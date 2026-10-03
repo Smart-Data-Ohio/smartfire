@@ -1,6 +1,5 @@
 //! app/models/event/reference_sync.rb. URLs match on any host and even a mismatched
 //! room-id path, but the referenced event must belong to the message's actual room.
-use crate::sql::query_all;
 use crate::{Message, Result, Tx};
 use regex::Regex;
 use rusqlite::params;
@@ -20,10 +19,13 @@ pub fn extract_ids(text: &str) -> Vec<i64> {
     ids
 }
 pub fn sync(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
+    sync_from_plain_text(tx, message, &message.plain_text_body(tx.conn(), tx.env().rich_text.as_ref())?)
+}
+pub(crate) fn sync_from_plain_text(tx: &mut Tx<'_>, message: &Message, plain: &str) -> Result<()> {
     let text = format!(
         "{}\n{}",
         message.markdown_source.as_deref().unwrap_or(""),
-        message.plain_text_body(tx.conn(), tx.env().rich_text.as_ref())?
+        plain
     );
     let mut desired = Vec::new();
     for id in extract_ids(&text) {
@@ -35,22 +37,12 @@ pub fn sync(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
             desired.push(id);
         }
     }
-    let existing = query_all(
-        tx.conn(),
-        "SELECT id,event_id FROM event_references WHERE message_id=?",
-        [message.id],
-        |r| Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?)),
+    tx.conn().execute(
+        "DELETE FROM event_references WHERE message_id=? AND event_id NOT IN (SELECT value FROM json_each(?))",
+        params![message.id, serde_json::json!(desired).to_string()],
     )?;
-    for (id, event_id) in &existing {
-        if !desired.contains(event_id) {
-            tx.conn()
-                .execute("DELETE FROM event_references WHERE id=?", [id])?;
-        }
-    }
     for id in desired {
-        if !existing.iter().any(|(_, e)| *e == id) {
-            tx.conn().execute("INSERT INTO event_references (message_id,event_id,created_at,updated_at) VALUES (?,?,?,?)",params![message.id,id,tx.now(),tx.now()])?;
-        }
+        tx.conn().execute("INSERT INTO event_references (message_id,event_id,created_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(message_id,event_id) DO NOTHING",params![message.id,id,tx.now(),tx.now()])?;
     }
     Ok(())
 }

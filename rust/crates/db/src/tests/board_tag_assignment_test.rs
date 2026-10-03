@@ -88,6 +88,11 @@ fn ws12_tag_assignment_validations_match_rails() {
                     },
                 )?;
             }
+            if has("duplicate_zero") {
+                tx.conn().execute("UPDATE board_tag_assignments SET id=0 WHERE room_id=?", [board.id])?;
+                let stored = BoardTagAssignment::find(tx.conn(), 0)?.unwrap();
+                assert!(stored.validate(tx.conn())?.is_empty());
+            }
             if has("deactivated") {
                 tx.conn()
                     .execute("UPDATE users SET status=1 WHERE id=?", [id("jz")])?;

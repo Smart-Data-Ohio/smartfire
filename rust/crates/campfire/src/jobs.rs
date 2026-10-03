@@ -268,6 +268,14 @@ impl Jobs {
 }
 
 impl EventSink for Jobs {
+    fn broadcast_digest_notes(&self, notes: &campfire_db::models::board_automations::DigestNotes) -> campfire_db::Result<Vec<i64>> {
+        let cable = self.cable.get().and_then(campfire_cable::WeakServer::upgrade)
+            .ok_or_else(|| campfire_db::Error::Other("digest cable server not booted".into()))?;
+        let app = self.app.get().and_then(Weak::upgrade)
+            .ok_or_else(|| campfire_db::Error::Other("digest app not booted".into()))?;
+        crate::channels::board_digests::deliver(&cable, &app, notes)
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))
+    }
     fn model_callback(&self, tx: &mut Tx<'_>, callback: campfire_db::callbacks::Callback) -> campfire_db::Result<()> {
         self.model_callbacks.call(tx, callback)
     }

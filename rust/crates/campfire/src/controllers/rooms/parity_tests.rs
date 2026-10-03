@@ -772,7 +772,7 @@ async fn parity_pair_cannot_be_widened_and_group_writes_require_membership() {
 
 #[tokio::test]
 async fn parity_plain_leave_keeps_room_and_last_direct_leave_enqueues_destroy() {
-    let app = app().await;
+    let app = app().await.without_job_runner().await;
     let mut david = app.david();
     let left = david
         .write(Req::new(

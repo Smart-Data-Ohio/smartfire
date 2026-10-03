@@ -7,6 +7,8 @@ cases=[
  ['photos',base.merge('media'=>{'photos'=>[photo.call('https://pbs.twimg.com/media/a.jpg?name=orig',{'width'=>800,'height'=>532}),photo.call('https://pbs.twimg.com/media/b.jpg',{'width'=>640,'height'=>480,'altText'=>'A desk'})]})],
  ['video',base.merge('media'=>{'photos'=>[photo.call(nil)],'videos'=>[{'type'=>'video','url'=>'https://video.twimg.com/1/v.mp4?tag=16','thumbnail_url'=>'https://pbs.twimg.com/1/t.jpg','width'=>1280,'height'=>720}]})],
  ['quote',base.merge('quote'=>{'url'=>'https://x.com/NASA/status/123','text'=>'We go up','author'=>{'name'=>'NASA','screen_name'=>'NASA'},'media'=>{'photos'=>[photo.call('https://pbs.twimg.com/q.jpg')]}})],
+ ['quote url prefix',base.merge('quote'=>{'url'=>'javascript:void(0)//https://x.com/i/status/123','text'=>'We go up','author'=>{'name'=>'NASA','screen_name'=>'NASA'},'media'=>{'photos'=>[photo.call('https://pbs.twimg.com/q.jpg')]}})],
+ ['quote url leading space',base.merge('quote'=>{'url'=>' https://x.com/NASA/status/123','text'=>'We go up','author'=>{'name'=>'NASA','screen_name'=>'NASA'},'media'=>{'photos'=>[photo.call('https://pbs.twimg.com/q.jpg')]}})],
  ['html',base.merge('text'=>'hi <img src=x onerror=alert(1)> there','author'=>base['author'].merge('name'=>'<b>jack</b>'))],
  ['evil hosts',base.merge('author'=>base['author'].merge('avatar_url'=>'https://evil.example/avatar.jpg'),'media'=>{'photos'=>[photo.call('https://evil.example/pic.jpg')],'videos'=>[{'type'=>'video','url'=>'https://evil.example/v.mp4','thumbnail_url'=>'https://pbs.twimg.com/t.jpg'}]})],
  ['alt limits',base.merge('media'=>{'photos'=>[photo.call('https://pbs.twimg.com/a.jpg',{'altText'=>'<b>hi</b>'}),photo.call('https://pbs.twimg.com/b.jpg',{'altText'=>'y'*2000})]})],

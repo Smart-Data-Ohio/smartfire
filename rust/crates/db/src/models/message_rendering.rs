@@ -2,7 +2,7 @@
 
 use crate::models::poll::{Poll, PollOption, PollVote};
 use crate::{Boost, Message, Result, Room, Timestamp, User};
-use rusqlite::{Connection, Row, params_from_iter};
+use rusqlite::{Connection, Row};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 
@@ -96,10 +96,10 @@ fn rows<T>(
     if ids.is_empty() {
         return Ok(vec![]);
     }
-    let sql = sql.replace("$ids", &vec!["?"; ids.len()].join(","));
+    let sql = sql.replace("$ids", "SELECT value FROM json_each(?)");
     Ok(conn
         .prepare(&sql)?
-        .query_map(params_from_iter(ids), map)?
+        .query_map([serde_json::json!(ids).to_string()], map)?
         .collect::<rusqlite::Result<Vec<_>>>()?)
 }
 impl RenderingRecords {

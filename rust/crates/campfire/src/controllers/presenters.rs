@@ -295,6 +295,9 @@ impl<'a> Presenter<'a> {
     pub(crate) fn preload_plain_text(&self,messages:&[Message]) -> Result<Self> {
         Ok(self.with_preloaded_facts(super::searches::preloads::Preloads::load_plain_text(self,messages)?))
     }
+    pub(crate) fn preload_broadcast(&self, messages: &[Message]) -> Result<Self> {
+        self.with_preloads(super::searches::preloads::Preloads::load_broadcast(self, messages)?, messages)
+    }
     fn with_preloads(&self,data:super::searches::preloads::Preloads,messages:&[Message]) -> Result<Self> {
         let ids = data.records.body_ids(messages);
         let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;

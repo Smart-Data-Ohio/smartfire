@@ -1,0 +1,850 @@
+{
+  "rows": [
+    {
+      "kind": "missing-venue",
+      "setup": [
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM audit_logs",
+        "UPDATE sqlite_sequence SET seq=9000000000 WHERE name='messages'",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000000,'Rooms::Board','Broadcast board 0',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000000,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000000,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000000,127326141,'Healthy post 0','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000001,'Rooms::Board','Broadcast board 1',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000001,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000001,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000001,127326141,'Healthy post 1','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000002,'Rooms::Board','Broadcast board 2',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000002,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000002,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000002,127326141,'Healthy post 2','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000003,'Rooms::Board','Broadcast board 3',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000003,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000003,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000003,127326141,'Healthy post 3','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000004,'Rooms::Board','Broadcast board 4',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000004,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000004,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000004,127326141,'Healthy post 4','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000005,'Rooms::Board','Broadcast board 5',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000005,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000005,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000005,127326141,'Healthy post 5','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000006,'Rooms::Board','Broadcast board 6',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000006,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000006,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000006,127326141,'Healthy post 6','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000007,'Rooms::Board','Broadcast board 7',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000007,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000007,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000007,127326141,'Healthy post 7','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000008,'Rooms::Board','Broadcast board 8',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000008,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000008,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000008,127326141,'Healthy post 8','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000009,'Rooms::Board','Broadcast board 9',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000009,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000009,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000009,127326141,'Healthy post 9','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000010,'Rooms::Board','Broadcast board 10',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000010,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000010,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000010,127326141,'Healthy post 10','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000011,'Rooms::Board','Broadcast board 11',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000011,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000011,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000011,127326141,'Healthy post 11','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000012,'Rooms::Board','Broadcast board 12',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000012,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000012,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000012,127326141,'Healthy post 12','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000013,'Rooms::Board','Broadcast board 13',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000013,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000013,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000013,127326141,'Healthy post 13','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000014,'Rooms::Board','Broadcast board 14',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000014,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000014,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000014,127326141,'Healthy post 14','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000015,'Rooms::Board','Broadcast board 15',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000015,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000015,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000015,127326141,'Healthy post 15','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000016,'Rooms::Board','Broadcast board 16',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000016,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000016,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000016,127326141,'Healthy post 16','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000017,'Rooms::Board','Broadcast board 17',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000017,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000017,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000017,127326141,'Healthy post 17','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000018,'Rooms::Board','Broadcast board 18',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000018,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000018,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000018,127326141,'Healthy post 18','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000019,'Rooms::Board','Broadcast board 19',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000019,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000019,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000019,127326141,'Healthy post 19','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000020,'Rooms::Board','Broadcast board 20',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000020,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000020,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000020,127326141,'Healthy post 20','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000021,'Rooms::Board','Broadcast board 21',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000021,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000021,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000021,127326141,'Healthy post 21','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000022,'Rooms::Board','Broadcast board 22',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000022,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000022,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000022,127326141,'Healthy post 22','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000023,'Rooms::Board','Broadcast board 23',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000023,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000023,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000023,127326141,'Healthy post 23','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000024,'Rooms::Board','Broadcast board 24',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000024,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000024,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000024,127326141,'Healthy post 24','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000025,'Rooms::Board','Broadcast board 25',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000025,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000025,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000025,127326141,'Healthy post 25','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000026,'Rooms::Board','Broadcast board 26',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000026,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000026,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000026,127326141,'Healthy post 26','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000027,'Rooms::Board','Broadcast board 27',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000027,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000027,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000027,127326141,'Healthy post 27','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000028,'Rooms::Board','Broadcast board 28',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000028,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000028,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000028,127326141,'Healthy post 28','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000029,'Rooms::Board','Broadcast board 29',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000029,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000029,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000029,127326141,'Healthy post 29','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000030,'Rooms::Board','Broadcast board 30',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000030,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000030,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000030,127326141,'Healthy post 30','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000031,'Rooms::Board','Broadcast board 31',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000031,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000031,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000031,127326141,'Healthy post 31','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000032,'Rooms::Board','Broadcast board 32',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000032,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000032,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000032,127326141,'Healthy post 32','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000033,'Rooms::Board','Broadcast board 33',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000033,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000033,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000033,127326141,'Late event http://example.com/rooms/974000033/events/974900001','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974900000,'Rooms::Voice','Vanishing venue',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO events(id,room_id,organizer_id,title,starts_at,time_zone,venue_room_id,created_at,updated_at) VALUES(974900001,974000033,127326141,'Late event','2026-03-02 17:00:00','UTC',974900000,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "CREATE TRIGGER round2_message_id AFTER INSERT ON messages WHEN NEW.system_note=1 AND NEW.room_id>=974000000 BEGIN UPDATE messages SET client_message_id='round2-' || NEW.room_id WHERE id=NEW.id; END"
+      ],
+      "claims": [
+        [
+          974000000,
+          true
+        ],
+        [
+          974000001,
+          true
+        ],
+        [
+          974000002,
+          true
+        ],
+        [
+          974000003,
+          true
+        ],
+        [
+          974000004,
+          true
+        ],
+        [
+          974000005,
+          true
+        ],
+        [
+          974000006,
+          true
+        ],
+        [
+          974000007,
+          true
+        ],
+        [
+          974000008,
+          true
+        ],
+        [
+          974000009,
+          true
+        ],
+        [
+          974000010,
+          true
+        ],
+        [
+          974000011,
+          true
+        ],
+        [
+          974000012,
+          true
+        ],
+        [
+          974000013,
+          true
+        ],
+        [
+          974000014,
+          true
+        ],
+        [
+          974000015,
+          true
+        ],
+        [
+          974000016,
+          true
+        ],
+        [
+          974000017,
+          true
+        ],
+        [
+          974000018,
+          true
+        ],
+        [
+          974000019,
+          true
+        ],
+        [
+          974000020,
+          true
+        ],
+        [
+          974000021,
+          true
+        ],
+        [
+          974000022,
+          true
+        ],
+        [
+          974000023,
+          true
+        ],
+        [
+          974000024,
+          true
+        ],
+        [
+          974000025,
+          true
+        ],
+        [
+          974000026,
+          true
+        ],
+        [
+          974000027,
+          true
+        ],
+        [
+          974000028,
+          true
+        ],
+        [
+          974000029,
+          true
+        ],
+        [
+          974000030,
+          true
+        ],
+        [
+          974000031,
+          true
+        ],
+        [
+          974000032,
+          true
+        ],
+        [
+          974000033,
+          true
+        ]
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000000\"><template>\n<div id=\"message_round2-974000000\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000001\" data-room-id=\"974000000\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 0 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000000/@9000000001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000001\"><template>\n<div id=\"message_round2-974000001\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000002\" data-room-id=\"974000001\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 1 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000001/@9000000002\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000002\"><template>\n<div id=\"message_round2-974000002\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000003\" data-room-id=\"974000002\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 2 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000002/@9000000003\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000003\"><template>\n<div id=\"message_round2-974000003\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000004\" data-room-id=\"974000003\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 3 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000003/@9000000004\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000004\"><template>\n<div id=\"message_round2-974000004\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000005\" data-room-id=\"974000004\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 4 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000004/@9000000005\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000005\"><template>\n<div id=\"message_round2-974000005\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000006\" data-room-id=\"974000005\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 5 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000005/@9000000006\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000006\"><template>\n<div id=\"message_round2-974000006\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000007\" data-room-id=\"974000006\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 6 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000006/@9000000007\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000007\"><template>\n<div id=\"message_round2-974000007\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000008\" data-room-id=\"974000007\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 7 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000007/@9000000008\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwOA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000008\"><template>\n<div id=\"message_round2-974000008\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000009\" data-room-id=\"974000008\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 8 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000008/@9000000009\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwOQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000009\"><template>\n<div id=\"message_round2-974000009\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000010\" data-room-id=\"974000009\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 9 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000009/@9000000010\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000010\"><template>\n<div id=\"message_round2-974000010\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000011\" data-room-id=\"974000010\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 10 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000010/@9000000011\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000011\"><template>\n<div id=\"message_round2-974000011\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000012\" data-room-id=\"974000011\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 11 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000011/@9000000012\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000012\"><template>\n<div id=\"message_round2-974000012\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000013\" data-room-id=\"974000012\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 12 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000012/@9000000013\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000013\"><template>\n<div id=\"message_round2-974000013\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000014\" data-room-id=\"974000013\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 13 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000013/@9000000014\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000014\"><template>\n<div id=\"message_round2-974000014\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000015\" data-room-id=\"974000014\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 14 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000014/@9000000015\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000015\"><template>\n<div id=\"message_round2-974000015\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000016\" data-room-id=\"974000015\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 15 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000015/@9000000016\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000016\"><template>\n<div id=\"message_round2-974000016\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000017\" data-room-id=\"974000016\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 16 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000016/@9000000017\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000017\"><template>\n<div id=\"message_round2-974000017\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000018\" data-room-id=\"974000017\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 17 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000017/@9000000018\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxOA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000018\"><template>\n<div id=\"message_round2-974000018\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000019\" data-room-id=\"974000018\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 18 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000018/@9000000019\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxOQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000019\"><template>\n<div id=\"message_round2-974000019\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000020\" data-room-id=\"974000019\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 19 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000019/@9000000020\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000020\"><template>\n<div id=\"message_round2-974000020\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000021\" data-room-id=\"974000020\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 20 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000020/@9000000021\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000021\"><template>\n<div id=\"message_round2-974000021\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000022\" data-room-id=\"974000021\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 21 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000021/@9000000022\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000022\"><template>\n<div id=\"message_round2-974000022\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000023\" data-room-id=\"974000022\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 22 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000022/@9000000023\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000023\"><template>\n<div id=\"message_round2-974000023\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000024\" data-room-id=\"974000023\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 23 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000023/@9000000024\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000024\"><template>\n<div id=\"message_round2-974000024\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000025\" data-room-id=\"974000024\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 24 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000024/@9000000025\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000025\"><template>\n<div id=\"message_round2-974000025\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000026\" data-room-id=\"974000025\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 25 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000025/@9000000026\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000026\"><template>\n<div id=\"message_round2-974000026\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000027\" data-room-id=\"974000026\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 26 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000026/@9000000027\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000027\"><template>\n<div id=\"message_round2-974000027\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000028\" data-room-id=\"974000027\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 27 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000027/@9000000028\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyOA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000028\"><template>\n<div id=\"message_round2-974000028\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000029\" data-room-id=\"974000028\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 28 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000028/@9000000029\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyOQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000029\"><template>\n<div id=\"message_round2-974000029\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000030\" data-room-id=\"974000029\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 29 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000029/@9000000030\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAzMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000030\"><template>\n<div id=\"message_round2-974000030\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000031\" data-room-id=\"974000030\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 30 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000030/@9000000031\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAzMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000031\"><template>\n<div id=\"message_round2-974000031\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000032\" data-room-id=\"974000031\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 31 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000031/@9000000032\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAzMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000032\"><template>\n<div id=\"message_round2-974000032\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000033\" data-room-id=\"974000032\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 32 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000032/@9000000033\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAzMw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000033\"><template>\n<div id=\"message_round2-974000033\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000034\" data-room-id=\"974000033\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nLate event <a target=\"_blank\" href=\"http://example.com/rooms/974000033/events/974900001\">http://example.com/rooms/974000033/events/974900001</a> — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000033/@9000000034\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        }
+      ],
+      "notes": 34
+    },
+    {
+      "kind": "failed-broadcast",
+      "setup": [
+        "DELETE FROM board_sla_rules",
+        "DELETE FROM board_stale_digests",
+        "DELETE FROM audit_logs",
+        "UPDATE sqlite_sequence SET seq=9000000000 WHERE name='messages'",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000000,'Rooms::Board','Broadcast board 0',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000000,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000000,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000000,127326141,'Healthy post 0','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000001,'Rooms::Board','Broadcast board 1',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000001,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000001,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000001,127326141,'Healthy post 1','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000002,'Rooms::Board','Broadcast board 2',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000002,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000002,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000002,127326141,'Healthy post 2','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000003,'Rooms::Board','Broadcast board 3',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000003,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000003,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000003,127326141,'Healthy post 3','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000004,'Rooms::Board','Broadcast board 4',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000004,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000004,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000004,127326141,'Healthy post 4','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000005,'Rooms::Board','Broadcast board 5',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000005,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000005,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000005,127326141,'Healthy post 5','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000006,'Rooms::Board','Broadcast board 6',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000006,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000006,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000006,127326141,'Healthy post 6','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000007,'Rooms::Board','Broadcast board 7',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000007,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000007,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000007,127326141,'Healthy post 7','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000008,'Rooms::Board','Broadcast board 8',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000008,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000008,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000008,127326141,'Healthy post 8','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000009,'Rooms::Board','Broadcast board 9',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000009,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000009,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000009,127326141,'Healthy post 9','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000010,'Rooms::Board','Broadcast board 10',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000010,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000010,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000010,127326141,'Healthy post 10','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000011,'Rooms::Board','Broadcast board 11',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000011,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000011,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000011,127326141,'Healthy post 11','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000012,'Rooms::Board','Broadcast board 12',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000012,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000012,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000012,127326141,'Healthy post 12','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000013,'Rooms::Board','Broadcast board 13',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000013,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000013,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000013,127326141,'Healthy post 13','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000014,'Rooms::Board','Broadcast board 14',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000014,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000014,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000014,127326141,'Healthy post 14','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000015,'Rooms::Board','Broadcast board 15',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000015,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000015,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000015,127326141,'Healthy post 15','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000016,'Rooms::Board','Broadcast board 16',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000016,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000016,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000016,127326141,'Healthy post 16','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000017,'Rooms::Board','Broadcast board 17',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000017,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000017,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000017,127326141,'Healthy post 17','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000018,'Rooms::Board','Broadcast board 18',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000018,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000018,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000018,127326141,'Healthy post 18','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000019,'Rooms::Board','Broadcast board 19',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000019,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000019,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000019,127326141,'Healthy post 19','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000020,'Rooms::Board','Broadcast board 20',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000020,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000020,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000020,127326141,'Healthy post 20','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000021,'Rooms::Board','Broadcast board 21',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000021,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000021,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000021,127326141,'Healthy post 21','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000022,'Rooms::Board','Broadcast board 22',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000022,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000022,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000022,127326141,'Healthy post 22','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000023,'Rooms::Board','Broadcast board 23',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000023,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000023,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000023,127326141,'Healthy post 23','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000024,'Rooms::Board','Broadcast board 24',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000024,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000024,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000024,127326141,'Healthy post 24','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000025,'Rooms::Board','Broadcast board 25',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000025,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000025,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000025,127326141,'Healthy post 25','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000026,'Rooms::Board','Broadcast board 26',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000026,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000026,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000026,127326141,'Healthy post 26','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000027,'Rooms::Board','Broadcast board 27',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000027,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000027,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000027,127326141,'Healthy post 27','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000028,'Rooms::Board','Broadcast board 28',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000028,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000028,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000028,127326141,'Healthy post 28','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000029,'Rooms::Board','Broadcast board 29',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000029,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000029,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000029,127326141,'Healthy post 29','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000030,'Rooms::Board','Broadcast board 30',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000030,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000030,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000030,127326141,'Healthy post 30','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000031,'Rooms::Board','Broadcast board 31',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000031,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000031,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000031,127326141,'Healthy post 31','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000032,'Rooms::Board','Broadcast board 32',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000032,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000032,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000032,127326141,'Healthy post 32','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974000033,'Rooms::Board','Broadcast board 33',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO memberships(room_id,user_id,created_at,updated_at) VALUES(974000033,127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO board_sla_rules(room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(974000033,'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(room_id,creator_id,name,work_status,work_status_changed_at,created_at,updated_at,last_activity_at) VALUES(974000033,127326141,'Late event http://example.com/rooms/974000033/events/974900001','planned','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00','2026-03-02 12:00:00')",
+        "INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(974900000,'Rooms::Voice','Vanishing venue',127326141,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO events(id,room_id,organizer_id,title,starts_at,time_zone,venue_room_id,created_at,updated_at) VALUES(974900001,974000033,127326141,'Late event','2026-03-02 17:00:00','UTC',974900000,'2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "CREATE TRIGGER round2_message_id AFTER INSERT ON messages WHEN NEW.system_note=1 AND NEW.room_id>=974000000 BEGIN UPDATE messages SET client_message_id='round2-' || NEW.room_id WHERE id=NEW.id; END"
+      ],
+      "claims": [
+        [
+          974000000,
+          true
+        ],
+        [
+          974000001,
+          true
+        ],
+        [
+          974000002,
+          true
+        ],
+        [
+          974000003,
+          true
+        ],
+        [
+          974000004,
+          true
+        ],
+        [
+          974000005,
+          true
+        ],
+        [
+          974000006,
+          true
+        ],
+        [
+          974000007,
+          true
+        ],
+        [
+          974000008,
+          true
+        ],
+        [
+          974000009,
+          true
+        ],
+        [
+          974000010,
+          true
+        ],
+        [
+          974000011,
+          true
+        ],
+        [
+          974000012,
+          true
+        ],
+        [
+          974000013,
+          true
+        ],
+        [
+          974000014,
+          true
+        ],
+        [
+          974000015,
+          true
+        ],
+        [
+          974000016,
+          true
+        ],
+        [
+          974000017,
+          true
+        ],
+        [
+          974000018,
+          true
+        ],
+        [
+          974000019,
+          true
+        ],
+        [
+          974000020,
+          true
+        ],
+        [
+          974000021,
+          true
+        ],
+        [
+          974000022,
+          true
+        ],
+        [
+          974000023,
+          true
+        ],
+        [
+          974000024,
+          true
+        ],
+        [
+          974000025,
+          true
+        ],
+        [
+          974000026,
+          true
+        ],
+        [
+          974000027,
+          true
+        ],
+        [
+          974000028,
+          true
+        ],
+        [
+          974000029,
+          true
+        ],
+        [
+          974000030,
+          true
+        ],
+        [
+          974000031,
+          true
+        ],
+        [
+          974000032,
+          true
+        ],
+        [
+          974000033,
+          false
+        ]
+      ],
+      "frames": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000000\"><template>\n<div id=\"message_round2-974000000\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000001\" data-room-id=\"974000000\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 0 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000000/@9000000001\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000001\"><template>\n<div id=\"message_round2-974000001\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000002\" data-room-id=\"974000001\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 1 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000001/@9000000002\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000002\"><template>\n<div id=\"message_round2-974000002\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000003\" data-room-id=\"974000002\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 2 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000002/@9000000003\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwMw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000003\"><template>\n<div id=\"message_round2-974000003\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000004\" data-room-id=\"974000003\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 3 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000003/@9000000004\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000004\"><template>\n<div id=\"message_round2-974000004\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000005\" data-room-id=\"974000004\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 4 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000004/@9000000005\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000005\"><template>\n<div id=\"message_round2-974000005\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000006\" data-room-id=\"974000005\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 5 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000005/@9000000006\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000006\"><template>\n<div id=\"message_round2-974000006\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000007\" data-room-id=\"974000006\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 6 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000006/@9000000007\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwNw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000007\"><template>\n<div id=\"message_round2-974000007\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000008\" data-room-id=\"974000007\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 7 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000007/@9000000008\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwOA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000008\"><template>\n<div id=\"message_round2-974000008\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000009\" data-room-id=\"974000008\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 8 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000008/@9000000009\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAwOQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000009\"><template>\n<div id=\"message_round2-974000009\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000010\" data-room-id=\"974000009\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 9 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000009/@9000000010\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000010\"><template>\n<div id=\"message_round2-974000010\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000011\" data-room-id=\"974000010\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 10 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000010/@9000000011\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000011\"><template>\n<div id=\"message_round2-974000011\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000012\" data-room-id=\"974000011\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 11 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000011/@9000000012\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000012\"><template>\n<div id=\"message_round2-974000012\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000013\" data-room-id=\"974000012\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 12 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000012/@9000000013\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxMw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000013\"><template>\n<div id=\"message_round2-974000013\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000014\" data-room-id=\"974000013\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 13 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000013/@9000000014\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000014\"><template>\n<div id=\"message_round2-974000014\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000015\" data-room-id=\"974000014\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 14 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000014/@9000000015\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000015\"><template>\n<div id=\"message_round2-974000015\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000016\" data-room-id=\"974000015\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 15 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000015/@9000000016\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000016\"><template>\n<div id=\"message_round2-974000016\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000017\" data-room-id=\"974000016\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 16 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000016/@9000000017\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxNw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000017\"><template>\n<div id=\"message_round2-974000017\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000018\" data-room-id=\"974000017\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 17 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000017/@9000000018\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxOA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000018\"><template>\n<div id=\"message_round2-974000018\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000019\" data-room-id=\"974000018\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 18 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000018/@9000000019\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAxOQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000019\"><template>\n<div id=\"message_round2-974000019\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000020\" data-room-id=\"974000019\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 19 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000019/@9000000020\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000020\"><template>\n<div id=\"message_round2-974000020\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000021\" data-room-id=\"974000020\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 20 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000020/@9000000021\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000021\"><template>\n<div id=\"message_round2-974000021\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000022\" data-room-id=\"974000021\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 21 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000021/@9000000022\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000022\"><template>\n<div id=\"message_round2-974000022\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000023\" data-room-id=\"974000022\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 22 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000022/@9000000023\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyMw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000023\"><template>\n<div id=\"message_round2-974000023\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000024\" data-room-id=\"974000023\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 23 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000023/@9000000024\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000024\"><template>\n<div id=\"message_round2-974000024\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000025\" data-room-id=\"974000024\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 24 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000024/@9000000025\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000025\"><template>\n<div id=\"message_round2-974000025\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000026\" data-room-id=\"974000025\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 25 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000025/@9000000026\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000026\"><template>\n<div id=\"message_round2-974000026\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000027\" data-room-id=\"974000026\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 26 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000026/@9000000027\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyNw:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000027\"><template>\n<div id=\"message_round2-974000027\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000028\" data-room-id=\"974000027\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 27 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000027/@9000000028\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyOA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000028\"><template>\n<div id=\"message_round2-974000028\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000029\" data-room-id=\"974000028\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 28 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000028/@9000000029\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAyOQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000029\"><template>\n<div id=\"message_round2-974000029\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000030\" data-room-id=\"974000029\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 29 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000029/@9000000030\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAzMA:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000030\"><template>\n<div id=\"message_round2-974000030\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000031\" data-room-id=\"974000030\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 30 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000030/@9000000031\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAzMQ:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000031\"><template>\n<div id=\"message_round2-974000031\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000032\" data-room-id=\"974000031\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 31 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000031/@9000000032\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkJvYXJkLzk3NDAwMDAzMg:messages",
+          "payload": "<turbo-stream action=\"append\" target=\"messages_rooms_board_974000032\"><template>\n<div id=\"message_round2-974000032\" tabindex=\"-1\" class=\"message message--system-note\" role=\"note\" data-controller=\"reply\" data-message-id=\"9000000033\" data-room-id=\"974000032\" data-message-timestamp=\"1772467200000\" data-message-updated-at=\"1772467200000\" data-sort-value=\"1772467200000\" data-messages-target=\"message\" data-message-format-target=\"message\" data-search-results-target=\"message\" data-refresh-room-target=\"message\" data-reply-composer-outlet=\"#composer\">\n  <h2 class=\"message__day-separator\"><time datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"date\"></time></h2>\n\n    <div class=\"message__system-note\">\n  <img class=\"colorize--black message__system-note-icon\" aria-hidden=\"true\" src=\"/assets/messages-outlined-87ff0331.svg\" width=\"14\" height=\"14\" />\n  <span class=\"message__system-note-author\"><strong>David</strong></span>\n  <span class=\"message__system-note-text\"><div class=\"trix-content\">\n  Stale work digest: 1 post past its SLA\nHealthy post 32 — Planned · Unassigned · 4.0 hours\n</div>\n</span>\n  <a target=\"_top\" class=\"message__system-note-permalink\" href=\"http://example.com/rooms/974000032/@9000000033\"><time class=\"message__timestamp\" datetime=\"2026-03-02T16:00:00Z\" data-local-time-target=\"time\"></time></a>\n</div>\n\n</div></template></turbo-stream>"
+        }
+      ],
+      "notes": 34
+    }
+  ]
+}

@@ -35,6 +35,6 @@ caseless.workspace = true
 test-support = ["dep:serde_yaml", "rusqlite/trace", "rusqlite/limits"]
 
 [dev-dependencies]
-rusqlite = { workspace = true, features = ["trace"] }
+rusqlite = { workspace = true, features = ["trace", "limits"] }
 campfire_db = { path = ".", features = ["test-support"] }
 tempfile.workspace = true

@@ -1,0 +1,14 @@
+{
+  "rows": [
+    {
+      "kind": "digest",
+      "destroyed": true,
+      "healthy_claims": 1
+    },
+    {
+      "kind": "sla",
+      "destroyed": true,
+      "healthy_claims": 2
+    }
+  ]
+}

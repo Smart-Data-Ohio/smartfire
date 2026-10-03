@@ -134,7 +134,10 @@ pub fn create(tx: &Tx<'_>, message_id: i64, referenced_message_id: i64) -> Resul
 }
 
 pub fn sync(tx: &Tx<'_>, message: &Message) -> Result<()> {
-    let mut text = non_code_text(&message.body_html(tx.conn())?.unwrap_or_default())?;
+    sync_from_body(tx, message, &message.body_html(tx.conn())?.unwrap_or_default())
+}
+pub(crate) fn sync_from_body(tx: &Tx<'_>, message: &Message, body: &str) -> Result<()> {
+    let mut text = non_code_text(body)?;
     if let Some(note) = &message.forward_note {
         text.push('\n');
         text.push_str(note);
@@ -145,14 +148,10 @@ pub fn sync(tx: &Tx<'_>, message: &Message) -> Result<()> {
             sources.push(id);
         }
     }
-    for id in referenced_ids(tx.conn(), message.id)? {
-        if !sources.contains(&id) {
-            tx.conn().execute_cached(
-                "DELETE FROM message_references WHERE message_id=? AND referenced_message_id=?",
-                params![message.id, id],
-            )?;
-        }
-    }
+    tx.conn().execute_cached(
+        "DELETE FROM message_references WHERE message_id=? AND referenced_message_id NOT IN (SELECT value FROM json_each(?))",
+        params![message.id, serde_json::json!(sources).to_string()],
+    )?;
     for id in sources {
         if !exists(
             tx.conn(),

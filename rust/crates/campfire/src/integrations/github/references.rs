@@ -59,23 +59,10 @@ pub fn sync(tx: &mut Tx<'_>, message: &Message, enqueue_fetches: bool) -> campfi
             })?;
         prs.push(super::pull_requests::PullRequest::for_reference(tx, &owner, &repo, number)?.id);
     }
-    let mut stmt = tx.conn().prepare(
-        "SELECT id,github_pull_request_id FROM github_pull_request_references WHERE message_id=?",
+    tx.conn().execute(
+        "DELETE FROM github_pull_request_references WHERE message_id=? AND github_pull_request_id NOT IN (SELECT value FROM json_each(?))",
+        params![message.id, serde_json::json!(prs).to_string()],
     )?;
-    let existing = stmt
-        .query_map([message.id], |r| {
-            Ok((r.get::<_, i64>(0)?, r.get::<_, i64>(1)?))
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    drop(stmt);
-    for (id, pr) in existing {
-        if !prs.contains(&pr) {
-            tx.conn().execute(
-                "DELETE FROM github_pull_request_references WHERE id=?",
-                [id],
-            )?;
-        }
-    }
     for id in prs {
         let created=tx.conn().query_row("INSERT INTO github_pull_request_references (message_id,github_pull_request_id,created_at,updated_at) VALUES (?,?,?,?) ON CONFLICT(message_id,github_pull_request_id) DO NOTHING RETURNING id",params![message.id,id,now,now],|r|r.get::<_,i64>(0)).optional()?.is_some();
         let stale = tx.conn().query_row(

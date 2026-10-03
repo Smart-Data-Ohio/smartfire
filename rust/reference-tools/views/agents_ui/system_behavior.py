@@ -8,10 +8,14 @@ root = pathlib.Path(__file__).resolve().parents[4]
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
 p.add_argument('--scenario', choices=['all','pages','budget','work'], default='all')
+p.add_argument('--inject-work-status', action='store_true', help='Discrimination probe: make the candidate writer retain planned status')
+p.add_argument('--inject-stream-finalize', action='store_true', help='Discrimination probe: make the candidate writer retain streaming state')
 args = p.parse_args()
+if args.inject_stream_finalize and args.scenario != 'pages': p.error('--inject-stream-finalize requires --scenario pages')
+if args.inject_work_status and args.scenario != 'work': p.error('--inject-work-status requires --scenario work')
 if args.scenario == 'all':
     codes = [subprocess.run(['python3', str(pathlib.Path(__file__).resolve()), '--binary', str(args.binary.resolve()), '--scenario', scenario], cwd=root).returncode for scenario in ['pages', 'budget', 'work']]
-    print(f'Agent behavior scenarios: {len(codes) - sum(bool(c) for c in codes)} completed; {sum(bool(c) for c in codes)} failed; 2 deferred', flush=True)
+    print(f'Agent behavior scenarios: {len(codes) - sum(bool(c) for c in codes)} completed; {sum(bool(c) for c in codes)} failed; 0 deferred', flush=True)
     raise SystemExit(1 if any(codes) else 0)
 frozen_time = '2026-03-03T16:00:00Z' if args.scenario == 'budget' else '2026-03-02T16:00:00Z'
 seed = root / 'rust/parity/.seed/agents_ui'
@@ -19,9 +23,13 @@ labels = json.loads((seed / 'labels.json').read_text())
 store = root / '.scratch/system-behavior'
 store.mkdir(parents=True, exist_ok=True)
 work = pathlib.Path(tempfile.mkdtemp(dir=store))
-env = {**os.environ, 'PARITY_NAMESPACE':'ws11ui-system', 'PARITY_OWNER':'ws11ui', 'PARITY_SEED_DIR':str(work/'seeds'), 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','ws11ui-reference:d7c7de92')}
+env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11ui-system'), 'PARITY_OWNER':os.environ.get('PARITY_OWNER','ws11ui'), 'PARITY_SEED_DIR':str(work/'seeds'), 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','ws11ui-reference:d7c7de92')}
 reference = root / 'rust/parity/bin/reference'
 child = None
+# Keep simultaneous worktrees' servers and teardown isolated.
+reference_port = int(os.environ.get('WS11UI_SYSTEM_REFERENCE_PORT','52798'))
+candidate_port = int(os.environ.get('WS11UI_SYSTEM_CANDIDATE_PORT','52799'))
+target_port = int(os.environ.get('WS11UI_SYSTEM_TARGET_PORT','52797'))
 
 def wait_up(port):
     for _ in range(240):
@@ -36,24 +44,32 @@ try:
     shutil.copytree(seed,private)
     labels_file = work/'labels.json'
     candidate = work/'candidate'; (candidate/'db').mkdir(parents=True);shutil.copytree(private/'storage',candidate/'files')
-    subprocess.run([str(reference),'up','--seed','agents_ui','--port','52798','--time',frozen_time,'--freeze'],cwd=root,env=env,check=True)
+    subprocess.run([str(reference),'up','--seed','agents_ui','--port',str(reference_port),'--time',frozen_time,'--freeze'],cwd=root,env=env,check=True)
     # Shared rules approve exactly this post-pin status-popup layout delta.
     layout = work/'application.html.erb';layout.write_bytes(subprocess.check_output(['git','show','2e20b24c3f2be9db8a646a1352c159b4afacad0e:app/views/layouts/application.html.erb'],cwd=root))
-    subprocess.run(['docker','cp',str(layout),'ws11ui-system-reference-52798:/rails/app/views/layouts/application.html.erb'],check=True)
-    fixture = subprocess.check_output([str(reference),'runner','--port','52798','--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/({'budget':'budget_fixture.rb','work':'work_fixture.rb'}.get(args.scenario,'system_fixture.rb')))],cwd=root,env=env,text=True)
+    subprocess.run(['docker','cp',str(layout),f'{env["PARITY_NAMESPACE"]}-reference-{reference_port}:/rails/app/views/layouts/application.html.erb'],check=True)
+    fixture = subprocess.check_output([str(reference),'runner','--port',str(reference_port),'--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/({'budget':'budget_fixture.rb','work':'work_fixture.rb'}.get(args.scenario,'system_fixture.rb')))],cwd=root,env=env,text=True)
     labels.update(json.loads(fixture)); labels_file.write_text(json.dumps(labels))
-    source_db = work/'seeds/.instances/52798/db/production.sqlite3'
+    source_db = work/f'seeds/.instances/{reference_port}/db/production.sqlite3'
     with sqlite3.connect(source_db) as source, sqlite3.connect(candidate/'db/production.sqlite3') as target: source.backup(target)
+    if args.inject_work_status:
+        # Exercise the real UI, endpoint and writer. A deliberately broken SQLite
+        # writer loses the status update, while still returning its real response.
+        with sqlite3.connect(candidate/'db/production.sqlite3') as target:
+            target.execute("CREATE TRIGGER ws11ui_broken_work_status AFTER UPDATE OF work_status ON channel_threads WHEN NEW.work_status='in_progress' BEGIN UPDATE channel_threads SET work_status='planned' WHERE id=NEW.id; END")
+    if args.inject_stream_finalize:
+        with sqlite3.connect(candidate/'db/production.sqlite3') as target:
+            target.execute("CREATE TRIGGER ws11ui_broken_stream_finalize AFTER UPDATE OF streaming ON messages WHEN NEW.streaming=0 AND OLD.streaming=1 BEGIN UPDATE messages SET streaming=1 WHERE id=NEW.id; END")
     candidate_env = dict(os.environ)
     for line in (root/'rust/parity/.env.reference').read_text().splitlines():
         if line and not line.startswith('#') and '=' in line:
             key,value=line.split('=',1);candidate_env[key]=value.strip('"\'')
-    candidate_env.update({'CAMPFIRE_STORAGE_PATH':str(candidate),'CAMPFIRE_FROZEN_TIME':frozen_time,'DISABLE_SSL':'true','HTTP_PORT':'52799','TARGET_PORT':'52797','APP_VERSION':'parity','GIT_REVISION':'parity'})
+    candidate_env.update({'CAMPFIRE_STORAGE_PATH':str(candidate),'CAMPFIRE_FROZEN_TIME':frozen_time,'DISABLE_SSL':'true','HTTP_PORT':str(candidate_port),'TARGET_PORT':str(target_port),'APP_VERSION':'parity','GIT_REVISION':'parity'})
     with (work/'candidate.log').open('w') as log:
         child=subprocess.Popen([str(args.binary.resolve())],cwd=root,env=candidate_env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
-        wait_up(52799)
+        wait_up(candidate_port)
         result_codes=[]
-        for name,port,db in [('Rails',52798,work/'seeds/.instances/52798/db/production.sqlite3'),('Rust',52799,candidate/'db/production.sqlite3')]:
+        for name,port,db in [('Rails',reference_port,work/f'seeds/.instances/{reference_port}/db/production.sqlite3'),('Rust',candidate_port,candidate/'db/production.sqlite3')]:
             print(f'{name} system behavior:',flush=True)
             result=subprocess.run(['node',str(root/'rust/reference-tools/views/agents_ui/system_cases.mjs'),f'http://127.0.0.1:{port}',str(labels_file),str(db),args.scenario],cwd=root)
             result_codes.append(result.returncode)
@@ -64,5 +80,5 @@ finally:
             os.killpg(child.pid,signal.SIGTERM)
             try: child.wait(timeout=5)
             except subprocess.TimeoutExpired: os.killpg(child.pid,signal.SIGKILL);child.wait()
-    subprocess.run([str(reference),'down','--port','52798'],cwd=root,env=env,stdout=subprocess.DEVNULL,check=False)
+    subprocess.run([str(reference),'down','--port',str(reference_port)],cwd=root,env=env,stdout=subprocess.DEVNULL,check=False)
     shutil.rmtree(work)

@@ -1,31 +1,23 @@
 //! Request-only Ruby coercions; writes and validation remain with the model owners.
-use bnum::types::I512;
-use campfire_db::{Timestamp, slash_commands::time_parser};
+use campfire_db::Timestamp;
 use campfire_kit::Param;
 use campfire_views::time::Zone;
 
-#[derive(Debug, thiserror::Error)]
-#[error("RangeError")]
-pub(super) struct DateRangeError;
-
-/// TimeZoneConverter rescues ArgumentError (nil), but propagates RangeError.
-/// Ruby Time.new converts components through NUM2INT and unsigned bit fields
-/// in this order, before validating the combined date and clock.
 pub(super) fn datetime(
     param: Option<&Param>,
     zone: &Zone,
     now: Timestamp,
-) -> Result<Option<Timestamp>, DateRangeError> {
-    let Some(Param::Str(value)) = param else {
-        return Ok(None);
+) -> Result<Option<Timestamp>, rails_compat::datetime::DateRangeError> {
+    let value = match param {
+        Some(Param::Str(value)) => Some(value.as_str()),
+        _ => None,
     };
-    match time_parser::parse_calendar(value, zone.tz(), now) {
-        Ok(value) => Ok(value),
-        Err(campfire_db::Error::Other(message)) if message.starts_with("ArgumentError:") => {
-            Ok(None)
-        }
-        Err(_) => Err(DateRangeError),
-    }
+    rails_compat::datetime::cast(value, zone.tz(), now)
+}
+
+pub(crate) fn extended_datetime(at: Timestamp, zone: &Zone, suffix: bool) -> String {
+    rails_compat::datetime::render(at, zone.tz(), suffix)
+
 }
 
 /// GithubConnectionsController calls `params[:access_token].to_s.strip` before
@@ -269,46 +261,5 @@ fn ruby_string(value: &str) -> String {
         }
     }
     result.push('"');
-    result
-}
-
-// The calendar consumer shares the pinned TZInfo transition boundaries with WS8.
-fn boundary_offset(zone: &Zone, seconds: i64, local: bool) -> Option<i64> {
-    time_parser::boundary_offset(zone.tz(), seconds, local)
-}
-/// Extended-year rendering uses the same pinned zone periods as the request cast.
-pub(crate) fn extended_datetime(at: Timestamp, zone: &Zone, suffix: bool) -> String {
-    let (proxy, _) = at.calendar_proxy();
-    let offset = boundary_offset(zone, at.transition_second(), false)
-        .unwrap_or_else(|| i64::from(zone.tz().to_offset_info(proxy).offset().seconds()));
-    // Shift the wide instant before choosing the safe calendar proxy. A valid
-    // local +/-9999 date can lie outside Jiff's offset-reserved UTC envelope.
-    let (local, shift) = at
-        .since(jiff::SignedDuration::from_secs(offset))
-        .calendar_proxy();
-    let local = local.to_zoned(jiff::tz::TimeZone::UTC);
-    let year = I512::from(local.year()) + shift;
-    let year = if year.is_negative() {
-        format!("-{:04}", year.unsigned_abs())
-    } else {
-        format!("{year:04}")
-    };
-    let mut result = format!("{year}{}", local.strftime("-%m-%dT%H:%M:%S"));
-    if suffix {
-        if zone
-            .tz()
-            .iana_name()
-            .is_none_or(|name| name == "Etc/UTC" || name == "UTC")
-        {
-            result.push('Z');
-        } else {
-            result.push_str(&format!(
-                "{}{:02}:{:02}",
-                if offset < 0 { '-' } else { '+' },
-                offset.abs() / 3600,
-                offset.abs() % 3600 / 60
-            ));
-        }
-    }
     result
 }

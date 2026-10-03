@@ -176,11 +176,26 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         campfire_db::models::calendar_dispatch::dispatch_ooo(&app.db, app.db.env().now()).await?;
         Ok(())
     }));
+    for task in board_automation_tasks() {periodic.task(task);}
     periodic.task(Task::new("streaming messages", Duration::from_secs(30), |app: App| async move {
         streaming_messages(&app.db).await
     }));
     periodic
 }
+/// The pinned runner registers SLA at five minutes and quiet digests hourly.
+pub(crate) fn board_automation_tasks() -> [Task<App>;2] {
+    [
+        Task::new("board sla nudges",Duration::from_secs(5*MINUTE),|app:App| async move {
+            campfire_db::models::board_automations::dispatch_sla(&app.db,app.db.env().now()).await?;
+            Ok(())
+        }),
+        Task::new("board stale digests",Duration::from_secs(HOUR),|app:App| async move {
+            campfire_db::models::board_automations::dispatch_digests(&app.db,app.db.env().now()).await?;
+            Ok(())
+        })
+    ]
+}
+
 pub(crate) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
