@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';
 import {CABLE_WAIT} from './behavior-deadlines.mjs';
-import {actOnVisible,visibleCount,visibleMatch,waitForVisibility,filterVisibleText,waitForCondition} from './behavior-visibility.mjs';
+import {actOnVisible,visibleCount,visibleMatch,isSeleniumVisible,waitForVisibility,filterVisibleText,waitForCondition} from './behavior-visibility.mjs';
 export const motionCases=[
   'mobile drawer animates in, lands in place, and returns focus with motion on',
   'member selection mode moves no rows and resizes nothing',
@@ -34,6 +34,14 @@ const surfaceTx=()=>{
   if(transform==='none')return 0;
   const match=transform.match(/matrix\((.+)\)/);return match?Number(match[1].split(',').map(part=>part.trim())[4]):null;
 };
+async function visibleElements(locator) {
+  const elements=[];
+  for(let index=0;index<await locator.count();index++) {
+    const element=locator.nth(index);
+    if(await isSeleniumVisible(element))elements.push(element);
+  }
+  return elements;
+}
 async function firstOpenCurrentFocus(page,selector) {
   await waitForCondition(()=>page.evaluate(selector=>document.activeElement?.matches(selector),selector));
 }
@@ -92,10 +100,10 @@ export async function motion({author:page,base,caseName,fixture}) {
     await actOnVisible(page.locator(`#channel-members [data-member-id="${fixture.jason_id}"] button.profile-card-name`),'click',{modifiers:['Control']});
     await waitForVisibility(boxes);await waitForVisibility(page.locator('#channel-members [data-multi-select-target="bar"]'));
     assert.deepEqual(await lefts(),before,'motion: member-select positions');assert.equal(await height(),beforeHeight,'motion: member-select height');
-    await click(page.locator(`#channel-members input[type="checkbox"]:not(#select-member-${fixture.jason_id})`).last());
+    await click((await visibleElements(page.locator(`#channel-members input[type="checkbox"]:not(#select-member-${fixture.jason_id})`))).at(-1));
     await waitForVisibility(filterVisibleText(page.locator('#channel-members [data-multi-select-target="messageButton"]'),'Message (2)'));
     assert.deepEqual(await lefts(),before,'motion: second-select positions');assert.equal(await height(),beforeHeight);
-    for(let index=0;index<await boxes.count();index++) {const box=boxes.nth(index);if(await box.isChecked())await click(box);}
+    for(const box of await visibleElements(boxes))if(await box.isChecked())await click(box);
     await waitForVisibility(page.locator('#channel-members [data-multi-select-target="bar"]'),{state:'hidden'});
     assert.deepEqual(await lefts(),before);assert.equal(await height(),beforeHeight);
   } else if(caseName===motionCases[2]||caseName===motionCases[3]) {
@@ -108,7 +116,7 @@ export async function motion({author:page,base,caseName,fixture}) {
     const boxes=page.locator('.people-directory__row input[type="checkbox"]');await click(boxes.first());await waitForVisibility(page.locator('.multi-select-bar'));
     if(!sticky) {
       assert.deepEqual(await tops(),before,'motion: directory-select positions');
-      for(let index=0;index<await boxes.count();index++)if(await boxes.nth(index).isChecked())await click(boxes.nth(index));
+      for(const box of await visibleElements(boxes))if(await box.isChecked())await click(box);
       await waitForVisibility(page.locator('.multi-select-bar'),{state:'hidden'});assert.deepEqual(await tops(),before);
     } else {
       await page.evaluate(()=>document.querySelector('#main-content').scrollTop=100);
