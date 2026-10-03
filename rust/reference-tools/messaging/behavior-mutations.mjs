@@ -12,6 +12,10 @@ const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
   ...actionMutations,
+  ['From Google Drive starts the legacy picker flow',['messages-','.message__quick-reaction {','.drive-picker__item { opacity: 0 !important; }\n.message__quick-reaction {']],
+  ...['attach Drive files from the picker, send textless, and remove through edit','edit a room message in the composer and remove one of two attachments'].map(name=>[name,['messages-','.message__quick-reaction {','.drive-attachments .drive-chip__name { opacity: 0 !important; }\n.message__quick-reaction {']]),
+  ['attach a Drive file from the thread composer',['messages-','.message__quick-reaction {','#thread-panel a.drive-attachment { opacity: 0 !important; }\n.message__quick-reaction {']],
+  ['motion is off by default in the test environment',['controllers/messages_controller-','connect() {','connect() { window.__ws8bmMotionMutation={before:document.documentElement.dataset.testMotion}; document.documentElement.removeAttribute("data-test-motion"); window.__ws8bmMotionMutation.after=document.documentElement.dataset.testMotion;']],
   ['From Google Drive starts the enhanced share flow when sharing is configured',['messages-','.message__quick-reaction {','.drive-share-dialog__file { opacity: 0 !important; }\n.message__quick-reaction {']],
   [WORKSPACE_CASE,['messages-','.message__quick-reaction {','#sidebar .sidebar__tools { margin-left: 20px !important; }\n.message__quick-reaction {']],
   [motionCases[0],['messages-','.message__quick-reaction {','#sidebar .sidebar__container { transition-duration: 0s !important; }\n.message__quick-reaction {']],
@@ -65,7 +69,7 @@ const mutations=new Map([
     'an edit replacement is not announced as an addition',
     'an own message is not re-announced when its broadcast replaces the pending copy',
   ].map(name=>[name,[live,'region.setAttribute("aria-live", "off")','region.setAttribute("aria-live", "polite")']]),
-  ['Markdown replies and file attachments remain usable',[composer,'new FileUploader(file, this.element.action, clientMessageId, this.#uploadProgress.bind(this), reply)','new FileUploader(file, this.element.action, clientMessageId, this.#uploadProgress.bind(this), null)']],
+  ['Markdown replies and file attachments remain usable',[composer,'new FileUploader(file, this.element.action, clientMessageId, this.#uploadProgress.bind(this), reply)','(window.__ws8bmAttachmentReplyFault = { originalReplyId: reply?.id, forcedReply: null }, new FileUploader(file, this.element.action, clientMessageId, this.#uploadProgress.bind(this), null))']],
   ['mention suggestions select a room member without sending the unfinished message',['mention-response']],
   ['a rejected message can be recovered corrected and sent',[composer,'recover(event) {','recover(event) { return;']],
   ['sending preserves the submitted source and a newer draft',[composer,'if (this.markdownTarget.value === submission.content)','if (true)']],
@@ -350,6 +354,14 @@ export async function installMutation(page,caseName,probe,variant='default') {
   assert.ok(mutation,`no discrimination mutant for ${caseName}`);
   if(process.env.WS8BM_NEGATIVE==='1') probe.target=mutationTarget(caseName,variant);
   const [asset,,replacement]=mutation;
+  if(caseName==='Markdown replies and file attachments remain usable'&&variant==='default') {
+    probe.requiresAttachmentReplyFault=true;
+    (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmAttachmentReplyFault?[window.__ws8bmAttachmentReplyFault]:[]).catch(()=>[]));
+  }
+  if(caseName==='motion is off by default in the test environment') {
+    probe.requiresMotionAttribute=true;
+    (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmMotionMutation?[window.__ws8bmMotionMutation]:[]).catch(()=>[]));
+  }
   if(variant==='default') {
     probe.requiredAction=caseName==='the picker shows category tabs and switches between them'
       ?{action:'chooseTab',target:'emoji-picker-tab-people'}:

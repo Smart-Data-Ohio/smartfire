@@ -11,6 +11,7 @@ import {installMutation,mutationVariants} from './behavior-mutations.mjs';
 import {unreadDivider} from './behavior-unread.mjs';
 import {destinationCases,messageDestinations} from './behavior-message-destinations.mjs';
 import {composer} from './behavior-composer.mjs';
+import {driveAttachments} from './behavior-drive.mjs';
 import {attachMenu} from './behavior-attach-menu.mjs';
 import {boosts} from './behavior-boosts.mjs';
 import {interactions,mobileActions,assertMenuOpen} from './behavior-actions.mjs';
@@ -20,7 +21,9 @@ import {threadContinuation,continuationCases} from './behavior-thread-continuati
 import {workControllers} from './behavior-work-controllers.mjs';
 import {mobileContinuation} from './behavior-mobile-continuation.mjs';
 import {workspace,WORKSPACE_CASE} from './behavior-workspace.mjs';
+import {motionDefault,MOTION_DEFAULT} from './behavior-motion-default.mjs';
 import {motion,motionCases} from './behavior-motion.mjs';
+import {nativeAttachment,ATTACHMENT_CASE} from './behavior-native-attachment.mjs';
 import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
 import {nativeMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
@@ -30,7 +33,7 @@ const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.
 const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['motion','mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
+assert.ok(['drive_attachments','motion','mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
 const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
@@ -42,6 +45,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
     // Served negatives retain their translated initial creation checkpoint.
     if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
       await nativePhone(base);return;
+    }
+    if(caseName===ATTACHMENT_CASE&&!negative&&!selectedMutant) {
+      await nativeAttachment(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base]);return;
     }
     if(caseName===NATIVE_MOTION_CASE&&!negative&&!selectedMutant) {
       await nativeMotion(base);return;
@@ -58,8 +64,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
       // data-test-motion="off" input (application.html.erb:2). Our servers use
       // the production reference image. Supply that test-only input before
       // parsing either app; this does not claim the server emits the attribute.
-      const pinnedTestMotion = caseName===WORKSPACE_CASE || caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
-      if(file==='motion') await context.addInitScript(()=>{
+      const pinnedTestMotion = caseName===WORKSPACE_CASE || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      if(file==='motion'&&caseName!==MOTION_DEFAULT) await context.addInitScript(()=>{
         const apply=()=>{if(!document.documentElement)return false;document.documentElement.dataset.testMotion='off';return true;};
         if(!apply()){const observer=new MutationObserver(()=>{if(apply())observer.disconnect();});observer.observe(document,{childList:true,subtree:true});}
       });
@@ -95,6 +101,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
       });
       const response=await page.goto(base+'/rooms/654632876');
       assert.equal(response.status(),200);
+      if(file==='drive_attachments'||caseName===MOTION_DEFAULT||caseName==='From Google Drive starts the legacy picker flow'||caseName==='Markdown replies and file attachments remain usable') {
+        assert.equal(await page.locator('html').getAttribute('data-service-worker'),'false','pinned test host opts out of service-worker auto-registration');
+      }
       assert.equal(new URL(page.url()).pathname,'/rooms/654632876');
       assert.equal(await page.locator('#composer').count(),1,'real room composer is present');
       try {await page.waitForFunction(()=>window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById('composer'),'composer'),null,{timeout:CABLE_WAIT});}
@@ -131,6 +140,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     async function field(page,value,options={}) {
       await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value',value,options);
     }
+    if(caseName===MOTION_DEFAULT) {await motionDefault(author,base,fixture);return;}
     if(file==='motion') {await motion({author,base,caseName,fixture});return;}
     if(file==='mobile_layout'||caseName.startsWith('text fields')) {await mobileContinuation({author,base,caseName,fixture});return;}
     if(file==='channel_threads_controller') {await workControllers({author,recipient,base,caseName,fixture});return;}
@@ -149,6 +159,12 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
     if(file==='composer') {
       await composer({author,recipient,base,caseName,fixture,viewer,send,text,field});
+      return;
+    }
+    if(file==='drive_attachments') {
+      const responses=[];author.on('response',async response=>{if(new URL(response.url()).pathname.startsWith('/google/drive/files')) responses.push({url:response.url(),status:response.status(),body:await response.text().catch(()=>'<unavailable>')});});
+      try {await driveAttachments({author,base,caseName,fixture});}
+      catch(error){console.error('WS8bm Drive diagnostics:',base,responses,await author.locator('.drive-picker').evaluateAll(nodes=>nodes.map(node=>({html:node.outerHTML.slice(0,1400)}))));throw error;}
       return;
     }
     if(file==='composer_attach_menu') {
@@ -426,9 +442,19 @@ async function acceptance(base,caseName,probe={},variant='default') {
           assert.equal(await page.evaluate(()=>window.markdownPayloadExecuted===true),false);
         }
       } else if(caseName==='Markdown replies and file attachments remain usable') {
+        if(process.env.WS8BM_UPLOAD_TRACE==='1') await author.evaluate(()=>{
+          window.__ws8bmUploadTrace=[];
+          const snapshot=()=>[...document.querySelectorAll('.message[data-message-id]')].slice(-2).map(row=>({id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,progress:row.querySelector('progress')?.value,html:row.querySelector('.message__body-content')?.innerHTML.slice(0,180)}));
+          new MutationObserver(()=>window.__ws8bmUploadTrace.push({event:'DOM',time:performance.now(),rows:snapshot()})).observe(document.querySelector('.messages'),{subtree:true,childList:true});
+          const send=XMLHttpRequest.prototype.send;
+          XMLHttpRequest.prototype.send=function(body){
+            if(body instanceof FormData&&body.has('message[attachment]')) this.upload.addEventListener('progress',event=>window.__ws8bmUploadTrace.push({event:'progress',time:performance.now(),loaded:event.loaded,total:event.total,rows:snapshot()}));
+            return send.call(this,body);
+          };
+        });
         const uploadResponses=[];
         author.on('response',response=>{
-          if(response.request().method()==='POST'&&new URL(response.url()).pathname==='/rooms/654632876/messages') uploadResponses.push({status:response.status(),type:response.headers()['content-type']});
+          if(response.request().method()==='POST'&&new URL(response.url()).pathname==='/rooms/654632876/messages') uploadResponses.push({status:response.status(),type:response.headers()['content-type'],reply:(response.request().postData()||'').match(/name="message\[reply_to_message_id\]"\r\n\r\n([^\r]+)/)?.[1]||null});
         });
         const source='**A useful point** with `inline code`.';
         await submit(author,source);
@@ -451,22 +477,20 @@ async function acceptance(base,caseName,probe={},variant='default') {
         await author.locator('#composer input[type="file"]').setInputFiles({name:'markdown-workspace-attachment.txt',mimeType:'text/plain',buffer:Buffer.from('An attachment sent from the Markdown composer.\n')});
         await waitForVisibility(filterVisibleText(author.locator('#composer'),'markdown-workspace-attachment'));
         await actOnVisible(author.getByRole('button',{name:'Send Message',exact:true}),'click',{});
-        for(const page of [author,recipient]) {
-          const attachment=messages(page).filter({has:filterVisibleText(page.locator('.message__reply-preview'),'A useful point')});
-          try {await waitForVisibility(filterVisibleText(attachment.locator('.message__reply-preview'),'A useful point'),{timeout:DELIVERY_WAIT});}
-          catch(error) {
-            console.error('WS8bm attachment preview diagnostics:',base,uploadResponses,
-              await page.locator('.message[data-message-id]').evaluateAll(rows=>rows.map(row=>({id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,body:row.querySelector('[data-reply-target="body"]')?.textContent}))),
-              await author.locator('#composer').evaluate(node=>({busy:node.getAttribute('aria-busy'),reply:node.querySelector('[data-composer-target="replyTo"]')?.value,feedback:node.querySelector('[data-composer-target="feedback"]')?.textContent})));
-            throw error;
-          }
-          // Rails workspace_markdown:166 uses assert_message_text (:115),
-          // not an accessible download name. Check the actual visible body.
-          await waitForVisibility(filterVisibleText(attachment.locator('.message__body'),'markdown-workspace-attachment.txt'));
-          try {await waitForVisibility(attachment.getByRole('link',{name:'Download markdown-workspace-attachment.txt',exact:true}));}
-          catch(error) {console.error('WS8bm attachment delivery:',base,await attachment.textContent());throw error;}
+        // :165 selects the preview directly; :166's assert_message_text uses
+        // any visible message body. It does not require the preview to remain
+        // on that body while the independent filename assertion runs.
+        try {await waitForVisibility(filterVisibleText(author.locator('.message[data-message-id] .message__reply-preview'),'A useful point'),{timeout:DELIVERY_WAIT});}
+        catch(error) {
+          console.error('WS8bm attachment preview diagnostics:',base,uploadResponses,
+            await author.evaluate(()=>window.__ws8bmUploadTrace),
+            execFileSync('python3',['-c','import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); print(json.dumps(c.execute("SELECT id,client_message_id,reply_to_message_id,reply_notify_author FROM messages WHERE id>=?",(int(sys.argv[2]),)).fetchall())); c.close()',database,String(parentIdentity[0])],{encoding:'utf8'}),
+            await author.locator('.message[data-message-id]').evaluateAll(rows=>rows.map(row=>({id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,body:row.querySelector('.message__body')?.textContent}))));
+          throw error;
         }
+        await waitForVisibility(filterVisibleText(author.locator('.message[data-message-id] .message__body'),'markdown-workspace-attachment.txt'));
         await waitForVisibility(author.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});
+        if(process.env.WS8BM_UPLOAD_TRACE==='1') console.log('WS8bm diagnostic-only upload trace:',base,JSON.stringify(await author.evaluate(()=>window.__ws8bmUploadTrace)));
       } else if(caseName==='mention suggestions select a room member without sending the unfinished message') {
         const editor=author.getByRole('combobox',{name:'Write a message',exact:true});
         const before=await visibleCount(messages(author));

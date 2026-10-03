@@ -16,6 +16,7 @@ class HostSourceTests(unittest.TestCase):
                 "rust/crates/campfire/src/controllers/presenters/test_support.rs":
                     b"async fn ws8bm_browser_host_without_jobs() {}",
                 "rust/reference-tools/messaging/older_provider_callbacks.rb": b"callback",
+                "rust/reference-tools/messaging/browser-drive-client.rs": b"external Drive client",
                 "public/500.html": b"original error page",
                 "rust/reference-tools/views/agents_ui/extreme_cast_inputs.json.gz": b"extreme",
                 "rust/reference-tools/views/agents_ui/normalized_cast_inputs.json.gz": b"normalized",

@@ -3,7 +3,7 @@
 kind = ARGV.fetch(0)
 # The production parity seed has many extra provider/state examples. The
 # pinned list regressions use just the three original Designers fixtures.
-if %w[workspace-upload message_list message_destinations history boosts toolbar interactions actions-mobile thread-pr].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-") || kind.start_with?("highlight")
+if %w[drive workspace-upload message_list message_destinations history boosts toolbar interactions actions-mobile thread-pr].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-") || kind.start_with?("highlight")
   Room.find(654632876).root_messages.where.not(id: [309456473, 908005739, 607264868]).destroy_all
 end
 case kind
@@ -110,13 +110,27 @@ when "attach-share"
   eval(File.read(Rails.root.join("storage/db/drive-share-mocks.rb")),TOPLEVEL_BINDING,"test/support/drive_share_mocks.rb")
   scenario=Object.new.extend(DriveShareMocks).drive_scenario
   File.write(Rails.root.join("storage/db/browser-fixture.json"),JSON.generate(drive_mock_js:DriveShareMocks::MOCK_JS,drive_scenario:scenario))
-when "attach-menu"
+when "attach-menu", "drive"
   user = User.find(773523953)
   user.google_account&.destroy!
   GoogleAccount.create!(user:, email: "jz@gmail.test", refresh_token: "refresh-token-#{user.id}",
     access_token: "access-token-#{user.id}", access_token_expires_at: 1.hour.from_now,
     scopes: "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file")
   User.find(712064548).google_account&.destroy!
+  if kind == "drive"
+    eval(File.read(Rails.root.join("storage/db/google-calendar-test-helper.rb")),TOPLEVEL_BINDING,"test/test_helpers/google_calendar_test_helper.rb")
+    helper=Object.new.extend(GoogleCalendarTestHelper)
+    two=ARGV[1].to_s.start_with?("edit a room message")
+    payloads={list:helper.send(:drive_list_payload),files:{"1AbcDefGhIjKlMnOpQrSt"=>helper.send(:drive_file_payload)}}
+    payloads[:files]["2BcdEfgHiJkLmNoPqRsTu"]=helper.send(:drive_file_payload,name:"Budget 2026",mime_type:"application/vnd.google-apps.spreadsheet") if two
+    metadata={drive_payloads:payloads}
+    if ARGV[1].to_s.start_with?("attach a Drive file from the thread")
+      thread=ChannelThread.create!(room:Room.find(654632876),creator:user,name:"Drive thread")
+      ThreadMembership.join!(thread,user)
+      metadata[:drive_thread_id]=thread.id
+    end
+    File.write(Rails.root.join("storage/db/browser-fixture.json"),JSON.generate(metadata))
+  end
 when "boosts"
   Message.find(607264868).boosts.create!(booster: User.find(127326141), content: "Older note")
 when "toolbar", "interactions", "actions-mobile"

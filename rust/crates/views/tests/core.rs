@@ -155,6 +155,24 @@ fn render(template: &impl Template) -> String {
 }
 
 #[test]
+fn application_test_environment_matches_rails_motion_attribute() {
+    let signer = |_: &[&str]| String::new();
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let mut ctx = context(None, &asset, &signer, "");
+    ctx.chrome.test_environment = true;
+    ctx.chrome.service_worker_auto_register = false;
+    let page = layouts::Application::new(&ctx, h::empty());
+    let actual = render(&page);
+    // d7c7de92 application.html.erb:2, evaluated with Rails.env.test? true.
+    assert_eq!(
+        actual.lines().nth(1),
+        Some(
+            "<html data-theme=\"system\" data-text-size=\"default\" data-service-worker=\"false\" data-test-motion=\"off\">"
+        )
+    );
+}
+
+#[test]
 fn application_layout_matches_rails_in_every_state() {
     let env = include_str!("../../../parity/.env.reference");
     let secrets = rails_compat::Secrets::new(

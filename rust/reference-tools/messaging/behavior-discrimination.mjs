@@ -26,6 +26,10 @@ export function assertionFrames(error) {
 const target=(module,anchor,message)=>({module:`behavior-${module}.mjs`,anchor,message});
 const D=new Map();
 const add=(names,module,anchor,message)=>{for(const name of names) D.set(name,[target(module,anchor,message)]);};
+add(['From Google Drive starts the legacy picker flow'],'attach-menu',"page.locator('.drive-picker__item')");
+add(['attach Drive files from the picker, send textless, and remove through edit','edit a room message in the composer and remove one of two attachments'],'drive',"scope.locator('.drive-attachments .drive-chip__name'),'Q3 Planning'");
+add(['attach a Drive file from the thread composer'],'drive','await waitForVisibility(link(),{timeout:10000})');
+add(['motion is off by default in the test environment'],'motion-default',"assert.equal(state.motion,'off','motion: server test attribute')");
 add(['From Google Drive starts the enhanced share flow when sharing is configured'],'attach-menu',"page.locator('.drive-share-dialog .drive-share-dialog__file')");
 add([WORKSPACE_CASE],'workspace',"'workspace: profile inside navigation'");
 for(const [index,anchor] of [
@@ -111,7 +115,7 @@ D.set('unlabelled code is detected while text unknown languages and inline code 
 add(['code and copying remain available when the highlighter cannot load'],'code','window.copiedCode),expected');
 add(['a stray create re-entry does not wipe the half-filled thread name'],'','the completed name must survive until submission');
 add(['Markdown messages reach other users and editing preserves the original source'],'','pre code.language-javascript[data-highlighted="yes"]');
-add(['Markdown replies and file attachments remain usable'],'','message__reply-preview');
+add(['Markdown replies and file attachments remain usable'],'',"author.locator('.message[data-message-id] .message__reply-preview'),'A useful point'");
 add(['mention suggestions select a room member without sending the unfinished message'],'','suggestion-option');
 add(['a rejected message can be recovered corrected and sent'],'','field(author,invalid)');
 add(['sending preserves the submitted source and a newer draft'],'','field(author,second)');
@@ -194,8 +198,8 @@ variant(['transparent-thread-body'],'','panel.locator(\'.thread-panel__thread-co
 variant(['hidden-conversation-visible-children'],'','panel.locator(\'[data-thread-panel-target="conversation"]\')');
 variant(['hidden-safety-body-visible-code'],'',"message.locator('.message__body'),'Safety check'");
 variant(['hidden-reply-body-visible-presentation'],'',"parent.locator('.message__body'),'A useful point'");
-variant(['transparent-attachment-reply-preview'],'','attachment.locator(\'.message__reply-preview\')');
-variant(['transparent-attachment-filename'],'',"attachment.locator('.message__body'),'markdown-workspace-attachment.txt'");
+variant(['transparent-attachment-reply-preview'],'',"author.locator('.message[data-message-id] .message__reply-preview'),'A useful point'");
+variant(['transparent-attachment-filename'],'',"author.locator('.message[data-message-id] .message__body'),'markdown-workspace-attachment.txt'");
 variant(['transparent-combobox-lookup'],'composer','waitForVisibility(editor,');
 // Global field opacity also invalidates the original visible fill_in before
 // its later value assertion. Name that causal action, never a setup elsewhere.
@@ -249,6 +253,8 @@ export function rejectionEvidence(caseName,variant,probe,error) {
   if(probe.requiresReleaseClick&&!probe.observed?.some(state=>state.releaseClick&&state.brokenGuard&&state.menuVisible)) reasons.push('mutated release click not encountered');
   if(probe.requiredMessageText&&!probe.observed?.some(state=>state.messageText===probe.requiredMessageText&&(state.opacity==='0'||state.visibility==='hidden'||state.display==='none'))) reasons.push('intended message mutation state not encountered');
   if(probe.requiresHiddenState&&!probe.observed?.some(state=>state.opacity==='0'||state.visibility==='hidden'||state.display==='none')) reasons.push('hidden mutation state not encountered');
+  if(probe.requiresAttachmentReplyFault&&!probe.observed?.some(state=>/^\d+$/.test(String(state.originalReplyId))&&state.forcedReply===null)) reasons.push('nonnull attachment reply was not discarded by the mutant');
+  if(probe.requiresMotionAttribute&&!probe.observed?.some(state=>state.before==='off'&&state.after===undefined)) reasons.push('server attribute was not removed by the mutant');
   if(probe.requiredAnimation&&!probe.observed?.some(state=>state.animations?.some(animation=>animation.name===probe.requiredAnimation.name&&animation.duration===probe.requiredAnimation.duration&&animation.playState==='running'))) reasons.push('intended running animation not encountered');
   return {valid:reasons.length===0,reasons,expected,actual:frames,observed:probe.observed||[]};
 }
