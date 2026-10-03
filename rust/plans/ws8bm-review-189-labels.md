@@ -21,7 +21,8 @@ Unchanged name/label scopes after the sweep:
 
 | Group | Original scope retained | Pinned Rails lines |
 | --- | --- | --- |
-| Profile message button; toolbar labels; picker ARIA controls | Explicit `[aria-label]` CSS/attributes select the visible element; an ARIA string is not rendered text | message_list_a11y_test.rb:557,563; message_toolbar_test.rb:16-20,73,78,96,101,149 |
+| Profile message button | Explicit `[aria-label]` CSS was retained | message_list_a11y_test.rb:557,563 |
+| Toolbar labels; picker ARIA controls | Correction: at `21e4a77d`, these used accessible-name lookups and did **not** retain the original literal selectors. The follow-up [checkpoint report](ws8bm-review-189-checkpoints.md) replaces them with literal CSS attributes | message_toolbar_test.rb:16-20,73,78,96,101,149 |
 | Copy-code and duplicate Edit button assertions | `assert_button` selects a named visible button; this is a locator filter, not `assert_selector ..., text:` on rendered descendant text | code_highlighting_test.rb:53,107,119,146; message_interactions_test.rb:147 |
 | Project notes and attachment download links | Named link / href lookup with the selected link's visibility; no additional visible-text assertion is invented | workspace_markdown_test.rb:336; attachment download is supplementary, while the filename now follows :166 / system_test_helper.rb:115 |
 | Named actions/fields, labelled thread fields | Original `click_on`, `fill_in`, `find_field` locator semantics, then the shared visible lookup on the selected element; scripted focus/label observations stay scripted | system_test_helper.rb:92,96-105,129; threads_test.rb:555-556,565-566 |
