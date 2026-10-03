@@ -30,7 +30,7 @@ export async function workspace({author:page,source,submit}) {
   assert.ok(await page.evaluate(()=>matchMedia('(prefers-color-scheme: dark)').matches));
   assert.notEqual(await background(),light,'workspace: system theme changes background');await settled();await profile();
   await page.setViewportSize({width:390,height:844});await overflow();await compact();await open();
-  await waitForVisibility(page.locator('button[aria-label="Close workspace navigation"]'),{state:'detached'}); // :267 visible: :all
+  await waitForVisibility(page.getByRole('button',{name:'Close workspace navigation',exact:true,includeHidden:true}),{state:'detached'}); // :267 visible: :all
   await waitForCondition(()=>page.evaluate(()=>document.activeElement?.matches('#sidebar a[aria-current="page"]')));
   await actOnVisible(page.locator('#sidebar a[href]').first(),'press',{},['Shift+Tab']);
   assert.ok(await page.evaluate(()=>document.querySelector('#sidebar').contains(document.activeElement)),'workspace: drawer traps focus');
