@@ -2806,33 +2806,33 @@
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 353,
       "test": "two agents assigning posts to each other stop at the hop limit",
-      "status": "deferred",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_models.json: hop_limit; full assignment ledger/metadata/hops and persisted threads/history; Rails next2_model_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/db/src/tests/agent_next2_cases_test.rs::ws11_next2_assignment_agent_hops_stop_at_limit"
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 388,
       "test": "deleting an agent-owned thread emits work_unassigned",
-      "status": "deferred",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_jobs.json: delete_owned; installed writer and durable queued handler; rows before/after, exact webhook body/HMAC and no request before queued execution; Rails next2_job_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs::ws11_next2_assignment_deleted_owner_snapshot_delivery"
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 416,
       "test": "deleting a thread without an agent owner emits nothing",
-      "status": "deferred",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_models.json: delete_no_owner; absent persisted thread, zero ledger rows and webhook jobs; Rails next2_model_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/db/src/tests/agent_next2_cases_test.rs::ws11_next2_assignment_delete_no_agent_emits_nothing"
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 422,
       "test": "a human assignment starts a new root at hop 0",
-      "status": "deferred",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_models.json: human_root; full human assignment ledger/metadata/hop=0 and persisted thread/history; Rails next2_model_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/db/src/tests/agent_next2_cases_test.rs::ws11_next2_assignment_human_starts_root_zero"
     },
     {
       "file": "test/models/channel_thread_auto_assign_test.rb",

@@ -3184,41 +3184,61 @@
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 353,
       "test": "two agents assigning posts to each other stop at the hop limit",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test.",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_models.json: hop_limit; full assignment ledger/metadata/hops and persisted threads/history; Rails next2_model_cases.rb; inherited WS11 negative controls.",
       "rails_sha256": "2799d61f64a16fdb77d70203c74da7a5be5ac912bc91a54885fc99a397eee4a0",
-      "tests": [],
-      "reconciliation": "flagged"
+      "tests": [
+        {
+          "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+          "rust_test": "ws11_next2_assignment_agent_hops_stop_at_limit"
+        }
+      ],
+      "reconciliation": "mapped"
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 388,
       "test": "deleting an agent-owned thread emits work_unassigned",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test.",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_jobs.json: delete_owned; installed writer and durable queued handler; rows before/after, exact webhook body/HMAC and no request before queued execution; Rails next2_job_cases.rb; inherited WS11 negative controls.",
       "rails_sha256": "2799d61f64a16fdb77d70203c74da7a5be5ac912bc91a54885fc99a397eee4a0",
-      "tests": [],
-      "reconciliation": "flagged"
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs",
+          "rust_test": "ws11_next2_assignment_deleted_owner_snapshot_delivery"
+        }
+      ],
+      "reconciliation": "mapped"
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 416,
       "test": "deleting a thread without an agent owner emits nothing",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test.",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_models.json: delete_no_owner; absent persisted thread, zero ledger rows and webhook jobs; Rails next2_model_cases.rb; inherited WS11 negative controls.",
       "rails_sha256": "2799d61f64a16fdb77d70203c74da7a5be5ac912bc91a54885fc99a397eee4a0",
-      "tests": [],
-      "reconciliation": "flagged"
+      "tests": [
+        {
+          "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+          "rust_test": "ws11_next2_assignment_delete_no_agent_emits_nothing"
+        }
+      ],
+      "reconciliation": "mapped"
     },
     {
       "file": "test/models/channel_thread_agent_assignment_test.rb",
       "line": 422,
       "test": "a human assignment starts a new root at hop 0",
-      "owner": "WS11 callbacks named evidence",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test.",
+      "owner": "WS11 callback comparison merged in #210",
+      "evidence": "agents_next2_models.json: human_root; full human assignment ledger/metadata/hop=0 and persisted thread/history; Rails next2_model_cases.rb; inherited WS11 negative controls.",
       "rails_sha256": "2799d61f64a16fdb77d70203c74da7a5be5ac912bc91a54885fc99a397eee4a0",
-      "tests": [],
-      "reconciliation": "flagged"
+      "tests": [
+        {
+          "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+          "rust_test": "ws11_next2_assignment_human_starts_root_zero"
+        }
+      ],
+      "reconciliation": "mapped"
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
