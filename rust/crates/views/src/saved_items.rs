@@ -8,8 +8,8 @@ pub struct Item {
     pub id: i64,
     pub status: String,
     pub created_at: Timestamp,
-    pub remind_at: Option<Timestamp>,
-    pub reminded_at: Option<Timestamp>,
+    pub remind_at: Option<crate::time::Instant>,
+    pub reminded_at: Option<crate::time::Instant>,
     pub room_name: String,
     pub author_name: String,
     pub body: String,
@@ -32,9 +32,12 @@ impl Item {
         )
     }
     pub fn reminder(&self, ctx: &ViewContext) -> h::Html {
-        crate::time::local_datetime_tag(
+        crate::time::local_instant_tag(
             &ctx.time_zone,
-            self.reminded_at.or(self.remind_at).expect("has reminder"),
+            self.reminded_at
+                .as_ref()
+                .or(self.remind_at.as_ref())
+                .expect("has reminder"),
             "time",
             h::attrs(),
             "",
