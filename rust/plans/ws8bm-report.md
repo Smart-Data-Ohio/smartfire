@@ -1,4 +1,16 @@
-# WS8bm -2: continuation PR checkpoint
+# WS8bm #221: requested changes verified
+
+Both P2 coverage gaps are fixed: global WorkThreadEvent deltas are checked around every real PATCH, including refusals, and the original history message is found through `work-history` and required to retain its ID. The audit of all ten new controller declarations also restores the missing global +2 assertion for separate stale-instance updates in both the Rails runner and Rust regression. [The full scope table, failing-first proofs, commands and raw receipts are in the review report](ws8bm-review221.md).
+
+The two reviewer producer mutants escape on Rails and Rust at unchanged `160ef0738` assertions, then are rejected at their intended assertions after the fix. The three previous producer mutants still reject. Eight paired controller cases pass; all eleven served variants reject on both apps; all five real producer proofs pass with no invalid result or escape. The restored stale-model control and both DB regressions pass. Python checks pass 24/24 and browser helpers 36/36. Final replay/helper source is `d14ee2d16`; native app and strict clippy source is `0f887d5a9`, whose Rust inputs are identical.
+
+The requested canonical-media app run passes **2,655 / 0 failed / 8 existing ignores**. All six previously failing media cases pass with private libvips **8.16.1** and FFmpeg **7.1.5** from the pinned image. No host libraries, product code, Rails JavaScript, vectors, masks, deadlines, ignores or concurrency were changed. Strict workspace clippy passes.
+
+Inventory remains **156/156 controllers; 118 passed / 17 deferred / 0 owner-blocked systems**. No declaration is newly credited by this review. The exact seventeen deferrals remain below. This is a coherent PR-ready checkpoint; the requested fixes are complete, and work stops after pushing it. The review's sole scratch target was removed: `Removed 17376 files, 21.9GiB total`; zero scratch targets and zero own listeners remain. Raw logs are retained.
+
+The earlier checkpoint receipts below remain historical; their six native-media failures are resolved by the canonical run above.
+
+# Historical WS8bm -2: continuation PR checkpoint
 
 Branch `rust/ws8bm-messages-http-2`. PR #189 is on main; this continuation merges `2fd00249` and then main checkpoint `24255712f` with merge commits. [The continuation PR summary, four-finding audit, failing-first proofs and complete verification receipts](ws8bm-pr2-review.md) describe the changes beyond that main checkpoint. Rails remains pinned to `d7c7de9264c63015be398001d7a1094e7695a6db` plus approved drift.
 
