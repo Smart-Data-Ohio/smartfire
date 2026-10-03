@@ -20,6 +20,12 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
     let mut counts = HashMap::new();
     let mut failures = vec![];
     let mut checked = 0;
+    // The oracle runs with allow_forgery_protection off, so Rails' button_to omits
+    // the per-request masked token that this app (correctly) renders.
+    let authenticity_token =
+        regex::Regex::new(r#"<input type="hidden" name="authenticity_token" value="[^"]*" />"#)
+            .unwrap();
+    let saved_item = regex::Regex::new(r#"(?s)<article id="saved_item_.*?</article>"#).unwrap();
     for group in vector["groups"].as_array().unwrap() {
         for case in group["cases"].as_array().unwrap() {
             // Independent fixed entropy on both runtimes. Never use an expected
@@ -108,6 +114,21 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
                 }
                 println!("WS8bm2 warm legacy message size={}: Rust {reads}; complete independently captured Rails partials and actual cache hits in four zones", group["size"]);
             }
+            if !case["saved_page"].is_null() {
+                // The Saved page renders each stored reminder; compare its actual items.
+                let page = browser.get("/saved").await;
+                let body = authenticity_token
+                    .replace_all(&page.text(), "")
+                    .into_owned();
+                let items = saved_item
+                    .find_iter(&body)
+                    .map(|item| item.as_str().to_owned())
+                    .collect::<Vec<_>>();
+                let actual = json!({"status":page.status.as_u16(),"items":items});
+                if actual != case["saved_page"] {
+                    failures.push(json!({"size":group["size"],"case":case["name"],"saved_page":actual,"expected":case["saved_page"]}));
+                }
+            }
             let key = case["name"].as_str().unwrap().to_owned();
             println!(
                 "WS8bm2 container {key} size={}: Rust {reads}; Rails {}",
@@ -186,4 +207,37 @@ async fn exceptional_relative_consumers_match_rails_complete_state_with_flat_rea
         "../../../../../vectors/messaging/relative_consumers.json"
     )).unwrap();
     assert_eq!(compare_feature_input_requests(vector).await, 80);
+}
+
+/// PR #223 review: `/event Review in 10^140 days` (and 10^142 hours) returned 500 in
+/// test builds and a negative year in release. 10^130 days is the positive control.
+#[tokio::test]
+async fn relative_overflow_event_urls_match_fresh_rails() {
+    let mut vector: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/relative_overflow_consumers.json"
+    ))
+    .unwrap();
+    for group in vector["groups"].as_array_mut().unwrap() {
+        group["cases"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|case| case["name"].as_str().unwrap().contains("/event_"));
+    }
+    assert_eq!(compare_feature_input_requests(vector).await, 6);
+}
+
+/// The same wide instants through `/remind`: notice, saved row, broadcast and Saved page.
+#[tokio::test]
+async fn relative_overflow_reminders_match_fresh_rails_rows_and_saved_page() {
+    let mut vector: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/relative_overflow_consumers.json"
+    ))
+    .unwrap();
+    for group in vector["groups"].as_array_mut().unwrap() {
+        group["cases"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|case| case["name"].as_str().unwrap().contains("/remind_"));
+    }
+    assert_eq!(compare_feature_input_requests(vector).await, 4);
 }

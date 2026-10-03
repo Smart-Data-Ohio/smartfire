@@ -733,3 +733,6 @@ fn broadcast_ooo(tx: &mut Tx<'_>, user: i64) -> Result<()> {
         .ok_or(Error::RecordNotFound("User"))?;
     settings.announce_ooo(tx)
 }
+
+#[cfg(test)]
+mod relative_overflow_tests;
