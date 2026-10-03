@@ -35,12 +35,12 @@ SQLite writer while retaining the real UI, endpoint, validations and callbacks.
 They must fail the corresponding behavior assertion and return nonzero. These
 probes compare no pixels and change no waits or concurrency.
 
-`inbox_lifecycle.sh --check` records eleven raw HTTP responses around real saved-item
+`inbox_lifecycle.sh --check` records twelve raw HTTP responses around real saved-item
 reminder dispatch, handling, re-arming the same reminder, and deleting its message.
 `check_inbox_lifecycle.py` proves the HTTP replay rejects deliberate faults in
 each of those writers, after a passing unmutated baseline. Missing seeds or
-failures outside the intended assertions invalidate the check. The global deleted-source 404 body remains WS9-owned; its
-status and the source-removal/access assertions still run.
+failures outside the intended assertions invalidate the check. Deleted-source JSON and HTML 404 bodies and headers now compare against the
+installed production exception renderer, including a rejected error-body corruption.
 
 The behavior browser now uses `system_browser.sh`: the same pinned Playwright
 image and Unix-socket upstream forwarder as the capture harness, with a stable

@@ -182,6 +182,18 @@ impl SidebarRoom {
                 )
             })
     }
+    /// Categories always select Rails' shared partial, irrespective of the room's STI type.
+    fn shared_link_attrs(&self) -> h::Attrs {
+        h::attrs()
+            .id(h::dom_id(&self.param_key, self.id, Some("list")))
+            .data("sorted_list_name", self.name.as_str())
+            .merge(self.menu.data())
+            .class(format!(
+                "sidebar-item room btn{}{}",
+                if self.unread { " unread" } else { "" },
+                if self.menu.menu_muted { " muted" } else { "" }
+            ))
+    }
     fn link_attrs(&self) -> h::Attrs {
         h::attrs()
             .id(h::dom_id(&self.param_key, self.id, Some("list")))

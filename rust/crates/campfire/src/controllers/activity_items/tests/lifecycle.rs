@@ -10,12 +10,28 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
     ))
     .unwrap();
     let clock = Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let t = TestApp::boot_with_test_clock(clock.clone())
+    let mut t = TestApp::boot_with_test_clock(clock.clone())
         .await
         .unwrap()
         .without_job_runner()
         .await;
     let defect = std::env::var("WS11UI_INBOX_LIFECYCLE_DEFECT").unwrap_or_default();
+    if defect == "error-body" {
+        // Corrupt only the response after the actual exception renderer runs.
+        t.booted.router = t
+            .booted
+            .router
+            .clone()
+            .layer(axum::middleware::map_response(
+                |mut response: axum::response::Response| async move {
+                    if response.status() == StatusCode::NOT_FOUND {
+                        *response.body_mut() =
+                            axum::body::Body::from("broken production error body");
+                    }
+                    response
+                },
+            ));
+    }
     t.db().write(move |tx| {
         tx.conn().execute("DELETE FROM activity_items",[])?;
         tx.conn().execute("DELETE FROM saved_items",[])?;
@@ -23,7 +39,7 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
             "reminder" => "CREATE TRIGGER ws11ui_broken_reminder BEFORE INSERT ON activity_items WHEN NEW.event_type='message_reminder' BEGIN SELECT RAISE(IGNORE); END",
             "recurrence" => "CREATE TRIGGER ws11ui_broken_recurrence AFTER UPDATE ON activity_items WHEN OLD.handled_at IS NOT NULL AND NEW.handled_at IS NULL BEGIN UPDATE activity_items SET read_at=OLD.read_at,handled_at=OLD.handled_at WHERE id=NEW.id; END",
             "deleted-source" => "CREATE TRIGGER ws11ui_broken_source_delete BEFORE DELETE ON messages BEGIN SELECT RAISE(IGNORE); END",
-            "" => "",
+            "" | "error-body" => "",
             _ => panic!("unknown lifecycle discrimination defect"),
         };
         if !broken.is_empty() {tx.conn().execute_batch(broken)?;}
@@ -75,8 +91,10 @@ async fn ws11ui_next_inbox_lifecycle_matches_rails_producers_and_response_bytes(
             step["name"],
             response.text()
         );
-        // Only the global WS9 404 template is outside this controller's parity scope.
-        if let Some(body) = step["body"].as_str() {
+        let body = step["body"].as_str().expect(
+            "every Rails HTTP response, including production errors, must have a pinned body",
+        );
+        {
             for key in ["content-type", "cache-control", "pragma", "location"] {
                 assert_eq!(
                     response.header(key),
