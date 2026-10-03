@@ -815,6 +815,7 @@ async fn ws8bm_browser_host_without_jobs() {
     let app = TestApp {
         booted,
         _dir: tempfile::tempdir().unwrap(),
+        publications: Default::default(),
     }
     .without_job_runner()
     .await;
