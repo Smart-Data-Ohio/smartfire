@@ -1,6 +1,6 @@
 {
   "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
-  "scope": "135 behavior declarations; no pixel work; mapped Playwright equivalents, not execution of original Ruby system files",
+  "scope": "135 behavior declarations; no pixel work; mapped Playwright equivalents except the pinned native Capybara/Selenium phone body and helpers; not execution of whole original Ruby system files",
   "excluded_file_owners": {
     "test/system/keyboard_shortcuts_test.rb": "WS8b-r (14)",
     "test/system/content_security_policy_test.rb": "WS8b-r (5)",
@@ -138,7 +138,7 @@
         {
           "name": "keeps the thread drawer usable on a phone and preserves the channel",
           "status": "passed",
-          "evidence": "Fresh source clone at a727d128f: .scratch/ws8bm-next/fresh-positive-final.log; mapped paired behavior and persisted rows PASS with pinned Selenium visibility, visible text, original 2 s/default or explicit waits and test-motion input. See continuation checkpoint report for assertion/fixture scope; no pixel credit."
+          "evidence": "Fresh no-hardlinks clone fd97891af: .scratch/ws8bm-pr2-review/phone-after.log. Pinned threads_test.rb:293-340 body and original private/SystemTestHelper helpers, native Capybara 3.40.0 / Selenium 4.35.0 on both apps; only screenshot omitted. Three consecutive fresh-fixture pairs, 25 assertions per app/pair, exact saved rows PASS. Native traces show menu focus before Escape. No diagnostic focus wait or new declaration credit; shared fast-Escape client race documented in ws8bm-pr2-review.md."
         },
         {
           "name": "marks a joined thread read only while the conversation is visible",
