@@ -314,6 +314,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bnum"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "119771309b95163ec7aaf79810da82f7cd0599c19722d48b9c03894dca833966"
+
+[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -341,6 +347,7 @@ dependencies = [
  "async-trait",
  "axum",
  "base64 0.22.1",
+ "bnum",
  "bytes",
  "campfire_assets",
  "campfire_cable",
@@ -432,6 +439,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "bcrypt",
+ "bnum",
  "campfire_db",
  "campfire_richtext",
  "campfire_storage",
@@ -601,6 +609,7 @@ name = "campfire_views"
 version = "0.1.0"
 dependencies = [
  "askama",
+ "bnum",
  "campfire_assets",
  "campfire_richtext",
  "campfire_routes",
@@ -1470,6 +1479,8 @@ checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
