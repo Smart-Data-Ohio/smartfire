@@ -1712,6 +1712,76 @@
           "rust": "builtin_unknown_commands_error_with_the_available_list"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rust_file": "rust/crates/db/src/tests/ws12_agent_named_test.rs",
+      "cases": [
+        {
+          "rails": "an active member agent with post_messages is an eligible work owner",
+          "rust": "ws12_agent_named_active_member_post_owner"
+        },
+        {
+          "rails": "a legacy agent keeps post eligibility through the fallback",
+          "rust": "ws12_agent_named_legacy_post_owner"
+        },
+        {
+          "rails": "a suspended agent is rejected with a validation error",
+          "rust": "ws12_agent_named_suspended_owner_validation"
+        },
+        {
+          "rails": "a non-member agent is rejected with a validation error",
+          "rust": "ws12_agent_named_nonmember_owner_validation"
+        },
+        {
+          "rails": "an agent without post_messages is rejected with a validation error",
+          "rust": "ws12_agent_named_missing_post_owner_validation"
+        },
+        {
+          "rails": "a human outside the parent room keeps the human eligibility error",
+          "rust": "ws12_agent_named_outside_human_owner_validation"
+        },
+        {
+          "rails": "a bot without an agent row is rejected with a validation error",
+          "rust": "ws12_agent_named_bot_without_agent_validation"
+        },
+        {
+          "rails": "suspending the agent or revoking its membership reads as an unavailable owner",
+          "rust": "ws12_agent_named_owner_unavailable_after_access_change"
+        },
+        {
+          "rails": "an agent status update records a work event with the note",
+          "rust": "ws12_agent_named_status_event_with_note"
+        },
+        {
+          "rails": "an agent status update reaches the inbox through the human path",
+          "rust": "ws12_agent_named_status_inbox_human_path"
+        },
+        {
+          "rails": "an agent tags update replaces the set without touching the status",
+          "rust": "ws12_agent_named_tag_set_preserves_status"
+        },
+        {
+          "rails": "an agent work update validates tags and run_url",
+          "rust": "ws12_agent_named_tags_run_url_missing_fields_validation"
+        },
+        {
+          "rails": "an agent result update records the event with the agent as actor",
+          "rust": "ws12_agent_named_result_event_agent_actor"
+        },
+        {
+          "rails": "an agent cannot write the result of work it does not own",
+          "rust": "ws12_agent_named_result_requires_ownership"
+        },
+        {
+          "rails": "an agent cannot move work it does not own",
+          "rust": "ws12_agent_named_status_requires_ownership"
+        },
+        {
+          "rails": "an agent status update rejects unknown statuses and long notes",
+          "rust": "ws12_agent_named_status_and_note_validation"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
@@ -1722,6 +1792,6 @@
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
     "test/models/user/bot_test.rb": "All 15 named cases are mapped, including reply-token room binding/expiry/revocation, fixed-entropy factory/reset and actual durable queued delivery.",
     "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations.",
-    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 eligibility/mutation comparisons and Recorder read-cost review remain deferred as requested for this WS8-only round. PR #215 merged to main during verification; separate fresh Rails replay and mapping remain."
+    "test/models/channel_thread_agent_assignment_test.rb": "All 29 names mapped. Sixteen WS12 eligibility/mutation comparisons freshly replayed against pinned Rails with individual producer controls. AgentBudgetNotice Recorder source integration stays WS12-owned on rust/ws12-board-automations-4."
   }
 }

@@ -1,0 +1,274 @@
+{
+  "baseline": "f85fb420",
+  "fresh_reference": "d7c7de92",
+  "assignment": [
+    {
+      "key": "active",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an active member agent with post_messages is an eligible work owner",
+      "rust_test": "ws12_agent_named_active_member_post_owner",
+      "mutation": "owner_active",
+      "intended_assertion": "active: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/active.log"
+    },
+    {
+      "key": "legacy",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a legacy agent keeps post eligibility through the fallback",
+      "rust_test": "ws12_agent_named_legacy_post_owner",
+      "mutation": "owner_active",
+      "intended_assertion": "legacy: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/legacy.log"
+    },
+    {
+      "key": "suspended",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a suspended agent is rejected with a validation error",
+      "rust_test": "ws12_agent_named_suspended_owner_validation",
+      "mutation": "owner_post",
+      "intended_assertion": "suspended: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/suspended.log"
+    },
+    {
+      "key": "nonmember",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a non-member agent is rejected with a validation error",
+      "rust_test": "ws12_agent_named_nonmember_owner_validation",
+      "mutation": "owner_nonmember",
+      "intended_assertion": "nonmember: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/nonmember.log"
+    },
+    {
+      "key": "no_post",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent without post_messages is rejected with a validation error",
+      "rust_test": "ws12_agent_named_missing_post_owner_validation",
+      "mutation": "owner_post",
+      "intended_assertion": "no_post: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/no_post.log"
+    },
+    {
+      "key": "outside_human",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a human outside the parent room keeps the human eligibility error",
+      "rust_test": "ws12_agent_named_outside_human_owner_validation",
+      "mutation": "owner_human",
+      "intended_assertion": "outside_human: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/outside_human.log"
+    },
+    {
+      "key": "plain_bot",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "a bot without an agent row is rejected with a validation error",
+      "rust_test": "ws12_agent_named_bot_without_agent_validation",
+      "mutation": "owner_plain_bot",
+      "intended_assertion": "plain_bot: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/plain_bot.log"
+    },
+    {
+      "key": "unavailable",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "suspending the agent or revoking its membership reads as an unavailable owner",
+      "rust_test": "ws12_agent_named_owner_unavailable_after_access_change",
+      "mutation": "owner_unavailable",
+      "intended_assertion": "unavailable: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 5,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.07s"
+      ],
+      "log": "logs/unavailable.log"
+    },
+    {
+      "key": "status_note",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent status update records a work event with the note",
+      "rust_test": "ws12_agent_named_status_event_with_note",
+      "mutation": "status_note",
+      "intended_assertion": "status_note: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/status_note.log"
+    },
+    {
+      "key": "status_inbox",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent status update reaches the inbox through the human path",
+      "rust_test": "ws12_agent_named_status_inbox_human_path",
+      "mutation": "status_inbox",
+      "intended_assertion": "status_inbox: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 3,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/status_inbox.log"
+    },
+    {
+      "key": "tags",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent tags update replaces the set without touching the status",
+      "rust_test": "ws12_agent_named_tag_set_preserves_status",
+      "mutation": "tags_string",
+      "intended_assertion": "tags: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/tags.log"
+    },
+    {
+      "key": "invalid_fields",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent work update validates tags and run_url",
+      "rust_test": "ws12_agent_named_tags_run_url_missing_fields_validation",
+      "mutation": "run_validation",
+      "intended_assertion": "invalid_fields: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/invalid_fields.log"
+    },
+    {
+      "key": "result",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent result update records the event with the agent as actor",
+      "rust_test": "ws12_agent_named_result_event_agent_actor",
+      "mutation": "result_actor",
+      "intended_assertion": "result: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/result.log"
+    },
+    {
+      "key": "unowned_result",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent cannot write the result of work it does not own",
+      "rust_test": "ws12_agent_named_result_requires_ownership",
+      "mutation": "model_ownership",
+      "intended_assertion": "unowned_result: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 2,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/unowned_result.log"
+    },
+    {
+      "key": "unowned_status",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent cannot move work it does not own",
+      "rust_test": "ws12_agent_named_status_requires_ownership",
+      "mutation": "model_ownership",
+      "intended_assertion": "unowned_status: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/unowned_status.log"
+    },
+    {
+      "key": "invalid_status_note",
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rails_test": "an agent status update rejects unknown statuses and long notes",
+      "rust_test": "ws12_agent_named_status_and_note_validation",
+      "mutation": "note_limit",
+      "intended_assertion": "invalid_status_note: every pinned original assertion and persisted fact",
+      "exit": 101,
+      "hits": 1,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1360 filtered out; finished in 0.08s"
+      ],
+      "log": "logs/invalid_status_note.log"
+    }
+  ],
+  "recorder": [
+    {
+      "key": "recorder_preflight",
+      "rust_test": "ws11_recorder_real_output_and_read_growth_match_fresh_rails",
+      "mutation": "recorder_preflight",
+      "intended_assertion": "Recorder preflight stays flat",
+      "exit": 101,
+      "hits": 10,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1361 filtered out; finished in 0.11s"
+      ],
+      "log": "logs/recorder_preflight.log"
+    },
+    {
+      "key": "recorder_rows",
+      "rust_test": "ws11_recorder_real_output_and_read_growth_match_fresh_rails",
+      "mutation": "recorder_rows",
+      "intended_assertion": "Recorder complete persisted rows and committed frames",
+      "exit": 101,
+      "hits": 10,
+      "intended_assertion_rejected": true,
+      "summaries": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1361 filtered out; finished in 0.10s"
+      ],
+      "log": "logs/recorder_rows.log"
+    }
+  ]
+}

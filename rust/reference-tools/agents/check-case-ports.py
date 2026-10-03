@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def rust_ports(source):
     ports = set(re.findall(r'^\s*(?:async )?fn (\w+)\(', source, re.M))
     # This committed macro emits one #[test] function for each identifier.
-    for invocation in re.findall(r'named_cases!\s*\{([^}]+)\}', source, re.S):
+    for invocation in re.findall(r'\b(?:named_cases|cases)!\s*\{([^}]+)\}', source, re.S):
         ports.update(re.findall(r'^\s*(\w+)\s*=>\s*"', invocation, re.M))
     # WS8's named!(identifier, vector_index) emits a #[tokio::test] per case.
     ports.update(re.findall(r'\bnamed!\s*\(\s*(\w+)\s*,\s*\d+\s*\)', source))

@@ -29,6 +29,15 @@ class Discovery(unittest.TestCase):
         self.assertFalse(expected <= ports.rust_ports(source.replace('named!', 'unsupported_cases!')))
         self.assertNotIn('unmapped_probe', ports.rust_ports('named!(unmapped_probe, -1);'))
 
+    def test_ws12_assignment_macro_and_missing_invocations(self):
+        source = (root/'rust/crates/db/src/tests/ws12_agent_named_test.rs').read_text()
+        import json
+        manifest = json.loads(Path(__file__).with_name('case-ports.json').read_text())
+        expected = {c['rust'] for g in manifest['files'] if g['rust_file'].endswith('ws12_agent_named_test.rs') for c in g['cases']}
+        self.assertEqual(len(expected), 16)
+        self.assertTrue(expected <= ports.rust_ports(source))
+        self.assertFalse(expected <= ports.rust_ports(source.replace('cases!', 'unsupported_cases!')))
+
     def test_literal_async_and_peer_names(self):
         source = '\n#[test]\nfn ws12_fixture() {}\n#[tokio::test]\nasync fn ws8_fixture() {}\n'
         self.assertEqual(ports.rust_ports(source), {'ws12_fixture', 'ws8_fixture'})
