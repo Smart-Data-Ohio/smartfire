@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[3]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--native", action="store_true", help="host media versions must match the pinned vectors")
 parser.add_argument("--toolchain-image", default=os.environ.get("RUST_CI_IMAGE", "campfire-toolchain"))
+parser.add_argument("--behavior-files", nargs="*", default=[],
+                    help="also run these paired browser groups and their served mutants from the clone")
 options = parser.parse_args()
 scratch = ROOT / ".scratch"
 scratch.mkdir(exist_ok=True)
@@ -26,7 +28,7 @@ env = dict(os.environ, CI="1", TMPDIR=str(clone / ".scratch"), CARGO_TARGET_DIR=
 
 revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=clone, text=True).strip()
 print(f"WS8bm fresh checkout: {revision}; no pre-existing scratch or Cargo target; {clone}", flush=True)
-print("WS8bm fresh concurrency: eight test threads; two build jobs; no timing threshold changes", flush=True)
+print("WS8bm fresh concurrency: eight test threads; two build jobs; native timing unchanged; audited browser deadlines match Rails", flush=True)
 if not options.native:
     # Docker's ancestry does not include Codex. Always claim the same host flock slots
     # instead of relying on the host wrapper's ancestry detection inside the container.
@@ -70,6 +72,10 @@ commands = [
     ("workspace", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--exclude", "html5ever", "--no-fail-fast"]),
     ("clippy", ["mise", "exec", "rust@1.98.1", "--", "cargo", "clippy", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--all-targets", "--", "-D", "warnings"]),
 ]
+if options.behavior_files:
+    for name, extra in [("behavior", []), ("discrimination", ["--negative"])]:
+        commands.append((name, ["python3", "rust/reference-tools/messaging/behavior-check.py",
+                               *options.behavior_files, *extra, "--keep-going"]))
 failures = []
 for name, command in commands:
     if name in ["workspace", "clippy"] and not options.native:
@@ -78,7 +84,7 @@ for name, command in commands:
         result = subprocess.run(command, cwd=clone, env=env, stdout=log, stderr=subprocess.STDOUT)
     output = (clone / ".scratch" / f"{name}.log").read_text()
     for line in output.splitlines():
-        if line.startswith(("seed:", "test result:", "    Finished")):
+        if line.startswith(("seed:", "test result:", "    Finished", "WS8bm behaviour", "WS8bm discrimination")):
             print(line, flush=True)
     if result.returncode:
         failures.append(name)
@@ -91,4 +97,5 @@ for name, command in commands:
 shutil.rmtree(clone / "rust/target", ignore_errors=True)
 print("WS8bm fresh target removed", flush=True)
 assert not failures, f"WS8bm fresh-check failures: {', '.join(failures)}; all available checks were run"
-print("WS8bm fresh-check: committed inputs only; generated default/first_run seeds; workspace tests/doctests/clippy passed", flush=True)
+print("WS8bm fresh-check: committed inputs only; generated default/first_run seeds; workspace tests/doctests/clippy passed"
+      + ("; requested browser groups and their mutants passed" if options.behavior_files else ""), flush=True)
