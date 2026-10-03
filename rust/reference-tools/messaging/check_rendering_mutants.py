@@ -57,9 +57,12 @@ try:
  for n,module,test,witness in controls:
   with (ROOT/'rust/crates/campfire/src/controllers/message_features'/module).open('a') as f:
    f.write(f'\n#[tokio::test] async fn ws8_render_producer_mutant_{n}() {{ rails_compat::datetime::WS8_RENDER_MUTANT.store({n}, std::sync::atomic::Ordering::SeqCst); {test}().await; }}\n')
- for n,_,_,witness in controls:
-  r=subprocess.run(runner+['test','--locked','-p','campfire','--bin','campfire',f'ws8_render_producer_mutant_{n}','-j2','--','--test-threads=4','--nocapture'],cwd=ROOT,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+ for n,module,_,witness in controls:
+  scope='controllers::messages::declaration_tests' if module.startswith('../messages/') else 'controllers::message_features::'+module.removesuffix('.rs')
+  name=f'{scope}::ws8_render_producer_mutant_{n}'
+  r=subprocess.run(runner+['test','--locked','-p','campfire','--bin','campfire',name,'-j2','--','--exact','--test-threads=4','--nocapture'],cwd=ROOT,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
   print(r.stdout,flush=True)
+  assert re.search(r'running 1 test\b',r.stdout) and 'FAILED. 0 passed; 1 failed;' in r.stdout,(n,'must select exactly one producer')
   assert r.returncode!=0 and re.search(r"panicked at [^\n]+\n(?:assertion `left == right` failed: )?"+re.escape(witness),r.stdout),(n,witness)
   print(f'WS8bm2 rendering producer mutant {n}: rejected at {witness}',flush=True)
 finally:
