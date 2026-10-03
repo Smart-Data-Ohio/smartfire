@@ -379,7 +379,7 @@ for file in files:
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if file == "channel_threads_controller" or case == "workspace follows the system theme and mobile navigation remains reachable":
+            if file == "channel_threads_controller" or case in {"workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
                 run_env['WS8BM_WORK_DATABASES']=json.dumps({
                     f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db/production.sqlite3'),
                     f'http://127.0.0.1:{ports[1]}':str(work / 'db/production.sqlite3'),

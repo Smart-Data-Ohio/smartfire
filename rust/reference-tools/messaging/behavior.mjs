@@ -428,8 +428,16 @@ async function acceptance(base,caseName,probe={},variant='default') {
         });
         const source='**A useful point** with `inline code`.';
         await submit(author,source);
-        const parent=messages(author).filter({has:filterVisibleText(author.locator('strong'),'A useful point')});
+        let parent=messages(author).filter({has:filterVisibleText(author.locator('strong'),'A useful point')});
         await waitForVisibility(filterVisibleText(parent.locator('.message__body'),'A useful point'),{timeout:CAPYBARA_DEFAULT});
+        // workspace_markdown:146-149 looks up the persisted parent immediately,
+        // then within_message scopes the action to its actual DOM identity.
+        // A text-matched optimistic row is not that Rails scope. No SQL retry.
+        const database=JSON.parse(process.env.WS8BM_WORK_DATABASES)[base];
+        const parentId=JSON.parse(execFileSync('python3',['-c',
+          'import json,sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); row=c.execute("SELECT id FROM messages WHERE markdown_source=? LIMIT 1",(sys.argv[2],)).fetchone(); print(json.dumps(row[0] if row else None)); c.close()',database,source],{encoding:'utf8'}));
+        assert.ok(Number.isInteger(parentId),'persisted attachment parent exists at the original Message.find_by!');
+        parent=author.locator(`#message_${parentId}`);
         await actOnVisible(parent.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
         await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
         await waitForVisibility(filterVisibleText(author.locator('#composer [data-composer-target="contextLabel"]'),'Replying to JZ'));
