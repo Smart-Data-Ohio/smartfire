@@ -122,14 +122,16 @@ Processing still waits for the enclosing commit and deferred uploads. Jobs
 carry the original blob ID, check it before work, reload after decoding, and
 touch / broadcast only when it remains current. Deleted or replaced messages
 are skipped; previously queued one-argument jobs remain supported. Because the
-claim is per blob, completion refreshes all messages still sharing that upload.
+claim is per blob, completion refreshes all messages still sharing that upload
+(the second re-review below fixes a remaining scheduler-edit guard).
 
 Missing posters enqueue recovery instead of generating JPEGs in the view. The
 message collection cache-key helper also triggers recovery, so a cached
 posterless fragment cannot prevent it. An atomic, per-blob processing lease
 keeps pending jobs and repeated renders from competing. Raised / refused
-enqueues, inline failures and exhausted retries release the claim; lost jobs
-can be recovered after the 15-minute lease expires. The migration adds two
+enqueues and inline failures originally released the claim, as did exhausted
+retries; the second re-review below bounds that recovery. Lost jobs can be
+recovered after the 15-minute lease expires. The migration adds two
 nullable columns to `active_storage_blobs` for this state, separate from
 metadata because concurrent Active Storage analysis replaces metadata.
 
@@ -165,4 +167,61 @@ PARALLEL_WORKERS=8 bin/rails test:
 5536 runs, 32449 assertions, 0 failures, 0 errors, 3 skips
 bin/rubocop --force-exclusion (generated schema excluded by inherited config):
 6 files inspected, no offenses detected
+```
+
+## Second re-review: bounded recovery and remaining owners
+
+The review at `6b38d127` confirmed the original fixes but found that clearing
+the claim on exhaustion let views restart three-attempt batches indefinitely.
+A corrupt MOV ran real FFmpeg 12 times across four batches; a continuing queue
+outage also caused enqueue attempts on every view. Completion additionally
+returned when the scheduling message was edited, suppressing the other owner's
+update despite successfully generated JPEG and WebP files.
+
+Decoder exhaustion now retains a durable `failed` marker in the existing
+`message_processing_token` column. Views and stale queued jobs cannot claim
+that blob again, even after the lease expires. Replacing it with a new upload
+starts with fresh state. Failed videos retain the playable original with no
+poster, error or persistent spinner.
+
+Refused enqueues retain a failure count in the token, with the next allowed
+attempt in `message_processing_expires_at`. Cooldowns increase from one minute
+through two, four and eight minutes, capped at fifteen minutes. Repeated views,
+including cache hits, cannot bypass that deadline. Queue outages remain
+recoverable after the cooldown; successful processing clears the backoff.
+Both raised adapter errors and Active Job's false enqueue result are covered.
+These changes reuse the two existing columns; there is no new migration and
+analysis cannot overwrite the state through blob metadata.
+
+The job chooses a current owner of its pinned blob to process it, then reloads
+and refreshes each remaining owner independently. Editing the scheduler before
+work starts or during real decoding neither broadcasts its old video nor
+suppresses the other owner's `touch` and poster update. An owner deleted during
+the completion scan is skipped without stopping the scan.
+
+Failing-first commit `48ef3afb5` reproduces all five cases at `6b38d127`:
+
+```text
+5 runs, 79 assertions, 5 failures, 0 errors, 0 skips
+```
+
+The corrupt-media test counts real decoder invocations while repeatedly viewing
+and draining jobs, and checks that a view a day later starts no work. Adapter
+refusal tests verify cached-view throttling, persisted backoff across several
+outages, and real JPEG/WebP recovery. Shared-owner regressions edit through
+PATCH at the real FFmpeg boundary and before the queued job starts. Existing
+recovery tests now wait for the enqueue cooldown; the old exhaustion test now
+expects terminal failure and verifies that a replacement upload succeeds.
+
+Validation (full suite run once, with six workers):
+
+```text
+New review regressions:
+5 runs, 128 assertions, 0 failures, 0 errors, 0 skips
+All fresh-video regressions + attachment model tests:
+47 runs, 596 assertions, 0 failures, 0 errors, 0 skips
+PARALLEL_WORKERS=6 bin/rails test (once):
+5541 runs, 32579 assertions, 0 failures, 0 errors, 3 skips
+bin/rubocop (three changed Ruby files):
+3 files inspected, no offenses detected
 ```

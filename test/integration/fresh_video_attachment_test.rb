@@ -295,15 +295,17 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
         assert_no_enqueued_jobs only: Message::AttachmentProcessingJob
         Message::AttachmentProcessingJob.unstub(:perform_later)
 
-        assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
-          2.times do
-            get room_thread_messages_url(@room, thread)
-            assert_response :success
-            assert_select "video.message__attachment", 1
-            assert_select "video.message__attachment[poster]", 0
+        travel Message::ATTACHMENT_ENQUEUE_RETRY_DELAY + 1.second do
+          assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
+            2.times do
+              get room_thread_messages_url(@room, thread)
+              assert_response :success
+              assert_select "video.message__attachment", 1
+              assert_select "video.message__attachment[poster]", 0
+            end
           end
+          assert_video_ready(message)
         end
-        assert_video_ready(message)
       end
     end
   end
@@ -361,7 +363,7 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "exhausted processing retries release the claim for rendering recovery" do
+  test "exhausted processing retries stay terminal and a new attachment can process" do
     sign_in :david
     thread = create_thread
     message = thread.post_message!(creator: users(:david), attributes: { attachment: video_upload(:direct) })
@@ -371,13 +373,14 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
     assert_raises ActiveStorage::PreviewError do
       perform_enqueued_jobs(only: Message::AttachmentProcessingJob)
     end
-    assert_nil message.attachment.blob.reload.message_processing_token
     Message.any_instance.unstub(:process_attachment_now)
 
-    assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
+    assert_no_enqueued_jobs only: Message::AttachmentProcessingJob do
       get room_thread_messages_url(@room, thread)
       assert_response :success
+      assert_select "video.message__attachment[poster]", 0
     end
+    message.update!(attachment: video_upload(:direct))
     assert_video_ready(message)
   end
 

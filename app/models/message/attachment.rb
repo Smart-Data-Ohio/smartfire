@@ -4,6 +4,8 @@ module Message::Attachment
   THUMBNAIL_MAX_WIDTH = 1200
   THUMBNAIL_MAX_HEIGHT = 800
   ATTACHMENT_PROCESSING_LEASE = 15.minutes
+  ATTACHMENT_PROCESSING_FAILED_TOKEN = "failed"
+  ATTACHMENT_ENQUEUE_RETRY_DELAY = 1.minute
 
   included do
     has_one_attached :attachment do |attachable|
@@ -58,12 +60,14 @@ module Message::Attachment
       Rails.error.handle(context: { message_id: id, blob_id: blob_id }) do
         blob = ActiveStorage::Blob.find_by(id: blob_id)
         if blob && attachment.blob_id == blob_id
-          token = SecureRandom.uuid
+          # Carry queue-failure backoff across new job identities. Legacy
+          # UUID-only tokens have no recorded enqueue failures.
+          token = "#{SecureRandom.uuid}:#{attachment_enqueue_failures(blob.message_processing_token)}"
           if claim_attachment_processing(blob, token)
             begin
               job = Message::AttachmentProcessingJob.perform_later(self, blob_id, token)
             ensure
-              release_attachment_processing(blob_id, token) unless job && job.successfully_enqueued?
+              defer_attachment_processing(blob_id, token) unless job && job.successfully_enqueued?
             end
           end
         end
@@ -82,6 +86,7 @@ module Message::Attachment
   # The lease also permits recovery after a lost job or worker crash.
   def claim_attachment_processing(blob, token)
     ActiveStorage::Blob.where(id: blob.id)
+      .where("message_processing_token IS NULL OR message_processing_token != ?", ATTACHMENT_PROCESSING_FAILED_TOKEN)
       .where("message_processing_token = ? OR message_processing_expires_at IS NULL OR message_processing_expires_at <= ?", token, Time.current)
       .update_all(message_processing_token: token, message_processing_expires_at: ATTACHMENT_PROCESSING_LEASE.from_now) == 1
   end
@@ -91,12 +96,32 @@ module Message::Attachment
       .update_all(message_processing_token: nil, message_processing_expires_at: nil)
   end
 
+  def fail_attachment_processing(blob_id, token)
+    # Retain a terminal marker after the job's three attempts. Normal page
+    # views must never restart processing this blob; a new upload starts fresh.
+    ActiveStorage::Blob.where(id: blob_id, message_processing_token: token)
+      .update_all(message_processing_token: ATTACHMENT_PROCESSING_FAILED_TOKEN, message_processing_expires_at: nil)
+  end
+
+  def defer_attachment_processing(blob_id, token)
+    # A queue outage says nothing about the media. Preserve recovery, with
+    # durable exponential backoff capped at the existing 15-minute lease.
+    failures = [ attachment_enqueue_failures(token) + 1, 5 ].min
+    delay = [ ATTACHMENT_ENQUEUE_RETRY_DELAY * 2**(failures - 1), ATTACHMENT_PROCESSING_LEASE ].min
+    ActiveStorage::Blob.where(id: blob_id, message_processing_token: token)
+      .update_all(message_processing_token: "enqueue_failed:#{failures}", message_processing_expires_at: delay.from_now)
+  end
+
   def process_attachment_now
     ensure_attachment_analyzed
     process_attachment_thumbnail
   end
 
   private
+    def attachment_enqueue_failures(token)
+      token.to_s[/:(\d+)\z/, 1].to_i
+    end
+
     def ensure_attachment_analyzed
       attachment&.analyze
     end
