@@ -80,6 +80,33 @@ class Twitter::PostFetcherTest < ActiveSupport::TestCase
     )
   end
 
+  test "a quote url with text before the post url is dropped" do
+    stub_post(status: "424242", handle: "jack", quote: {
+      "url" => "javascript:void(0)//https://x.com/i/status/123",
+      "text" => "We go up",
+      "author" => { "name" => "NASA", "screen_name" => "NASA" }
+    })
+
+    Twitter::PostFetcher.new(@post).fetch
+
+    assert_equal(
+      { "url" => nil, "author_name" => "NASA", "author_handle" => "NASA", "text" => "We go up" },
+      @post.reload.quote
+    )
+  end
+
+  test "a quote url with leading whitespace is dropped" do
+    stub_post(status: "424242", handle: "jack", quote: {
+      "url" => " https://x.com/NASA/status/123",
+      "text" => "We go up",
+      "author" => { "name" => "NASA", "screen_name" => "NASA" }
+    })
+
+    Twitter::PostFetcher.new(@post).fetch
+
+    assert_nil @post.reload.quote["url"]
+  end
+
   test "a missing post records a not-found error" do
     stub_request(:get, "https://api.fxtwitter.com/jack/status/424242")
       .to_return(status: 200, body: { code: 404, message: "NOT_FOUND", tweet: nil }.to_json,
