@@ -1,5 +1,5 @@
 //! UI-owned names from WS11's inventory. Rails generator uses the same pubsub as its named tests.
-use super::agent_broadcasts::{human_socket, receive};
+use super::agent_broadcasts::{human_socket, next_broadcast, receive};
 use super::{Test, boot_seed_with_clock};
 use futures_util::SinkExt;
 use serde_json::{Value, json};
@@ -224,6 +224,13 @@ async fn ws11ui_ooo_broadcasts_the_badge_and_the_notice() {
             row["html"].as_str().unwrap()
         ));
     }
+    assert!(
+        next_broadcast(&mut socket)
+            .await
+            .expect("OOO cardinality transport is invalid")
+            .is_none(),
+        "OOO must publish exactly one badge and one notice"
+    );
     socket.close(None).await.unwrap();
     server.abort();
 }

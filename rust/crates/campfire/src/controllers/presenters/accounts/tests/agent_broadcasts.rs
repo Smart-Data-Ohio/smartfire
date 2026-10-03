@@ -8,7 +8,11 @@ use tokio_tungstenite::{
 };
 type Socket = WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>;
 
-pub(super) async fn human_socket(test: &Test, address: std::net::SocketAddr, viewer: i64) -> Socket {
+pub(super) async fn human_socket(
+    test: &Test,
+    address: std::net::SocketAddr,
+    viewer: i64,
+) -> Socket {
     use campfire_kit::Crypto;
     let session = test
         .booted
@@ -49,7 +53,11 @@ pub(super) async fn human_socket(test: &Test, address: std::net::SocketAddr, vie
     socket
 }
 
-pub(super) async fn activity_socket(test: &Test, address: std::net::SocketAddr, viewer: i64) -> Socket {
+pub(super) async fn activity_socket(
+    test: &Test,
+    address: std::net::SocketAddr,
+    viewer: i64,
+) -> Socket {
     let mut socket = human_socket(test, address, viewer).await;
     let identifier = json!({"channel":"ActivityChannel"}).to_string();
     socket
@@ -126,7 +134,11 @@ async fn approval_activity_ids_follow_committed_http_decisions_without_cross_use
             })
             .await
             .unwrap();
-        let created = receive_expected(&mut owner_socket, "committed approval must broadcast its activity item").await;
+        let created = receive_expected(
+            &mut owner_socket,
+            "committed approval must broadcast its activity item",
+        )
+        .await;
         assert_eq!(created["message"], json!({"activityItemId":item_id}));
         let response = owner
             .form(
@@ -215,6 +227,79 @@ async fn approval_silence_filters_heartbeats_without_hiding_private_activity() {
         Ok(Message::Text(private.to_string().into())),
     ]);
     assert_eq!(receive(&mut activity).await, private);
+}
+
+/// Silence means no application broadcasts within the original fixed deadline.
+/// Protocol heartbeats are harmless; closed/broken/malformed transports are invalid.
+pub(super) async fn next_broadcast(socket: &mut Socket) -> Result<Option<Value>, String> {
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_millis(250);
+    loop {
+        let frame = match tokio::time::timeout_at(deadline, socket.next()).await {
+            Err(_) => return Ok(None),
+            Ok(Some(Ok(frame))) => frame,
+            Ok(Some(Err(error))) => return Err(format!("cable silence transport failed: {error}")),
+            Ok(None) => return Err("cable silence transport ended".into()),
+        };
+        match frame {
+            Message::Text(text) => {
+                let value: Value = serde_json::from_str(&text)
+                    .map_err(|error| format!("cable silence invalid JSON: {error}"))?;
+                if value["type"] == "ping" {
+                    eprintln!("Cable silence: ignored ActionCable heartbeat");
+                    continue;
+                }
+                if value["identifier"].is_string() && !value["message"].is_null() {
+                    return Ok(Some(value));
+                }
+                return Err(format!("cable silence invalid control frame: {value}"));
+            }
+            Message::Ping(_) | Message::Pong(_) => continue,
+            other => return Err(format!("cable silence invalid transport frame: {other:?}")),
+        }
+    }
+}
+
+async fn assert_no_status_callback(socket: &mut Socket, identifier: &str, id: i64) {
+    if let Some(frame) = next_broadcast(socket)
+        .await
+        .expect("working presence silence is invalid")
+    {
+        if frame["identifier"] == identifier
+            && frame["message"].as_str().is_some_and(|html| {
+                [
+                    format!("status_badge_agent_{id}"),
+                    format!("directory_row_agent_{id}"),
+                ]
+                .iter()
+                .any(|target| {
+                    html.starts_with(&format!(
+                        "<turbo-stream action=\"replace\" target=\"{target}\">"
+                    ))
+                })
+            })
+        {
+            panic!(
+                "working presence incorrectly broadcast a status callback: AgentsChannel status replacement"
+            );
+        }
+        panic!("working presence silence invalid unexpected application frame: {frame}");
+    }
+}
+
+#[tokio::test]
+async fn working_presence_silence_transport_failure_is_invalid() {
+    let test = boot_seed("default").await.expect("default seed");
+    let listener = crate::channels::tests::support::bind_listener().await;
+    let address = listener.local_addr().unwrap();
+    let router = test.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut socket = human_socket(&test, address, test.label("users.david").parse().unwrap()).await;
+    socket.close(None).await.unwrap();
+    assert!(
+        next_broadcast(&mut socket).await.is_err(),
+        "a closed transport is invalid, not a status callback"
+    );
+    server.abort();
 }
 
 pub(super) async fn receive<S, E>(socket: &mut S) -> Value
@@ -363,7 +448,11 @@ async fn message_step_callbacks_replace_current_message_in_room_and_thread_witho
             })
             .await
             .unwrap();
-        let frame = receive_expected(&mut socket, "committed message step must broadcast the current message").await;
+        let frame = receive_expected(
+            &mut socket,
+            "committed message step must broadcast the current message",
+        )
+        .await;
         let html = frame["message"].as_str().unwrap();
         assert!(
             html.starts_with(&format!(
@@ -372,7 +461,10 @@ async fn message_step_callbacks_replace_current_message_in_room_and_thread_witho
             "{html}"
         );
         assert!(html.contains("Message carrying structured progress"));
-        assert!(html.contains("Inspect &lt;message&gt;"), "message step callback must render current uncached steps");
+        assert!(
+            html.contains("Inspect &lt;message&gt;"),
+            "message step callback must render current uncached steps"
+        );
         assert!(html.contains("Safe &amp; escaped"));
         for private in [
             "authenticity_token",
@@ -441,6 +533,15 @@ async fn message_step_callbacks_replace_current_message_in_room_and_thread_witho
 
 #[tokio::test]
 async fn working_presence_is_polled_and_does_not_emit_status_callbacks() {
+    working_presence_silence(std::time::Duration::ZERO).await;
+}
+
+#[tokio::test]
+async fn working_presence_silence_ignores_buffered_heartbeat() {
+    working_presence_silence(std::time::Duration::from_millis(3500)).await;
+}
+
+async fn working_presence_silence(delay: std::time::Duration) {
     // app/models/agent.rb only broadcasts status/status_note changes. The
     // member panel polls working_presence_text through Rooms::MembersController.
     let test = boot_seed("default").await.expect("default seed");
@@ -490,12 +591,8 @@ async fn working_presence_is_polled_and_does_not_emit_status_callbacks() {
         })
         .await
         .unwrap();
-    assert!(
-        tokio::time::timeout(std::time::Duration::from_millis(250), socket.next())
-            .await
-            .is_err(),
-        "working presence incorrectly broadcast a status callback"
-    );
+    tokio::time::sleep(delay).await;
+    assert_no_status_callback(&mut socket, &identifier, id).await;
     test.booted
         .app
         .db
@@ -516,12 +613,7 @@ async fn working_presence_is_polled_and_does_not_emit_status_callbacks() {
         })
         .await
         .unwrap();
-    assert!(
-        tokio::time::timeout(std::time::Duration::from_millis(250), socket.next())
-            .await
-            .is_err(),
-        "working presence clear incorrectly broadcast a status callback"
-    );
+    assert_no_status_callback(&mut socket, &identifier, id).await;
     // A status-note-only write does broadcast both fragments, with current data.
     test.booted
         .app
@@ -542,7 +634,11 @@ async fn working_presence_is_polled_and_does_not_emit_status_callbacks() {
         format!("status_badge_agent_{id}"),
         format!("directory_row_agent_{id}"),
     ] {
-        let frame = receive_expected(&mut socket, "committed status note must broadcast both status fragments").await;
+        let frame = receive_expected(
+            &mut socket,
+            "committed status note must broadcast both status fragments",
+        )
+        .await;
         assert_eq!(frame["identifier"], identifier);
         let html = frame["message"].as_str().unwrap();
         assert!(html.starts_with(&format!(
@@ -636,7 +732,11 @@ async fn status_callback_replaces_badge_then_directory_over_live_socket_after_co
         format!("status_badge_agent_{id}"),
         format!("directory_row_agent_{id}"),
     ] {
-        let frame = receive_expected(&mut socket, "committed agent status must broadcast both status fragments").await;
+        let frame = receive_expected(
+            &mut socket,
+            "committed agent status must broadcast both status fragments",
+        )
+        .await;
         assert_eq!(frame["identifier"], identifier);
         let html = frame["message"].as_str().unwrap();
         assert!(
@@ -784,7 +884,11 @@ async fn thread_step_callback_renders_ordered_steps_and_updates_over_live_socket
         })
         .await
         .unwrap();
-    let frame = receive_expected(&mut socket, "committed thread step must broadcast ordered steps").await;
+    let frame = receive_expected(
+        &mut socket,
+        "committed thread step must broadcast ordered steps",
+    )
+    .await;
     let html = frame["message"].as_str().unwrap();
     assert!(html.starts_with(&format!(
         "<turbo-stream action=\"replace\" target=\"agent_steps_channel_thread_{thread_id}\""

@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from discrimination import require_baseline, require_rejected
+from check_runtime import assertions as runtime_assertions
 
 
 TEST = "intended_test"
@@ -35,6 +36,19 @@ class DiscriminationTests(unittest.TestCase):
         ]:
             with self.subTest(result=result), self.assertRaises(RuntimeError):
                 require_rejected(result, {TEST: (SOURCE, MESSAGE)})
+
+    def test_presence_control_rejects_heartbeat_and_transport_failures(self):
+        filename, expected = runtime_assertions["presence-broadcast"]
+        source = "crates/campfire/src/controllers/presenters/accounts/tests/" + filename
+        for detail in [
+            "working presence incorrectly broadcast a status callback",
+            "working presence silence is invalid: cable silence transport ended",
+            'working presence silence invalid unexpected application frame: {"type":"ping"}',
+        ]:
+            with self.subTest(detail=detail), self.assertRaises(RuntimeError):
+                require_rejected(failure(detail, source=source), {TEST: (source, expected)})
+        with redirect_stdout(io.StringIO()):
+            require_rejected(failure(expected, source=source), {TEST: (source, expected)})
 
     def test_extra_background_panic_is_invalid(self):
         result = failure()
