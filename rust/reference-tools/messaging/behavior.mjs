@@ -434,10 +434,11 @@ async function acceptance(base,caseName,probe={},variant='default') {
         // then within_message scopes the action to its actual DOM identity.
         // A text-matched optimistic row is not that Rails scope. No SQL retry.
         const database=JSON.parse(process.env.WS8BM_WORK_DATABASES)[base];
-        const parentId=JSON.parse(execFileSync('python3',['-c',
-          'import json,sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); row=c.execute("SELECT id FROM messages WHERE markdown_source=? LIMIT 1",(sys.argv[2],)).fetchone(); print(json.dumps(row[0] if row else None)); c.close()',database,source],{encoding:'utf8'}));
-        assert.ok(Number.isInteger(parentId),'persisted attachment parent exists at the original Message.find_by!');
-        parent=author.locator(`#message_${parentId}`);
+        const parentIdentity=JSON.parse(execFileSync('python3',['-c',
+          'import json,sqlite3,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); row=c.execute("SELECT id,client_message_id FROM messages WHERE markdown_source=? LIMIT 1",(sys.argv[2],)).fetchone(); print(json.dumps(row)); c.close()',database,source],{encoding:'utf8'}));
+        assert.ok(parentIdentity&&Number.isInteger(parentIdentity[0]),'persisted attachment parent exists at the original Message.find_by!');
+        // Message#to_key uses client_message_id, not the database primary key.
+        parent=author.locator(`[id=${JSON.stringify('message_'+parentIdentity[1])}]`);
         await actOnVisible(parent.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
         await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
         await waitForVisibility(filterVisibleText(author.locator('#composer [data-composer-target="contextLabel"]'),'Replying to JZ'));
