@@ -105,9 +105,8 @@ impl ChannelThread {
         let member = Membership::find_by_room_and_user(conn, self.room_id, id)?.is_some();
         if let Some(owner) = owner.as_ref().filter(|u| u.is_bot()) {
             let eligible = if let Some(agent) = Agent::for_user(conn, owner.id)? {
-                agent.active(conn)?
-                    && member
-                    && agent.can(conn, "post_messages", Some(self.room_id))?
+                member && Agent::capabilities_for_rooms(conn, "post_messages", &[(agent.id, Some(self.room_id))])?
+                    .get(&(agent.id, Some(self.room_id))).copied().unwrap_or(false)
             } else {
                 false
             };

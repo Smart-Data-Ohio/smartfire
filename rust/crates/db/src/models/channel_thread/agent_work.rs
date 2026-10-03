@@ -170,7 +170,7 @@ impl ChannelThread {
             WorkThreadEvent::create_for_handoff(tx,&before,&fresh,sender,&handoff)?;
             let payload = handoff.payload(tx.conn())?;
             agent_work_events::record_handoff(tx,&fresh,before.work_owner_id,receiver.id,Some(sender.id),payload)?;
-            let from_owner = before.work_owner_id.map(|id|User::find_by_id(tx.conn(),id)).transpose()?.flatten();
+            let from_owner = if before.work_owner_id == Some(sender.id) { Some(sender.clone()) } else { before.work_owner_id.map(|id|User::find_by_id(tx.conn(),id)).transpose()?.flatten() };
             let to_owner = User::find(tx.conn(),receiver.user_id)?;
             audit_log::AuditLog::record(tx,audit_log::NewAuditLog { action:"work.handoff".into(),actor:Some(sender.into()),
                 target:Some(audit_log::Target {record_type:"ChannelThread".into(),id:fresh.id,label:Some(fresh.name.clone())}),

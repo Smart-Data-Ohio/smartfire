@@ -28,41 +28,28 @@ impl WorkOwners {
         if pairs.is_empty() {
             return Ok(Self {users: HashMap::new(), available: HashMap::new()});
         }
-        let ids = pairs
-            .iter()
-            .map(|&(_, id)| id)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect::<Vec<_>>();
-        let users = User::where_ids(conn, &ids)?
-            .into_iter()
-            .map(|user| (user.id, user))
-            .collect::<HashMap<_, _>>();
-        let room_ids = pairs
-            .iter()
-            .map(|&(room, _)| room)
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect::<Vec<_>>();
-        let members = Membership::for_rooms(conn, &room_ids)?
-            .into_iter()
-            .map(|member| (member.room_id, member.user_id))
-            .collect::<HashSet<_>>();
-        let bot_ids = users
-            .values()
-            .filter(|user| user.is_active() && user.is_bot())
-            .map(|user| user.id)
-            .collect::<Vec<_>>();
-        let agents = crate::Agent::for_users(conn, &bot_ids)?
-            .into_iter()
-            .map(|agent| (agent.user_id, agent.id))
-            .collect::<HashMap<_, _>>();
-        let requests = pairs
-            .iter()
-            .filter_map(|&(room, user)| agents.get(&user).map(|&agent| (agent, Some(room))))
-            .collect::<HashSet<_>>()
-            .into_iter()
-            .collect::<Vec<_>>();
+        // Read associations together; the subsequent public capability query still
+        // resolves current agent/user/grant/room policy rather than trusting these rows.
+        let rows = query_all(conn,
+            "SELECT users.*,json_extract(request.value,'$[0]') AS owner_room_id,
+             EXISTS(SELECT 1 FROM memberships WHERE user_id=users.id AND room_id=json_extract(request.value,'$[0]')) AS owner_member,
+             agents.id AS owner_agent_id
+             FROM json_each(?) request JOIN users ON users.id=json_extract(request.value,'$[1]')
+             LEFT JOIN agents ON agents.user_id=users.id",
+            [serde_json::json!(pairs).to_string()],
+            |row| Ok((User::from_row(row)?, row.get::<_,i64>("owner_room_id")?, row.get::<_,bool>("owner_member")?, row.get::<_,Option<i64>>("owner_agent_id")?)))?;
+        let mut users = HashMap::new();
+        let mut members = HashSet::new();
+        let mut agents = HashMap::new();
+        for (user, room, member, agent) in rows {
+            if member { members.insert((room,user.id)); }
+            if user.is_active() && user.is_bot() && let Some(agent) = agent {
+                agents.insert(user.id,agent);
+            }
+            users.insert(user.id,user);
+        }
+        let requests = pairs.iter().filter_map(|&(room,user)| agents.get(&user).map(|&id|(id,Some(room))))
+            .collect::<HashSet<_>>().into_iter().collect::<Vec<_>>();
         let capabilities = crate::Agent::capabilities_for_rooms(conn, "post_messages", &requests)?;
         let available = pairs
             .iter()

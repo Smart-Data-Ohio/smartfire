@@ -1,0 +1,6 @@
+{
+  "test/models/channel_thread_agent_assignment_test.rb": "2799d61f64a16fdb77d70203c74da7a5be5ac912bc91a54885fc99a397eee4a0",
+  "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
+  "app/models/work_thread_event.rb": "d6b62b3f5bab3141a3284be84b5ad387a127430754b880fb7db0aa0a6b430c19",
+  "app/services/activity_items/recorder.rb": "cc8edf555e5e0b337e0f54e6c333a61865a38516e605dfa7387053802917fdac"
+}

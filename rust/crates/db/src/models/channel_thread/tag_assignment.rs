@@ -29,7 +29,8 @@ impl ChannelThread {
                 }
             }
         }
-        self.save(tx, changed)?;
+        tx.register_record("channel_threads", self.id);
+        self.save_validated(tx, changed, &room)?;
         if let Some(names) = names {
             let existing = self.tag_names(tx.conn())?;
             let added = names
@@ -38,7 +39,7 @@ impl ChannelThread {
                 .collect::<Vec<_>>();
             Self::register_tag_assignment(tx, self.id, added.clone(), self.work_owner_id);
             for name in added {
-                ThreadTag::create(tx, self.id, &name)?;
+                ThreadTag::create_for_thread(tx, self, &name)?;
             }
         }
         Ok(())

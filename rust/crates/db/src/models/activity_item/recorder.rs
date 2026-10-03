@@ -112,13 +112,14 @@ impl ActivityItem {
         if !user.is_active() || user.is_bot() {
             return Ok(None);
         }
-        Self::record_authorized(
+        Self::record_authorized_with_recipient(
             tx,
             user.id,
             "WorkThreadEvent",
             event.id,
             Some(event.channel_thread_id),
             event_type,
+            Some(user),
         )
     }
 
