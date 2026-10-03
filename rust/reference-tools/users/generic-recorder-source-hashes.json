@@ -1,0 +1,7 @@
+{
+  "app/services/activity_items/recorder.rb": "cc8edf555e5e0b337e0f54e6c333a61865a38516e605dfa7387053802917fdac",
+  "app/models/activity_item.rb": "2e6d1915f243be790d6b82dedbdd7525fda0d849d705935bb9ffae38de69eb29",
+  "app/models/huddle_grant.rb": "77b4b7c6906dd5321118f00fc86632eadb1a51959f7ff2c592fcd1aac73a5126",
+  "app/models/agent_approval.rb": "0839b1d16085c2fb5eea876bd58485cc48f0bf9dd77b0aedb1d601b6e5d22974",
+  "app/models/agent_budget_notice.rb": "0f6c851d16f39afda8f3e8295b315e46483d16ba8c198e05c29f470ca008b859"
+}

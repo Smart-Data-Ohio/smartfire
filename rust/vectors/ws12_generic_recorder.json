@@ -1,0 +1,4303 @@
+{
+  "reference": "d7c7de92 plus approved board drift",
+  "setup": {
+    "users": [
+      {
+        "id": 127326141,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-01-02 16:00:00",
+        "custom_status_emoji": "🚀",
+        "custom_status_expires_at": null,
+        "custom_status_text": "Shipping Rust",
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "david@37signals.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 1,
+        "icon_name": null,
+        "inbox_preferences": "{\"huddle_invitations\":false}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "David",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 1,
+        "quiet_hours_end_minute": 420,
+        "quiet_hours_start_minute": 1320,
+        "role": 1,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": "2026-01-01 00:00:00",
+        "updated_at": "2026-03-02 16:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 149087659,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-01-02 17:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "jason@37signals.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 1,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Jason",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 1,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": "2026-01-01 00:00:00",
+        "updated_at": "2026-01-25 16:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 394959859,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": "eca7c1486ccaf098cc637f7f8e48cad465ac9f14a4da3b2287e0f5addc62a4c2",
+        "created_at": "2026-01-02 20:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": null,
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 0,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Bender Bot",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": null,
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 2,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": null,
+        "updated_at": "2026-01-02 20:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 712064548,
+        "bio": "Programmer",
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-01-02 19:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "kevin@37signals.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 1,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Kevin",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 0,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": "2026-01-01 00:00:00",
+        "updated_at": "2026-01-02 19:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 773523953,
+        "bio": "Designer",
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-01-02 18:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "jz@37signals.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 1,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "JZ",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 0,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": "2026-01-01 00:00:00",
+        "updated_at": "2026-01-02 18:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 773523954,
+        "bio": "Support",
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-01-21 16:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "rita-deactivated-00000000-0000-4000-8000-000000000000@37signals.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 0,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Rita Lopez",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 0,
+        "status": 1,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": null,
+        "updated_at": "2026-01-31 16:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 773523955,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-01-22 16:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "mallory@example.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 0,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Mallory Banned",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 0,
+        "status": 2,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": null,
+        "updated_at": "2026-02-02 16:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 773523956,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": "aaf13caa2a3205852a6936e2b9b593f575f8cc0dea18698d000b997c10c00636",
+        "created_at": "2026-01-23 16:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": null,
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 0,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Deploy Bot",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": null,
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 2,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": null,
+        "updated_at": "2026-01-25 16:01:00",
+        "voice_mode": null
+      },
+      {
+        "id": 773523957,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": "92576edcc33824b23d7c0bac7d3aed034a010033613fd07ad92dfe1effb08975",
+        "created_at": "2026-01-24 16:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": null,
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 0,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Old Bot",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": null,
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 2,
+        "status": 1,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": null,
+        "updated_at": "2026-02-01 16:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 773523958,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-02-03 16:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "lou@37signals.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 0,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "Lonely Lou",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 0,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": null,
+        "updated_at": "2026-02-03 16:00:00",
+        "voice_mode": null
+      },
+      {
+        "id": 773523959,
+        "bio": null,
+        "bot_token": null,
+        "bot_token_digest": null,
+        "created_at": "2026-03-02 16:00:00",
+        "custom_status_emoji": null,
+        "custom_status_expires_at": null,
+        "custom_status_text": null,
+        "dnd_enabled": 0,
+        "dnd_until": null,
+        "email_address": "enrolling@example.com",
+        "email_self_changed_at": null,
+        "github_login": null,
+        "google_email_link_allowed": 0,
+        "icon_name": null,
+        "inbox_preferences": "{}",
+        "meeting_dnd_enabled": 0,
+        "meeting_status_enabled": 0,
+        "name": "New member",
+        "ooo_broadcast": null,
+        "ooo_calendar_enabled": 0,
+        "ooo_note": null,
+        "ooo_notify_enabled": 0,
+        "ooo_until": null,
+        "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
+        "presence_setting": "auto",
+        "push_to_talk_key": null,
+        "quiet_hours_enabled": 0,
+        "quiet_hours_end_minute": null,
+        "quiet_hours_start_minute": null,
+        "role": 0,
+        "status": 0,
+        "text_size": "default",
+        "theme": "system",
+        "time_zone": null,
+        "time_zone_explicit": 0,
+        "tour_completed_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "voice_mode": null
+      }
+    ],
+    "rooms": [
+      {
+        "id": 104393281,
+        "created_at": "2026-01-03 16:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "All Pets",
+        "pins_changed_at": null,
+        "type": "Rooms::Open",
+        "updated_at": "2026-03-02 14:00:00"
+      },
+      {
+        "id": 186869642,
+        "created_at": "2026-01-03 20:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": null,
+        "pins_changed_at": null,
+        "type": "Rooms::Direct",
+        "updated_at": "2026-03-02 11:03:00"
+      },
+      {
+        "id": 201306877,
+        "created_at": "2026-01-03 17:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "HQ",
+        "pins_changed_at": null,
+        "type": "Rooms::Open",
+        "updated_at": "2026-01-03 17:00:00"
+      },
+      {
+        "id": 340026324,
+        "created_at": "2026-01-03 22:00:00",
+        "creator_id": 712064548,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": null,
+        "pins_changed_at": null,
+        "type": "Rooms::Direct",
+        "updated_at": "2026-03-02 12:00:00"
+      },
+      {
+        "id": 486777696,
+        "created_at": "2026-01-03 18:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "All Talk",
+        "pins_changed_at": null,
+        "type": "Rooms::Closed",
+        "updated_at": "2026-03-02 15:55:00"
+      },
+      {
+        "id": 654632876,
+        "created_at": "2026-01-03 19:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Designers",
+        "pins_changed_at": "2026-03-02 14:00:00",
+        "type": "Rooms::Closed",
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 699448325,
+        "created_at": "2026-01-03 21:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": null,
+        "pins_changed_at": null,
+        "type": "Rooms::Direct",
+        "updated_at": "2026-03-02 14:00:00"
+      },
+      {
+        "id": 699448326,
+        "created_at": "2026-01-26 16:00:00",
+        "creator_id": 712064548,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Quiet Corner",
+        "pins_changed_at": null,
+        "type": "Rooms::Closed",
+        "updated_at": "2026-01-26 16:00:00"
+      },
+      {
+        "id": 699448327,
+        "created_at": "2026-01-27 16:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Archive",
+        "pins_changed_at": null,
+        "type": "Rooms::Open",
+        "updated_at": "2026-01-27 16:00:00"
+      },
+      {
+        "id": 699448328,
+        "created_at": "2026-01-28 16:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Broken",
+        "pins_changed_at": null,
+        "type": "Rooms::Closed",
+        "updated_at": "2026-03-02 10:00:00"
+      },
+      {
+        "id": 699448329,
+        "created_at": "2026-01-29 16:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": "dm:c8175eb2969bdcd7a558c0fc030bff532afb4c3bad1b2dcaca8e452fcb70f867",
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": null,
+        "pins_changed_at": null,
+        "type": "Rooms::Direct",
+        "updated_at": "2026-03-02 13:00:00"
+      },
+      {
+        "id": 699448330,
+        "created_at": "2026-03-02 14:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Team lounge",
+        "pins_changed_at": null,
+        "type": "Rooms::Voice",
+        "updated_at": "2026-03-02 14:00:00"
+      },
+      {
+        "id": 699448331,
+        "created_at": "2026-03-02 14:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Release stage",
+        "pins_changed_at": null,
+        "type": "Rooms::Stage",
+        "updated_at": "2026-03-02 14:00:00"
+      },
+      {
+        "id": 699448332,
+        "created_at": "2026-03-02 14:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Release board",
+        "pins_changed_at": null,
+        "type": "Rooms::Board",
+        "updated_at": "2026-03-02 15:13:00"
+      },
+      {
+        "id": 901840001,
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": "dm:ff64643bcf0b5594c7df1b6965e533d89b4a8cd3b9dc6bd61b61a12011d0983c",
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": null,
+        "pins_changed_at": null,
+        "type": "Rooms::Direct",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "memberships": [
+      {
+        "id": 142918545,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:16:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935962041,
+        "room_category_id": null,
+        "room_id": 699448325,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 146174848,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:00:00",
+        "favorite_position": 0,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935962043,
+        "room_category_id": 1,
+        "room_id": 654632876,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 181790929,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:04:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935962045,
+        "room_category_id": null,
+        "room_id": 104393281,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 198590975,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:14:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935962036,
+        "room_category_id": null,
+        "room_id": 186869642,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 11:02:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 211379269,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:09:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "nothing",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 201306877,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-04 16:09:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 239841951,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:12:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 201306877,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-04 16:12:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 449028908,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:13:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 186869642,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 11:03:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 505016279,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:07:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935961915,
+        "room_category_id": null,
+        "room_id": 486777696,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 15:40:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 515358788,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:05:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 104393281,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 658335620,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:03:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 654632876,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 690221570,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:10:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 201306877,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-04 16:10:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 741303990,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:02:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 654632876,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523953
+      },
+      {
+        "id": 765383822,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:17:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935962039,
+        "room_category_id": null,
+        "room_id": 340026324,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 12:00:00",
+        "user_id": 394959859
+      },
+      {
+        "id": 774341722,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:06:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 486777696,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 15:40:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 812357801,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:18:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 340026324,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 12:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 897066373,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:01:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935961888,
+        "room_category_id": null,
+        "room_id": 654632876,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 944797859,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:15:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "nothing",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448325,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 963867642,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:08:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 486777696,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-02-28 22:00:00",
+        "user_id": 394959859
+      },
+      {
+        "id": 1021579652,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-04 16:11:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 201306877,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-04 16:11:00",
+        "user_id": 773523953
+      },
+      {
+        "id": 1021579655,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-22 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 104393281,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 773523955
+      },
+      {
+        "id": 1021579656,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-22 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 201306877,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-22 16:00:00",
+        "user_id": 773523955
+      },
+      {
+        "id": 1021579657,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-23 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 104393281,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 773523956
+      },
+      {
+        "id": 1021579658,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-23 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 201306877,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-23 16:00:00",
+        "user_id": 773523956
+      },
+      {
+        "id": 1021579661,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-26 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448326,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-26 16:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 1021579662,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-26 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448326,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-26 16:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579663,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-27 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "invisible",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-27 16:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579664,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-27 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-27 16:00:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 1021579665,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-27 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-27 16:00:00",
+        "user_id": 394959859
+      },
+      {
+        "id": 1021579666,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-27 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-27 16:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 1021579667,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-27 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-27 16:00:00",
+        "user_id": 773523953
+      },
+      {
+        "id": 1021579669,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-27 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-27 16:00:00",
+        "user_id": 773523955
+      },
+      {
+        "id": 1021579670,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-27 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-27 16:00:00",
+        "user_id": 773523956
+      },
+      {
+        "id": 1021579681,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-28 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935962042,
+        "room_category_id": null,
+        "room_id": 699448328,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 10:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579682,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-29 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448329,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 13:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579683,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-29 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448329,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 13:00:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 1021579684,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-29 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": 935962040,
+        "room_category_id": null,
+        "room_id": 699448329,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 13:00:00",
+        "user_id": 773523953
+      },
+      {
+        "id": 1021579685,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-29 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448329,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 13:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 1021579687,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-30 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 654632876,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523956
+      },
+      {
+        "id": 1021579688,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-30 16:01:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 654632876,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523955
+      },
+      {
+        "id": 1021579692,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448330,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579693,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448330,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 1021579694,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448330,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 1021579695,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448331,
+        "server_muted_at": null,
+        "stage_role": "host",
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579696,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448331,
+        "server_muted_at": null,
+        "stage_role": "listener",
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 1021579697,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448331,
+        "server_muted_at": null,
+        "stage_role": "listener",
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 1021579698,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448332,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579699,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448332,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 15:13:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 1021579700,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 14:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448332,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 15:13:00",
+        "user_id": 394959859
+      },
+      {
+        "id": 1021579701,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 104393281,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523959
+      },
+      {
+        "id": 1021579702,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 201306877,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523959
+      },
+      {
+        "id": 1021579703,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 699448327,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523959
+      },
+      {
+        "id": 1021579704,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-10-03 01:05:51.767",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 901840001,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-10-03 01:05:51.767",
+        "user_id": 127326141
+      },
+      {
+        "id": 1021579705,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-10-03 01:05:51.767",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 901840001,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-10-03 01:05:51.767",
+        "user_id": 773523953
+      },
+      {
+        "id": 1021579706,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-10-03 01:05:51.767",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "everything",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 901840001,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-10-03 01:05:51.767",
+        "user_id": 712064548
+      }
+    ],
+    "agents": [
+      {
+        "id": 773018776,
+        "created_at": "2026-03-02 16:00:00",
+        "daily_board_post_cap": null,
+        "daily_external_action_cap": null,
+        "daily_message_cap": null,
+        "description": null,
+        "kind": "workspace",
+        "last_seen_at": null,
+        "owner_id": 127326141,
+        "provider": null,
+        "runtime": null,
+        "status": "idle",
+        "status_changed_at": null,
+        "status_note": null,
+        "suspended_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 394959859,
+        "webhook_signing_secret": null,
+        "working_presence": null,
+        "working_presence_expires_at": null
+      }
+    ],
+    "sessions": [
+      {
+        "id": 481019661,
+        "created_at": "2026-01-07 16:00:00",
+        "device_id": null,
+        "ip_address": null,
+        "last_active_at": "2026-03-02 16:00:00",
+        "token": "AxJs94fteQ5Autv2VrKsH68c",
+        "two_factor_verified_at": "2026-03-02 16:00:00",
+        "updated_at": "2026-01-07 16:00:00",
+        "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36",
+        "user_id": 127326141
+      },
+      {
+        "id": 481019662,
+        "created_at": "2026-03-02 16:00:00",
+        "device_id": null,
+        "ip_address": "127.0.0.1",
+        "last_active_at": "2026-03-02 16:00:00",
+        "token": "76464e5afb4f798a66061e777dd16fc5",
+        "two_factor_verified_at": "2026-03-02 16:00:00",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0 Safari/537.36",
+        "user_id": 127326141
+      },
+      {
+        "id": 481019663,
+        "created_at": "2026-03-02 16:00:00",
+        "device_id": null,
+        "ip_address": "127.0.0.1",
+        "last_active_at": "2026-03-02 16:00:00",
+        "token": "bb505c090c414c56623b7763b9c065a5",
+        "two_factor_verified_at": "2026-03-02 16:00:00",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0 Safari/537.36",
+        "user_id": 149087659
+      },
+      {
+        "id": 481019664,
+        "created_at": "2026-03-02 16:00:00",
+        "device_id": null,
+        "ip_address": "127.0.0.1",
+        "last_active_at": "2026-03-02 16:00:00",
+        "token": "e4fe8145f310b673fabf379185866d33",
+        "two_factor_verified_at": "2026-03-02 16:00:00",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0 Safari/537.36",
+        "user_id": 773523953
+      },
+      {
+        "id": 481019665,
+        "created_at": "2026-03-02 16:00:00",
+        "device_id": null,
+        "ip_address": "127.0.0.1",
+        "last_active_at": "2026-03-02 16:00:00",
+        "token": "9e0cdb81a3fe14fb1899283550a82151",
+        "two_factor_verified_at": "2026-03-02 16:00:00",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0 Safari/537.36",
+        "user_id": 712064548
+      },
+      {
+        "id": 481019666,
+        "created_at": "2026-03-02 16:00:00",
+        "device_id": null,
+        "ip_address": "127.0.0.1",
+        "last_active_at": "2026-03-02 16:00:00",
+        "token": "9d481b87aa2519c51105f1a213dc33d0",
+        "two_factor_verified_at": "2026-03-02 16:00:00",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_agent": "Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0.0.0 Safari/537.36",
+        "user_id": 773523958
+      },
+      {
+        "id": 481019667,
+        "created_at": "2026-03-02 16:00:00",
+        "device_id": null,
+        "ip_address": "127.0.0.1",
+        "last_active_at": "2026-03-02 16:00:00",
+        "token": "parity-setup-session-token",
+        "two_factor_verified_at": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_agent": "Parity setup",
+        "user_id": 773523959
+      }
+    ],
+    "channel_threads": [
+      {
+        "id": 901840004,
+        "auto_archive_after_minutes": 4320,
+        "closed_at": null,
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 773523953,
+        "last_activity_at": "2026-03-02 16:00:00",
+        "locked_at": null,
+        "messages_count": 1,
+        "name": "Caller-authorized opener",
+        "parent_message_id": null,
+        "result_markdown": null,
+        "result_updated_at": null,
+        "result_updated_by_id": null,
+        "room_id": 654632876,
+        "run_url": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "work_owner_id": null,
+        "work_status": null,
+        "work_status_changed_at": null
+      }
+    ],
+    "messages": [
+      {
+        "id": 901840005,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "ws12-generic-opener",
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 773523953,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": null,
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 654632876,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": 901840004,
+        "updated_at": "2026-03-02 16:00:00"
+      },
+      {
+        "id": 935961887,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "d0d2d586-e072-567c-905c-9836d4023856",
+        "created_at": "2026-03-01 09:00:00",
+        "creator_id": 149087659,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": null,
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 654632876,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-01 09:00:00"
+      },
+      {
+        "id": 935962043,
+        "action": 0,
+        "board_post_opener": 0,
+        "client_message_id": "8713fd2f-91e7-5aa4-bfaf-1e5fc848a596",
+        "created_at": "2026-03-02 14:00:00",
+        "creator_id": 127326141,
+        "edited_at": null,
+        "embeds_suppressed": 0,
+        "forward_note": null,
+        "forwarded_at": null,
+        "forwarded_from_message_id": null,
+        "forwarded_markdown": 0,
+        "markdown_source": "# Launch checklist\n\n**Ready** for review. @149087659\n\n- [x] Write the plan\n- [ ] Ship the port\n\n```rust\nlet ready = true;\n```\n\n| Area | State |\n| --- | --- |\n| Parity | In progress |",
+        "reply_notify_author": 1,
+        "reply_target_deleted_at": null,
+        "reply_to_message_id": null,
+        "room_id": 654632876,
+        "stream_broadcast_at": null,
+        "streaming": 0,
+        "streaming_updated_at": null,
+        "system_note": 0,
+        "thread_id": null,
+        "updated_at": "2026-03-02 14:00:00"
+      }
+    ],
+    "saved_items": [
+      {
+        "id": 1,
+        "created_at": "2026-03-02 14:00:00",
+        "message_id": 935962043,
+        "remind_at": "2026-03-02 18:00:00",
+        "reminded_at": null,
+        "status": "in_progress",
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 2,
+        "created_at": "2026-03-02 14:00:00",
+        "message_id": 935961887,
+        "remind_at": null,
+        "reminded_at": null,
+        "status": "done",
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      }
+    ],
+    "events": [
+      {
+        "id": 390339825,
+        "cancelled_at": null,
+        "created_at": "2026-03-02 16:00:00",
+        "description": "Finalize the launch checklist.",
+        "ends_at": "2026-03-04 17:00:00",
+        "meet_link": null,
+        "meet_link_requested": 0,
+        "organizer_id": 127326141,
+        "recurrence_rule": null,
+        "recurrence_until": null,
+        "reminded_at": null,
+        "room_id": 654632876,
+        "series_id": null,
+        "starts_at": "2026-03-04 16:00:00",
+        "time_zone": "America/New_York",
+        "title": "Launch party planning",
+        "updated_at": "2026-03-02 16:00:00",
+        "venue_room_id": null
+      },
+      {
+        "id": 411254270,
+        "cancelled_at": null,
+        "created_at": "2026-03-02 16:00:00",
+        "description": null,
+        "ends_at": null,
+        "meet_link": null,
+        "meet_link_requested": 0,
+        "organizer_id": 127326141,
+        "recurrence_rule": null,
+        "recurrence_until": null,
+        "reminded_at": null,
+        "room_id": 486777696,
+        "series_id": null,
+        "starts_at": "2026-03-05 16:00:00",
+        "time_zone": "UTC",
+        "title": "Watercooler sync",
+        "updated_at": "2026-03-02 16:00:00",
+        "venue_room_id": null
+      },
+      {
+        "id": 439674037,
+        "cancelled_at": "2026-03-02 15:00:00",
+        "created_at": "2026-03-02 16:00:00",
+        "description": null,
+        "ends_at": null,
+        "meet_link": null,
+        "meet_link_requested": 0,
+        "organizer_id": 149087659,
+        "recurrence_rule": null,
+        "recurrence_until": null,
+        "reminded_at": null,
+        "room_id": 654632876,
+        "series_id": null,
+        "starts_at": "2026-03-03 16:00:00",
+        "time_zone": "UTC",
+        "title": "Sprint retro",
+        "updated_at": "2026-03-02 16:00:00",
+        "venue_room_id": null
+      }
+    ],
+    "huddle_grants": [
+      {
+        "id": 901840002,
+        "created_at": "2026-03-02 16:00:00",
+        "identity": "ws12-recorder",
+        "last_issued_at": "2026-03-02 16:00:00",
+        "last_seen_at": null,
+        "membership_id": 1021579705,
+        "revoked_at": null,
+        "room_id": 901840001,
+        "room_name": "ws12",
+        "server_muted": 0,
+        "session_id": 481019664,
+        "stage_role": null,
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523953
+      }
+    ],
+    "agent_approvals": [
+      {
+        "id": 1,
+        "action": "deploy.preview",
+        "agent_credential_id": null,
+        "agent_id": 773018776,
+        "created_at": "2026-03-02 16:00:00",
+        "decided_at": null,
+        "decided_by_id": null,
+        "decision_note": null,
+        "expires_at": "2026-03-03 16:00:00",
+        "external_id": null,
+        "fizzy_connected_account_id": null,
+        "fizzy_user_id": null,
+        "fizzy_user_name": null,
+        "github_account_id": null,
+        "github_login": null,
+        "payload": "{}",
+        "room_id": 654632876,
+        "status": "pending",
+        "summary": "Approve a preview deployment",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "agent_budget_notices": [
+      {
+        "id": 901840003,
+        "agent_id": 773018776,
+        "cap": "board_posts",
+        "created_at": "2026-03-02 16:00:00",
+        "day": "2026-03-02",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "scheduled_messages": [
+      {
+        "id": 1,
+        "claimed_at": null,
+        "created_at": "2026-03-02 14:00:00",
+        "drop_reason": null,
+        "dropped_at": null,
+        "markdown_source": "Launch reminder for **tomorrow**",
+        "reply_to_message_id": null,
+        "room_id": 654632876,
+        "send_at": "2026-03-03 16:00:00",
+        "sent_at": null,
+        "sent_message_id": null,
+        "thread_id": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 2,
+        "claimed_at": null,
+        "created_at": "2026-03-02 14:00:00",
+        "drop_reason": null,
+        "dropped_at": null,
+        "markdown_source": "Earlier reminder",
+        "reply_to_message_id": null,
+        "room_id": 654632876,
+        "send_at": "2026-03-02 15:00:00",
+        "sent_at": "2026-03-02 15:00:00",
+        "sent_message_id": 935962043,
+        "thread_id": null,
+        "updated_at": "2026-03-02 14:00:00",
+        "user_id": 127326141
+      }
+    ],
+    "two_factor_credentials": [
+      {
+        "id": 1,
+        "confirmed_at": "2026-03-02 16:00:00",
+        "consecutive_failures": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "last_totp_at": null,
+        "locked_until": null,
+        "lockout_count": 0,
+        "secret": "{\"p\":\"9FNOUkvUE0GDLbCusJd22QPNq/DwSLXO6xhpqQZODus=\",\"h\":{\"iv\":\"hTmnsQWV2E/xwCWz\",\"at\":\"s8c78GD48bjD0Dij+2S2MA==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 127326141
+      },
+      {
+        "id": 2,
+        "confirmed_at": "2026-03-02 16:00:00",
+        "consecutive_failures": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "last_totp_at": null,
+        "locked_until": null,
+        "lockout_count": 0,
+        "secret": "{\"p\":\"JN5Qm6bnDYKntWCK9CIcZT/ePNMN0+N3yWtWNgW6hW0=\",\"h\":{\"iv\":\"9EDAny97ajbiSFu1\",\"at\":\"xrcGpWPLdhU1qRzKrC38wQ==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 149087659
+      },
+      {
+        "id": 3,
+        "confirmed_at": "2026-03-02 16:00:00",
+        "consecutive_failures": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "last_totp_at": null,
+        "locked_until": null,
+        "lockout_count": 0,
+        "secret": "{\"p\":\"EOo1dfJMtc8AbXaaZI5NI3y3VLOTq+e4y1203DEBUTw=\",\"h\":{\"iv\":\"f5DVWZMafiKXGJxe\",\"at\":\"hKKtfYVNy2vODWHx+5YM5g==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523953
+      },
+      {
+        "id": 4,
+        "confirmed_at": "2026-03-02 16:00:00",
+        "consecutive_failures": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "last_totp_at": null,
+        "locked_until": null,
+        "lockout_count": 0,
+        "secret": "{\"p\":\"/fWP5u3FsWww7v0TTkzKGl4pmT37+hqndMlnz9LcoHE=\",\"h\":{\"iv\":\"XOLUGz5YD3MYa9xw\",\"at\":\"UgAWM9hAgm0V8HO0H3EDpQ==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 712064548
+      },
+      {
+        "id": 5,
+        "confirmed_at": "2026-03-02 16:00:00",
+        "consecutive_failures": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "last_totp_at": null,
+        "locked_until": null,
+        "lockout_count": 0,
+        "secret": "{\"p\":\"l8JJSO6S6NdK1Vp/iZi6l7vb8F4rhTwXyzWQAd0i/f8=\",\"h\":{\"iv\":\"wdZ6b9+BE7Sn6i88\",\"at\":\"TOJLa8T1wHaXjaXS8jbIuA==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 773523958
+      }
+    ]
+  },
+  "rows": [
+    {
+      "name": "Message_127326141_false",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_773523953_false",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_712064548_false",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_394959859_false",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_127326141_true",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "Message",
+            "source_id": 901840005,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Message_773523953_true",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_712064548_true",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "Message",
+            "source_id": 901840005,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Message_394959859_true",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_unpersisted",
+      "source_type": "Message",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_127326141_false",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_773523953_false",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_712064548_false",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_394959859_false",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_127326141_true",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "SavedItem",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "SavedItem_773523953_true",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "SavedItem",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "SavedItem_712064548_true",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "SavedItem",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "SavedItem_394959859_true",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_unpersisted",
+      "source_type": "SavedItem",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_127326141_false",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_773523953_false",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_712064548_false",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_394959859_false",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_127326141_true",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "Event",
+            "source_id": 390339825,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Event_773523953_true",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "Event",
+            "source_id": 390339825,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Event_712064548_true",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "Event",
+            "source_id": 390339825,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Event_394959859_true",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_unpersisted",
+      "source_type": "Event",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_127326141_false",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_773523953_false",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_712064548_false",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_394959859_false",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_127326141_true",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_773523953_true",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_712064548_true",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_394959859_true",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_unpersisted",
+      "source_type": "HuddleGrant",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentApproval_127326141_false",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "AgentApproval",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentApproval_773523953_false",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentApproval_712064548_false",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentApproval_394959859_false",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentApproval_127326141_true",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "AgentApproval",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentApproval_773523953_true",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "AgentApproval",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentApproval_712064548_true",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "AgentApproval",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentApproval_394959859_true",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentApproval_unpersisted",
+      "source_type": "AgentApproval",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_127326141_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_773523953_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_712064548_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_394959859_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_127326141_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_773523953_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_712064548_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_394959859_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_unpersisted",
+      "source_type": "AgentBudgetNotice",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_127326141_false",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_773523953_false",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_712064548_false",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_394959859_false",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_127326141_true",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "ScheduledMessage",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScheduledMessage_773523953_true",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "ScheduledMessage",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScheduledMessage_712064548_true",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "ScheduledMessage",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "ScheduledMessage_394959859_true",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_unpersisted",
+      "source_type": "ScheduledMessage",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_127326141_false",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_773523953_false",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_712064548_false",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_394959859_false",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_127326141_true",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "Session",
+            "source_id": 481019661,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Session_773523953_true",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "Session",
+            "source_id": 481019661,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Session_712064548_true",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "Session",
+            "source_id": 481019661,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Session_394959859_true",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_unpersisted",
+      "source_type": "Session",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_127326141_false",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_773523953_false",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_712064548_false",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_394959859_false",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_127326141_true",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "TwoFactorCredential",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "TwoFactorCredential_773523953_true",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "TwoFactorCredential",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "TwoFactorCredential_712064548_true",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "TwoFactorCredential",
+            "source_id": 1,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "TwoFactorCredential_394959859_true",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_unpersisted",
+      "source_type": "TwoFactorCredential",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_127326141_false",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_773523953_false",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_712064548_false",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_394959859_false",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": false,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_127326141_true",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_773523953_true",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "Room",
+            "source_id": 901840001,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Room_712064548_true",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 712064548,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "Room",
+            "source_id": 901840001,
+            "event": "work_update",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "Room_394959859_true",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 394959859,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_unpersisted",
+      "source_type": "Room",
+      "source_id": -1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_inactive_recipient",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Message_missing_recipient",
+      "source_type": "Message",
+      "source_id": 901840005,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_inactive_recipient",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "SavedItem_missing_recipient",
+      "source_type": "SavedItem",
+      "source_id": 1,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_inactive_recipient",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Event_missing_recipient",
+      "source_type": "Event",
+      "source_id": 390339825,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_inactive_recipient",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_missing_recipient",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentApproval_inactive_recipient",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentApproval_missing_recipient",
+      "source_type": "AgentApproval",
+      "source_id": 1,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_inactive_recipient",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_missing_recipient",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_inactive_recipient",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "ScheduledMessage_missing_recipient",
+      "source_type": "ScheduledMessage",
+      "source_id": 1,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_inactive_recipient",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Session_missing_recipient",
+      "source_type": "Session",
+      "source_id": 481019661,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_inactive_recipient",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": 127326141,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "TwoFactorCredential_missing_recipient",
+      "source_type": "TwoFactorCredential",
+      "source_id": 1,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_inactive_recipient",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": 773523953,
+      "event": "work_update",
+      "skip": true,
+      "sql": [
+        "UPDATE users SET status=1 WHERE id=773523953"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "Room_missing_recipient",
+      "source_type": "Room",
+      "source_id": 901840001,
+      "recipient": -1,
+      "event": "work_update",
+      "skip": true,
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_nothing_false",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "huddle_started",
+      "skip": false,
+      "sql": [
+        "UPDATE memberships SET involvement='nothing' WHERE room_id=901840001 AND user_id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_nothing_true",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "huddle_started",
+      "skip": true,
+      "sql": [
+        "UPDATE memberships SET involvement='nothing' WHERE room_id=901840001 AND user_id=127326141"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "huddle_started",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_invisible_false",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "huddle_started",
+      "skip": false,
+      "sql": [
+        "UPDATE memberships SET involvement='invisible' WHERE room_id=901840001 AND user_id=127326141"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "HuddleGrant_invisible_true",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "huddle_started",
+      "skip": true,
+      "sql": [
+        "UPDATE memberships SET involvement='invisible' WHERE room_id=901840001 AND user_id=127326141"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "huddle_started",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_mentions_false",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "huddle_started",
+      "skip": false,
+      "sql": [
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=901840001 AND user_id=127326141"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "huddle_started",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuddleGrant_mentions_true",
+      "source_type": "HuddleGrant",
+      "source_id": 901840002,
+      "recipient": 127326141,
+      "event": "huddle_started",
+      "skip": true,
+      "sql": [
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=901840001 AND user_id=127326141"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "HuddleGrant",
+            "source_id": 901840002,
+            "event": "huddle_started",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__127326141_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 127326141,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__127326141_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 127326141,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__773523953_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 773523953,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__773523953_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 773523953,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__712064548_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 712064548,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__712064548_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 712064548,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__394959859_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 394959859,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner__394959859_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 394959859,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=NULL WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_127326141_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 127326141,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_127326141_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 127326141,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 127326141,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_773523953_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 773523953,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_773523953_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 773523953,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 773523953,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_712064548_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 712064548,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_712064548_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 712064548,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": true,
+        "items": [
+          {
+            "user": 712064548,
+            "source_type": "AgentBudgetNotice",
+            "source_id": 901840003,
+            "event": "agent_budget_exceeded",
+            "read_at": null,
+            "handled_at": null,
+            "created_at": 1772467200,
+            "updated_at": 1772467200
+          }
+        ]
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_394959859_false",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 394959859,
+      "event": "agent_budget_exceeded",
+      "skip": false,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "AgentBudgetNotice_owner_712064548_394959859_true",
+      "source_type": "AgentBudgetNotice",
+      "source_id": 901840003,
+      "recipient": 394959859,
+      "event": "agent_budget_exceeded",
+      "skip": true,
+      "sql": [
+        "UPDATE agents SET owner_id=712064548 WHERE id=773018776"
+      ],
+      "expected": {
+        "recorded": false,
+        "items": []
+      }
+    },
+    {
+      "name": "invalid_event_before_missing_source",
+      "source_type": "SavedItem",
+      "source_id": -1,
+      "recipient": -1,
+      "event": "invalid",
+      "skip": true,
+      "expected": {
+        "error": "Unknown activity event type: invalid",
+        "items": []
+      }
+    }
+  ],
+  "caller_authorized": {
+    "source_id": 901840005,
+    "recipient": 127326141,
+    "expected": {
+      "denied": true,
+      "same_id": true,
+      "items": [
+        {
+          "user": 127326141,
+          "source_type": "Message",
+          "source_id": 901840005,
+          "event": "thread_activity",
+          "read_at": null,
+          "handled_at": null,
+          "created_at": 1772467200,
+          "updated_at": 1772467200
+        }
+      ]
+    }
+  },
+  "idempotent": {
+    "source_id": 1,
+    "recipient": 127326141,
+    "expected": {
+      "recorded": true,
+      "items": [
+        {
+          "user": 127326141,
+          "source_type": "SavedItem",
+          "source_id": 1,
+          "event": "message_reminder",
+          "read_at": 1772467200,
+          "handled_at": 1772467200,
+          "created_at": 1772467200,
+          "updated_at": 1772467200
+        }
+      ]
+    }
+  }
+}

@@ -8,6 +8,14 @@ pub enum ActivitySource {
     Message(i64),
     WorkThreadEvent(i64),
     BoardSlaNudge(i64),
+    SavedItem(i64),
+    CalendarEvent(i64),
+    HuddleGrant(i64),
+    AgentApproval(i64),
+    AgentBudgetNotice(i64),
+    ScheduledMessage(i64),
+    Session(i64),
+    TwoFactorCredential(i64),
 }
 
 impl ActivityItem {
@@ -32,6 +40,7 @@ impl ActivityItem {
         )
     }
 
+    /// Rails-compatible entry point. Budget notices use the explicit WS11 reader seam.
     pub fn record(
         tx: &mut Tx<'_>,
         user_id: i64,
@@ -39,62 +48,127 @@ impl ActivityItem {
         event_type: &str,
         skip_source_check: bool,
     ) -> Result<Option<Self>> {
-        if !super::EVENT_TYPES.contains(&event_type) {
-            return Err(Error::Other(format!(
-                "Unknown activity event type: {event_type}"
-            )));
+        let event_type = super::ActivityEventType::parse(event_type)?;
+        let authorization = if skip_source_check {
+            super::SourceAuthorization::CallerAuthorized
+        } else {
+            super::SourceAuthorization::SourceRecipients
+        };
+        Self::record_typed(tx, user_id, source, event_type, authorization)
+    }
+
+    pub fn record_typed(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source: ActivitySource,
+        event_type: super::ActivityEventType,
+        authorization: super::SourceAuthorization,
+    ) -> Result<Option<Self>> {
+        let Some(facts) = source_facts(tx, source, authorization, None)? else {
+            return Ok(None);
+        };
+        Self::record_for_current_recipient(tx, user_id, &facts, event_type, authorization)
+    }
+
+    pub fn record_with_budget_notice_reader(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source: ActivitySource,
+        event_type: super::ActivityEventType,
+        authorization: super::SourceAuthorization,
+        reader: &dyn super::AgentBudgetNoticeActivityReader,
+    ) -> Result<Option<Self>> {
+        let Some(facts) = source_facts(tx, source, authorization, Some(reader))? else {
+            return Ok(None);
+        };
+        Self::record_for_current_recipient(tx, user_id, &facts, event_type, authorization)
+    }
+
+    /// An owning domain may expose another persisted polymorphic source. Source policy
+    /// is explicit; a room association alone never authorizes an unknown source.
+    pub fn record_from_source(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        source: &dyn super::ActivityRecordingSource,
+        event_type: super::ActivityEventType,
+        authorization: super::SourceAuthorization,
+    ) -> Result<Option<Self>> {
+        let Some(facts) = source.recording_facts(tx.conn())? else {
+            return Ok(None);
+        };
+        Self::record_for_current_recipient(tx, user_id, &facts, event_type, authorization)
+    }
+
+    /// Batch source authorization and active-human facts in this writer transaction.
+    /// Returned items follow the requested recipient order, including idempotent repeats.
+    /// Owning-domain writers keep their own callback/failure boundaries.
+    pub fn record_source_for_recipients(
+        tx: &mut Tx<'_>,
+        recipient_ids: &[i64],
+        source: &dyn super::ActivityRecordingSource,
+        event_type: super::ActivityEventType,
+        authorization: super::SourceAuthorization,
+    ) -> Result<Vec<Self>> {
+        let Some(facts) = source.recording_facts(tx.conn())? else {
+            return Ok(Vec::new());
+        };
+        let users = User::where_ids(tx.conn(), recipient_ids)?
+            .into_iter()
+            .map(|user| (user.id, user))
+            .collect::<std::collections::HashMap<_, _>>();
+        let mut items = Vec::new();
+        for id in recipient_ids {
+            if let Some(user) = users.get(id)
+                && let Some(item) =
+                    Self::record_with_facts(tx, user, &facts, event_type, authorization)?
+            {
+                items.push(item);
+            }
         }
+        Ok(items)
+    }
+
+    fn record_for_current_recipient(
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        facts: &super::ActivityRecordingFacts,
+        event_type: super::ActivityEventType,
+        authorization: super::SourceAuthorization,
+    ) -> Result<Option<Self>> {
         let Some(user) = User::find_by_id(tx.conn(), user_id)? else {
             return Ok(None);
         };
-        if !user.is_active() || user.is_bot() {
+        Self::record_with_facts(tx, &user, facts, event_type, authorization)
+    }
+
+    fn record_with_facts(
+        tx: &mut Tx<'_>,
+        user: &User,
+        facts: &super::ActivityRecordingFacts,
+        event_type: super::ActivityEventType,
+        authorization: super::SourceAuthorization,
+    ) -> Result<Option<Self>> {
+        if !user.is_active()
+            || user.is_bot()
+            || facts.creator_id == Some(user.id)
+            || (authorization == super::SourceAuthorization::SourceRecipients
+                && !facts.recipient_ids.contains(&user.id))
+        {
             return Ok(None);
         }
-        let (source_type, source_id, thread_id, allowed) = match source {
-            ActivitySource::Message(id) => {
-                let Some(message) = crate::Message::find_by_id(tx.conn(), id)? else {
-                    return Ok(None);
-                };
-                if message.creator_id == user_id {
-                    return Ok(None);
-                }
-                let allowed = skip_source_check
-                    || super::message_recorder::candidates(
-                        tx.conn(),
-                        tx.rich_text(),
-                        &message,
-                        tx.now(),
-                    )?
-                    .recipients
-                    .iter()
-                    .any(|candidate| candidate.user_id == user_id);
-                ("Message", id, message.thread_id, allowed)
-            }
-            ActivitySource::WorkThreadEvent(id) => {
-                let Some(event) = WorkThreadEvent::find_by_id(tx.conn(), id)? else {
-                    return Ok(None);
-                };
-                let allowed =
-                    skip_source_check || event.recipient_user_ids(tx.conn())?.contains(&user_id);
-                (
-                    "WorkThreadEvent",
-                    id,
-                    Some(event.channel_thread_id),
-                    allowed,
-                )
-            }
-            ActivitySource::BoardSlaNudge(id) => {
-                let Some(nudge) = crate::BoardSlaNudge::find_by_id(tx.conn(), id)? else {
-                    return Ok(None);
-                };
-                let allowed = skip_source_check || nudge.activity_recipient_ids().contains(&user_id);
-                ("BoardSlaNudge", id, None, allowed)
-            }
-        };
-        if !allowed {
-            return Ok(None);
-        }
-        Self::record_authorized(tx, user_id, source_type, source_id, thread_id, event_type)
+        // Only these two Rails classes participate in grouping, even for custom readers.
+        let thread = facts
+            .thread_id
+            .filter(|_| matches!(facts.source_type, "Message" | "WorkThreadEvent"));
+        Self::record_authorized_with_recipient(
+            tx,
+            user.id,
+            facts.source_type,
+            facts.source_id,
+            thread,
+            event_type.as_str(),
+            Some(user),
+        )
     }
 
     /// WorkThreadEvent's fanout has already authorized and preloaded this recipient.
@@ -142,25 +216,6 @@ impl ActivityItem {
             None,
             "work_sla",
             Some(&user),
-        )
-    }
-
-    fn record_authorized(
-        tx: &mut Tx<'_>,
-        user_id: i64,
-        source_type: &str,
-        source_id: i64,
-        thread_id: Option<i64>,
-        event_type: &str,
-    ) -> Result<Option<Self>> {
-        Self::record_authorized_with_recipient(
-            tx,
-            user_id,
-            source_type,
-            source_id,
-            thread_id,
-            event_type,
-            None,
         )
     }
 
@@ -218,4 +273,133 @@ impl ActivityItem {
             None => Self::broadcast_item(tx, user_id, item),
         }
     }
+}
+
+fn source_facts(
+    tx: &Tx<'_>,
+    source: ActivitySource,
+    authorization: super::SourceAuthorization,
+    budget_reader: Option<&dyn super::AgentBudgetNoticeActivityReader>,
+) -> Result<Option<super::ActivityRecordingFacts>> {
+    use super::{ActivityRecordingFacts as Facts, SourceAuthorization};
+    let check = authorization == SourceAuthorization::SourceRecipients;
+    let basic = |source_type, source_id, recipient_ids| Facts {
+        source_type,
+        source_id,
+        creator_id: None,
+        thread_id: None,
+        recipient_ids,
+    };
+    let facts = match source {
+        ActivitySource::Message(id) => {
+            let Some(message) = crate::Message::find_by_id(tx.conn(), id)? else {
+                return Ok(None);
+            };
+            let recipient_ids = if check {
+                super::message_recorder::candidates(tx.conn(), tx.rich_text(), &message, tx.now())?
+                    .recipients
+                    .into_iter()
+                    .map(|candidate| candidate.user_id)
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            Facts {
+                source_type: "Message",
+                source_id: id,
+                creator_id: Some(message.creator_id),
+                thread_id: message.thread_id,
+                recipient_ids,
+            }
+        }
+        ActivitySource::WorkThreadEvent(id) => {
+            let Some(event) = WorkThreadEvent::find_by_id(tx.conn(), id)? else {
+                return Ok(None);
+            };
+            Facts {
+                source_type: "WorkThreadEvent",
+                source_id: id,
+                creator_id: None,
+                thread_id: Some(event.channel_thread_id),
+                recipient_ids: if check {
+                    event.recipient_user_ids(tx.conn())?
+                } else {
+                    Vec::new()
+                },
+            }
+        }
+        ActivitySource::BoardSlaNudge(id) => {
+            let Some(nudge) = crate::BoardSlaNudge::find_by_id(tx.conn(), id)? else {
+                return Ok(None);
+            };
+            basic("BoardSlaNudge", id, nudge.activity_recipient_ids().to_vec())
+        }
+        ActivitySource::HuddleGrant(id) => {
+            let Some(grant) = crate::models::huddle_grant::HuddleGrant::find_by_id(tx.conn(), id)?
+            else {
+                return Ok(None);
+            };
+            basic(
+                "HuddleGrant",
+                id,
+                if check {
+                    grant.activity_recipient_ids(tx.conn())?
+                } else {
+                    Vec::new()
+                },
+            )
+        }
+        ActivitySource::AgentApproval(id) => {
+            let Some(approval) = crate::AgentApproval::find(tx.conn(), id)? else {
+                return Ok(None);
+            };
+            basic(
+                "AgentApproval",
+                id,
+                if check {
+                    approval.decider_ids(tx.conn())?
+                } else {
+                    Vec::new()
+                },
+            )
+        }
+        ActivitySource::AgentBudgetNotice(id) => {
+            let reader = budget_reader.ok_or_else(|| {
+                Error::Other("AgentBudgetNotice requires its owning-domain activity reader".into())
+            })?;
+            let Some(recipients) = reader.recording_recipient_ids(tx.conn(), id)? else {
+                return Ok(None);
+            };
+            basic("AgentBudgetNotice", id, recipients)
+        }
+        // These Rails sources do not implement activity_recipient_ids. The generic
+        // recorder needs CallerAuthorized; their owning writers retain their policy.
+        source => {
+            let (kind, id, sql) = match source {
+                ActivitySource::SavedItem(id) => {
+                    ("SavedItem", id, "SELECT 1 FROM saved_items WHERE id=?")
+                }
+                ActivitySource::CalendarEvent(id) => {
+                    ("Event", id, "SELECT 1 FROM events WHERE id=?")
+                }
+                ActivitySource::ScheduledMessage(id) => (
+                    "ScheduledMessage",
+                    id,
+                    "SELECT 1 FROM scheduled_messages WHERE id=?",
+                ),
+                ActivitySource::Session(id) => ("Session", id, "SELECT 1 FROM sessions WHERE id=?"),
+                ActivitySource::TwoFactorCredential(id) => (
+                    "TwoFactorCredential",
+                    id,
+                    "SELECT 1 FROM two_factor_credentials WHERE id=?",
+                ),
+                _ => unreachable!(),
+            };
+            if !crate::sql::exists(tx.conn(), sql, [id])? {
+                return Ok(None);
+            }
+            basic(kind, id, Vec::new())
+        }
+    };
+    Ok(Some(facts))
 }
