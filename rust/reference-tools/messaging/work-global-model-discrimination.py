@@ -38,17 +38,24 @@ replacement=needle+'''
             assert_eq!(inserted, 1, "foreign-event mutant must insert its row");
 '''
 env=dict(os.environ,CARGO_BUILD_JOBS='2',RUST_TEST_THREADS='8',CAMPFIRE_REFERENCE=str(root),TMPDIR=str(root/'.scratch'))
+command=['mise','exec','rust@1.98.1','--','cargo','test','--locked',
+    '--manifest-path',str(generated/'Cargo.toml'),'-p','campfire_db',
+    'message_controller_separate_stale_work_changes_match_rails_history','--','--test-threads=8']
 try:
     source.write_text(original.replace(needle,replacement))
-    result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked',
-        '--manifest-path',str(generated/'Cargo.toml'),'-p','campfire_db',
-        'message_controller_separate_stale_work_changes_match_rails_history','--','--test-threads=8'],
-        cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    result=subprocess.run(command,cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
 finally:
     source.write_text(original)
     test_source.write_text(test_original)
+# This copy shares the caller's target. Rebuild the restored producer before
+# exiting: Cargo can otherwise reuse the mutant executable across identical
+# workspace package identities. A failed restored control invalidates the proof.
+control=subprocess.run(command,cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
 print(result.stdout,end='')
+print('WS8bm restored model control:')
+print(control.stdout,end='')
 valid=(result.returncode==0 and '1 passed; 0 failed;' in result.stdout) if args.expect_escape else (
     result.returncode!=0 and 'global work event delta' in result.stdout and '0 passed; 1 failed;' in result.stdout)
+valid &= control.returncode==0 and '1 passed; 0 failed;' in control.stdout
 print('WS8bm global model discrimination: '+('foreign-event producer ESCAPED at baseline' if args.expect_escape and valid else 'foreign-event producer REJECTED at global event delta' if valid else 'INVALID or unexpected result'))
 sys.exit(not valid)
