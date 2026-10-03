@@ -26,14 +26,11 @@ pub(crate) fn for_messages(
         .collect::<HashSet<_>>()
         .into_iter()
         .collect();
-    let users: HashMap<_, _> = if organizers.is_empty() {
-        HashMap::new()
-    } else {
-        User::where_ids(conn, &organizers)?
-            .into_iter()
-            .map(|user| (user.id, user))
-            .collect()
-    };
+    let mut users = HashMap::new();
+    // One message can reference more events than the callback's message batch.
+    for ids in organizers.chunks(crate::integrations::message_batches::SIZE) {
+        users.extend(User::where_ids(conn, ids)?.into_iter().map(|user| (user.id, user)));
+    }
     let venue_ids: Vec<_> = events
         .values()
         .flatten()
@@ -41,10 +38,10 @@ pub(crate) fn for_messages(
         .collect::<HashSet<_>>()
         .into_iter()
         .collect();
-    let venues: HashMap<_, _> = Room::for_ids(conn, &venue_ids)?
-        .into_iter()
-        .map(|room| (room.id, room))
-        .collect();
+    let mut venues = HashMap::new();
+    for ids in venue_ids.chunks(crate::integrations::message_batches::SIZE) {
+        venues.extend(Room::for_ids(conn, ids)?.into_iter().map(|room| (room.id, room)));
+    }
     events
         .into_iter()
         .map(|(message, events)| {
@@ -85,20 +82,27 @@ pub(crate) fn for_messages(
 }
 
 pub fn cards(conn: &Connection, message_id: i64) -> Result<String> {
-    use askama::Template;
     let message = Message::find(conn, message_id)?;
-    let events = for_message(conn, &message)?;
-    let entries = campfire_views::events::card_entries(
-        &events,
-        &message.id.to_string(),
-        &super::page::renderer_time_zone(),
-    );
-    campfire_views::events::Cards {
-        message_key: &message.client_message_id,
-        entries: &entries,
-    }
-    .render()
-    .map_err(|e| campfire_db::Error::Other(e.to_string()))
+    Ok(cards_for_messages(conn, std::slice::from_ref(&message))?
+        .remove(&message_id).expect("requested message rendered"))
+}
+
+pub(crate) fn cards_for_messages(
+    conn: &Connection,
+    messages: &[Message],
+) -> Result<std::collections::HashMap<i64, String>> {
+    use askama::Template;
+    let cards = for_messages(conn, messages)?;
+    let zone = super::page::renderer_time_zone();
+    messages.iter().map(|message| {
+        let events = cards.get(&message.id).map(Vec::as_slice).unwrap_or_default();
+        let entries = campfire_views::events::card_entries(events, &message.id.to_string(), &zone);
+        let html = campfire_views::events::Cards {
+            message_key: &message.client_message_id,
+            entries: &entries,
+        }.render().map_err(|error| campfire_db::Error::Other(error.to_string()))?;
+        Ok((message.id, html))
+    }).collect()
 }
 
 use campfire_db::Timestamp;
