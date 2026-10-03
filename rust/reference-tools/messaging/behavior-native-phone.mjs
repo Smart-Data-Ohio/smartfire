@@ -54,6 +54,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     }
     console.log(`WS8bm native ${label} source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; ${label==='attachment'?'original behavior body; shared file path adapted':'unchanged behavior body/helpers, screenshots omitted'}`);
     const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:ro`,'-v',`${temp}:${temp}`]:[];
+    if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
     const result=spawnSync('docker',['run','--rm','--name',container,'--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'],{encoding:'utf8',timeout:120000,maxBuffer:8*1024*1024});
     process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');
     if(label==='attachment') captureUploadReferenceLog(base,database);

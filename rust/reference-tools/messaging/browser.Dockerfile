@@ -6,4 +6,7 @@ COPY --chown=1000:1000 parity/docker/resque-pool.yml /rails/config/resque-pool.y
 COPY --chown=1000:1000 parity/docker/Procfile /rails/Procfile
 COPY --chown=1000:1000 reference-tools/messaging/browser-test-jobs.rb /rails/config/initializers/ws8bm_browser_test_jobs.rb
 COPY --chown=1000:1000 reference-tools/messaging/browser-drive.rb /rails/config/initializers/ws8bm_browser_drive.rb
+# The pinned test routes require this file before engine routes can finish.
+# The production image omits test/, so restore the original test fixture.
+COPY --chown=1000:1000 reference-tools/messaging/browser-test-session-controller.rb /rails/test/support/test_session_controller.rb
 USER 1000:1000

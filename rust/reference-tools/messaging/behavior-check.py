@@ -429,6 +429,10 @@ for file in files:
                             reference_up += ["-e",key+"="+run_env[key]]
                     if case in test_environment_cases:
                         reference_up += ["-e","RAILS_ENV=test"]
+                        # config/environments/test.rb uses the caller's CI flag
+                        # to eager-load the same models/routes as pinned tests.
+                        if "CI" in run_env:
+                            reference_up += ["-e","CI="+run_env["CI"]]
                     if case=="Markdown replies and file attachments remain usable":
                         reference_up += ["-e","WS8BM_TEST_FORGERY_PROTECTION=1"]
                     if paused_jobs:
