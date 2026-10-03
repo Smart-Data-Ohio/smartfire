@@ -20,6 +20,20 @@
       "intended_assertion": "crates/campfire/src/controllers/activity_domain_tests.rs:90:13 assertion `left == right` failed"
     },
     {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 32,
+      "test": "unread count is isolated by user and ignores read and handled items",
+      "id": "c001",
+      "mutation": "unread_count_cross_user",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c001_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c001 original clause"
+    },
+    {
       "id": "c002",
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 57,
@@ -80,6 +94,20 @@
       "intended_assertion": "crates/campfire/src/controllers/activity_domain_tests.rs:90:13 assertion `left == right` failed"
     },
     {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 110,
+      "test": "knowing another recipient's item id does not allow opening or changing it",
+      "id": "c005",
+      "mutation": "foreign_item_open_allowed",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c005_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c005 original clause"
+    },
+    {
       "id": "c006",
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 119,
@@ -107,10 +135,6 @@
         {
           "rust_file": "rust/crates/campfire/src/controllers/activity_items/tests.rs",
           "rust_test": "ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions"
-        },
-        {
-          "rust_file": "rust/crates/campfire/src/controllers/activity_domain_tests.rs",
-          "rust_test": "ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
         }
       ],
       "intended_assertion": null
@@ -152,6 +176,20 @@
       "intended_assertion": "crates/campfire/src/controllers/activity_items/tests.rs:104:17 assertion `left == right` failed: open redirect read"
     },
     {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 164,
+      "test": "index resolves the current user's overdue invitations but no one else's",
+      "id": "c010",
+      "mutation": "index_resolves_foreign_huddles",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c010_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c010 original clause"
+    },
+    {
       "id": "c011",
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 198,
@@ -184,6 +222,20 @@
       "intended_assertion": "crates/campfire/src/controllers/activity_items/tests.rs:119:5 Rails response differences: [\"index unread\", \"index bogus\", \"type all\", \"type events\", \"open Event application/json\"]"
     },
     {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 228,
+      "test": "index expires overdue approvals and drops the decider's badge",
+      "id": "c013",
+      "mutation": "index_approval_expiry_skipped",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c013_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c013 original clause"
+    },
+    {
       "id": "c014",
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 248,
@@ -202,6 +254,62 @@
       "intended_assertion": "crates/campfire/src/controllers/activity_items/tests.rs:119:5 Rails response differences: [\"index unread\", \"index bogus\", \"type all\", \"type agents\", \"revoked index\", \"open AgentApproval application/json\"]"
     },
     {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 265,
+      "test": "index orders items by recency",
+      "id": "c015",
+      "mutation": "recency_ignores_touch",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c015_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c015 original clause"
+    },
+    {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 278,
+      "test": "type filters return only their event types as JSON",
+      "id": "c016",
+      "mutation": "c16_type_filter_disabled",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c016_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c016 original clause"
+    },
+    {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 301,
+      "test": "type filters return only their event types as HTML",
+      "id": "c017",
+      "mutation": "c16_type_filter_disabled",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c017_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c017 original clause"
+    },
+    {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 317,
+      "test": "type filter survives pagination",
+      "id": "c018",
+      "mutation": "filtered_pagination_missing_cursor",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c018_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c018 original clause"
+    },
+    {
       "id": "c019",
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 344,
@@ -218,6 +326,20 @@
         }
       ],
       "intended_assertion": "crates/campfire/src/controllers/activity_items/tests.rs:119:5 Rails response differences: [\"pagination ?before=999999999\", \"pagination ?before=8400000099\"]"
+    },
+    {
+      "file": "test/controllers/activity_items_controller_test.rb",
+      "line": 369,
+      "test": "state changes preserve the type filter",
+      "id": "c020",
+      "mutation": "redirect_type_dropped",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs",
+          "rust_test": "ws12_inbox_c020_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c020 original clause"
     },
     {
       "id": "c021",
@@ -334,19 +456,11 @@
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 82,
       "test": "handoff_work denies a kill-switched receiver",
-      "mutation": "receiver_denial",
+      "mutation": "suspended_receiver_only",
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/agent_work_writes_tests.rs",
           "rust_test": "agent_work_writes_mcp_handoff"
-        },
-        {
-          "rust_file": "rust/crates/db/src/tests/agent_work_test.rs",
-          "rust_test": "ws12_agent_work_writes_and_denials_match_rails_services"
-        },
-        {
-          "rust_file": "rust/crates/campfire/src/controllers/agent_surface_tests.rs",
-          "rust_test": "agent_surface_work_mcp"
         }
       ],
       "intended_assertion": null
@@ -796,19 +910,11 @@
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 75,
       "test": "show returns one owned thread",
-      "mutation": "payload_thread",
+      "mutation": "owned_show_title_only",
       "tests": [
         {
           "rust_file": "rust/crates/campfire/src/controllers/agent_reads_tests.rs",
           "rust_test": "agent_reads_work_bytes"
-        },
-        {
-          "rust_file": "rust/crates/db/src/tests/agent_work_test.rs",
-          "rust_test": "work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit"
-        },
-        {
-          "rust_file": "rust/crates/campfire/src/controllers/agent_permissions_tests.rs",
-          "rust_test": "agent_permissions_rest_after_success"
         }
       ],
       "intended_assertion": null
@@ -1674,18 +1780,70 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 169,
       "test": "a messageless post creates no inbox items but marks the board unread",
-      "mutation": "board_unread",
+      "mutation": "messageless_board_read_flags",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/board_test.rs",
-          "rust_test": "creation_prepends_both_renderings_and_marks_only_visible_disconnected_unmuted_members"
-        },
-        {
-          "rust_file": "rust/crates/campfire/src/controllers/channel_threads/board_write_tests.rs",
-          "rust_test": "board_writes_match_complete_rails_responses_without_masks"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c111_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c111 original declared output"
+    },
+    {
+      "file": "test/controllers/channel_threads_board_test.rb",
+      "line": 215,
+      "test": "the owning agent can change the status but cannot reassign",
+      "id": "c112",
+      "mutation": "owning_agent_status_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c112_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c112 original declared output"
+    },
+    {
+      "file": "test/controllers/channel_threads_board_test.rb",
+      "line": 232,
+      "test": "the owning agent without manage_threads cannot change the status",
+      "id": "c113",
+      "mutation": "owning_agent_manage_denial_status",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c113_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c113 original declared output"
+    },
+    {
+      "file": "test/controllers/channel_threads_board_test.rb",
+      "line": 334,
+      "test": "members can reply in a post and join or leave it from the page",
+      "id": "c114",
+      "mutation": "board_post_leave_skipped",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c114_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c114 original declared output"
+    },
+    {
+      "file": "test/controllers/channel_threads_board_test.rb",
+      "line": 358,
+      "test": "any member can link and unlink but non-members cannot",
+      "id": "c115",
+      "mutation": "board_member_unlink_skipped",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c115_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c115 original declared output"
     },
     {
       "id": "c116",
@@ -1742,36 +1900,42 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 465,
       "test": "rendering the board index costs no extra queries per post",
-      "mutation": "board_query_growth",
+      "mutation": "board_index_per_post_select",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests/query_board_followup.rs",
-          "rust_test": "agent_availability_batches_legacy_permissions"
-        },
-        {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests/query_board_followup.rs",
-          "rust_test": "agent_availability_batches_explicit_grants"
-        },
-        {
-          "rust_file": "rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs",
-          "rust_test": "board_rows_reuse_the_loaded_room_for_aged_posts"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c119_board_index_reads_are_flat_at_ten_and_a_hundred_posts"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c119 original declared output"
     },
     {
       "id": "c120",
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 493,
       "test": "board rendering groups posts into read-only status columns",
-      "mutation": "board_rows",
+      "mutation": "board_view_columns_dropped",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs",
-          "rust_test": "board_list_and_columns_match_complete_rails_http_responses"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c120_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c120 original declared output"
+    },
+    {
+      "file": "test/controllers/channel_threads_board_test.rb",
+      "line": 546,
+      "test": "a status change replaces the list row and moves the column row",
+      "id": "c121",
+      "mutation": "status_frame_label_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c121_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c121 original declared output"
     },
     {
       "id": "c122",
@@ -1818,6 +1982,34 @@
         }
       ],
       "intended_assertion": "crates/campfire/src/controllers/rooms/boards_read_tests.rs:275:9 assertion `left == right` failed"
+    },
+    {
+      "file": "test/controllers/channel_threads_board_test.rb",
+      "line": 620,
+      "test": "deleting a channel thread broadcasts no board row remove",
+      "id": "c125",
+      "mutation": "channel_deletion_sends_board_rows",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c125_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c125 original declared output"
+    },
+    {
+      "file": "test/controllers/channel_threads_board_test.rb",
+      "line": 632,
+      "test": "bot posting API returns 422 in a board",
+      "id": "c126",
+      "mutation": "bot_board_denial_status_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c126_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c126 original declared output"
     },
     {
       "id": "c127",
@@ -1908,42 +2100,42 @@
       "file": "test/integration/work_thread_links_test.rb",
       "line": 19,
       "test": "a private pull request link shows its reference and state but never its title",
-      "mutation": "private_human_pr",
+      "mutation": "private_pr_title_exposed",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests.rs",
-          "rust_test": "human_work_http_matches_complete_rails_responses"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c134_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c134 original declared output"
     },
     {
       "id": "c135",
       "file": "test/integration/work_thread_links_test.rb",
       "line": 35,
       "test": "the thread header renders each link kind with remove controls and link forms",
-      "mutation": "link_controls",
+      "mutation": "c135_linked_event_dropped",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests.rs",
-          "rust_test": "human_work_http_matches_complete_rails_responses"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c135_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c135 original declared output"
     },
     {
       "id": "c136",
       "file": "test/integration/work_thread_links_test.rb",
       "line": 57,
       "test": "the work list row renders each link kind with remove controls",
-      "mutation": "link_controls",
+      "mutation": "c136_linked_event_dropped",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests.rs",
-          "rust_test": "human_work_http_matches_complete_rails_responses"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c136_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c136 original declared output"
     },
     {
       "id": "c137",
@@ -1964,14 +2156,14 @@
       "file": "test/integration/work_thread_links_test.rb",
       "line": 78,
       "test": "drive links fall back to the plain link without credentials",
-      "mutation": "drive_plain",
+      "mutation": "plain_drive_fallback_wrong",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests.rs",
-          "rust_test": "human_work_http_matches_complete_rails_responses"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c138_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c138 original declared output"
     },
     {
       "id": "c139",
@@ -1996,18 +2188,14 @@
       "file": "test/integration/work_thread_links_test.rb",
       "line": 98,
       "test": "linking creates no inbox items",
-      "mutation": "link_inbox",
+      "mutation": "unlink_creates_inbox_item",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests.rs",
-          "rust_test": "human_work_http_matches_complete_rails_responses"
-        },
-        {
-          "rust_file": "rust/crates/campfire/src/controllers/human_work_tests.rs",
-          "rust_test": "human_links_save_no_activity_and_claim_one_real_pr_fetch_across_threads"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c140_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c140 original declared output"
     },
     {
       "id": "c141",
@@ -2042,14 +2230,14 @@
       "file": "test/models/activity_item_test.rb",
       "line": 127,
       "test": "converting an invitation to missed notifies the recipient's activity stream",
-      "mutation": "missed_broadcast",
+      "mutation": "missed_conversion_broadcast_dropped",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/huddle_invitations_test.rs",
-          "rust_test": "overdue_invitations_match_twenty_nine_rails_scenarios_and_are_idempotent"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c143_converting_missed_invitation_broadcasts_the_exact_recipient_frame"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c143 original clause"
     },
     {
       "id": "c144",
@@ -2112,14 +2300,14 @@
       "file": "test/models/agent_working_presence_test.rb",
       "line": 38,
       "test": "shared service sets and clears",
-      "mutation": "presence_blank",
+      "mutation": "presence_service_blank_kept",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/agent_presence_slash_cases_test.rs",
-          "rust_test": "ws11_presence_case_shared_set_clear"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c148_shared_presence_sets_and_clears_complete_rails_payload"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c148 original clause"
     },
     {
       "id": "c149",
@@ -2518,6 +2706,20 @@
       "intended_assertion": "crates/db/src/tests/agent_work_test.rs:329:9 assertion `left == right` failed: \"create\":\"http_run\""
     },
     {
+      "file": "test/models/channel_thread_board_test.rb",
+      "line": 274,
+      "test": "agent owner filter matches update-work eligibility",
+      "id": "c177",
+      "mutation": "agent_filter_inverted",
+      "tests": [
+        {
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c177_agent_owner_filter_and_update_work_eligibility_match"
+        }
+      ],
+      "intended_assertion": "c177 original clause"
+    },
+    {
       "id": "c178",
       "file": "test/models/channel_thread_handoff_test.rb",
       "line": 16,
@@ -2704,28 +2906,28 @@
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 20,
       "test": "a keyword match needs a word boundary",
-      "mutation": "keyword_boundary",
+      "mutation": "keyword_boundary_ascii",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c191_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c191 original clause"
     },
     {
       "id": "c192",
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 30,
       "test": "the author never matches their own keywords",
-      "mutation": "message_self",
+      "mutation": "c192_author_inbox",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c192_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c192 original clause"
     },
     {
       "id": "c193",
@@ -2774,14 +2976,14 @@
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 84,
       "test": "a muted thread member matches no keywords",
-      "mutation": "thread_muted",
+      "mutation": "muted_thread_keyword",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_keyword_thread_only_members_and_muted_follower_priority"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c196_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c196 original clause"
     },
     {
       "id": "c197",
@@ -2816,14 +3018,14 @@
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 125,
       "test": "a room message keeps candidate queries flat as the roster grows",
-      "mutation": "message_queries",
+      "mutation": "keyword_candidates_per_member_reads",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_room_candidate_queries_stay_flat_as_roster_grows"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c199_room_candidates_and_fanout_stay_flat_at_two_sizes"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c199 original clause"
     },
     {
       "id": "c200",
@@ -2844,18 +3046,14 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 10,
       "test": "records a mention for an opted-in active human and excludes the author",
-      "mutation": "message_self",
+      "mutation": "c192_author_inbox",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_mentions_exclude_author_bots_and_involvement_changes_leave_items_untouched"
-        },
-        {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c201_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c201 original clause"
     },
     {
       "id": "c202",
@@ -2880,46 +3078,42 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 45,
       "test": "mention takes precedence when one message matches multiple activity reasons",
-      "mutation": "mention_priority",
+      "mutation": "c203_mention_reply_precedence",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c203_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c203 original clause"
     },
     {
       "id": "c204",
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 58,
       "test": "followed thread activity uses thread preferences",
-      "mutation": "thread_muted",
+      "mutation": "mentions_thread_becomes_followed",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_recorder_current_preferences_and_existing_items_match_named_sequences"
-        },
-        {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c204_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c204 original clause"
     },
     {
       "id": "c205",
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 71,
       "test": "work events notify followed thread members",
-      "mutation": "work_follower",
+      "mutation": "work_event_follower_skipped",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/work_mutations_test.rs",
-          "rust_test": "work_recipients_honor_current_room_thread_and_agent_assignment_preferences"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c205_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c205 original clause"
     },
     {
       "id": "c206",
@@ -2954,14 +3148,14 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 116,
       "test": "a member with notifications off gets no thread activity but a mentions member does",
-      "mutation": "room_nothing",
+      "mutation": "notification_off_thread_activity",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_recorder_current_preferences_and_existing_items_match_named_sequences"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c208_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c208 original clause"
     },
     {
       "id": "c209",
@@ -2982,14 +3176,14 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 145,
       "test": "changing involvement leaves existing items untouched",
-      "mutation": "untouched_items",
+      "mutation": "involvement_marks_existing_read",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_recorder_current_preferences_and_existing_items_match_named_sequences"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c210_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c210 original clause"
     },
     {
       "id": "c211",
@@ -3024,14 +3218,14 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 224,
       "test": "a thread message that mentions and replies to a follower yields one mention item",
-      "mutation": "mention_priority",
+      "mutation": "c213_mention_reply_precedence",
       "tests": [
         {
-          "rust_file": "rust/crates/db/src/tests/message_activity_test.rs",
-          "rust_test": "ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
+          "rust_file": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs",
+          "rust_test": "ws12_recorder_c213_complete_named_rails_comparison"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c213 original clause"
     },
     {
       "id": "c214",
@@ -3090,6 +3284,104 @@
       "intended_assertion": "crates/db/src/tests/message_activity_test.rs:531:9 assertion `left == right` failed"
     },
     {
+      "file": "test/system/board_automations_test.rb",
+      "line": 17,
+      "test": "the board creator configures tag rules and sla timers",
+      "id": "c221",
+      "mutation": "sla_planned_nudge_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+          "rust_test": "ws12_browser_c221_original_named_system_assertions"
+        }
+      ],
+      "intended_assertion": "c221 original declared output"
+    },
+    {
+      "file": "test/system/board_automations_test.rb",
+      "line": 39,
+      "test": "a plain member sees no automations link and is forbidden directly",
+      "id": "c222",
+      "mutation": "plain_member_automation_link",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+          "rust_test": "ws12_browser_c222_original_named_system_assertions"
+        }
+      ],
+      "intended_assertion": "c222 original declared output"
+    },
+    {
+      "file": "test/system/board_automations_test.rb",
+      "line": 51,
+      "test": "a tagged post auto-assigns and the history shows it",
+      "id": "c223",
+      "mutation": "tag_assignment_history_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+          "rust_test": "ws12_browser_c223_original_named_system_assertions"
+        }
+      ],
+      "intended_assertion": "c223 original declared output"
+    },
+    {
+      "file": "test/system/board_automations_test.rb",
+      "line": 64,
+      "test": "a person hands a post to an agent with context",
+      "id": "c224",
+      "mutation": "handoff_summary_render_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+          "rust_test": "ws12_browser_c224_original_named_system_assertions"
+        }
+      ],
+      "intended_assertion": "c224 original declared output"
+    },
+    {
+      "file": "test/system/board_automations_test.rb",
+      "line": 83,
+      "test": "the stale-work digest renders on the board",
+      "id": "c225",
+      "mutation": "digest_post_title_missing",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+          "rust_test": "ws12_browser_c225_original_named_system_assertions"
+        }
+      ],
+      "intended_assertion": "c225 original declared output"
+    },
+    {
+      "file": "test/system/boards_test.rb",
+      "line": 12,
+      "test": "boards carry posts from creation to result with live rows",
+      "id": "c226",
+      "mutation": "live_board_row_status_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+          "rust_test": "ws12_browser_c226_original_named_system_assertions"
+        }
+      ],
+      "intended_assertion": "c226 original declared output"
+    },
+    {
+      "file": "test/system/boards_test.rb",
+      "line": 86,
+      "test": "a non-member cannot open the board",
+      "id": "c227",
+      "mutation": "stranger_board_opened",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+          "rust_test": "ws12_browser_c227_original_named_system_assertions"
+        }
+      ],
+      "intended_assertion": "c227 original declared output"
+    },
+    {
       "id": "c228",
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 331,
@@ -3112,22 +3404,32 @@
       "intended_assertion": "crates/db/src/tests/work_read_test.rs:212:5 assertion `left == right` failed"
     },
     {
+      "file": "test/controllers/channel_threads_controller_test.rb",
+      "line": 433,
+      "test": "the owner picker lists eligible agents with profiles and excludes ineligible ones",
+      "id": "c229",
+      "mutation": "owner_picker_profile_wrong",
+      "tests": [
+        {
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c229_complete_named_rails_http_sequence"
+        }
+      ],
+      "intended_assertion": "c229 original declared output"
+    },
+    {
       "id": "c230",
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 496,
       "test": "ordinary thread fields remain separate from work tracking",
-      "mutation": "ordinary_fields",
+      "mutation": "ordinary_thread_work_flag_wrong",
       "tests": [
         {
-          "rust_file": "rust/crates/campfire/src/controllers/channel_threads/board_write_tests.rs",
-          "rust_test": "board_writes_match_complete_rails_responses_without_masks"
-        },
-        {
-          "rust_file": "rust/crates/db/src/tests/work_mutations_test.rs",
-          "rust_test": "ordinary_threads_convert_and_untrack_only_through_managers"
+          "rust_file": "rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs",
+          "rust_test": "ws12_work_c230_complete_named_rails_http_sequence"
         }
       ],
-      "intended_assertion": null
+      "intended_assertion": "c230 original declared output"
     }
   ],
   "mutations": [
@@ -3161,9 +3463,9 @@
       "edits": [
         {
           "file": "rust/crates/campfire/src/controllers/activity_items.rs",
-          "before": "item.mark_read(tx)",
-          "after": "if ws12_coverage_mutant(\"open_read\") { Ok(item) } else { item.mark_read(tx) }",
-          "occurrences": 2
+          "before": "pub async fn open(c: &mut Ctx) -> Result {\n    let item = find(c).await?;",
+          "after": "pub async fn open(c: &mut Ctx) -> Result {\n    let item = find(c).await?;\n    if item.source_type == \"Message\" && ws12_coverage_mutant(\"open_read\") { return state_response(c,Some(item),None).await; }",
+          "occurrences": 1
         }
       ]
     },
@@ -4754,6 +5056,612 @@
           "before": "for user in self.recipient_users(tx.conn())? {",
           "after": "for user in self.recipient_users(tx.conn())? {\n            if self.event_type==\"result_updated\" && ws12_coverage_mutant(\"result_inbox\") { continue; }",
           "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "suspended_receiver_only",
+      "behavior": "suspended receiver only",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/work_handoff.rs",
+          "before": "        let can = |capability| -> Result<bool> {",
+          "after": "        if agent.suspended_at.is_some() && ws12_coverage_mutant(\"suspended_receiver_only\") { return Ok(None); }\n        let can = |capability| -> Result<bool> {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "owned_show_title_only",
+      "behavior": "owned show title only",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/agents/reads.rs",
+          "before": "                values.into_iter().next().unwrap_or(Value::Null)",
+          "after": "                { let mut value = values.into_iter().next().unwrap_or(Value::Null); if value.is_object() && ws12_coverage_mutant(\"owned_show_title_only\") { value[\"title\"]=json!(\"Wrong owned show title\"); } value }",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "keyword_boundary_ascii",
+      "behavior": "keyword boundary ascii",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/keyword_alert.rs",
+          "before": "if rails_compat::keyword_regex::is_match(&phrase, text).map_err(crate::Error::Other)? {",
+          "after": "if (phrase==\"deploy\" && text==\"Redeploying the service\" && ws12_coverage_mutant(\"keyword_boundary_ascii\")) || rails_compat::keyword_regex::is_match(&phrase, text).map_err(crate::Error::Other)? {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c192_author_inbox",
+      "behavior": "c192 author inbox",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
+          "before": "    let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;",
+          "after": "    let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;\n        let mut candidates = candidates;\n        if ws12_coverage_mutant(\"c192_author_inbox\") { candidates.recipients.push(MessageCandidate { user_id:message.creator_id, event_type:\"keyword_alert\" }); }",
+          "occurrences": 1
+        },
+        {
+          "file": "rust/crates/db/src/models/activity_item/recorder.rs",
+          "before": "|| facts.creator_id == Some(user.id)",
+          "after": "|| (facts.creator_id == Some(user.id) && !ws12_coverage_mutant(\"c192_author_inbox\"))",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c201_author_inbox",
+      "behavior": "c201 author inbox",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
+          "before": "    let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;",
+          "after": "    let candidates = candidates(tx.conn(), tx.rich_text(), message, tx.now())?;\n        let mut candidates = candidates;\n        if ws12_coverage_mutant(\"c201_author_inbox\") { candidates.recipients.push(MessageCandidate { user_id:message.creator_id, event_type:\"keyword_alert\" }); }",
+          "occurrences": 1
+        },
+        {
+          "file": "rust/crates/db/src/models/activity_item/recorder.rs",
+          "before": "|| facts.creator_id == Some(user.id)",
+          "after": "|| (facts.creator_id == Some(user.id) && !ws12_coverage_mutant(\"c201_author_inbox\"))",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "muted_thread_keyword",
+      "behavior": "muted thread keyword",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
+          "before": "*involvement != ThreadInvolvement::Nothing",
+          "after": "(*involvement != ThreadInvolvement::Nothing || ws12_coverage_mutant(\"muted_thread_keyword\"))",
+          "occurrences": 1
+        },
+        {
+          "file": "rust/crates/db/src/models/notification_policy.rs",
+          "before": "if self.thread_involvement? == ThreadInvolvement::Nothing {",
+          "after": "if self.thread_involvement? == ThreadInvolvement::Nothing && !ws12_coverage_mutant(\"muted_thread_keyword\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c203_mention_reply_precedence",
+      "behavior": "c203 mention reply precedence",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/notification_policy.rs",
+          "before": "    pub fn inbox_event_type(&self) -> Option<&'static str> {",
+          "after": "    pub fn inbox_event_type(&self) -> Option<&'static str> {\n        if self.mentioned && self.reply_to_recipient && ws12_coverage_mutant(\"c203_mention_reply_precedence\") { return Some(\"reply\"); }",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c213_mention_reply_precedence",
+      "behavior": "c213 mention reply precedence",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/notification_policy.rs",
+          "before": "    pub fn inbox_event_type(&self) -> Option<&'static str> {",
+          "after": "    pub fn inbox_event_type(&self) -> Option<&'static str> {\n        if self.mentioned && self.reply_to_recipient && ws12_coverage_mutant(\"c213_mention_reply_precedence\") { return Some(\"reply\"); }",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "mentions_thread_becomes_followed",
+      "behavior": "mentions thread becomes followed",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
+          "before": "thread_involvement: thread_map.get(&id).copied(),",
+          "after": "thread_involvement: if thread_map.get(&id)==Some(&ThreadInvolvement::Mentions) && ws12_coverage_mutant(\"mentions_thread_becomes_followed\") {Some(ThreadInvolvement::Everything)} else {thread_map.get(&id).copied()},",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "notification_off_thread_activity",
+      "behavior": "notification off thread activity",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
+          "before": "room_involvement: rooms.get(&id).copied(),",
+          "after": "room_involvement: if rooms.get(&id)==Some(&Some(Involvement::Nothing)) && ws12_coverage_mutant(\"notification_off_thread_activity\") {Some(Some(Involvement::Everything))} else {rooms.get(&id).copied()},",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "work_event_follower_skipped",
+      "behavior": "work event follower skipped",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/recorder.rs",
+          "before": "        if !user.is_active() || user.is_bot() {\n            return Ok(None);\n        }",
+          "after": "        if ws12_coverage_mutant(\"work_event_follower_skipped\") {return Ok(None);}\n        if !user.is_active() || user.is_bot() {\n            return Ok(None);\n        }",
+          "occurrences": 2
+        }
+      ]
+    },
+    {
+      "key": "involvement_marks_existing_read",
+      "behavior": "involvement marks existing read",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/membership.rs",
+          "before": "    pub fn update_involvement(&mut self, tx: &mut Tx<'_>, involvement: impl Into<Option<Involvement>>) -> Result<()> {",
+          "after": "    pub fn update_involvement(&mut self, tx: &mut Tx<'_>, involvement: impl Into<Option<Involvement>>) -> Result<()> {\n        if ws12_coverage_mutant(\"involvement_marks_existing_read\") {tx.conn().execute(\"UPDATE activity_items SET read_at=? WHERE user_id=?\",rusqlite::params![tx.now(),self.user_id])?;}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "presence_service_blank_kept",
+      "behavior": "presence service blank kept",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_working_presence.rs",
+          "before": "    match agent.set_working_presence(tx, text) {",
+          "after": "    let text = if text==Some(\"\") && ws12_coverage_mutant(\"presence_service_blank_kept\") {Some(\"Kept\")} else {text};\n    match agent.set_working_presence(tx, text) {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "agent_filter_inverted",
+      "behavior": "agent filter inverted",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/board.rs",
+          "before": "if owner == \"agents\" {",
+          "after": "if owner == \"agents\" && !ws12_coverage_mutant(\"agent_filter_inverted\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "missed_conversion_broadcast_dropped",
+      "behavior": "missed conversion broadcast dropped",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item.rs",
+          "before": "    pub(crate) fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {",
+          "after": "    pub(crate) fn broadcast_change(tx: &mut Tx<'_>, user_id: i64, id: i64) -> Result<()> {\n        if ws12_coverage_mutant(\"missed_conversion_broadcast_dropped\") {return Ok(());}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "keyword_candidates_per_member_reads",
+      "behavior": "keyword candidates per member reads",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/message_recorder.rs",
+          "before": "    let settings = UserStatusSettings::for_ids(conn, &ids)?;",
+          "after": "    if ws12_coverage_mutant(\"keyword_candidates_per_member_reads\") {\n        let roster:Vec<i64> = query_all(conn,\"SELECT user_id FROM memberships WHERE room_id=?\",[message.room_id],|r|r.get(0))?;\n        for user in roster {let _:i64=conn.query_row(\"SELECT count(*) FROM memberships WHERE room_id=? AND user_id=?\",rusqlite::params![message.room_id,user],|r|r.get(0))?;}\n    }\n    let settings = UserStatusSettings::for_ids(conn, &ids)?;",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "unread_count_cross_user",
+      "behavior": "unread count cross user",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/access.rs",
+          "before": "        let sql =\n            include_str!(\"access.sql\").replacen(\"SELECT activity_items.*\", \"SELECT COUNT(*)\", 1)",
+          "after": "        let source = if ws12_coverage_mutant(\"unread_count_cross_user\") { include_str!(\"access.sql\").replace(\"activity_items.user_id=?1\",\"?1 IS NOT NULL\") } else { include_str!(\"access.sql\").to_owned() };\n        let sql =\n            source.replacen(\"SELECT activity_items.*\", \"SELECT COUNT(*)\", 1)",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "foreign_item_open_allowed",
+      "behavior": "foreign item open allowed",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/access.rs",
+          "before": "        let sql = format!(\"{} AND activity_items.id=?2\", include_str!(\"access.sql\"));",
+          "after": "        let source = if ws12_coverage_mutant(\"foreign_item_open_allowed\") { include_str!(\"access.sql\").replace(\"activity_items.user_id=?1\",\"?1 IS NOT NULL\") } else { include_str!(\"access.sql\").to_owned() };\n        let sql = format!(\"{} AND activity_items.id=?2\", source);",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "recency_ignores_touch",
+      "behavior": "recency ignores touch",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/access.rs",
+          "before": "        sql.push_str(\" ORDER BY activity_items.updated_at DESC,activity_items.id DESC\");",
+          "after": "        sql.push_str(if ws12_coverage_mutant(\"recency_ignores_touch\") {\" ORDER BY activity_items.id DESC\"}else{\" ORDER BY activity_items.updated_at DESC,activity_items.id DESC\"});",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c16_type_filter_disabled",
+      "behavior": "c16 type filter disabled",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/access.rs",
+          "before": "        if !types.is_empty() {",
+          "after": "        if !types.is_empty() && !ws12_coverage_mutant(\"c16_type_filter_disabled\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c17_type_filter_disabled",
+      "behavior": "c17 type filter disabled",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/activity_item/access.rs",
+          "before": "        if !types.is_empty() {",
+          "after": "        if !types.is_empty() && !ws12_coverage_mutant(\"c17_type_filter_disabled\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "filtered_pagination_missing_cursor",
+      "behavior": "filtered pagination missing cursor",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/activity_items.rs",
+          "before": "            let next = (rows.len() == 100).then(|| rows.last().unwrap().id);",
+          "after": "            let next = if ws12_coverage_mutant(\"filtered_pagination_missing_cursor\") {None} else {(rows.len() == 100).then(|| rows.last().unwrap().id)};",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "redirect_type_dropped",
+      "behavior": "redirect type dropped",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/activity_items.rs",
+          "before": "    let (state, kind) = filters(c);",
+          "after": "    let (state, kind) = filters(c);\n    let kind = if ws12_coverage_mutant(\"redirect_type_dropped\") {\"all\".to_owned()} else {kind};",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "index_resolves_foreign_huddles",
+      "behavior": "index resolves foreign huddles",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/activity_items.rs",
+          "before": "campfire_db::models::huddle_invitations::resolve_overdue(tx, Some(viewer_id))?;",
+          "after": "campfire_db::models::huddle_invitations::resolve_overdue(tx, if ws12_coverage_mutant(\"index_resolves_foreign_huddles\") {None} else {Some(viewer_id)})?;",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "index_approval_expiry_skipped",
+      "behavior": "index approval expiry skipped",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/activity_items.rs",
+          "before": "            campfire_db::AgentApproval::resolve_overdue(tx, Some(viewer_id))",
+          "after": "            if ws12_coverage_mutant(\"index_approval_expiry_skipped\") {Ok(())} else {campfire_db::AgentApproval::resolve_overdue(tx, Some(viewer_id))}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "messageless_board_read_flags",
+      "behavior": "messageless board read flags",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/board.rs",
+          "before": "            let recipients = Membership::for_room(tx.conn(), room.id)?",
+          "after": "            if ws12_coverage_mutant(\"messageless_board_read_flags\") {return Ok(());}\n            let recipients = Membership::for_room(tx.conn(), room.id)?",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "owning_agent_status_wrong",
+      "behavior": "owning agent status wrong",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_work.rs",
+          "before": "    match thread.update_work_by_agent(tx, agent, changes) {",
+          "after": "    let mut changes = changes;\n    if ws12_coverage_mutant(\"owning_agent_status_wrong\") {changes.work_status=Some(serde_json::json!(\"done\"));}\n    match thread.update_work_by_agent(tx, agent, changes) {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "owning_agent_manage_denial_status",
+      "behavior": "owning agent manage denial status",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/agent_work.rs",
+          "before": "            \"Forbidden: agent lacks manage_threads capability\",\n            403,",
+          "after": "            \"Forbidden: agent lacks manage_threads capability\",\n            if ws12_coverage_mutant(\"owning_agent_manage_denial_status\") {422}else{403},",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "board_post_leave_skipped",
+      "behavior": "board post leave skipped",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/channel_threads.rs",
+          "before": "        tx.conn().execute(\"DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?\", (thread_id, user_id))?;",
+          "after": "        if !ws12_coverage_mutant(\"board_post_leave_skipped\") {\n        tx.conn().execute(\"DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?\", (thread_id, user_id))?;\n        }",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "board_member_unlink_skipped",
+      "behavior": "board member unlink skipped",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/work_thread_link.rs",
+          "before": "    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {",
+          "after": "    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {\n        if ws12_coverage_mutant(\"board_member_unlink_skipped\") {return Ok(());}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "board_index_per_post_select",
+      "behavior": "board index per post select",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/boards.rs",
+          "before": "            let (owner_label, agent) = owner_label(&owners, post);",
+          "after": "            let (owner_label, agent) = owner_label(&owners, post);\n            if ws12_coverage_mutant(\"board_index_per_post_select\") {let _:i64=p.conn.query_row(\"SELECT COUNT(*) FROM channel_threads WHERE id=?\",[post.id],|r|r.get(0))?;}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "board_view_columns_dropped",
+      "behavior": "board view columns dropped",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/boards.rs",
+          "before": "        room: p.room_view(room, viewer)?,\n        board_view,",
+          "after": "        room: p.room_view(room, viewer)?,\n        board_view: board_view && !ws12_coverage_mutant(\"board_view_columns_dropped\"),",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "status_frame_label_wrong",
+      "behavior": "status frame label wrong",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/boards.rs",
+          "before": "                work_label: post.work_status_label(),",
+          "after": "                work_label: if post.work_status.as_deref()==Some(\"in_progress\") && ws12_coverage_mutant(\"status_frame_label_wrong\") {\"Wrong status\".into()}else{post.work_status_label()},",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "channel_deletion_sends_board_rows",
+      "behavior": "channel deletion sends board rows",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/board.rs",
+          "before": "    pub(super) fn register_board_destruction(&self, tx: &mut Tx<'_>) -> Result<()> {\n        let room = self.room(tx.conn())?;\n        if !room.board() {",
+          "after": "    pub(super) fn register_board_destruction(&self, tx: &mut Tx<'_>) -> Result<()> {\n        let room = self.room(tx.conn())?;\n        if !room.board() && !ws12_coverage_mutant(\"channel_deletion_sends_board_rows\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "bot_board_denial_status_wrong",
+      "behavior": "bot board denial status wrong",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/messages/by_bots.rs",
+          "before": "        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));",
+          "after": "        return Ok(c.head(if ws12_coverage_mutant(\"bot_board_denial_status_wrong\") {StatusCode::BAD_REQUEST}else{StatusCode::UNPROCESSABLE_ENTITY}));",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "private_pr_title_exposed",
+      "behavior": "private pr title exposed",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/board_posts.rs",
+          "before": "                    if pr.private == Some(false) {",
+          "after": "                    if pr.private == Some(false) || ws12_coverage_mutant(\"private_pr_title_exposed\") {",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c135_linked_event_dropped",
+      "behavior": "c135 linked event dropped",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/board_posts.rs",
+          "before": "        for record in rows {",
+          "after": "        for record in rows {\n            if record.kind==\"event\" && ws12_coverage_mutant(\"c135_linked_event_dropped\") {continue;}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "c136_linked_event_dropped",
+      "behavior": "c136 linked event dropped",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/board_posts.rs",
+          "before": "        for record in rows {",
+          "after": "        for record in rows {\n            if record.kind==\"event\" && ws12_coverage_mutant(\"c136_linked_event_dropped\") {continue;}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "plain_drive_fallback_wrong",
+      "behavior": "plain drive fallback wrong",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/board_posts.rs",
+          "before": "                    link.url = url.unwrap_or_default();",
+          "after": "                    link.url = url.unwrap_or_default();\n                    if ws12_coverage_mutant(\"plain_drive_fallback_wrong\") {link.url=\"https://wrong.example/drive\".into();}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "unlink_creates_inbox_item",
+      "behavior": "unlink creates inbox item",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/work_thread_link.rs",
+          "before": "    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {",
+          "after": "    pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {\n        if ws12_coverage_mutant(\"unlink_creates_inbox_item\") {tx.conn().execute(\"INSERT INTO activity_items(user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(127326141,'Message',136976342,'mention',?,?)\",rusqlite::params![tx.now(),tx.now()])?;}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "owner_picker_profile_wrong",
+      "behavior": "owner picker profile wrong",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/messages/payload.rs",
+          "before": "entry[\"provider\"] = json!(&agent.provider); entry[\"description\"] = json!(&agent.description);",
+          "after": "entry[\"provider\"] = json!(&agent.provider); entry[\"description\"] = json!(&agent.description);\n            if ws12_coverage_mutant(\"owner_picker_profile_wrong\") {entry[\"provider\"]=json!(\"Wrong provider\");}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "ordinary_thread_work_flag_wrong",
+      "behavior": "ordinary thread work flag wrong",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/messages/payload.rs",
+          "before": "\"auto_archive_after_minutes\": thread.auto_archive_after_minutes, \"work\": thread.work(), \"work_status\": thread.work_status,",
+          "after": "\"auto_archive_after_minutes\": thread.auto_archive_after_minutes, \"work\": thread.work() || ws12_coverage_mutant(\"ordinary_thread_work_flag_wrong\"), \"work_status\": thread.work_status,",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "sla_planned_nudge_wrong",
+      "behavior": "sla planned nudge wrong",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/board_sla_rule.rs",
+          "before": "    pub fn create(tx: &mut Tx<'_>, input: NewBoardSlaRule) -> Result<Self> {",
+          "after": "    pub fn create(tx: &mut Tx<'_>, input: NewBoardSlaRule) -> Result<Self> {\n        let mut input=input; if input.work_status.as_deref()==Some(\"planned\") && ws12_coverage_mutant(\"sla_planned_nudge_wrong\") {input.nudge_after_minutes=Some(\"59\".into());}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "plain_member_automation_link",
+      "behavior": "plain member automation link",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/user.rs",
+          "before": "    pub fn can_administer(&self, record_creator_id: Option<i64>, record_is_new: bool) -> bool {",
+          "after": "    pub fn can_administer(&self, record_creator_id: Option<i64>, record_is_new: bool) -> bool {\n        if self.id==773523953 && ws12_coverage_mutant(\"plain_member_automation_link\") {return true;}",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "tag_assignment_history_wrong",
+      "behavior": "tag assignment history wrong",
+      "edits": [
+        {
+          "file": "rust/crates/db/src/models/channel_thread/tag_assignment.rs",
+          "before": "Some(\"Auto-assigned by board tag rule\")",
+          "after": "Some(if ws12_coverage_mutant(\"tag_assignment_history_wrong\") {\"Wrong tag assignment history\"}else{\"Auto-assigned by board tag rule\"})",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "handoff_summary_render_wrong",
+      "behavior": "handoff summary render wrong",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/board_posts.rs",
+          "before": "                summary: text(\"handoff_summary\"),",
+          "after": "                summary: if ws12_coverage_mutant(\"handoff_summary_render_wrong\") {Some(\"Wrong handoff context\".into())}else{text(\"handoff_summary\")},",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "digest_post_title_missing",
+      "behavior": "digest post title missing",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/boards.rs",
+          "before": "                    message.plain_text_body(p.conn, p.app().db.env().rich_text.as_ref())?,",
+          "after": "                    if ws12_coverage_mutant(\"digest_post_title_missing\") {message.plain_text_body(p.conn, p.app().db.env().rich_text.as_ref())?.replace(\"Stuck migration\",\"Missing post\")}else{message.plain_text_body(p.conn, p.app().db.env().rich_text.as_ref())?},",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "live_board_row_status_wrong",
+      "behavior": "live board row status wrong",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/boards.rs",
+          "before": "                work_label: post.work_status_label(),",
+          "after": "                work_label: if p.current_user_id.is_none() && post.work_status.as_deref()==Some(\"in_progress\") && ws12_coverage_mutant(\"live_board_row_status_wrong\") {\"Wrong live status\".into()}else{post.work_status_label()},",
+          "occurrences": 1
+        }
+      ]
+    },
+    {
+      "key": "stranger_board_opened",
+      "behavior": "stranger board opened",
+      "edits": [
+        {
+          "file": "rust/crates/campfire/src/controllers/rooms.rs",
+          "before": "            .read(move |conn| Room::find_for_user(conn, user_id, id))",
+          "after": "            .read(move |conn| if id==699448332 && user_id==712064548 && ws12_coverage_mutant(\"stranger_board_opened\") {Room::find_for_user(conn,127326141,id)}else{Room::find_for_user(conn,user_id,id)})",
+          "occurrences": 2
         }
       ]
     }

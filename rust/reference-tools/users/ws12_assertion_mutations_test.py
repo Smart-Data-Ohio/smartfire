@@ -37,6 +37,17 @@ class AuditGuards(unittest.TestCase):
                 self.assertEqual((root / "first.rs").read_bytes(), first)
                 self.assertEqual((root / "last.rs").read_text(), "newer main code\n")
 
+    def test_shared_rust_field_recipes_preserve_the_unselected_expression(self):
+        before = '    work_label: post.work_status_label(),'
+        edits = [{"mode": name, "after": f'    work_label: if ws12_coverage_mutant("{name}") {{ "Wrong".into() }} else {{ post.work_status_label() }},'}
+                 for name in ["first", "second"]]
+        combined = audit.combine(before, edits)
+        self.assertTrue(combined.startswith('    work_label: if '))
+        self.assertIn(' else { post.work_status_label() }', combined)
+        self.assertTrue(combined.endswith(' } },'))
+        self.assertEqual(combined.count('ws12_coverage_mutant('), 2)
+        self.assertEqual(combined.count('std::env::var('), 2)
+
     def campaign(self, summary, returncode=0, selector=None):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

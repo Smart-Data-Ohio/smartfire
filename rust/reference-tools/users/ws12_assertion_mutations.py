@@ -47,6 +47,14 @@ def combine(before, edits):
                 '        let error: String = error.into();\n' +
                 "".join(re.search(r"        let status = .*?;\n", after).group()
                         for after in afters) + '        Self {')
+    field = re.fullmatch(r"(\s*[a-z_]+: )(.*),", before)
+    if field and all(after.startswith(field[1]) and after.endswith(",") for after in afters):
+        value = field[2]
+        for edit in reversed(edits):
+            expression = edit["after"][len(field[1]):-1]
+            value = ('if std::env::var("WS12_ASSERTION_MUTATION").as_deref() == Ok("'
+                     + edit["mode"] + '") { ' + expression + ' } else { ' + value + ' }')
+        return field[1] + value + ','
     if before.startswith("if ") and before.endswith(" {"):
         conditions = [after[3:-2] for after in afters]
         assert all(after.startswith("if ") and after.endswith(" {") for after in afters)
@@ -216,6 +224,11 @@ if __name__ == "__main__":
         args.target = args.target.resolve()
     catalog = json.loads(CATALOG.read_text())
     if args.action == "install":
+        if args.declaration:
+            selected = [row for row in catalog["declarations"] if row["id"] in args.declaration]
+            assert set(args.declaration) == {row["id"] for row in selected}, "unknown declaration"
+            modes = {row["mutation"] for row in selected}
+            catalog = {**catalog, "mutations": [m for m in catalog["mutations"] if m["key"] in modes]}
         install(catalog, args.scratch)
     elif args.action == "restore":
         restore(args.scratch)
