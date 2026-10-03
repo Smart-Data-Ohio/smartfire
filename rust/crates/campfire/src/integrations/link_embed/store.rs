@@ -114,8 +114,17 @@ impl Embed {
     }
 
     fn broadcast_after_commit(&self, tx: &mut Tx<'_>) -> Result<()> {
-        // The callback renders this card container, whose helper also requests stale siblings.
-        // Make those requests in the triggering transaction, before the synchronous broadcast.
+        // Rails renders only the references that survive the whole transaction.
+        // Prepare durable sibling claims from that final state, still before COMMIT.
+        let embed = self.clone();
+        tx.before_commit_record_latest("LinkEmbed#stale_siblings", self.id, move |tx| {
+            embed.request_stale_siblings(tx)
+        })?;
+        tx.emit_after_commit(Event::broadcast(&CardUpdate { embed_id: self.id }));
+        Ok(())
+    }
+
+    fn request_stale_siblings(&self, tx: &mut Tx<'_>) -> Result<()> {
         use crate::integrations::message_batches::{self, Reference as Source};
         let mut requested = std::collections::HashSet::new();
         let mut after = None;
@@ -141,7 +150,6 @@ impl Embed {
             }
             after = messages.last().map(|m| m.id);
         }
-        tx.emit_after_commit(Event::broadcast(&CardUpdate { embed_id: self.id }));
         Ok(())
     }
 }
