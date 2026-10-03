@@ -27,8 +27,13 @@ The new overflow consumer vector uses the same recorded-baseline/changed-row
 encoding as H's relative and periodic vectors. Candidate state is still read
 in full. Expansion proves equality for all ten HTTP envelopes, complete stored
 rows, Saved-page items, read counts and ordered publication/wire bytes.
-Independent fresh Rails regeneration is byte-identical. G's existing per-request token handling is retained. No masks or allowlists
-were widened, and no deadlines or expected-output substitutions changed.
+Independent fresh Rails regeneration is byte-identical. G's existing
+per-request token handling is retained. No masks or allowlists were widened,
+and no deadlines or expected-output substitutions changed.
+
+The merged overflow HTTP reads remain flat at 4 / 16 old references:
+`/event` Rails 5 / 5, Rust 11 / 11; `/remind` Rails 26 / 26, Rust 110 / 110.
+Visible-row counts remain fixed, as in the original H proof.
 
 ## Current verification
 
@@ -43,7 +48,7 @@ Exact invocations (the native wrapper supplies the CI image and throttle):
 
 ```sh
 bash rust/parity/bin/seed build default first_run agents_ui
-WS8BM2_ORACLE_SCRATCH=<owned replay directory> python3 rust/reference-tools/messaging/verify_oracles.py
+WS8BM2_ORACLE_SCRATCH=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm2/.scratch/ws8bm2-h-merge/logs/oracle-replays python3 rust/reference-tools/messaging/verify_oracles.py
 bash rust/ci/cargo.sh metadata --locked --format-version 1
 bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 --no-run
 bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnings
@@ -51,11 +56,14 @@ bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnin
 bash rust/ci/cargo.sh test --locked -p campfire_db relative_overflow -j2 -- --test-threads=4 --nocapture
 ```
 
-Five focused `campfire` selectors used this exact command, individually:
-`bash rust/ci/cargo.sh test --locked -p campfire --bin campfire <selector> -j2 -- --test-threads=4 --nocapture`.
-The selectors were `controllers::message_features::container_input_tests`,
-`wide_html_tests`, `periodic_delivery_tests`, `saved_tests` and
-`relative_split_input_tests`, each with the same full namespace prefix.
+The five focused `campfire` invocations were:
+
+```sh
+for selector in controllers::message_features::container_input_tests controllers::message_features::wide_html_tests controllers::message_features::periodic_delivery_tests controllers::message_features::saved_tests controllers::message_features::relative_split_input_tests; do
+  bash rust/ci/cargo.sh test --locked -p campfire --bin campfire "$selector" -j2 -- --test-threads=4 --nocapture
+done
+```
+
 The single workspace execution was
 `bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 -- --test-threads=4 --nocapture`.
 The lossless expansion command was
