@@ -518,7 +518,7 @@ for file in files:
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE id=607264868").fetchone() == ("Redacted!",)
                             elif case == "deleting messages":
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE id=607264868").fetchone()[0] == 0
-                            elif case == CASES["workspace_markdown"][0]:
+                            elif case == "Markdown messages reach other users and editing preserves the original source":
                                 markdown = textwrap.dedent(source.decode().split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("  MARKDOWN")[0])
                                 # The actual browser edit uses multipart FormData, whose
                                 # wire serialization preserves CRLF in the saved string.
@@ -528,9 +528,9 @@ for file in files:
                                 actual = conn.execute("SELECT markdown_source FROM messages WHERE markdown_source LIKE '## Review complete%'").fetchall()
                                 assert actual == [(edited,)], f"{database}: saved source {actual!r}; expected {edited!r}"
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (markdown,)).fetchone()[0] == 0
-                            elif case == CASES["workspace_markdown"][1]:
+                            elif case == "desktop keyboard composition keeps line breaks and sends once after composition ends":
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", ("First line\nSecond line",)).fetchone()[0] == 1
-                            elif case == CASES["workspace_markdown"][2]:
+                            elif case == "untrusted markup stays inert in the delivered message":
                                 payload = textwrap.dedent(source.decode().split("payload = <<~'MARKDOWN'\n")[1].split("  MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (payload,)).fetchone()[0] == 1
                             elif case == "Markdown replies and file attachments remain usable":
@@ -551,7 +551,7 @@ for file in files:
                             elif case == "sending preserves the submitted source and a newer draft":
                                 for body in ["**First message** stays exact.", "A newer draft is still here."]:
                                     assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (body,)).fetchone()[0] == 1
-                            elif case == CASES["threads"][0]:
+                            elif case == "creates a thread from a channel message and keeps the channel draft separate":
                                 thread = conn.execute("SELECT id,parent_message_id,auto_archive_after_minutes FROM channel_threads WHERE name='Design review thread'").fetchone()
                                 assert thread is not None and thread[1:] == (607264868, 1440)
                                 assert conn.execute("SELECT involvement FROM thread_memberships WHERE thread_id=? AND user_id=773523953", (thread[0],)).fetchone() == ("nothing",)
@@ -561,7 +561,7 @@ for file in files:
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE id=?", (reply,)).fetchone() == ("A reply from the thread drawer.",)
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='A channel draft stays here.'").fetchone()[0] == 0
                                 assert conn.execute("SELECT COUNT(*) FROM boosts JOIN messages ON messages.id=boosts.message_id WHERE messages.thread_id=? AND boosts.content='👍'", (thread[0],)).fetchone()[0] == 1
-                            elif case == CASES["threads"][1]:
+                            elif case == "the thread root counts its replies live and hides the count when none remain":
                                 thread = conn.execute("SELECT id,parent_message_id FROM channel_threads WHERE name='Indicator thread'").fetchone()
                                 assert thread is not None and thread[1] == 607264868
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE thread_id=?", (thread[0],)).fetchone()[0] == 0
@@ -582,7 +582,7 @@ for file in files:
                                 thread = conn.execute("SELECT id FROM channel_threads WHERE name=?", (name,)).fetchone()
                                 assert thread is not None
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("A safe thread body.",)]
-                            elif case == CASES["threads"][2]:
+                            elif case == "a stray create re-entry does not wipe the half-filled thread name":
                                 thread = conn.execute("SELECT id FROM channel_threads WHERE name='Survives a stray reset'").fetchone()
                                 assert thread is not None
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("The name survives the re-entry.",)]
