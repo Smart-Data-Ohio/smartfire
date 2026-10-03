@@ -81,7 +81,7 @@ export async function motion({author:page,base,caseName,fixture}) {
     await focusInside('motion: focus enters drawer');await close();
     await waitUntil(page,()=>document.activeElement?.getAttribute('aria-label')==='Open workspace navigation','motion: focus returns to opener');
   } else if(caseName===motionCases[1]) {
-    const show=page.locator('button').filter({hasText:'Show members'});
+    const show=filterVisibleText(page.locator('button'),'Show members');
     let showButton;try {showButton=await visibleMatch(show,{timeout:5000});}catch(error){if(error.name!=='TimeoutError')throw error;}
     if(showButton)await click(showButton);
     await waitForCondition(async()=>await visibleCount(page.locator('#channel-members .member-panel__member'))>=2,{timeout:10000});
@@ -124,12 +124,12 @@ export async function motion({author:page,base,caseName,fixture}) {
     await waitUntil(page,()=>getComputedStyle(document.querySelector('#room-menu')).transform==='none','motion: menu pop lands');
     const geometry=await page.locator('#room-menu').evaluate(node=>({right:node.getBoundingClientRect().right,limit:innerWidth-8}));
     assert.ok(geometry.right<=geometry.limit+1,'motion: menu clamped inside viewport');
-    await page.keyboard.press('Escape');await waitForVisibility(page.locator('#room-menu[hidden]'),{state:'attached'}); // :171 visible: :all
+    await page.keyboard.press('Escape');await waitForVisibility(page.locator('#room-menu[hidden]'),{state:'attached'}); // :174 visible: :all
   } else {
     await page.setViewportSize({width:390,height:844});
     const current='#sidebar a[aria-current="page"]';
     if(caseName===motionCases[6]) {
-      await waitForVisibility(page.locator(current),{state:'attached'}); // :249 visible: :all
+      await waitForVisibility(page.locator(current),{state:'attached'}); // :250 visible: :all
       assert.equal(await scroll(),0);assert.equal(await page.evaluate(drawerVisible,current),false);
       await open();
       await firstOpenCurrentFocus(page,current);
