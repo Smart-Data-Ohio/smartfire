@@ -38,7 +38,7 @@ variants={
 }
 variants.each do |name,sql|
   target=name.start_with?('human_') ? labels.fetch('users.kevin') : uid
- ['/users/me/sidebar','/users/me/profile',"/users/#{target}"].each { |path| add.call("#{name} #{path}",'david',path,sql) }
+ ['/users/me/sidebar','/users/me/profile',"/users/#{target}"].each { |path| [true,false].each { |frame| add.call("#{name} #{path} #{frame ? 'frame' : 'page'}",'david',path,sql,frame) } }
 end
 add.call('restricted member sidebar','kevin','/users/me/sidebar',variants.fetch('restricted'))
 # Real models construct the complete organized sidebar, then raw snapshots reproduce only the fixture in Rust.
