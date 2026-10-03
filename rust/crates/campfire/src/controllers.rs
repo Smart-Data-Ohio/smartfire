@@ -1257,3 +1257,9 @@ mod agent_array_shape_tests;
 
 #[cfg(test)]
 mod agent_budget_notice_tests;
+
+#[cfg(test)]
+mod ws12_handled_sequence_tests;
+
+#[cfg(test)]
+mod ws12_private_pr_owner_tests;
