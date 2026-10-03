@@ -1342,3 +1342,6 @@ fn browser_cookie_deletion_requires_real_attribute() {
     assert!(cookie_tombstone("session_token=signed; Max-Age=0"));
     assert!(cookie_tombstone("session_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT"));
 }
+
+#[path = "tests/navigation_matrix.rs"]
+mod navigation_matrix;

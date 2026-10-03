@@ -14,6 +14,10 @@ pub(crate) struct LoadedPreferences {
     calendar_ooo: bool,
 }
 impl LoadedPreferences {
+    pub(crate) fn time_zone(&self) -> campfire_views::time::Zone {
+        campfire_views::time::Zone::for_user(self.preferences.time_zone.as_deref())
+    }
+
     pub(crate) fn from_row(
         row: &rusqlite::Row<'_>,
         now: jiff::Timestamp,

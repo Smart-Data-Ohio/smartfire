@@ -49,6 +49,16 @@ pub struct Layout {
 struct UnusedRoomBackLink;
 pub(crate) fn omit_unused_room_back_link(c: &mut Ctx) { c.set_current(UnusedRoomBackLink); }
 
+/// Reuse the zone already carried by the authenticated row; no association reload.
+pub async fn time_zone(c: &Ctx) -> Result<Zone> {
+    if let Some(loaded) = c.current::<super::layout_preferences::LoadedPreferences>()
+        && concerns::current_user(c).is_some_and(|user| user.id == loaded.user_id)
+    {
+        return Ok(loaded.time_zone());
+    }
+    Ok(Layout::load(c).await?.time_zone)
+}
+
 impl Layout {
     /// `Current.account`, `Current.user`, `last_room_visited` and the platform. With no account
     /// yet (first run) the account summary is blank: the pages that reference the account raise

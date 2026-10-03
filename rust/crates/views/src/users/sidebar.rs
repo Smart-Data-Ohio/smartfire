@@ -58,6 +58,7 @@ pub struct SidebarDirect {
     pub participant_ids: Option<Vec<i64>>,
     pub membership_id: i64,
     pub membership_updated_at: jiff::Timestamp,
+    pub avatar_zone: crate::time::Zone,
 }
 impl SidebarDirect {
     fn row_attrs(&self) -> h::Attrs {
@@ -124,11 +125,17 @@ fn direct_room_fragment_key(row: &SidebarDirect) -> String {
         row.membership_id,
         row.membership_updated_at,
     );
-    let key = crate::fragment_cache::keys::sidebar_membership(
+    let membership_key = crate::fragment_cache::keys::sidebar_membership(
         &record,
         row.participant_ids.as_deref(),
         row.viewer_administrator,
     );
+    // The avatar version is rendered in the viewer's zone. A zone switch must
+    // not reuse an otherwise identical membership fragment from the old zone.
+    let key = crate::fragment_cache::keys::Key::Array(vec![
+        membership_key,
+        crate::fragment_cache::keys::Key::Text(row.avatar_zone.name().into()),
+    ]);
     crate::fragment_cache::keys::fragment(
         "users/sidebars/rooms/_direct",
         direct_room_digest(),
@@ -325,5 +332,7 @@ struct EmptyVenueChildren<'a> {
 
 impl SidebarShow<'_> {
     // #163: your own sidebar avatar opens the same profile card as other avatars.
-    fn profile_card_trigger(&self) -> h::Attrs { h::profile_card_trigger(self.current_user.id, false) }
+    fn profile_card_trigger(&self) -> h::Attrs {
+        h::profile_card_trigger(self.current_user.id, false)
+    }
 }
