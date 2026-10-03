@@ -5,6 +5,7 @@ use campfire_db::{AgentCredential, NewCredential};
 use campfire_kit::Method;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -89,7 +90,7 @@ fn req(mcp: bool) -> Req {
     req
 }
 
-async fn measure(app: &TestApp, reader: &AllowRepository, mcp: bool, size: usize) -> usize {
+async fn measure(app: &TestApp, reader: &AllowRepository, mcp: bool, size: usize) -> Vec<String> {
     let label = if mcp {
         "mcp_private_work"
     } else {
@@ -143,15 +144,37 @@ async fn measure(app: &TestApp, reader: &AllowRepository, mcp: bool, size: usize
         "PR192_R2_PRIVATE interface={label} size={size} SELECTs={}",
         statements.len()
     );
-    statements.len()
+    statements
+}
+
+fn print_query_difference(measurements: &[Vec<String>]) {
+    let mut frequencies = BTreeMap::<&str, [usize; 2]>::new();
+    for (index, (size, statements)) in [5, 50].into_iter().zip(measurements).enumerate() {
+        eprintln!("PR192_R2_PRIVATE SQL size={size} SELECTs={}", statements.len());
+        // SQLITE_TRACE_STMT supplies statement text, not expanded bind values.
+        for (number, sql) in statements.iter().enumerate() {
+            eprintln!("  {}: {sql}", number + 1);
+            frequencies.entry(sql).or_default()[index] += 1;
+        }
+    }
+    eprintln!("PR192_R2_PRIVATE SQL diff (occurrences at size=5 -> size=50):");
+    for (sql, [small, large]) in frequencies {
+        if small != large {
+            eprintln!("  {small} -> {large}: {sql}");
+        }
+    }
 }
 
 async fn private_queries(mcp: bool) {
     let (app, reader) = setup().await;
-    let mut counts = Vec::new();
+    let mut measurements = Vec::new();
     for (start, end) in [(0, 5), (5, 50)] {
         add_work(&app, start, end).await;
-        counts.push(measure(&app, &reader, mcp, end as usize).await);
+        measurements.push(measure(&app, &reader, mcp, end as usize).await);
+    }
+    let counts = measurements.iter().map(Vec::len).collect::<Vec<_>>();
+    if counts[0] != counts[1] {
+        print_query_difference(&measurements);
     }
     assert_eq!(
         counts[0], counts[1],

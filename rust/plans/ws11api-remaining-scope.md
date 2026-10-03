@@ -1,8 +1,7 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-3`, starting at 914bd16ff; #210's branch is
-untouched. Current main c6c37fb8f is merged with merge commit e26c8f9ac.
-The pinned Rails reference remains `d7c7de92`. This is an implementation audit
+Updated on `rust/ws11api-next-4` after merging main `1d3b69b8f`, including #216 and the subsequent #215 merge.
+#206, #209, #212 and #214 are also included. #215 merged while this round was verifying. Its 16 comparisons and Recorder read-cost review remain deferred as requested for this WS8-only follow-up. The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
 ## Implementation status
@@ -27,9 +26,9 @@ Both approved JPEG/video crash differences and unconditional committed-file rete
 remain explicitly documented; they are deliberate differences, not unported API paths.
 
 The preceding rounds trimmed repeated capability/serialization-identity reads and
-batched array candidates. This round fixes nested/singleton/null/hash integer
+batched array candidates. The preceding API round fixed nested/singleton/null/hash integer
 candidate coercion, sweeps scalar-ID service adapters with the shared Rails matrix,
-and corrects executor query caching in the uncached oracle. WS12 services retain
+and corrected executor query caching in the uncached oracle. WS12 services retain
 authorization, history, audit and queue ownership. The named-case checker now
 recognizes the nine assignment macro invocations, preserves pinned delivery case
 order and runs in CI seed preparation. Race differences from Astra's #205
@@ -72,13 +71,22 @@ exact byte comparisons; sizes/checksums are never masked.
 
 ## Broader named-case evidence still partial
 
-The pinned domain inventory has 378 cases in 26 files. The preceding round closed all
-13 remaining WS11-owned names: four streaming projections, three bot cases,
-four assignment callbacks and two budget comparisons. The ledger remains
-**325 comparisons, 53 deferred** (previously 312/66). Executed pass counts are
-reported separately from mapping counts. Each new named comparison has a fresh
-pinned Rails vector and an independently wrong observable negative control.
-No new production behavior mismatch was found in those 13 cases.
+The pinned domain inventory has 378 cases in 26 files. The previous ledger was
+328 comparisons / 50 deferred. This round replays the newly merged #216 corpus:
+
+| Previously deferred group | Fresh evidence on main | Still deferred |
+| --- | --- | --- |
+| 34 WS8 built-in commands | All 35 built-in cases freshly executed in Rails; 63 observations byte-identical to the owner vectors; 34 newly mapped names | 0 |
+| 16 WS12 owner eligibility/work mutation cases | PR #215 merged during verification; separate fresh replay/mapping remains outside this round | 16, owner WS12 |
+
+The ledger is now **362 comparisons, 16 deferred**. The already mapped OOO
+badge/notice case is replayed but counted only once. The 34 newly mapped names
+use #216's real app-adapter tests, including actual attachment processing and
+committed webhook hooks. The named-case checker discovers their generated test
+functions; removing the macro invocations makes its new regression fail. Runtime
+pass counts are recorded separately in ws11api-next-4-ws8-report.md. No WS11-API
+behavior difference was found. These are peer-owned named-case comparisons,
+not formerly missing API service seams.
 
 Streaming uses real model callbacks, actual WebSocket frames and both human
 subscribers' unread broadcasts, activity/ledger/index projections and logical
@@ -95,64 +103,13 @@ The array lookup sweep additionally fixes thread/cursor/reaction N+1 lookups,
 preserves Rails' global/scoped selection and permission order, and handles
 40,000 candidates with one JSON bind. All WS11-owned named comparisons are now
 closed. **Only peer-owned evidence remains**; none is called an unmerged service
-blocker. The exact remaining names follow.
-
-### test/models/agent_test.rb
-
-Owner: WS11-ui rendered broadcast cases; WS11 domain cases compared.
-
-Reason: WS11-ui owns rendered badge/directory broadcasts and secret-leak HTML assertions.
-
-- status change broadcasts badge and directory row replaces to agents:all
-- status broadcasts carry no credentials or grants
-
-### test/services/slash_commands/dispatcher_test.rb
-
-Owner: WS11 agent dispatch; WS8 built-in commands.
-
-Reason: WS8 owns built-in command behavior; WS11 custom agent registration/invocation comparisons are complete.
-
-- registry holds every shipped command with metadata
-- command_text? matches slash commands but not escapes or play passthrough
-- huddle starts a call when configured
-- huddle errors when unconfigured
-- event opens the prefilled form url
-- event without a time prefills the title only
-- event rejects past times
-- bare event opens the blank form
-- poll opens the builder in channels but not threads
-- remind posts and saves with a reminder
-- remind rejects unusable input without posting
-- status sets emoji and text until end of day
-- status rejects blank arguments
-- dnd toggles, takes durations, and turns off
-- dnd rejects garbage durations
-- ooo sets an end with a note, and off clears it
-- ooo takes week durations, dates, and datetimes
-- ooo bare tomorrow and weekdays run to the end of the day
-- ooo bare dates run to the end of the day
-- ooo bare month dates roll to next year when this year's passed
-- ooo day durations stay exact
-- ooo broadcasts the badge and the notice
-- ooo off while calendar OOO covers says the calendar still shows it
-- ooo rejects blank arguments, garbage, past times, and long notes
-- shrug posts with the shrug
-- posting commands in a board answer an error without posting
-- posting commands in a board thread still post
-- slash posts in threads skip the legacy webhook fanout
-- slash posts in channels fan out to legacy webhooks
-- slash posts in threads process attachments once
-- me posts an action line
-- me requires an action
-- play posts through the normal message path
-- slash posts never start a stream
-- unknown commands error with the available list
+blocker. The remaining owner comparisons come from newly merged #215 and await a separate fresh Rails replay/mapping round. The exact remaining names follow.
 
 ### test/models/channel_thread_agent_assignment_test.rb
 
-Owner: WS11 agent callbacks; WS12 mutation producers.
+Owner: WS12 eligibility/mutation named comparisons, merged PR #215; WS11 agent callbacks are complete.
 
-Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/validation named comparisons. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
+Reason: these eight owner-eligibility/viewer and eight mutation/validation comparisons remain deferred by the requested scope. #215 merged during verification and is included through main; its new named tests are not mapped here without a separate fresh Rails replay. Recorder read-cost review stays with WS12. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
 
 - an active member agent with post_messages is an eligible work owner
 - a legacy agent keeps post eligibility through the fallback
@@ -176,16 +133,15 @@ Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/valida
 
 ## Peer-owned fixed read costs
 
-This round removes repeated adapter capability and room lookups, repeated ledger
+The preceding API round removed repeated adapter capability and room lookups, repeated ledger
 identity/hop/actor facts, eligibility reads and post-insert/update ledger reloads.
 Complete current authorization and fresh private-account sealing remain. Query
 growth stays flat at 5/50 owned rows; exact before/after totals are recorded in
 ws11api-next-3-report.md. Required WS11 auth, response and event reads remain;
-those costs are not assigned to peers. The largest remaining fixed gap is inside
+those costs are not assigned to peers. At the preceding API checkpoint, the largest fixed gap was inside
 WS12's `agent_work::{find_owned,writable,update_work,set_result,handoff_work}`,
 `ChannelThread::{create_board_post,update_work,update_result}` and their after-commit
 board rendering. They repeat thread/room/owner membership/capability reads and complete
-board render preloads per callback. WS12 owns those service/read-boundary optimizations;
-this branch names them without changing their transaction or policy contract.
+board render preloads per callback. WS12 owns those service/read-boundary optimizations; #215 now includes owner read-cost work. This round does not independently reassess those costs or change the transaction/policy contract.
 `work_threads.rs` and `presenters/boards.rs` remain untouched. WS15g/WS15e retain external
 GitHub/Fizzy clients and account authorization. WS11-ui owns account/agent HTML pages.

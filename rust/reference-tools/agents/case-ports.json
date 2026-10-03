@@ -1546,15 +1546,182 @@
           "rust": "ws11_next2_budget_handoff_ignores_exhausted_caps"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_test.rb",
+      "rust_file": "rust/crates/campfire/src/controllers/presenters/accounts/tests/named_ui_broadcasts.rs",
+      "cases": [
+        {
+          "rails": "status change broadcasts badge and directory row replaces to agents:all",
+          "rust": "ws11ui_status_change_broadcasts_badge_and_directory_row_replaces_to_agents_all"
+        },
+        {
+          "rails": "status broadcasts carry no credentials or grants",
+          "rust": "ws11ui_status_broadcasts_carry_no_credentials_or_grants"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/services/slash_commands/dispatcher_test.rb",
+      "rust_file": "rust/crates/campfire/src/controllers/presenters/accounts/tests/named_ui_broadcasts.rs",
+      "cases": [
+        {
+          "rails": "ooo broadcasts the badge and the notice",
+          "rust": "ws11ui_ooo_broadcasts_the_badge_and_the_notice"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/services/slash_commands/dispatcher_test.rb",
+      "rust_file": "rust/crates/campfire/src/controllers/message_features/slash_named_tests.rs",
+      "cases": [
+        {
+          "rails": "registry holds every shipped command with metadata",
+          "rust": "builtin_registry_holds_every_shipped_command_with_metadata"
+        },
+        {
+          "rails": "command_text? matches slash commands but not escapes or play passthrough",
+          "rust": "builtin_command_text_matches_slash_commands_but_not_escapes_or_play_passthrough"
+        },
+        {
+          "rails": "huddle starts a call when configured",
+          "rust": "builtin_huddle_starts_a_call_when_configured"
+        },
+        {
+          "rails": "huddle errors when unconfigured",
+          "rust": "builtin_huddle_errors_when_unconfigured"
+        },
+        {
+          "rails": "event opens the prefilled form url",
+          "rust": "builtin_event_opens_the_prefilled_form_url"
+        },
+        {
+          "rails": "event without a time prefills the title only",
+          "rust": "builtin_event_without_a_time_prefills_the_title_only"
+        },
+        {
+          "rails": "event rejects past times",
+          "rust": "builtin_event_rejects_past_times"
+        },
+        {
+          "rails": "bare event opens the blank form",
+          "rust": "builtin_bare_event_opens_the_blank_form"
+        },
+        {
+          "rails": "poll opens the builder in channels but not threads",
+          "rust": "builtin_poll_opens_the_builder_in_channels_but_not_threads"
+        },
+        {
+          "rails": "remind posts and saves with a reminder",
+          "rust": "builtin_remind_posts_and_saves_with_a_reminder"
+        },
+        {
+          "rails": "remind rejects unusable input without posting",
+          "rust": "builtin_remind_rejects_unusable_input_without_posting"
+        },
+        {
+          "rails": "status sets emoji and text until end of day",
+          "rust": "builtin_status_sets_emoji_and_text_until_end_of_day"
+        },
+        {
+          "rails": "status rejects blank arguments",
+          "rust": "builtin_status_rejects_blank_arguments"
+        },
+        {
+          "rails": "dnd toggles, takes durations, and turns off",
+          "rust": "builtin_dnd_toggles_takes_durations_and_turns_off"
+        },
+        {
+          "rails": "dnd rejects garbage durations",
+          "rust": "builtin_dnd_rejects_garbage_durations"
+        },
+        {
+          "rails": "ooo sets an end with a note, and off clears it",
+          "rust": "builtin_ooo_sets_an_end_with_a_note_and_off_clears_it"
+        },
+        {
+          "rails": "ooo takes week durations, dates, and datetimes",
+          "rust": "builtin_ooo_takes_week_durations_dates_and_datetimes"
+        },
+        {
+          "rails": "ooo bare tomorrow and weekdays run to the end of the day",
+          "rust": "builtin_ooo_bare_tomorrow_and_weekdays_run_to_the_end_of_the_day"
+        },
+        {
+          "rails": "ooo bare dates run to the end of the day",
+          "rust": "builtin_ooo_bare_dates_run_to_the_end_of_the_day"
+        },
+        {
+          "rails": "ooo bare month dates roll to next year when this year's passed",
+          "rust": "builtin_ooo_bare_month_dates_roll_to_next_year_when_this_year_s_passed"
+        },
+        {
+          "rails": "ooo day durations stay exact",
+          "rust": "builtin_ooo_day_durations_stay_exact"
+        },
+        {
+          "rails": "ooo off while calendar OOO covers says the calendar still shows it",
+          "rust": "builtin_ooo_off_while_calendar_ooo_covers_says_the_calendar_still_shows_it"
+        },
+        {
+          "rails": "ooo rejects blank arguments, garbage, past times, and long notes",
+          "rust": "builtin_ooo_rejects_blank_arguments_garbage_past_times_and_long_notes"
+        },
+        {
+          "rails": "shrug posts with the shrug",
+          "rust": "builtin_shrug_posts_with_the_shrug"
+        },
+        {
+          "rails": "posting commands in a board answer an error without posting",
+          "rust": "builtin_posting_commands_in_a_board_answer_an_error_without_posting"
+        },
+        {
+          "rails": "posting commands in a board thread still post",
+          "rust": "builtin_posting_commands_in_a_board_thread_still_post"
+        },
+        {
+          "rails": "slash posts in threads skip the legacy webhook fanout",
+          "rust": "builtin_slash_posts_in_threads_skip_the_legacy_webhook_fanout"
+        },
+        {
+          "rails": "slash posts in channels fan out to legacy webhooks",
+          "rust": "builtin_slash_posts_in_channels_fan_out_to_legacy_webhooks"
+        },
+        {
+          "rails": "slash posts in threads process attachments once",
+          "rust": "builtin_slash_posts_in_threads_process_attachments_once"
+        },
+        {
+          "rails": "me posts an action line",
+          "rust": "builtin_me_posts_an_action_line"
+        },
+        {
+          "rails": "me requires an action",
+          "rust": "builtin_me_requires_an_action"
+        },
+        {
+          "rails": "play posts through the normal message path",
+          "rust": "builtin_play_posts_through_the_normal_message_path"
+        },
+        {
+          "rails": "slash posts never start a stream",
+          "rust": "builtin_slash_posts_never_start_a_stream"
+        },
+        {
+          "rails": "unknown commands error with the available list",
+          "rust": "builtin_unknown_commands_error_with_the_available_list"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "All named cases are mapped. Absent, blank and malformed HTTP credentials have REST/MCP boundary vectors.",
-    "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
-    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
+    "test/models/agent_test.rb": "All 41 names mapped. The two WS11-ui complete badge/directory and no-secret socket comparisons are merged via #209/#212; the reset-lock comparison checks the actual serialized writer transaction.",
+    "test/services/slash_commands/dispatcher_test.rb": "All 40 names mapped: five WS11 custom-agent command comparisons, one WS11-ui OOO broadcast comparison, and 34 built-in WS8 comparisons merged with PR #216 and freshly replayed against pinned Rails.",
     "test/models/message_streaming_test.rb": "All 23 named cases are mapped, including start, trailing replacement and finalize side effects through actual callbacks and WebSocket frames.",
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
     "test/models/user/bot_test.rb": "All 15 named cases are mapped, including reply-token room binding/expiry/revocation, fixed-entropy factory/reset and actual durable queued delivery.",
-    "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations."
+    "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations.",
+    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 eligibility/mutation comparisons and Recorder read-cost review remain deferred as requested for this WS8-only round. PR #215 merged to main during verification; separate fresh Rails replay and mapping remain."
   }
 }

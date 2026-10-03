@@ -7,7 +7,7 @@ use super::{agent_posting, agent_service::ServiceResult, audit_log};
 use crate::models::channel_thread::{AgentWorkChanges, normalize_owner_id, tag_names_from_value};
 use crate::sql::{query_all, query_one};
 use crate::{
-    Agent, ChannelThread, Error, HandoffPackage, Membership, NewChannelThread, Result, Room, Tx,
+    Agent, ChannelThread, Error, HandoffPackage, NewChannelThread, Result, Room, Tx,
     User, WorkHandoff,
 };
 use campfire_richtext::ruby::{is_blank, strip};
@@ -177,16 +177,14 @@ pub fn list_work(conn: &Connection, agent: &Agent) -> Result<Outcome<Vec<Channel
 fn find_owned(conn: &Connection, agent: &Agent, id: i64) -> Result<Option<ChannelThread>> {
     let thread = query_one(
         conn,
-        "SELECT * FROM channel_threads WHERE id=? AND work_status IS NOT NULL AND work_owner_id=?",
-        params![id, agent.user_id],
+        "SELECT * FROM channel_threads WHERE id=? AND work_status IS NOT NULL AND work_owner_id=? AND EXISTS(SELECT 1 FROM memberships WHERE room_id=channel_threads.room_id AND user_id=?)",
+        params![id, agent.user_id, agent.user_id],
         ChannelThread::from_row,
     )?;
     let Some(thread) = thread else {
         return Ok(None);
     };
-    if Membership::find_by_room_and_user(conn, thread.room_id, agent.user_id)?.is_none()
-        || !agent.can(conn, "read_messages", Some(thread.room_id))?
-    {
+    if !current_capability(conn, agent, "read_messages", thread.room_id)? {
         return Ok(None);
     }
     Ok(Some(thread))
@@ -201,7 +199,7 @@ fn writable(conn: &Connection, agent: &Agent, id: i64) -> Result<Outcome<Channel
     let Some(thread) = find_owned(conn, agent, id)? else {
         return Ok(Outcome::fail("Work not found", 404));
     };
-    if !agent.can(conn, "manage_threads", Some(thread.room_id))? {
+    if !current_capability(conn, agent, "manage_threads", thread.room_id)? {
         return Ok(Outcome::fail(
             "Forbidden: agent lacks manage_threads capability",
             403,
@@ -220,7 +218,7 @@ pub fn update_work(
         denial => return Ok(denial),
     };
     match thread.update_work_by_agent(tx, agent, changes) {
-        Ok(()) => Ok(Outcome::ok(ChannelThread::find(tx.conn(), id)?, 200)),
+        Ok(()) => Ok(Outcome::ok(thread, 200)),
         Err(Error::RecordInvalid(errors)) => Ok(invalid(errors)),
         Err(error) => Err(error),
     }
@@ -240,7 +238,7 @@ pub fn set_result(
         return Ok(Outcome::fail("Markdown can't be blank", 422));
     };
     match thread.update_result_by_agent(tx, agent, markdown) {
-        Ok(()) => Ok(Outcome::ok(ChannelThread::find(tx.conn(), id)?, 200)),
+        Ok(()) => Ok(Outcome::ok(thread, 200)),
         Err(Error::RecordInvalid(errors)) => Ok(invalid(errors)),
         Err(error) => Err(error),
     }
@@ -275,7 +273,7 @@ pub fn handoff_work(
     match thread.hand_off(tx, &sender, &receiver, package, context) {
         Ok(handoff) => Ok(Outcome::ok(
             HandedOffWork {
-                thread: ChannelThread::find(tx.conn(), id)?,
+                thread,
                 handoff,
             },
             201,
@@ -290,4 +288,11 @@ fn invalid<T>(errors: crate::Errors) -> Outcome<T> {
         crate::slash_commands::sentence(errors.full_messages()),
         422,
     ))
+}
+
+// The public batch reader checks live agent/user/grant/room state in one SELECT.
+// No capability fact is carried across a request or a writer-lock boundary.
+fn current_capability(conn: &Connection, agent: &Agent, capability: &str, room: i64) -> Result<bool> {
+    Ok(Agent::capabilities_for_rooms(conn, capability, &[(agent.id, Some(room))])?
+        .get(&(agent.id, Some(room))).copied().unwrap_or(false))
 }

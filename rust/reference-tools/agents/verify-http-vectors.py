@@ -75,7 +75,7 @@ def main():
         if filename == 'agent_review192r3_attachment.json':
             check_approved_video_difference(json.loads(actual))
         print(f'WS11-api fresh {kind} oracle: {len(json.loads(actual)["cases"])} request/response pairs; byte-identical committed vectors')
-    for filename, key in [('agent_id_casting.json', 'cases'), ('agent_budget_notice_reader.json', 'results'), ('agent_array_shapes.json', 'cases'), ('pr214_id_corpus.json', 'cases'), ('pr214_event_clock.json', 'rows')]:
+    for filename, key in [('agent_id_casting.json', 'cases'), ('agent_budget_notice_reader.json', 'results'), ('agent_array_shapes.json', 'cases'), ('pr214_id_corpus.json', 'cases'), ('next4_numeric_ids.json', 'cases'), ('pr214_event_clock.json', 'rows')]:
         actual = (scratch / filename).read_bytes()
         compare_vectors(actual, (root / 'vectors' / filename).read_bytes(), filename)
         value = json.loads(actual)

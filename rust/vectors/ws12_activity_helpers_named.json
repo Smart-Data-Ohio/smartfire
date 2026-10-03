@@ -1,0 +1,85 @@
+{
+  "setup": {
+    "rooms": [
+      {
+        "id": 699448333,
+        "created_at": "2026-03-02 16:00:00",
+        "creator_id": 127326141,
+        "deleted_at": null,
+        "destroy_enqueued_at": null,
+        "direct_member_key": null,
+        "icon_name": null,
+        "inbound_email_token": null,
+        "name": "Lounge",
+        "pins_changed_at": null,
+        "type": "Rooms::Voice",
+        "updated_at": "2026-03-02 16:00:00"
+      }
+    ],
+    "events": [
+      {
+        "id": 390339825,
+        "cancelled_at": null,
+        "created_at": "2026-03-02 16:00:00",
+        "description": "Finalize the launch checklist.",
+        "ends_at": "2026-03-04 17:00:00",
+        "meet_link": null,
+        "meet_link_requested": 0,
+        "organizer_id": 127326141,
+        "recurrence_rule": null,
+        "recurrence_until": null,
+        "reminded_at": null,
+        "room_id": 654632876,
+        "series_id": null,
+        "starts_at": "2026-03-04 16:00:00",
+        "time_zone": "America/New_York",
+        "title": "Launch party planning",
+        "updated_at": "2026-03-02 16:00:00",
+        "venue_room_id": 699448333
+      }
+    ],
+    "two_factor_credentials": [
+      {
+        "id": 6,
+        "confirmed_at": "2026-03-02 16:00:00",
+        "consecutive_failures": 0,
+        "created_at": "2026-03-02 16:00:00",
+        "last_totp_at": null,
+        "locked_until": null,
+        "lockout_count": 0,
+        "secret": "{\"p\":\"urXBVePOTqDc3cQUIoGf6Lm64tSv9DxxYpgOLGCNWT0=\",\"h\":{\"iv\":\"1aVVkW/iRxicluQz\",\"at\":\"28hezDTEDiX0Lhc0ZrHYIA==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+        "updated_at": "2026-03-02 16:00:00",
+        "user_id": 127326141
+      }
+    ]
+  },
+  "rows": [
+    {
+      "key": "review",
+      "facts": {
+        "label": "Review requested"
+      }
+    },
+    {
+      "key": "venue",
+      "facts": {
+        "body": "Starts in 15 minutes: Launch party planning in Lounge."
+      }
+    },
+    {
+      "key": "no_venue",
+      "facts": {
+        "body": "Starts in 15 minutes: Launch party planning."
+      }
+    },
+    {
+      "key": "lockout",
+      "facts": {
+        "label": "Sign-in lockout",
+        "body": "Several wrong sign-in codes were entered for your account.",
+        "title": "Two-step sign-in",
+        "path": "/users/me/profile"
+      }
+    }
+  ]
+}

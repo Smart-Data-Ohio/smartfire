@@ -1,67 +1,18 @@
 {
   "reference_pin": "d7c7de92",
-  "status": "peer-owned evidence deferred; all WS11-owned names compared",
+  "status": "partial",
   "meaning": "Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.",
   "boundary_deferred": {
-    "test/models/agent_credential_test.rb": "No named comparisons are deferred. Absent/blank HTTP credentials are covered by real REST/MCP invalid-auth vectors; the former HTTP boundary note is closed.",
-    "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
-    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "All 23 names compared. Four complete start/finalize/append/trailing projections now retain actual socket HTML, both users' unread broadcasts, activity, ledger, index and logical queued arguments. External-reference adapters retain their owners.",
+    "test/models/agent_credential_test.rb": "All named cases are mapped. Absent, blank and malformed HTTP credentials have REST/MCP boundary vectors.",
+    "test/models/agent_test.rb": "All 41 names mapped. The two WS11-ui complete badge/directory and no-secret socket comparisons are merged via #209/#212; the reset-lock comparison checks the actual serialized writer transaction.",
+    "test/services/slash_commands/dispatcher_test.rb": "All 40 names mapped: five WS11 custom-agent command comparisons, one WS11-ui OOO broadcast comparison, and 34 built-in WS8 comparisons merged with PR #216 and freshly replayed against pinned Rails.",
+    "test/models/message_streaming_test.rb": "All 23 named cases are mapped, including start, trailing replacement and finalize side effects through actual callbacks and WebSocket frames.",
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
-    "test/models/user/bot_test.rb": "All 15 names compared, including fixed generator entropy at the real create/reset boundary and actual durable queued delivery with a controlled dialer only.",
-    "test/models/agent_budgets_test.rb": "All 11 names compared. The two remaining names now exercise merged WS12 ActivityItem.accessible_to and agent_work::handoff_work, with real usage and handoff rows.",
-    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 owner eligibility/work mutation names retain their owner."
+    "test/models/user/bot_test.rb": "All 15 named cases are mapped, including reply-token room binding/expiry/revocation, fixed-entropy factory/reset and actual durable queued delivery.",
+    "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations.",
+    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 eligibility/mutation comparisons and Recorder read-cost review remain deferred as requested for this WS8-only round. PR #215 merged to main during verification; separate fresh Rails replay and mapping remain."
   },
   "files": [
-    {
-      "rails_file": "test/models/agent_test.rb",
-      "owner": "WS11-ui rendered broadcast cases; WS11 domain cases compared",
-      "remaining_named_case_ports": [
-        "status change broadcasts badge and directory row replaces to agents:all",
-        "status broadcasts carry no credentials or grants"
-      ]
-    },
-    {
-      "rails_file": "test/services/slash_commands/dispatcher_test.rb",
-      "owner": "WS11 agent dispatch; WS8 built-in commands",
-      "remaining_named_case_ports": [
-        "registry holds every shipped command with metadata",
-        "command_text? matches slash commands but not escapes or play passthrough",
-        "huddle starts a call when configured",
-        "huddle errors when unconfigured",
-        "event opens the prefilled form url",
-        "event without a time prefills the title only",
-        "event rejects past times",
-        "bare event opens the blank form",
-        "poll opens the builder in channels but not threads",
-        "remind posts and saves with a reminder",
-        "remind rejects unusable input without posting",
-        "status sets emoji and text until end of day",
-        "status rejects blank arguments",
-        "dnd toggles, takes durations, and turns off",
-        "dnd rejects garbage durations",
-        "ooo sets an end with a note, and off clears it",
-        "ooo takes week durations, dates, and datetimes",
-        "ooo bare tomorrow and weekdays run to the end of the day",
-        "ooo bare dates run to the end of the day",
-        "ooo bare month dates roll to next year when this year's passed",
-        "ooo day durations stay exact",
-        "ooo broadcasts the badge and the notice",
-        "ooo off while calendar OOO covers says the calendar still shows it",
-        "ooo rejects blank arguments, garbage, past times, and long notes",
-        "shrug posts with the shrug",
-        "posting commands in a board answer an error without posting",
-        "posting commands in a board thread still post",
-        "slash posts in threads skip the legacy webhook fanout",
-        "slash posts in channels fan out to legacy webhooks",
-        "slash posts in threads process attachments once",
-        "me posts an action line",
-        "me requires an action",
-        "play posts through the normal message path",
-        "slash posts never start a stream",
-        "unknown commands error with the available list"
-      ]
-    },
     {
       "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
       "owner": "WS11 agent callbacks; WS12 mutation producers",

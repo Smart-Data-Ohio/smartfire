@@ -3,6 +3,8 @@
 mod access;
 pub mod message_recorder;
 mod recorder;
+mod recording_source;
+pub use recording_source::{ActivityEventType, ActivityRecordingFacts, ActivityRecordingSource, AgentBudgetNoticeActivityReader, SourceAuthorization};
 pub use recorder::ActivitySource;
 pub use access::ActivityQuery;
 

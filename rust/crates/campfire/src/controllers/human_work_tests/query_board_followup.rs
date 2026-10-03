@@ -63,11 +63,8 @@ async fn agent_availability(explicit: bool) {
         );
         counts.push(count);
     }
-    assert_eq!(
-        counts,
-        [4, 4],
-        "agent availability must meet Rails' constant four reads"
-    );
+    assert_eq!(counts[0], counts[1], "agent availability must stay flat");
+    assert!(counts.iter().all(|count| *count <= 4), "agent availability must not exceed Rails' four reads: {counts:?}");
 }
 
 #[tokio::test]

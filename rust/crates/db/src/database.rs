@@ -664,7 +664,38 @@ impl Config {
     }
 }
 
-type Job = Box<dyn FnOnce(&Connection, &Env) + Send>;
+type Job = Box<dyn WriterJob>;
+
+// Keep the reply alive outside the operation's unwind boundary: even a panic
+// must finish rollback and generation bookkeeping before notifying the caller.
+trait WriterJob: Send {
+    fn run(&mut self, conn: &Connection, env: &Env);
+    fn complete(self: Box<Self>);
+}
+
+struct WriteJob<T, F> {
+    operation: Option<F>,
+    result: Option<Result<T>>,
+    reply: oneshot::Sender<Result<T>>,
+}
+
+impl<T, F> WriterJob for WriteJob<T, F>
+where
+    T: Send,
+    F: FnOnce(&Connection, &Env) -> Result<T> + Send,
+{
+    fn run(&mut self, conn: &Connection, env: &Env) {
+        let operation = self.operation.take().expect("writer runs each job once");
+        self.result = Some(operation(conn, env));
+    }
+
+    fn complete(self: Box<Self>) {
+        if let Some(result) = self.result {
+            let _ = self.reply.send(result);
+        }
+        // If run panicked, dropping the retained sender reports WriterGone.
+    }
+}
 
 #[cfg(feature = "test-support")]
 type QueryLog = Arc<Mutex<Vec<String>>>;
@@ -702,7 +733,7 @@ impl Database {
         std::thread::Builder::new()
             .name("campfire-db-writer".into())
             .spawn(move || {
-                while let Some(job) = receiver.blocking_recv() {
+                while let Some(mut job) = receiver.blocking_recv() {
                     #[cfg(feature = "test-support")]
                     let _trace = query_log
                         .lock()
@@ -712,12 +743,17 @@ impl Database {
                     generation.fetch_add(1, Ordering::SeqCst);
                     // A panicking write must not take the writer down with it.
                     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        job(&conn, &writer_env)
+                        job.run(&conn, &writer_env)
                     }));
                     if outcome.is_err() && !conn.is_autocommit() {
                         let _ = conn.execute_batch("ROLLBACK TRANSACTION");
                     }
                     generation.fetch_add(1, Ordering::SeqCst);
+                    // Completion can drop a cancelled caller's result, whose Drop
+                    // may panic. It must not kill the writer or strand the reply.
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        job.complete();
+                    }));
                     match WAL_PAGES.replace(0) {
                         0 => {}
                         pages if pages >= WAL_LIMIT_PAGES => restart_wal(&conn, &checkpoints),
@@ -749,6 +785,8 @@ impl Database {
     /// Changes before and after every writer job, including its after-commit callbacks.
     /// Odd values mean work is in progress. Request-local read snapshots may be reused
     /// only while this value stays equal and even; this is not an external DB version.
+    /// Each job restores an even value before notifying its caller, including on panic.
+    /// A subsequent queued job can make it odd again before that caller resumes.
     pub fn write_generation(&self) -> u64 {
         self.writer_generation.load(Ordering::SeqCst)
     }
@@ -786,12 +824,13 @@ impl Database {
     {
         let (reply, response) = oneshot::channel();
         self.writer
-            .send(Box::new(move |conn, env| {
-                let result = {
+            .send(Box::new(WriteJob {
+                operation: Some(move |conn: &Connection, env: &Env| {
                     let _scope = scope();
                     run_write(conn, env, f)
-                };
-                let _ = reply.send(result);
+                }),
+                result: None,
+                reply,
             }))
             .await
             .map_err(|_| Error::WriterGone)?;
@@ -806,8 +845,10 @@ impl Database {
     {
         let (reply, response) = oneshot::channel();
         self.writer
-            .blocking_send(Box::new(move |conn, env| {
-                let _ = reply.send(run_write(conn, env, f));
+            .blocking_send(Box::new(WriteJob {
+                operation: Some(move |conn: &Connection, env: &Env| run_write(conn, env, f)),
+                result: None,
+                reply,
             }))
             .map_err(|_| Error::WriterGone)?;
         response.blocking_recv().map_err(|_| Error::WriterGone)?
@@ -1089,6 +1130,201 @@ impl Drop for Checkout<'_> {
 mod tests {
     use super::*;
 
+    struct CompletionWake {
+        generation: Arc<AtomicU64>,
+        observed: Mutex<Option<std::sync::mpsc::Sender<u64>>>,
+    }
+
+    impl std::task::Wake for CompletionWake {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+
+        fn wake_by_ref(self: &Arc<Self>) {
+            if let Some(reply) = self.observed.lock().unwrap().take() {
+                reply.send(self.generation.load(Ordering::SeqCst)).unwrap();
+            }
+        }
+    }
+
+    // Observe the generation synchronously inside oneshot's notification, before
+    // the writer can advance it again. A scheduler-dependent check after await
+    // would miss the race, or observe an unrelated subsequent write.
+    fn observe_completion<F, G>(
+        db: &Database,
+        scope: impl FnOnce() -> G + Send + 'static,
+        f: F,
+    ) -> (Result<()>, u64)
+    where
+        F: FnOnce(&mut Tx<'_>) -> Result<()> + Send + 'static,
+        G: 'static,
+    {
+        let (release, blocked) = std::sync::mpsc::channel();
+        let (reply, observed) = std::sync::mpsc::channel();
+        let waker = std::task::Waker::from(Arc::new(CompletionWake {
+            generation: db.writer_generation.clone(),
+            observed: Mutex::new(Some(reply)),
+        }));
+        let mut context = std::task::Context::from_waker(&waker);
+        let mut write = std::pin::pin!(db.write_scoped(
+            move || {
+                blocked.recv().unwrap();
+                scope()
+            },
+            f
+        ));
+        assert!(write.as_mut().poll(&mut context).is_pending());
+        release.send(()).unwrap();
+        let generation = observed
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("accepted write must notify its caller, even after a panic");
+        let std::task::Poll::Ready(result) = write.as_mut().poll(&mut context) else {
+            panic!("reply must be ready when its waker runs");
+        };
+        (result, generation)
+    }
+
+    #[test]
+    fn write_completion_notifies_only_after_generation_is_even() {
+        struct Scope {
+            generation: Arc<AtomicU64>,
+            panic_on_drop: bool,
+            // Guards may be !Send: they are constructed and dropped on the writer.
+            _local: std::rc::Rc<()>,
+        }
+        impl Drop for Scope {
+            fn drop(&mut self) {
+                assert_eq!(self.generation.load(Ordering::SeqCst) % 2, 1);
+                assert!(!self.panic_on_drop, "injected scope cleanup panic");
+            }
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let db = Database::open(
+            Config::new(dir.path().join("completion.sqlite3")),
+            Env::default(),
+        )
+        .unwrap();
+        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE probe(id INTEGER)")?))
+            .unwrap();
+        for case in 0..7 {
+            let before = db.write_generation();
+            let generation = db.writer_generation.clone();
+            let snapshot = db.clone();
+            let (result, notified) = observe_completion(
+                &db,
+                move || {
+                    assert_ne!(case, 6, "injected scope construction panic");
+                    Scope {
+                        generation,
+                        panic_on_drop: case == 5,
+                        _local: std::rc::Rc::new(()),
+                    }
+                },
+                move |tx| {
+                    assert_eq!(snapshot.write_generation(), before + 1);
+                    tx.conn().execute("INSERT INTO probe VALUES(?)", [case])?;
+                    match case {
+                        1 => return Err(Error::Other("injected transaction error".into())),
+                        2 => panic!("injected transaction panic"),
+                        _ => {}
+                    }
+                    tx.after_commit(move |tx| {
+                        assert_eq!(snapshot.write_generation(), before + 1);
+                        assert!(tx.conn().is_autocommit());
+                        match case {
+                            3 => Err(Error::Other("injected callback error".into())),
+                            4 => panic!("injected callback panic"),
+                            _ => Ok(()),
+                        }
+                    });
+                    Ok(())
+                },
+            );
+            assert!(notified.is_multiple_of(2), "notification must observe even generation");
+            assert_eq!(notified, before + 2, "completion case {case}");
+            match case {
+                0 => result.unwrap(),
+                1 | 3 => assert!(matches!(result, Err(Error::Other(_)))),
+                _ => assert!(matches!(result, Err(Error::WriterGone))),
+            }
+            let persisted = db
+                .read_blocking(move |conn| {
+                    Ok(
+                        conn.query_row("SELECT count(*) FROM probe WHERE id=?", [case], |r| {
+                            r.get::<_, i64>(0)
+                        })?,
+                    )
+                })
+                .unwrap();
+            assert_eq!(persisted, i64::from(!matches!(case, 1 | 2 | 6)));
+        }
+        // Scope construction also panicked; the writer still accepts work.
+        db.write_blocking(|tx| {
+            assert!(!tx.conn().is_autocommit());
+            Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn cancelled_write_drops_its_result_after_even_and_survives_a_panicking_drop() {
+        struct Value {
+            generation: Arc<AtomicU64>,
+            observed: std::sync::mpsc::Sender<u64>,
+            panic_on_drop: bool,
+        }
+        impl Drop for Value {
+            fn drop(&mut self) {
+                self.observed
+                    .send(self.generation.load(Ordering::SeqCst))
+                    .unwrap();
+                assert!(!self.panic_on_drop, "injected cancelled result panic");
+            }
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let db = Database::open(
+            Config::new(dir.path().join("cancelled.sqlite3")),
+            Env::default(),
+        )
+        .unwrap();
+        db.write_blocking(|tx| Ok(tx.conn().execute_batch("CREATE TABLE probe(id INTEGER)")?))
+            .unwrap();
+        for panic_on_drop in [false, true] {
+            let before = db.write_generation();
+            let generation = db.writer_generation.clone();
+            let (release, blocked) = std::sync::mpsc::channel();
+            let (observed, dropped) = std::sync::mpsc::channel();
+            let mut write = Box::pin(db.write(move |tx| {
+                blocked.recv().unwrap();
+                tx.conn().execute("INSERT INTO probe VALUES(1)", [])?;
+                Ok(Value {
+                    generation,
+                    observed,
+                    panic_on_drop,
+                })
+            }));
+            let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+            assert!(write.as_mut().poll(&mut context).is_pending());
+            drop(write);
+            release.send(()).unwrap();
+            let disposed = dropped.recv_timeout(std::time::Duration::from_secs(10)).unwrap();
+            assert!(disposed.is_multiple_of(2), "cancelled result must be disposed after even");
+            assert_eq!(disposed, before + 2);
+            db.write_blocking(|tx| {
+                assert!(!tx.conn().is_autocommit());
+                Ok(())
+            })
+            .unwrap();
+        }
+        assert_eq!(
+            db.read_blocking(|conn| Ok(
+                conn.query_row("SELECT count(*) FROM probe", [], |r| r.get::<_, i64>(0))?
+            ))
+            .unwrap(),
+            2
+        );
+    }
+
     #[cfg(feature = "test-support")]
     #[tokio::test]
     async fn query_capture_includes_writer_and_reader_statements_and_can_stop() {
@@ -1268,13 +1504,20 @@ mod tests {
             .write_blocking(move |tx| {
                 let version = snapshot.write_generation();
                 assert_eq!(version % 2, 1, "writer is active");
-                tx.after_commit(move |_| {
+                tx.after_commit(move |tx| {
                     assert_eq!(
                         snapshot.write_generation(),
                         version,
                         "after-commit callbacks are still writer work"
                     );
-                    Ok(())
+                    run_write(tx.conn(), tx.env, |nested| {
+                        assert_eq!(snapshot.write_generation(), version);
+                        nested.after_commit(move |_| {
+                            assert_eq!(snapshot.write_generation(), version);
+                            Ok(())
+                        });
+                        Ok(())
+                    })
                 });
                 Ok(version)
             })
