@@ -526,15 +526,18 @@ try {
       if(invalidApps.length) throw new AggregateError(invalidApps,'Uncredited discrimination attempts');
       }
     } else {
+      const failedApps=[];
       for(const [app,base] of [['Rails',rails],['Rust',rust]]) {
         const probe={ready:false,applied:0};
-        await acceptance(base,caseName,probe,selectedMutant||'default');
+        try {await acceptance(base,caseName,probe,selectedMutant||'default');}
+        catch(error) {console.error(`WS8bm positive application FAILED: ${app}: ${caseName}:`,error.stack);failedApps.push(error);continue;}
         if(selectedMutant) {
           assert.ok(probe.ready&&probe.applied>0,'probe must actually apply after valid startup');
           assert.equal(probe.networkFailures?.length||0,0);
           console.log(`WS8bm review escape: ${file}: ${caseName}: ${selectedMutant}: ${app} ACCEPTED`);
         }
       }
+      if(failedApps.length) throw new AggregateError(failedApps,'Unpaired positive attempts');
       if(!selectedMutant) console.log(`WS8bm browser flow: ${file}: ${caseName}: Rails PASS; Rust PASS`);
     }
     } catch(error) {
