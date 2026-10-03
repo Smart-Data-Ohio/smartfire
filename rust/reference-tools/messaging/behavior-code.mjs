@@ -1,6 +1,6 @@
 // Non-pixel code_highlighting_test.rb flows from pinned d7c7de92.
 import assert from 'node:assert/strict';
-import {waitForVisibility,waitForVisibleCount,actOnVisible,filterVisibleText,waitForDomCount} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,actOnVisible,filterVisibleText,waitForDomCount,visibleMatch} from './behavior-visibility.mjs';
 import {CAPYBARA_DEFAULT} from './behavior-deadlines.mjs';
 export async function codeHighlighting({author:page,recipient,caseName,fixture,base,openEdit,field}) {
   const {samples,literal_code_source,code_source,code_replacement,highlight_wait,code_search_id}=fixture;
@@ -27,7 +27,20 @@ export async function codeHighlighting({author:page,recipient,caseName,fixture,b
     await actOnVisible(row.getByRole('button',{name:'Copy code',exact:true}),'click',{});await waitForVisibility(row.getByRole('button',{name:'Code copied',exact:true}));
     assert.equal(await page.evaluate(()=>window.copiedCode),expected);
   }
-  if(caseName.startsWith('language fences')) {
+  if(caseName.startsWith('thread code stays')) {
+    await page.goto(`${base}/rooms/654632876?thread=${fixture.code_thread_id}&message_id=${fixture.code_thread_message_id}`);
+    const row=page.locator(`.message[data-message-id="${fixture.code_thread_message_id}"]`);await highlight(marked(row,'ts'),'const');
+    const colors=[];
+    for(const colorScheme of ['light','dark']) {
+      await page.emulateMedia({colorScheme});
+      const code=await visibleMatch(page.locator('#thread-panel pre code.language-ts'));
+      const keyword=await visibleMatch(filterVisibleText(code.locator('.code-token'),'const'));
+      const color=await keyword.evaluate(node=>getComputedStyle(node).color);assert.notEqual(await code.evaluate(node=>getComputedStyle(node).color),color);colors.push(color);
+    }
+    assert.deepEqual(colors,['rgb(0, 0, 255)','rgb(86, 156, 214)']);
+    await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    const pre=await visibleMatch(page.locator('#thread-panel pre'));assert.ok(await pre.evaluate(node=>node.scrollWidth>node.clientWidth));await waitForVisibleCount(page.locator('#thread-panel .markdown-code-copy'),1);
+  } else if(caseName.startsWith('language fences')) {
     const source=samples.map(([language,code])=>`\`\`\`${language}\n${code}\n\`\`\``).join('\n\n');
     const row=await post(source);
     await waitForVisibleCount(page.locator('.message[data-message-id] pre code'),samples.length,{timeout:CAPYBARA_DEFAULT});

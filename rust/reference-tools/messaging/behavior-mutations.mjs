@@ -1,6 +1,7 @@
 // Deliberately broken served implementations, never replacement oracle values.
 // Each named check must reach its case assertions and reject its specific mutant.
 import assert from 'node:assert/strict';
+import {workControllerCases} from './behavior-work-controllers.mjs';
 import {mutationTarget} from './behavior-discrimination.mjs';
 import {actionMutations} from './behavior-action-mutations.mjs';
 const list='controllers/message_list_controller-';
@@ -9,6 +10,24 @@ const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
   ...actionMutations,
+  ['thread code stays readable in both themes and scrolls within a narrow screen',['models/code_highlighter-','span.className = "code-token"','span.className = "missing-code-token"']],
+  ...workControllerCases.map(name=>[name,['work-controller-json-response']]),
+  ['the profile page fits phone widths without scrolling sideways',['messages-','.message__quick-reaction {','#main-content fieldset { min-width: 1000px !important; }\n.message__quick-reaction {']],
+  ['headers outside the workspace shell stay opaque over scrolled content',['messages-','.message__quick-reaction {','#nav { background: transparent !important; }\n.message__quick-reaction {']],
+  ['headers outside the workspace shell never cover the page or its scrollbar',['messages-','.message__quick-reaction {','#nav { position: absolute !important; height: 200px !important; }\n.message__quick-reaction {']],
+  ['pages outside the workspace shell show no drawer toggle that opens nothing',['workspace-toggle-response']],
+  ['every drawer destination has one toggle that opens the drawer on itself',['messages-','.message__quick-reaction {','#nav button[aria-label="Open workspace navigation"] { opacity: 0 !important; }\n.message__quick-reaction {']],
+  ['text fields stay at 16px on touch devices without changing the desktop look',['messages-','.message__quick-reaction {','@media (pointer: coarse) { .board-post__form input[name="thread[tags]"] { font-size: 10px !important; } }\n.message__quick-reaction {']],
+  ...[
+    ['tracks work, assigns an owner, completes and reopens it without losing the conversation','[data-thread-panel-target="workStatusLabel"]'],
+    ['shows work-thread guidance in the new-thread form and on the work page','details.thread-panel__guide summary'],
+    ['keeps the new-thread guidance usable on a phone','details.thread-panel__guide summary'],
+    ['shows work assignment activity to the owner and opens the exact thread','[data-thread-panel-target="workOwnerLabel"]'],
+    ['keeps the thread drawer usable on a phone and preserves the channel','[data-thread-panel-target="conversationTitle"]'],
+    ['opens a shared thread message link around an older post','.message-area__return-to-latest'],
+  ].map(([name,selector])=>[name,['controllers/thread_panel_controller-','connect() {',`connect() { const style = document.createElement("style"); style.textContent = '${selector} { opacity: 0 !important; }'; document.head.append(style);`]]),
+  ['marks a joined thread read only while the conversation is visible',['controllers/thread_panel_controller-','#markReadIfJoined(thread, { requireVisible = false, requireLatest = false } = {}) {','#markReadIfJoined(thread, { requireVisible = false, requireLatest = false } = {}) { return;']],
+  ['keeps an anchored older thread unread when a new reply arrives',['controllers/thread_panel_controller-','if (requireLatest && this.contentTarget.dataset.threadContentAtLatest !== "true") return','if (false) return']],
   ['Markdown messages reach other users and editing preserves the original source',['models/code_highlighter-','code.dataset.highlighted = "yes"','code.dataset.highlighted = "no"']],
   ['the message list is a single tab stop with a roving tabindex',[list,'index === messages.length - 1 ? 0 : -1','index >= 0 ? 0 : -1']],
   ['arrow keys move between messages',[list,'next.focus()','message.focus()']],
@@ -84,6 +103,8 @@ const mutations=new Map([
 // defects. Keep source text intact while removing only its keyword styling.
 const missingKeyword=keyword=>['models/code_highlighter-','span.className = "code-token"',`span.className = token.content.trim() === "${keyword}" ? "missing-keyword-token" : "code-token"`];
 const reviewMutations=new Map([
+  ...['assigned owner can change work status but cannot reassign it','a member who cannot manage the thread cannot assign an agent'].map(name=>[name,new Map([['wrong-permission-status',['work-controller-permission-response']]])]),
+  ['work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable',new Map([['wrong-validation-status',['work-controller-permission-response']]])],
   ['search results highlight code on initial load and after returning to the channel',new Map([['missing-const',missingKeyword('const')]])],
   ['editing a code block replaces its language colors and copied source',new Map([['missing-const',missingKeyword('const')],['missing-def',missingKeyword('def')]])],
   ['opens message actions from context menu and keyboard, and cancels a moving long press',new Map([
@@ -334,23 +355,31 @@ export async function installMutation(page,caseName,probe,variant='default') {
     });
     (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmReleaseClicks||[]).catch(()=>[]));
   }
-  const cssSelector=asset==='messages-'&&replacement?.includes('{')?replacement.split('{')[0].trim():null;
+  const cssSelector=asset==='messages-'&&replacement?.includes('{')?(replacement.startsWith('@media')?replacement.match(/@media[^\{]+\{\s*([^\{]+)\{/)[1].trim():replacement.split('{')[0].trim()):null;
   const scriptedSelector=['transparent-cancelled-draft','transparent-saved-draft','transparent-newer-draft'].includes(variant)?editor:
     ['transparent-device-text','transparent-drive-text','transparent-phone-drive-text'].includes(variant)?'.attach-menu span[style]':
     ['missing-const','missing-def'].includes(variant)?'.missing-keyword-token':
     asset==='models/code_highlighter-'&&replacement?.includes('code.dataset.highlighted = "no"')?'code[data-highlighted="no"]':
     asset==='models/code_highlighter-'&&replacement?.includes('missing-code-token')?'.missing-code-token':null;
+  const injectedStyleSelector=asset==='controllers/thread_panel_controller-'?replacement?.match(/style\.textContent = '([^'{]+)\{/ )?.[1].trim():null;
   const missingLabels={'missing-thumb-aria-label':'React with thumbs up','missing-picker-aria-label':'Add reaction',
     'missing-reply-aria-label':'Reply to message','missing-thread-aria-label':'Open thread','missing-more-aria-label':'More message actions'};
   const attributeSelector=missingLabels[variant]?`.message__toolbar button[title="${missingLabels[variant]}"]:not([aria-label])`:
     variant==='missing-option-aria-label'?'.emoji-picker__option[aria-labelledby="ws8bm-option-label"]:not([aria-label])':null;
-  const stateSelector=cssSelector||scriptedSelector||attributeSelector;
-  probe.requiresHiddenState ||= !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);
+  const initialConversationSelector=variant==='hidden-initial-composer-conversation'?'#thread-panel [data-thread-panel-target="conversation"]':null;
+  const stateSelector=cssSelector||scriptedSelector||injectedStyleSelector||attributeSelector||initialConversationSelector;
+  if(variant==='hidden-submitted-body-visible-strong') probe.requiredMessageText='First message stays exact.';
+  if(initialConversationSelector) probe.requiresHiddenState=true;
+  probe.requiresHiddenState ||= !!injectedStyleSelector&&/opacity:\s*0/.test(replacement)|| !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);
   if(stateSelector) (probe.observers??=[]).push(async()=>{
     if(page.isClosed()) return [];
     return page.locator(stateSelector).evaluateAll((elements,selector)=>elements.map(element=>({
-      selector,opacity:getComputedStyle(element).opacity,
+      selector,messageId:element.closest('.message[data-message-id]')?.dataset.messageId,
+      messageText:element.closest('.message[data-message-id]')?.querySelector('[data-reply-target="body"]')?.textContent.replace(/\s+/g,' ').trim(),
+      opacity:getComputedStyle(element).opacity,
       visibility:getComputedStyle(element).visibility,display:getComputedStyle(element).display,
+      fontSize:getComputedStyle(element).fontSize,background:getComputedStyle(element).backgroundColor,position:getComputedStyle(element).position,
+      width:element.getBoundingClientRect().width,height:element.getBoundingClientRect().height,
       seleniumVisible:window.__ws8bmSeleniumVisible(element),
     })),stateSelector).catch(()=>[]);
   });
@@ -360,6 +389,15 @@ export async function installMutation(page,caseName,probe,variant='default') {
     // Icons share names with stylesheets. Never mutate an SVG whose name
     // happens to start with messages- or flash-.
     if((asset==='messages-'||asset==='flash-')&&!url.pathname.endsWith('.css')) return route.continue();
+    const controller=['work-controller-json-response','work-controller-permission-response'].includes(asset)&&/^\/rooms\/654632876\/threads\/\d+\.json$/.test(url.pathname);
+    const orphan=asset==='workspace-toggle-response'&&url.pathname==='/users/me/profile'&&request.method()==='GET';
+    if(controller||orphan) {
+      const response=await route.fetch();let body=await response.text();
+      if(controller&&asset==='work-controller-permission-response'&&[403,422].includes(response.status())) {probe.applied++;return route.fulfill({response,status:200});}
+      if(controller&&asset==='work-controller-json-response'&&response.status()===200) {const value=JSON.parse(body);value.thread.name='Wrong discussion';body=JSON.stringify(value);probe.applied++;}
+      else if(orphan){assert.ok(body.includes('</nav>'));body=body.replace('</nav>','<button aria-label="Open workspace navigation">Open workspace navigation</button></nav>');probe.applied++;}
+      return route.fulfill({response,body});
+    }
     const refresh=asset==='refresh-content-type'&&url.searchParams.get('reason')==='connection';
     const mention=asset==='mention-response'&&url.pathname.includes('/autocompletable/users');
     const search=asset==='search-page-response'&&url.pathname==='/searches'&&url.searchParams.has('before');
