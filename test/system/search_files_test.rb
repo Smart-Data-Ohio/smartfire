@@ -91,12 +91,17 @@ class SearchFilesTest < ApplicationSystemTestCase
 
     fill_in "Search by filename", with: "cover"
     click_button "Search"
+    # The cover row also matches the old page. These server-rendered links
+    # identify the applied filename/type before the next navigation starts.
+    assert_selector ".room-files__type[aria-current='page'][href='#{room_files_path(@room, type: "all", filename: "cover")}']"
     assert_selector ".room-files__name", text: "system-cover.png", wait: 10
 
     click_link "Images"
+    assert_selector ".room-files__type[aria-current='page'][href='#{room_files_path(@room, type: "images", filename: "cover")}']"
     assert_selector ".room-files__name", count: 1, wait: 10
 
     click_link "Videos"
+    assert_selector ".room-files__type[aria-current='page'][href='#{room_files_path(@room, type: "videos", filename: "cover")}']"
     assert_text "No uploads match.", wait: 10
   end
 end
