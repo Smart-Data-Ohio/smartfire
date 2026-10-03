@@ -4,6 +4,8 @@ import net from 'node:net';
 import { connectUpstream } from '../../../parity/capture/forward.ts';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+// Reject the broken host path before looking for any browser dependencies.
+if (process.env.WS11UI_HOST_NETWORK === fs.readlinkSync('/proc/self/ns/net')) throw new Error('browser must have an isolated network namespace');
 const require = createRequire(path.resolve('rust/parity/package.json'));
 const { chromium } = require('playwright');
 // Playwright's assertion library lives in @playwright/test, which this harness
@@ -13,7 +15,6 @@ const labels = JSON.parse(fs.readFileSync(labelsFile, 'utf8'));
 // The browser's network namespace is stable while other workers start Docker containers.
 // Forward unmodified HTTP and WebSocket bytes to the existing loopback servers.
 let upstreamProxy;
-if (process.env.WS11UI_HOST_NETWORK === fs.readlinkSync('/proc/self/ns/net')) throw new Error('browser must have an isolated network namespace');
 if (process.env.PARITY_UPSTREAM_SOCKET) {
   const origin = new URL(base);
   upstreamProxy = net.createServer(client => {
