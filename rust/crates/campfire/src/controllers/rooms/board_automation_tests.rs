@@ -21,6 +21,53 @@ async fn review_pr206_settings() {
     check_settings(golden).await;
 }
 
+async fn original_review_subset(names: &[&str]) {
+    let mut golden: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/board_automation_review_settings.json"
+    )).unwrap();
+    golden["rows"].as_array_mut().unwrap().retain(|r|names.contains(&r["name"].as_str().unwrap()));
+    assert_eq!(golden["rows"].as_array().unwrap().len(),names.len());
+    check_settings(golden).await;
+}
+
+#[tokio::test]
+async fn review_pr206_original_malformed_arrays() {
+    original_review_subset(&["nested-array-empty","nested-array-hash","nested-array-string","top-array-empty","top-array-hash","top-array-string"]).await;
+}
+
+#[tokio::test]
+async fn review_pr206_original_missing_and_underscored_assignees() {
+    original_review_subset(&["zero-assignee-omitted","zero-assignee-blank","zero-assignee-null","underscored-assignee"]).await;
+}
+
+#[tokio::test]
+async fn review_pr206_original_unicode_blank() {
+    original_review_subset(&["nbsp-clear","emspace-clear","ideographic-clear","mixed-unicode-clear"]).await;
+}
+
+#[tokio::test]
+async fn review_pr206_round2_sla_shapes() {
+    let mut golden: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/board_automation_review_round2_settings.json"
+    )).unwrap();
+    golden["rows"].as_array_mut().unwrap().retain(|r| r["name"].as_str().unwrap().starts_with("shape-"));
+    let rows = golden["rows"].as_array().unwrap();
+    assert_eq!(rows.len(),128);
+    for (status,count) in [(302,66),(422,35),(500,27)] {
+        assert_eq!(rows.iter().filter(|r|r["status"]==status).count(),count);
+    }
+    check_settings(golden).await;
+}
+
+#[tokio::test]
+async fn review_pr206_round2_scalar_tags() {
+    let mut golden: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/board_automation_review_round2_settings.json"
+    )).unwrap();
+    golden["rows"].as_array_mut().unwrap().retain(|r|r["name"].as_str().unwrap().starts_with("scalar-tag-"));
+    check_settings(golden).await;
+}
+
 async fn check_settings(golden: Value) {
     let env = std::fs::read_to_string(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../parity/.env.reference"),
@@ -93,10 +140,7 @@ async fn check_settings(golden: Value) {
             );
         }
         let approved_bad_request = row["status"] == 500
-            && (row["input"]["sla_rules"].is_array()
-                || row["input"]["sla_rules"]
-                    .as_object()
-                    .is_some_and(|o| o.values().any(Value::is_array)));
+            && row["path"].as_str().unwrap().ends_with("/sla_rules");
         let expected_status = if approved_bad_request {
             approved_differences += 1;
             400
@@ -150,13 +194,15 @@ async fn check_settings(golden: Value) {
         );
     }
     assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
-    assert_eq!(counts.len(), 2);
-    assert!(
+    if !counts.is_empty() {
+      assert_eq!(counts.len(), 2);
+      assert!(
         counts[1].0.saturating_sub(counts[0].0) <= counts[1].1.saturating_sub(counts[0].1),
         "settings read growth: {counts:?}"
-    );
+      );
+    }
     println!(
-        "WS12 settings: {} complete responses and rule/tag/audit facts; {approved_differences} explicit approved malformed-array 400 responses",
+        "WS12 settings: {} complete responses and rule/tag/audit facts; {approved_differences} explicit approved malformed-SLA 400 responses",
         golden["rows"].as_array().unwrap().len(),
     );
 }
@@ -491,7 +537,7 @@ async fn assert_digest_broadcast_bytes(app: &TestApp, rooms: String) {
         crate::channels::board_digests::render(&app.booted.app, &DigestNotes { message_ids: ids })
             .unwrap()
             .into_iter()
-            .map(|(room, html)| (room.id, html))
+            .map(|(_, room, html)| (room.id, html))
             .collect::<Vec<_>>();
     assert_eq!(
         actual, expected,

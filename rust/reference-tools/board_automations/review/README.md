@@ -51,3 +51,21 @@ CI=1 mise exec rust@1.98.1 -- cargo test --locked -p campfire -p campfire_db rev
 The workstream report records the original failing runs, final full-app counts, workspace,
 strict-clippy and release-input verification receipts. Reviewer scratch inputs are read-only;
 these checked-in copies contain no paths into another worker's checkout.
+# Re-review at 262fdfce
+
+Run `round2-settings.rb` through the same pinned runner used below. It selects 128
+unique shapes through the real Strong Parameters implementation and model
+validation, spread over all four statuses, with 66 redirects, 35 validation
+responses and 27 exceptions. Then it captures complete HTTP responses and facts;
+all rejected shapes must preserve the existing planned rule and write no audit.
+Sixteen tag cases cover all JSON scalar categories and Ruby float notation.
+Replay: `cargo test -p campfire review_pr206_round2 -- --test-threads=8 --nocapture`.
+
+Run `round2-digests.rb` separately, never alongside another large Rails producer.
+It commits notes through the real dispatcher, captures Action Cable frame bytes,
+and records daily claim attachments and repeat sweeps for 34 boards. Destroying a
+loaded event's venue still publishes 34 frames; one injected broadcast failure
+publishes 33 and leaves that board's claim unattached. The Rust socket regression
+performs a normal venue destruction through a second database handle between the
+event and venue reads. A SQLite interruption on the late note separately checks
+preload failure isolation, broadcast bytes and Rails' failed-claim state.

@@ -5,6 +5,61 @@ surface; WS12 as a whole remains partial. The complete owned-file audit and rema
 boundaries are in `rust/plans/ws12-board-automations-2-unported.md`. The generic recorder API is
 still WS12-owned continuation work, so this is not an owner-blocked-only stop.
 
+## Re-review at `262fdfce`
+
+This section supersedes the earlier review's response-difference count and verification
+receipts. The three new findings are fixed within PR #206's scope:
+
+| Finding | Regression and resulting behavior |
+| --- | --- |
+| P2 numeric-key SLA hashes | `review_pr206_round2_sla_shapes` replays 128 unique Rails shapes across all four statuses: 66 redirects, 35 validation responses, 27 exceptions. Filtering follows the pinned Strong Parameters numeric nested-attribute, array-of-hash and scalar permits. The lead's mixed-key repro clears and audits the rule. Every Rails-accepted response matches full bytes, headers and rule/tag/audit facts. Every rejected shape preserves the existing rule and writes no audit. |
+| P2 digest preload failure | Two full-app socket regressions cover 34 due boards, including a late note in the second rendering batch. Normal venue destruction through a second database handle between event and venue loading still publishes all 34 frames, omitting the missing optional venue. A SQLite interruption during the late note's event preload publishes 33 healthy frames, leaves the failed board's claim unattached, and publishes nothing on repeat, matching Rails' explicit broadcast-failure differential. Published frame bytes match Rails exactly. Failed batch preloads fall back per note; successful rendering/broadcast IDs determine claim attachment. |
+| P3 boolean tag casts | `review_pr206_round2_scalar_tags` compares 16 complete Rails responses and assignment/audit facts for booleans, null, signed/unsigned integers, floats, negative zero, exponent notation and a string control. Active Model String casting stores `t`/`f`; other scalars retain Ruby `to_s` semantics before tag normalization. |
+
+The approved 400 difference now covers every SLA shape for which Rails raises 500,
+including absent/scalar roots, retained root arrays and directly retained status arrays.
+Rust returns its existing empty-body bad-request response, with no redirect, writes or
+audit. This is explicit in the differential, without masking Rails' expected facts.
+Accepted numeric-key collections and filtered empty arrays retain Rails' actual 302 or
+422 behavior. The 128-shape corpus has exactly the reviewer's 66/35/27 distribution;
+all 62 rejected Rails cases are checked to leave the original facts unchanged.
+
+Failing-first receipts are in `rust/.scratch/pr206-round2/logs/`. Before their fixes,
+`before-settings.log` fails both new settings regressions: shape-0 persists 61/241
+instead of removing the rule, and the two boolean tags persist `true`/`false` instead
+of `t`/`f`. `before-digests-valid.log` fails both corrected digest regressions: missing
+venue publishes zero instead of 34 frames, and the failed note's claim is attached.
+An earlier query-hook timeout was corrected and is not counted as regression proof.
+
+The original six fixes were also temporarily removed and restored on this checkout.
+Independent named settings regressions fail for malformed arrays, missing/underscored
+assignees and Unicode blankness; the 48-case cast test reports its four differences;
+the normal room-destruction race panics; the full-app performance regression fails.
+Without batching, measured SLA reads are 323/3203 and digest reads are 283/2803 at
+10/100 boards (the previously fixed reference callbacks remain installed). The receipts
+are `without-original-settings.log`, `without-original-db.log`,
+`without-original-performance.log` and `without-original-summary.log`. All mutations
+were restored before the passing runs; no stash or other worktree was used.
+
+New Rails producers are `review/round2-settings.rb` and `review/round2-digests.rb`.
+They use the same pinned image, source checks and seeds as the first review. Producers
+ran sequentially. The digest oracle was recaptured with identical JSON after fixing
+client IDs at creation (not masking rendered bytes). The source and oracle replay
+instructions are in `reference-tools/board_automations/review/README.md`.
+
+| Full-app path | Rust 10 | Rails 10 | Rust 100 | Rails 100 |
+| --- | ---: | ---: | ---: | ---: |
+| SLA new | 163 | 268 | 1603 | 2668 |
+| SLA repeat | 2 | 62 | 2 | 602 |
+| Digest new | 64 | 61 | 487 | 601 |
+| Digest repeat | 1 | 41 | 1 | 401 |
+| Settings | 14 | 14 | 14 | 14 |
+
+The probe includes the production rich-text callbacks, installed app broadcast adapter,
+all readers and the writer. Successful batched broadcasts retain the individual renderer's
+bytes. The 100-board and 64-quoted-source regressions retain SQLite's 64-variable limit.
+Final gate receipts and cleanup are recorded in the companion verification file.
+
 ## PR #206 review corrections
 
 This section supersedes the earlier database-only performance measurements below. The review

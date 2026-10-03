@@ -151,7 +151,12 @@ async fn render(
 fn text(c: &Ctx, key: &str) -> String {
     c.params
         .get(key)
-        .map(|p| campfire_richtext::ruby::json_value_to_s(&p.to_json()))
+        .map(|p| match p.to_json() {
+            // ActiveModel::Type::String casts booleans before normalize_tag.
+            serde_json::Value::Bool(true) => "t".into(),
+            serde_json::Value::Bool(false) => "f".into(),
+            value => campfire_richtext::ruby::json_value_to_s(&value),
+        })
         .unwrap_or_default()
 }
 pub async fn create_tag_assignment(c: &mut Ctx) -> Result {

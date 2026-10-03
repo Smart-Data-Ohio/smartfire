@@ -28,8 +28,8 @@ common=["DELETE FROM board_sla_rules", "DELETE FROM board_tag_assignments", "DEL
 rule="INSERT INTO board_sla_rules(id,room_id,work_status,nudge_after_minutes,escalate_after_minutes,created_at,updated_at) VALUES(970000001,#{board},'planned',60,240,'2026-03-02 16:00:00','2026-03-02 16:00:00')"
 tag="INSERT INTO board_tag_assignments(id,room_id,tag,assignee_id,created_by_id,created_at,updated_at) VALUES(970000002,#{board},'bug',#{jason},#{david},'2026-03-02 16:00:00','2026-03-02 16:00:00')"
 valid={planned:{nudge_after_minutes:'60',escalate_after_minutes:'240'},in_progress:{nudge_after_minutes:'30',escalate_after_minutes:'90'},blocked:{nudge_after_minutes:'1',escalate_after_minutes:'43200'}}
-cases=JSON.parse(File.read(File.join(ENV.fetch('PARITY_WORK'),'reference-tools/board_automations/review/settings-cases.json'))).map{|r|r.values_at('name','method','path','input','user_id','extra')}
-[10,100].each do |size|
+cases=(defined?(REVIEW_CASES) ? REVIEW_CASES : JSON.parse(File.read(File.join(ENV.fetch('PARITY_WORK'),'reference-tools/board_automations/review/settings-cases.json')))).map{|r|r.values_at('name','method','path','input','user_id','extra')}
+(defined?(REVIEW_CASES) ? [] : [10,100]).each do |size|
   extra=[]
   size.times do |i|
     id=980100000+i
@@ -64,4 +64,11 @@ cases.each do |name,method,path,input,user_id,extra|
   end
 end
 puts JSON.pretty_generate(rows:)
+if defined?(REVIEW_CASES)
+  shapes=rows.select { |r|r[:name].start_with?('shape-') }
+  raise 'shape status distribution changed' unless shapes.group_by { |r|r[:status] }.transform_values(&:size)=={302=>66,422=>35,500=>27}
+  shapes.reject { |r|r[:status]==302 }.each do |r|
+    raise "rejected shape wrote facts: #{r[:name]}" unless r[:facts]=={rules:[['planned',60,240]],tags:[],audits:[]}
+  end
+end
 warn "Rails board automation settings oracle: #{rows.size} complete responses and rule/tag/audit facts; 0 masks"

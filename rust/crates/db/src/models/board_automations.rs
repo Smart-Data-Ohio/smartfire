@@ -2,7 +2,7 @@
 //! Eligibility is loaded across boards in batches. Only unclaimed due work acquires a writer.
 use crate::sql::{query_all, query_one};
 use crate::{
-    BoardSlaNudge, BoardStaleDigest, ChannelThread, Connection, Database, Event, Message,
+    BoardSlaNudge, BoardStaleDigest, ChannelThread, Connection, Database, Message,
     NewBoardSlaNudge, Result, Room, Timestamp, User,
 };
 use jiff::{SignedDuration, tz::TimeZone};
@@ -281,14 +281,26 @@ pub async fn dispatch_digests(db: &Database, now: Timestamp) -> Result<DispatchS
         let notes = DigestNotes {
             message_ids: posted.iter().map(|(_, message)| message.id).collect(),
         };
-        // Post and broadcast before digest.update!, retaining both if association fails.
-        db.write(move |tx| {
-            tx.emit_after_commit(Event::broadcast(&notes));
-            Ok(())
-        })
-        .await?;
+        // Rails' explicit broadcast precedes digest.update!. A failed broadcast
+        // retains the committed note and unattached daily claim, without retrying.
+        // Rendering runs outside the writer and reports each successful note.
+        let sink = db.env().sink.clone();
+        let published = tokio::task::spawn_blocking(move || sink.broadcast_digest_notes(&notes))
+            .await.map_err(|error| crate::Error::Other(error.to_string()))
+            .and_then(|result| result);
+        let published: HashSet<_> = match published {
+            Ok(ids) => ids.into_iter().collect(),
+            Err(error) => {
+                tracing::error!(%error,"Board stale digest broadcasts failed");
+                HashSet::new()
+            }
+        };
         for (mut claim, message) in posted {
             let room_id = claim.room_id;
+            if !published.contains(&message.id) {
+                stats.failed_ids.push(room_id);
+                continue;
+            }
             if let Err(error) = db.write(move |tx| claim.attach_message(tx, &message)).await {
                 tracing::error!(room_id,%error,"Board stale digest failed");
                 stats.failed_ids.push(room_id);
