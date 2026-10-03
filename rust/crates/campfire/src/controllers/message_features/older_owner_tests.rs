@@ -48,17 +48,15 @@ async fn subscriber(
         .await;
     (client, server)
 }
-async fn frames(client: &mut crate::channels::tests::support::Client, expected: &Value) {
-    for expected in expected.as_array().unwrap() {
-        let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
-        assert_eq!(
-            actual["message"], expected["html"],
-            "owner frame on {}",
-            expected["stream"]
-        );
-    }
+async fn frames(
+    app: &TestApp,
+    client: &mut crate::channels::tests::support::Client,
+    expected: &Value,
+) {
+    super::comparison_support::frames(app, client, expected, "older_owner_tests.rs").await;
     client.assert_silent().await;
 }
+
 async fn windows(app: &TestApp, group: &Value) {
     for path in [
         format!("/rooms/{QUIET_CORNER}/messages"),
@@ -177,7 +175,7 @@ async fn older_owner_callbacks_match_rails_with_flat_reads_and_silent_rollbacks(
             .await
             .unwrap();
         app.db().stop_capturing_read_queries();
-        frames(&mut client, &group["callback"]["frames"]).await;
+        frames(&app, &mut client, &group["callback"]["frames"]).await;
         let reads = queries
             .lock()
             .unwrap()
@@ -326,7 +324,7 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                 })
                 .await
                 .unwrap();
-            frames(&mut client, &job["frames"]).await;
+            frames(&app, &mut client, &job["frames"]).await;
             runner.shutdown(std::time::Duration::from_secs(1)).await;
             let key = format!("{} {}", group["kind"], route["status"]);
             let reads = reads.lock().unwrap().expect("owner job completed");

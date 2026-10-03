@@ -77,17 +77,15 @@ async fn subscriber(
     }
     (client, server)
 }
-async fn frames(client: &mut crate::channels::tests::support::Client, expected: &Value) {
-    for expected in expected.as_array().unwrap() {
-        let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
-        assert_eq!(
-            actual["message"], expected["html"],
-            "mapped provider stream {}",
-            expected["stream"]
-        );
-    }
+async fn frames(
+    app: &TestApp,
+    client: &mut crate::channels::tests::support::Client,
+    expected: &Value,
+) {
+    super::comparison_support::frames(app, client, expected, "mapped_provider_tests.rs").await;
     client.assert_silent().await;
 }
+
 async fn windows(app: &TestApp, group: &Value, initial: bool) {
     let ids = regex::Regex::new(r#"data-message-id="(\d+)""#).unwrap();
     for window in group["windows"].as_array().unwrap() {
@@ -208,7 +206,7 @@ async fn mapped_provider_headers_replies_callbacks_have_rails_bytes_and_flat_rea
             .await
             .unwrap();
         app.db().stop_capturing_read_queries();
-        frames(&mut client, &group["callback"]["frames"]).await;
+        frames(&app, &mut client, &group["callback"]["frames"]).await;
         let reads = queries.lock().unwrap().len();
         let key = group["privacy"].to_string();
         println!(
@@ -267,7 +265,7 @@ async fn mapped_provider_durable_jobs_replace_headers_and_older_replies() {
             })
             .await
             .unwrap();
-        frames(&mut client, &group["job"]["frames"]).await;
+        frames(&app, &mut client, &group["job"]["frames"]).await;
         assert_eq!(http.received().len(), 5);
         let authorization = format!("Bearer {FIXTURE_TOKEN}");
         assert!(

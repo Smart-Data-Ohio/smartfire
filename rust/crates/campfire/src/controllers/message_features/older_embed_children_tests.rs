@@ -13,14 +13,10 @@ use crate::{
 use campfire_db::Event;
 use campfire_jobs::{Execution, JobQueue, Outcome, QueueConfig, Registry, RunnerConfig};
 use serde_json::{Value, json};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 fn oracle() -> Value {
     serde_json::from_str(include_str!(
-        "../../../../../vectors/messaging/older_embed_jobs.json"
+        "../../../../../vectors/messaging/older_embed_children.json"
     ))
     .unwrap()
 }
@@ -30,7 +26,7 @@ fn reads(sql: &[String]) -> usize {
         .count()
 }
 #[tokio::test]
-async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
+async fn queued_stale_generic_and_linkedin_children_execute_after_parent_with_flat_reads() {
     let mut counts = HashMap::new();
     for group in embed_groups(oracle()) {
         let app = app_rows(group["rows"].clone()).await;
@@ -73,7 +69,7 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
             .unwrap();
         for job in group["jobs"].as_array().unwrap() {
             let sibling = group["sibling_id"].as_i64().unwrap();
-            app.db().write(move |tx| {tx.conn().execute("UPDATE link_embeds SET fetch_requested_at='2026-03-02 15:49:00' WHERE id=?",[sibling])?;Ok(())}).await.unwrap();
+            app.db().write(move |tx| {tx.conn().execute("UPDATE link_embeds SET fetch_requested_at='2026-03-02 15:49:00',expires_at='2026-03-02 15:59:00' WHERE id=?",[sibling])?;Ok(())}).await.unwrap();
             let routes = job["routes"]
                 .as_array()
                 .unwrap()
@@ -102,32 +98,22 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
             });
             let mut net = network(resolver, dialer);
             net.tls = crate::integrations::net::tls_config(roots);
-            let (completed, completion) = tokio::sync::oneshot::channel();
-            let completed = Arc::new(Mutex::new(Some(completed)));
-            let release = Arc::new(tokio::sync::Notify::new());
-            let barrier = release.clone();
+            let (completed, mut completion) = tokio::sync::mpsc::unbounded_channel();
             let mut registry = Registry::new();
             registry.register(move |app: crate::app::App, job: FetchJob, _: Execution| {
                 let net = net.clone();
                 let completed = completed.clone();
-                let barrier = barrier.clone();
                 async move {
                     let queries = app.db.capture_queries();
                     let result = link_embed::fetcher::fetch(&app, &net, job.embed_id).await;
                     app.db.stop_capturing_queries();
                     completed
-                        .lock()
-                        .unwrap()
-                        .take()
-                        .expect("only the parent job runs")
                         .send((
+                            job.embed_id,
                             result.as_ref().map(|_| ()).map_err(ToString::to_string),
                             reads(&queries.lock().unwrap()),
                         ))
                         .unwrap();
-                    // Stop the runner before allowing this parent to finish. Children remain
-                    // durable; their execution is a separate permutation, as Rails' test adapter does.
-                    barrier.notified().await;
                     result.map_err(crate::jobs::discard_missing)?;
                     Ok(Outcome::Done)
                 }
@@ -149,16 +135,13 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                 })
                 .await
                 .unwrap();
-            let (result, count) = completion.await.unwrap();
+            let (parent_id, result, count) = completion.recv().await.unwrap();
+            assert_eq!(parent_id, id);
             result.unwrap();
-            let mut stopping = Box::pin(runner.shutdown(Duration::from_secs(1)));
-            std::future::poll_fn(|cx| {
-                assert!(std::future::Future::poll(stopping.as_mut(), cx).is_pending());
-                std::task::Poll::Ready(())
-            })
-            .await;
-            release.notify_one();
-            stopping.await;
+            let (child_id, result, child_count) = completion.recv().await.unwrap();
+            assert_eq!(child_id, sibling);
+            result.unwrap();
+            runner.shutdown(Duration::from_secs(1)).await;
             super::comparison_support::frames(
                 &app,
                 &mut client,
@@ -180,7 +163,7 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                 .collect::<Vec<_>>();
             assert_eq!(json!(calls), job["calls"], "actual wire HTTP calls");
             let expected = job["state"].clone();
-            let pending = job["pending"].clone();
+            let expected_child = job["child"].clone();
             let ids = [
                 group["opposite_id"].as_i64().unwrap(),
                 group["suppressed_id"].as_i64().unwrap(),
@@ -188,7 +171,10 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
             app.db().read(move |c| {
                 let saved=Embed::find(c,id)?;assert_eq!(json!({"title":saved.title,"description":saved.description,"site_name":saved.site_name,"image_url":saved.image_url,"fetch_error":saved.fetch_error}),json!({"title":expected["title"],"description":expected["description"],"site_name":expected["site_name"],"image_url":expected["image_url"],"fetch_error":expected["fetch_error"]}));
                 for (actual,key) in [(saved.fetched_at,"fetched_at"),(saved.expires_at,"expires_at")] {assert_eq!(actual.unwrap(),campfire_db::Timestamp::parse_db(expected[key].as_str().unwrap()).unwrap());}
-                let jobs=c.prepare("SELECT arguments FROM background_jobs WHERE job_class='LinkEmbed::FetchJob' ORDER BY id")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().map(|r|serde_json::from_str::<Value>(&r).unwrap()["embed_id"].clone()).collect::<Vec<_>>();assert_eq!(json!(jobs),pending);
+                let jobs=c.prepare("SELECT arguments FROM background_jobs WHERE job_class='LinkEmbed::FetchJob' ORDER BY id")?.query_map([],|r|r.get::<_,String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?.into_iter().map(|r|serde_json::from_str::<Value>(&r).unwrap()["embed_id"].clone()).collect::<Vec<_>>();assert!(jobs.is_empty(), "both actual jobs must be acknowledged");
+                let child=Embed::find(c,sibling)?;
+                assert_eq!(json!({"title":child.title,"description":child.description,"site_name":child.site_name,"image_url":child.image_url,"fetch_error":child.fetch_error}),json!({"title":expected_child["title"],"description":expected_child["description"],"site_name":expected_child["site_name"],"image_url":expected_child["image_url"],"fetch_error":expected_child["fetch_error"]}));
+                for (actual,key) in [(child.fetched_at,"fetched_at"),(child.expires_at,"expires_at")] { assert_eq!(actual.unwrap(),campfire_db::Timestamp::parse_db(expected_child[key].as_str().unwrap()).unwrap()); }
                 for id in ids {assert_eq!(Embed::find(c,id)?.fetch_requested_at.unwrap().jiff(),"2026-03-02T15:49:00Z".parse::<jiff::Timestamp>().unwrap());}
                 assert_eq!(Embed::find(c,sibling)?.fetch_requested_at.unwrap().jiff(),"2026-03-02T16:00:00Z".parse::<jiff::Timestamp>().unwrap());Ok(())
             }).await.unwrap();
@@ -210,6 +196,13 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                 job["reads"],
                 job["frames"].as_array().unwrap().len()
             );
+            println!(
+                "WS8bm2 older-embed child Rust {key} size={}: {child_count} consumer reads; Rails={}",
+                group["size"], job["child_reads"]
+            );
+            if let Some(before) = counts.insert(format!("{key} child"), child_count) {
+                assert_eq!(child_count, before, "child consumer query growth");
+            }
             if let Some(before) = counts.insert(key, count) {
                 assert_eq!(count, before, "fetch consumer query growth");
             }
@@ -272,6 +265,73 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
         server.abort();
     }
     println!(
-        "WS8bm2 older-embed jobs Rust: 20 real network jobs; 200 exact Rails frames; 20 deduplicated same-provider sibling jobs; 8 silent outer/savepoint rollbacks; flat consumer reads; no external network"
+        "WS8bm2 older-embed jobs Rust: 20 real parent network jobs; 400 exact Rails frames; 20 actual queued same-provider children executed; 8 silent outer/savepoint rollbacks; flat consumer reads; no external network"
+    );
+}
+
+/// An observed legal Rails wire order must not fail the Rust job comparator.
+/// Replay actual Redis/Cable captures through the real socket, preserving every
+/// payload and duplicate. Job execution/serialization remain tested separately.
+#[tokio::test]
+async fn recorded_rails_delivery_orders_preserve_all_queued_child_frames() {
+    use super::quote_integration_tests::{insert_rows, stream};
+    use crate::channels::tests::support::identifier;
+    let groups = embed_groups(oracle());
+    let app = app_rows(groups[0]["rows"].clone()).await;
+    for group in &groups[1..] {
+        insert_rows(&app, group["rows"].clone()).await;
+    }
+    let (mut client, server) = stream(&app).await;
+    for group in &groups {
+        let gid = campfire_views::helpers::gid_param(
+            "ChannelThread",
+            group["thread_id"].as_i64().unwrap(),
+        );
+        let signed =
+            rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&gid, "messages"]);
+        client
+            .confirm(&identifier(
+                json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}),
+            ))
+            .await;
+    }
+    let source = oracle();
+    let transcript = source["groups"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|g| g["jobs"].as_array().unwrap())
+        .flat_map(|j| j["frames"].as_array().unwrap())
+        .cloned()
+        .collect::<Vec<_>>();
+    let orders: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/older_embed_wire_orders.json"
+    ))
+    .unwrap();
+    let case = &orders["cases"][(super::comparison_support::embed_seed() % 2) as usize];
+    // Replay an actual allowed Rails arrival order, not an invented permutation.
+    // This is a transport/comparator regression; the test above executes real jobs.
+    // No await: the real connection reads a backlog within its unchanged capacity.
+    for index in case["delivery_indices"].as_array().unwrap() {
+        let frame = &transcript[index.as_u64().unwrap() as usize];
+        assert_eq!(
+            app.booted.app.cable.broadcast(
+                frame["stream"].as_str().unwrap(),
+                frame["html"].as_str().unwrap()
+            ),
+            1
+        );
+    }
+    super::comparison_support::frames(
+        &app,
+        &mut client,
+        &json!(transcript),
+        "recorded Rails delivery order",
+    )
+    .await;
+    client.assert_silent().await;
+    server.abort();
+    println!(
+        "WS8bm2 Rails delivery replay: 400 exact envelopes; unchanged capacity/deadlines; real socket and five authorized streams"
     );
 }

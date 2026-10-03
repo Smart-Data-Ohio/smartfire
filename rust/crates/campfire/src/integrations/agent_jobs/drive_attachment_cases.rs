@@ -96,7 +96,7 @@ async fn exercise(name: &str, http: bool) {
         assert_eq!(
             reply.status.as_u16(),
             200,
-            "pending WS11-API polling route at 60d97bd"
+            "real WS11 /agents/events HTTP poll"
         );
         let body = reply.json();
         let event = body["events"]
@@ -207,12 +207,10 @@ async fn ws14g_agent_webhook_posts_drive_files_without_names() {
 }
 
 #[tokio::test]
-#[ignore = "pending WS11-API PR: /agents/events shape at 60d97bd is not on main"]
 async fn ws14g_agent_polling_http_carries_drive_file_ids_and_urls_only() {
     exercise("poll_files", true).await;
 }
 #[tokio::test]
-#[ignore = "pending WS11-API PR: /agents/events shape at 60d97bd is not on main"]
 async fn ws14g_agent_polling_http_carries_an_empty_drive_array() {
     exercise("poll_empty", true).await;
 }

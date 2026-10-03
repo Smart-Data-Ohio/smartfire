@@ -82,6 +82,12 @@ pub fn network(resolver: Arc<FakeResolver>, dialer: Arc<MappingDialer>) -> Netwo
     Network { resolver, dialer, tls: super::net::tls_config(test_tls_roots()) }
 }
 
+/// Deterministic fetch interleaving; release only after the test writer commits.
+#[derive(Debug, Default)]
+pub struct ResponseGate {
+    pub entered: tokio::sync::Notify,
+    pub released: tokio::sync::Notify,
+}
 #[derive(Debug, Clone)]
 pub struct Route {
     pub method: String,
@@ -95,6 +101,7 @@ pub struct Route {
     pub gzip: bool,
     /// Wait this long before answering.
     pub delay: std::time::Duration,
+    pub response_gate: Option<Arc<ResponseGate>>,
 }
 
 impl Route {
@@ -110,6 +117,7 @@ impl Route {
             chunked: false,
             gzip: false,
             delay: std::time::Duration::ZERO,
+            response_gate: None,
         }
     }
 
@@ -356,6 +364,10 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 
     let not_found = Route::new(&method, &host, &target, 404).header("Content-Type", "text/plain").body("not found");
     let route = routes.iter().find(|r| r.method == method && (r.host == host || r.host == "*") && r.path == target).unwrap_or(&not_found);
+    if let Some(gate) = &route.response_gate {
+        gate.entered.notify_one();
+        gate.released.notified().await;
+    }
     tokio::time::sleep(route.delay).await;
     let mut body = route.body.clone();
     if route.gzip {

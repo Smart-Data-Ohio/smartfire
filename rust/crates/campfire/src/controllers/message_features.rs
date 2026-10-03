@@ -152,8 +152,11 @@ pub(crate) fn parse_time(
     zone: &campfire_views::time::Zone,
     now: jiff::Timestamp,
 ) -> Result<Option<Timestamp>> {
+    parse_time_checked(raw, zone, now).map_err(db_error)
+}
+
+pub(crate) fn parse_time_checked(raw: &str, zone: &campfire_views::time::Zone, now: jiff::Timestamp) -> campfire_db::Result<Option<Timestamp>> {
     campfire_db::slash_commands::time_parser::parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))
-        .map_err(db_error)
 }
 
 pub(crate) fn poll_view(
@@ -173,16 +176,16 @@ pub(crate) fn poll_view(
         })
         .collect();
     let votes = poll
-        .votes(conn)?
+        .votes_with_names(conn)?
         .into_iter()
-        .map(|vote| {
-            Ok(campfire_views::messages::parts::PollVote {
+        .map(|(vote,name)| {
+            campfire_views::messages::parts::PollVote {
                 option_id: vote.poll_option_id,
                 user_id: vote.user_id,
-                user_name: campfire_db::User::find_by_id(conn, vote.user_id)?.map(|user| user.name),
-            })
+                user_name: name,
+            }
         })
-        .collect::<campfire_db::Result<_>>()?;
+        .collect();
     Ok(campfire_views::messages::parts::Poll {
         id,
         room_id: message.room_id,
@@ -214,6 +217,12 @@ mod root_cache_tests;
 #[cfg(test)]
 mod panel_tests;
 #[cfg(test)]
+mod pin_poll_scaling_tests;
+#[cfg(test)]
+mod exceptional_input_tests;
+#[cfg(test)]
+mod slash_named_tests;
+#[cfg(test)]
 mod date_tests;
 
 #[cfg(test)]
@@ -238,3 +247,15 @@ mod older_owner_tests;
 mod older_calendar_tests;
 #[cfg(test)]
 mod older_embed_job_tests;
+
+#[cfg(test)]
+mod older_calendar_execution_tests;
+#[cfg(test)]
+mod older_embed_children_tests;
+#[cfg(test)]
+mod older_embed_failure_tests;
+
+#[cfg(test)]
+mod comparison_support;
+#[cfg(test)]
+mod final_state_sibling_tests;
