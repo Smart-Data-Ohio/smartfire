@@ -9,7 +9,7 @@ PIN=$(cat "$ROOT/parity/reference.sha")
 export CAMPFIRE_REFERENCE=$WORK/reference
 export PARITY_REFERENCE_REVISION=$PIN PARITY_NAMESPACE=ws19b-ci PARITY_OWNER=ws19b-ci
 export PARITY_RUNTIME=docker PARITY_IMAGE=${PARITY_IMAGE:-ws19b-ci-reference}
-export PARITY_REFERENCE_APP_IMAGE=ws19b-ci-reference:app
+export PARITY_REFERENCE_APP_IMAGE=${PARITY_REFERENCE_APP_IMAGE:-ws19b-ci-reference:app}
 SEEDS=${PARITY_SEED_DIR:-$ROOT/parity/.seed}
 mkdir -p "$WORK"
 
@@ -37,16 +37,22 @@ case "${1:-}" in
     python3 "$ROOT/parity/ci_seed.py"
     ;;
   image)
-    if [ -f "$WORK/image/reference.tar" ]; then
+    if [ -f "$WORK/image/reference.tar" ] &&
+        python3 "$ROOT/parity/ci_seed.py" --check-archive "$WORK/image/reference.tar"; then
       docker load --input "$WORK/image/reference.tar"
+      check_image
       echo 'ci-seed: reference image restored'
     else
+      if [ -f "$WORK/image/reference.tar" ]; then
+        echo 'ci-seed: stale or unverified image archive; rebuilding'
+      fi
       "$ROOT/parity/bin/reference" build
+      check_image
       mkdir -p "$WORK/image"
       docker save --output "$WORK/image/reference.tar" "$PARITY_IMAGE"
+      python3 "$ROOT/parity/ci_seed.py" --record-archive "$WORK/image/reference.tar"
       echo 'ci-seed: reference image built'
     fi
-    check_image
     ;;
   check-image) check_image ;;
   build)
