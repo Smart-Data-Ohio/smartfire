@@ -77,7 +77,7 @@ stream updates, decoder failure/retry, already processed videos, images, and
 nonrepresentable files. The browser regression uploads through the thread
 composer with normal CSRF protection enabled.
 
-Validation used `BUNDLE_PATH=/home/riels/.cache/campfire-bundle`, at most eight
+Original validation at `2d7c65b7` used `BUNDLE_PATH=/home/riels/.cache/campfire-bundle`, at most eight
 unit/integration workers and four browser workers:
 
 ```text
@@ -100,3 +100,69 @@ Nontransactional regressions clean up their committed messages, threads, media,
 sessions and agent ledger rows, and restore room/unread stamps; otherwise they
 contaminate later tests even though ordinary fixture tables are reset. No
 production access, deploy, or Rust modification was used.
+
+## PR #226 replacement and stale-job follow-up
+
+Review found two gaps at `2d7c65b7`. Room and thread PATCHes saved fresh
+attachments without processing them, and withholding an absent video poster
+removed the old lazy recovery trigger. Separately, a job finishing after an
+attachment edit rendered its cached message, overwriting the newer image in
+open clients even though the database and search were correct.
+
+All attachment replacement entry points are room PATCH, thread reply PATCH,
+and legacy / agent-backed bot PATCH (which inherits the room endpoint). Each
+accepts multipart files and signed direct-upload blobs. Agent conversation
+REST, MCP and streaming APIs have no binary replacement endpoint. Forwarding,
+webhook replies and inbound email create messages; the Slack importer imports
+file links. No additional job or service replaces a persisted binary attachment.
+
+The attachment concern now detects replacements after save and calls the same
+`process_attachment` path, including `attachment.attach` on persisted messages.
+Processing still waits for the enclosing commit and deferred uploads. Jobs
+carry the original blob ID, check it before work, reload after decoding, and
+touch / broadcast only when it remains current. Deleted or replaced messages
+are skipped; previously queued one-argument jobs remain supported. Because the
+claim is per blob, completion refreshes all messages still sharing that upload.
+
+Missing posters enqueue recovery instead of generating JPEGs in the view. The
+message collection cache-key helper also triggers recovery, so a cached
+posterless fragment cannot prevent it. An atomic, per-blob processing lease
+keeps pending jobs and repeated renders from competing. Raised / refused
+enqueues, inline failures and exhausted retries release the claim; lost jobs
+can be recovered after the 15-minute lease expires. The migration adds two
+nullable columns to `active_storage_blobs` for this state, separate from
+metadata because concurrent Active Storage analysis replaces metadata.
+
+The failing-first commit is `5d2cba50b`. The expanded replacement, recovery and
+stale-job tests were also run against the four original implementation files
+from `2d7c65b7` (then restored), retaining the current tests:
+
+```text
+Initial eight review regressions against 2d7c65b7:
+8 runs, 65 assertions, 8 failures, 0 errors, 0 skips
+Expanded baseline including both bot APIs:
+12 runs, 89 assertions, 12 failures, 0 errors, 0 skips
+```
+
+The stale-job regression pauses at the real FFmpeg notification boundary,
+PATCHes to `moon.jpg`, then allows the decoder to produce real JPEG and WebP
+output. It verifies that completion neither touches the edited message nor
+adds a stale presentation broadcast. Further tests cover cached recovery,
+pending-job deduplication during decoding, analysis preserving claims, expired
+leases, exhausted retries, replacement rollback, obsolete queued jobs and
+completion broadcasts for messages sharing one direct upload.
+
+Follow-up validation (eight unit/integration workers; four browser workers):
+
+```text
+Regression + attachment model tests:
+42 runs, 466 assertions, 0 failures, 0 errors, 0 skips
+Related attachment/message tests:
+527 runs, 2665 assertions, 0 failures, 0 errors, 0 skips
+Related system tests:
+58 runs, 784 assertions, 0 failures, 0 errors, 0 skips
+PARALLEL_WORKERS=8 bin/rails test:
+5536 runs, 32449 assertions, 0 failures, 0 errors, 3 skips
+bin/rubocop --force-exclusion (generated schema excluded by inherited config):
+6 files inspected, no offenses detected
+```

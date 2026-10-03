@@ -31,6 +31,8 @@ module Github::PullRequestsHelper
   # The presentation cache version busts every fragment when the rendering
   # code itself changes (see MessagesHelper::PRESENTATION_CACHE_VERSION).
   def message_with_pr_cards_cache_key(message)
+    # Recovery must also run when the posterless fragment is already cached.
+    message.recover_attachment_preview
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.fizzy_cards.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     # Link embeds are fetched after the message renders; their rows (and the
     # reference set) must bust the fragment like the other cards.

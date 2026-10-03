@@ -29,6 +29,7 @@ class Messages::AttachmentPresentation
       width, height = preview_dimensions
       # Let the processing job generate the first preview; a poster request
       # while it is pending would race the job to attach the same JPEG.
+      message.recover_attachment_preview
       poster = url_for(message.attachment.preview(format: :webp, resize_to_limit: [ Message::THUMBNAIL_MAX_WIDTH, Message::THUMBNAIL_MAX_HEIGHT ])) if message.attachment.blob.preview_image.attached?
 
       inline_media_dimension_constraints(width, height) do

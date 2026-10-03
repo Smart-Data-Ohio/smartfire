@@ -26,6 +26,7 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
     end
     ChannelThread.where.not(id: @thread_ids).destroy_all
     Session.where.not(id: @session_ids).delete_all
+    @legacy_bot&.destroy!
     ActiveStorage::Blob.where.not(id: @blob_ids).find_each(&:purge)
     @membership_state.each { |id, unread_at| Membership.where(id: id).update_all(unread_at: unread_at) }
     Room.where(id: @room.id).update_all(updated_at: @room_updated_at)
@@ -136,6 +137,28 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     assert_video_ready(@room.messages.order(:id).last)
+  end
+
+  [ :legacy, :agent ].each do |kind|
+    [ :multipart, :direct ].each do |upload|
+      test "#{kind} bot replaces an attachment with a fresh #{upload} video" do
+        bot = if kind == :legacy
+          @legacy_bot = User.create_bot!(name: "Video replacement bot")
+          @room.memberships.grant_to(@legacy_bot)
+          @legacy_bot
+        else
+          users(:bender)
+        end
+        message = @room.messages.create!(creator: bot,
+          attachment: fixture_file_upload("moon.jpg", "image/jpeg"))
+
+        patch room_bot_message_url(@room, bot_key_for(bot), message),
+          params: { attachment: video_upload(upload) }
+
+        assert_response :success
+        assert_video_ready(message)
+      end
+    end
   end
 
   test "a completed browser direct upload posts to a thread before any preview exists" do
@@ -265,18 +288,147 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
       assert_response :created
       message = thread.messages.sole
       assert_not message.attachment.blob.preview_image.attached?
-      Message::AttachmentProcessingJob.unstub(:perform_later)
+      with_message_caching do
+        # Cache the posterless fragment while the queue is still unavailable.
+        get room_thread_messages_url(@room, thread)
+        assert_response :success
+        assert_no_enqueued_jobs only: Message::AttachmentProcessingJob
+        Message::AttachmentProcessingJob.unstub(:perform_later)
 
+        assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
+          2.times do
+            get room_thread_messages_url(@room, thread)
+            assert_response :success
+            assert_select "video.message__attachment", 1
+            assert_select "video.message__attachment[poster]", 0
+          end
+        end
+        assert_video_ready(message)
+      end
+    end
+  end
+
+  test "a lost job is recovered after its lease expires" do
+    sign_in :david
+    thread = create_thread
+    message = thread.post_message!(creator: users(:david), attributes: { attachment: video_upload(:direct) })
+    clear_enqueued_jobs
+
+    travel Message::ATTACHMENT_PROCESSING_LEASE + 1.second do
       assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
         2.times do
           get room_thread_messages_url(@room, thread)
           assert_response :success
-          assert_select "video.message__attachment", 1
-          assert_select "video.message__attachment[poster]", 0
         end
       end
       assert_video_ready(message)
     end
+  end
+
+  test "analysis cannot erase the pending preview claim" do
+    sign_in :david
+    thread = create_thread
+    signed_id = video_upload(:direct)
+    analyzer_blob = ActiveStorage::Blob.find_signed!(signed_id)
+    analyzer_blob.metadata # Load the metadata before scheduling processing.
+    message = thread.post_message!(creator: users(:david), attributes: { attachment: signed_id })
+
+    analyzer_blob.analyze
+
+    assert_no_enqueued_jobs only: Message::AttachmentProcessingJob do
+      get room_thread_messages_url(@room, thread)
+      assert_response :success
+    end
+    assert_video_ready(message)
+  end
+
+  test "one preview job refreshes both messages sharing a direct upload" do
+    signed_id = video_upload(:direct)
+    messages = []
+    assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
+      2.times do
+        messages << create_thread.post_message!(creator: users(:david), attributes: { attachment: signed_id })
+      end
+    end
+
+    assert_video_ready(messages.first)
+
+    messages.each do |message|
+      assert_rendered_turbo_stream_broadcast message.thread, :messages,
+        action: "replace", target: [ message, :presentation ] do
+        assert_select "video.message__attachment[poster]"
+      end
+    end
+  end
+
+  test "exhausted processing retries release the claim for rendering recovery" do
+    sign_in :david
+    thread = create_thread
+    message = thread.post_message!(creator: users(:david), attributes: { attachment: video_upload(:direct) })
+    Message.any_instance.stubs(:process_attachment_now).raises(ActiveStorage::PreviewError, "decoder unavailable")
+
+    2.times { perform_enqueued_jobs(only: Message::AttachmentProcessingJob) }
+    assert_raises ActiveStorage::PreviewError do
+      perform_enqueued_jobs(only: Message::AttachmentProcessingJob)
+    end
+    assert_nil message.attachment.blob.reload.message_processing_token
+    Message.any_instance.unstub(:process_attachment_now)
+
+    assert_enqueued_jobs 1, only: Message::AttachmentProcessingJob do
+      get room_thread_messages_url(@room, thread)
+      assert_response :success
+    end
+    assert_video_ready(message)
+  end
+
+  test "rendering while the real decoder runs does not start competing processing" do
+    sign_in :david
+    thread = create_thread
+    message = thread.post_message!(creator: users(:david), attributes: { attachment: video_upload(:direct) })
+    reached_decoder = false
+    subscription = ActiveSupport::Notifications.subscribe("preview.active_storage") do |event|
+      next unless event.payload[:key] == message.attachment.key
+
+      reached_decoder = true
+      assert_no_enqueued_jobs only: Message::AttachmentProcessingJob do
+        get room_thread_messages_url(@room, thread)
+        assert_response :success
+        assert_select "video.message__attachment[poster]", 0
+      end
+    end
+
+    assert_video_ready(message)
+    assert reached_decoder
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscription) if subscription
+  end
+
+  test "attachment attach schedules processing and rollback schedules nothing" do
+    message = @room.messages.create!(creator: users(:david),
+      attachment: fixture_file_upload("moon.jpg", "image/jpeg"))
+    assert_no_enqueued_jobs only: Message::AttachmentProcessingJob do
+      Message.transaction do
+        message.attachment.attach(video_upload(:multipart))
+        raise ActiveRecord::Rollback
+      end
+    end
+    assert_equal "moon.jpg", message.reload.attachment.filename.to_s
+
+    message.attachment.attach(video_upload(:multipart))
+
+    assert_video_ready(message)
+  end
+
+  test "a job queued for an attachment replaced before it starts is skipped" do
+    message = create_thread.post_message!(creator: users(:david), attributes: { attachment: video_upload(:direct) })
+    old_blob = message.attachment.blob
+    message.update!(attachment: fixture_file_upload("moon.jpg", "image/jpeg"))
+
+    perform_enqueued_jobs(only: Message::AttachmentProcessingJob)
+
+    assert_equal "moon.jpg", message.reload.attachment.filename.to_s
+    assert_not old_blob.reload.preview_image.attached?
+    assert_nil old_blob.message_processing_token
   end
 
   test "rendering recovers a video after inline processing failed" do
@@ -316,7 +468,7 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
       edited_stamp = Message.find(message.id).updated_at
     end
 
-    Message::AttachmentProcessingJob.perform_now(message)
+    perform_enqueued_jobs(only: Message::AttachmentProcessingJob)
 
     assert edited_broadcasts, "the real decoder must have reached the pause"
     assert original.reload.preview_image.attached?, "the real decoder must finish"
@@ -358,6 +510,20 @@ class FreshVideoAttachmentTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def with_message_caching
+      original_cache = Rails.cache
+      original_collection_cache = ActionView::PartialRenderer.collection_cache
+      original_perform_caching = ActionController::Base.perform_caching
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
+      ActionView::PartialRenderer.collection_cache = Rails.cache
+      ActionController::Base.perform_caching = true
+      yield
+    ensure
+      ActionController::Base.perform_caching = original_perform_caching
+      ActionView::PartialRenderer.collection_cache = original_collection_cache
+      Rails.cache = original_cache
+    end
+
     def create_thread
       ChannelThread.create!(room: @room, creator: users(:david), name: "Fresh video", closed_at: Time.current)
     end
