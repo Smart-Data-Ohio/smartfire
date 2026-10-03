@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
 """Require a valid signed cookie to survive the HTTP test browser's expiry parser."""
 from pathlib import Path
-import os
-import subprocess
+from discrimination import require_baseline, require_rejected, run_tests
 
 root = Path(__file__).resolve().parents[3]
 source = root / "crates/campfire/src/controllers/presenters/accounts/tests.rs"
 original = source.read_text()
-start = original.index("fn cookie_is_deleted(")
-end = original.index("\n#[test]", start)
-broken = '''fn cookie_is_deleted(cookie: &str) -> bool {
+start = original.index("fn cookie_tombstone(")
+end = original.index("\n}\n", start) + 3
+broken = '''fn cookie_tombstone(cookie: &str) -> bool {
     cookie.to_ascii_lowercase().contains("max-age=0") || cookie.contains("1970")
 }
 '''
+require_baseline('browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature')
 try:
     source.write_text(original[:start] + broken + original[end:])
-    result = subprocess.run(
-        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
-         "-p", "campfire", "browser_keeps_valid_signed_cookies", "--", "--nocapture", "--test-threads=8"],
-        cwd=root, env={**os.environ, "CI": "1", "CARGO_BUILD_JOBS": "2"}, capture_output=True, text=True)
-    output = result.stdout + result.stderr
-    assert result.returncode != 0 and "test result: FAILED." in output and "valid signature digits are not an expiry attribute" in output, f"browser regression escaped test\n{output}"
-    print(next(line for line in output.splitlines() if line.startswith("test result:")))
-    print("Browser cookie discrimination: valid signed-cookie regression rejected; source restored")
+    result = run_tests('browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature')
+    require_rejected(result, {'browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature': ('crates/campfire/src/controllers/presenters/accounts/tests.rs', 'valid signature digits are not an expiry attribute')})
+    print('Browser cookie discrimination: valid signed-cookie regression rejected; source restored')
 finally:
     source.write_text(original)
