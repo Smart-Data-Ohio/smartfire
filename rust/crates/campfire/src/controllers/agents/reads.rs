@@ -103,7 +103,68 @@ pub(super) fn lookup_ids(value: &Value) -> Vec<i64> {
     ids.dedup();
     ids
 }
+/// Keep raw MCP Integer candidates separate from serde_json's rounded Float
+/// representation. Other JSON fields retain their existing parsing/serialization.
+#[derive(Clone)]
+pub(super) struct ReaderCandidates(std::collections::BTreeMap<String, Vec<i64>>);
+impl ReaderCandidates {
+    pub(super) fn parse(body: &[u8]) -> serde_json::Result<Self> {
+        use serde_json::value::RawValue;
+        type Fields = std::collections::BTreeMap<String, Box<RawValue>>;
+        let envelope: Fields = serde_json::from_slice(body)?;
+        let params: Fields = serde_json::from_str(envelope["params"].get())?;
+        let args: Fields = serde_json::from_str(params["arguments"].get())?;
+        let mut values = std::collections::BTreeMap::new();
+        for key in ["room_id", "thread_id", "before", "after"] {
+            if let Some(raw) = args.get(key) {
+                values.insert(key.to_owned(), lookup_json_ids(raw)?);
+            }
+        }
+        Ok(Self(values))
+    }
+}
+fn lookup_json_ids(raw: &serde_json::value::RawValue) -> serde_json::Result<Vec<i64>> {
+    use serde_json::value::RawValue;
+    fn cast(raw: &RawValue) -> serde_json::Result<Option<i64>> {
+        let text = raw.get();
+        if text.starts_with(['[', '{']) || text == "null" {
+            return Ok(None);
+        }
+        if text.starts_with('-') || text.as_bytes()[0].is_ascii_digit() {
+            if !text.contains(['.', 'e', 'E']) {
+                return Ok(text.parse::<i64>().ok());
+            }
+        }
+        Ok(lookup_ids(&serde_json::from_str(text)?).first().copied())
+    }
+    let mut ids = if raw.get().starts_with('[') {
+        let values: Vec<&RawValue> = serde_json::from_str(raw.get())?;
+        let values: Vec<_> = values.into_iter().filter(|v| v.get() != "null").collect();
+        if values.len() == 1 {
+            return lookup_json_ids(values[0]);
+        }
+        values
+            .into_iter()
+            .map(cast)
+            .collect::<serde_json::Result<Vec<_>>>()?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+    } else {
+        cast(raw)?.into_iter().collect()
+    };
+    ids.sort_unstable();
+    ids.dedup();
+    Ok(ids)
+}
 async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
+    let candidates = ["room_id", "thread_id", "before", "after"].map(|key| {
+        c.current::<ReaderCandidates>()
+            .and_then(|ids| ids.0.get(key))
+            .cloned()
+            .unwrap_or_else(|| lookup_ids(&args[key]))
+    });
+    let [room_ids, thread_ids, before_ids, after_ids] = candidates;
     // Agents::Reading resolves the conversation and its current read grant before
     // limit conversion, then resolves each cursor inside that conversation.
     messages::present(c,move |p| {
@@ -113,12 +174,12 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
         if !room_given && !thread_given {return Ok(ServiceResult::fail("room_id or thread_id is required",422));}
         let agent=Agent::find(p.conn,agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
         let (room,thread) = if room_given {
-            let ids=lookup_ids(&args["room_id"]);
+            let ids=&room_ids;
             let room=Room::for_user(p.conn,agent.user_id)?.into_iter().filter(|room|ids.contains(&room.id)).min_by_key(|room|room.id);
             let Some(room)=room else {return Ok(ServiceResult::fail("Room not found",404));};
             (room,None)
         }else{
-            let thread=agent_reading::thread_by_ids(p.conn,&lookup_ids(&args["thread_id"]))?;
+            let thread=agent_reading::thread_by_ids(p.conn,&thread_ids)?;
             let Some(thread)=thread else {return Ok(ServiceResult::fail("Thread not found",404));};
             let Some(room)=Room::find_for_user(p.conn,agent.user_id,thread.room_id)? else {return Ok(ServiceResult::fail("Thread not found",404));};
             (room,Some(thread.id))
@@ -133,9 +194,9 @@ async fn history(c: &Ctx, agent_id: i64, args: Value) -> Result<ServiceResult> {
         let limit=limit.map_or(50,ruby_i64).clamp(1,100);
         let (scope,conversation)=match thread {Some(thread)=>("thread_id=?",thread),None=>("room_id=? AND thread_id IS NULL",room.id)};
         let mut anchors=[None,None];
-        for (i,key) in ["before","after"].into_iter().enumerate() {
-            if let Some(value)=args.get(key).filter(|value|!blank(value)) {
-                anchors[i]=agent_reading::conversation_anchor(p.conn,room.id,thread,&lookup_ids(value))?;
+        for (i,(key,ids)) in [("before",before_ids),("after",after_ids)].into_iter().enumerate() {
+            if args.get(key).is_some_and(|value|!blank(value)) {
+                anchors[i]=agent_reading::conversation_anchor(p.conn,room.id,thread,&ids)?;
                 if anchors[i].is_none() {return Ok(ServiceResult::fail("Message not found",404));}
             }
         }
@@ -248,22 +309,49 @@ mod id_cast_tests {
     fn ws11_next4_numeric_boundaries_match_rails_predicates() {
         let vector: Value = serde_json::from_str(include_str!(
             "../../../../../vectors/next4_numeric_ids.json"
-        )).unwrap();
-        let allowed: Vec<i64> = vector["allowed"].as_array().unwrap().iter()
-            .map(|v| v.as_i64().unwrap()).collect();
+        ))
+        .unwrap();
+        let allowed: Vec<i64> = vector["allowed"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_i64().unwrap())
+            .collect();
         let mut mismatches = Vec::new();
+        let mut rounded_mismatches = 0;
         for case in vector["cases"].as_array().unwrap() {
             // Deserialize raw input, rather than reserializing a rounded Value.
-            let input: Value = serde_json::from_str(case["input_json"].as_str().unwrap()).unwrap();
-            let selected: Vec<i64> = super::lookup_ids(&input).into_iter()
-                .filter(|id| allowed.contains(id)).collect();
+            let input: Box<serde_json::value::RawValue> =
+                serde_json::from_str(case["input_json"].as_str().unwrap()).unwrap();
+            let selected: Vec<i64> = super::lookup_json_ids(&input)
+                .unwrap()
+                .into_iter()
+                .filter(|id| allowed.contains(id))
+                .collect();
+            // The previous Value-only parser is an independent negative control.
+            let rounded: Value = serde_json::from_str(input.get()).unwrap();
+            let rounded: Vec<_> = super::lookup_ids(&rounded)
+                .into_iter()
+                .filter(|id| allowed.contains(id))
+                .collect();
+            rounded_mismatches += usize::from(json!(rounded) != case["selected"]);
             if json!(selected) != case["selected"] {
-                mismatches.push(format!("input={} actual={:?} expected={}",
-                    case["input_json"], selected, case["selected"]));
+                mismatches.push(format!(
+                    "input={} actual={:?} expected={}",
+                    case["input_json"], selected, case["selected"]
+                ));
             }
         }
-        println!("WS11 next4 numeric IDs: {} cases; {} mismatches",
-            vector["cases"].as_array().unwrap().len(), mismatches.len());
+        println!(
+            "WS11 next4 numeric IDs: {} cases; {} mismatches",
+            vector["cases"].as_array().unwrap().len(),
+            mismatches.len()
+        );
+        assert_eq!(
+            rounded_mismatches, 36,
+            "rounding control must expose the regression"
+        );
+        println!("WS11 next4 rounding control: {rounded_mismatches} mismatches rejected");
         assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
     }
     #[test]
