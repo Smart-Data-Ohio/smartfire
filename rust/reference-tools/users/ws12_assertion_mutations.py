@@ -147,35 +147,40 @@ def run(catalog, args):
                 if cached is not None:
                     result["groups"].append(cached.result())
                     continue
-            env = os.environ.copy()
-            env.update(CI="1", RUST_TEST_THREADS="1", CABLE_TEST_PORT_RANGE="53420-53449",
-                       MAIL_TEST_PORT_RANGE="53400-53419", GITHUB_TEST_PORT_RANGE="53450-53499",
-                       TMPDIR=str(args.scratch / "tmp"),
-                       LD_LIBRARY_PATH=str(ROOT / ".scratch/rails-media/native-libs"))
-            env["PATH"] = str(ROOT / ".scratch/rails-media/usr/bin") + ":" + env["PATH"]
-            if args.action == "run":
-                env["WS12_ASSERTION_MUTATION"] = row["mutation"]
-            else:
-                env.pop("WS12_ASSERTION_MUTATION", None)
-            command = (["bwrap", "--bind", "/", "/", "--unshare-net"] if kind == "app" else []) + [
-                str(binaries[kind]), "--exact", *dict.fromkeys(names), "--test-threads=1", "--nocapture"]
-            path = logs / f"{row['id']}-{kind}.log"
-            with path.open("w") as output:
-                done = subprocess.run(command, cwd=ROOT / f"rust/crates/{'db' if kind == 'db' else 'campfire'}",
-                                      env=env, stdout=output, stderr=subprocess.STDOUT, timeout=600)
-            text = path.read_text()
-            summaries = re.findall(r"^test result:.*$", text, re.M)
-            assert summaries, (row["id"], "no executed test summary", text[-1000:])
-            count = re.search(r"(\d+) passed; (\d+) failed; (\d+) ignored;", summaries[-1])
-            assert count and int(count[1]) + int(count[2]) == len(set(names)) and int(count[3]) == 0, \
-                (row["id"], "all selected assertions must run", summaries)
-            group = {"kind": kind, "tests": list(dict.fromkeys(names)), "exit": done.returncode,
-                     "hits": text.count("WS12_COVERAGE_HIT " + row["mutation"]),
-                     "assertion_failed": "assertion `" in text or "assertion failed:" in text,
-                     "summaries": summaries,
-                     "panics": re.findall(r"^.*panicked at.*(?:\n.*){0,2}", text, re.M),
-                     "log": str(path.relative_to(ROOT))}
-            result["groups"].append(group)
+            try:
+                env = os.environ.copy()
+                env.update(CI="1", RUST_TEST_THREADS="1", CABLE_TEST_PORT_RANGE="53420-53449",
+                           MAIL_TEST_PORT_RANGE="53400-53419", GITHUB_TEST_PORT_RANGE="53450-53499",
+                           TMPDIR=str(args.scratch / "tmp"),
+                           LD_LIBRARY_PATH=str(ROOT / ".scratch/rails-media/native-libs"))
+                env["PATH"] = str(ROOT / ".scratch/rails-media/usr/bin") + ":" + env["PATH"]
+                if args.action == "run":
+                    env["WS12_ASSERTION_MUTATION"] = row["mutation"]
+                else:
+                    env.pop("WS12_ASSERTION_MUTATION", None)
+                command = (["bwrap", "--bind", "/", "/", "--unshare-net"] if kind == "app" else []) + [
+                    str(binaries[kind]), "--exact", *dict.fromkeys(names), "--test-threads=1", "--nocapture"]
+                path = logs / f"{row['id']}-{kind}.log"
+                with path.open("w") as output:
+                    done = subprocess.run(command, cwd=ROOT / f"rust/crates/{'db' if kind == 'db' else 'campfire'}",
+                                          env=env, stdout=output, stderr=subprocess.STDOUT, timeout=600)
+                text = path.read_text()
+                summaries = re.findall(r"^test result:.*$", text, re.M)
+                assert summaries, (row["id"], "no executed test summary", text[-1000:])
+                count = re.search(r"(\d+) passed; (\d+) failed; (\d+) ignored;", summaries[-1])
+                assert count and int(count[1]) + int(count[2]) == len(set(names)) and int(count[3]) == 0, \
+                    (row["id"], "all selected assertions must run", summaries)
+                group = {"kind": kind, "tests": list(dict.fromkeys(names)), "exit": done.returncode,
+                         "hits": text.count("WS12_COVERAGE_HIT " + row["mutation"]),
+                         "assertion_failed": "assertion `" in text or "assertion failed:" in text,
+                         "summaries": summaries,
+                         "panics": re.findall(r"^.*panicked at.*(?:\n.*){0,2}", text, re.M),
+                         "log": str(path.relative_to(ROOT))}
+                result["groups"].append(group)
+            except BaseException as error:
+                if args.action == "baseline":
+                    baseline_cache[cache_key].set_exception(error)
+                raise
             if args.action == "baseline":
                 baseline_cache[cache_key].set_result(group)
         result["hits"] = sum(group["hits"] for group in result["groups"])

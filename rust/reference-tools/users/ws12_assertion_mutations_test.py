@@ -7,6 +7,9 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import sys
+import threading
+from concurrent.futures import Future
 import unittest
 from unittest.mock import patch
 
@@ -72,6 +75,13 @@ class AuditGuards(unittest.TestCase):
             receipt = json.loads((args.scratch / "baseline-results.json").read_text())
             self.assertEqual(receipt[0]["groups"][0]["exit"], 0)
 
+    def test_duplicate_baselines_receive_the_owners_timeout_exception(self):
+        # Run in a bounded child because the old unresolved Future deadlocks shutdown.
+        child = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--future-child"],
+                               capture_output=True, text=True, timeout=5)
+        self.assertEqual(child.returncode, 0, child.stdout + child.stderr)
+        self.assertIn("WS12_BASELINE_EXCEPTION propagated to duplicate; no hang", child.stdout)
+
     def test_baseline_creates_tmp_and_never_discovers_the_production_binary(self):
         self.campaign("test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured;\n")
 
@@ -88,5 +98,43 @@ class AuditGuards(unittest.TestCase):
             self.campaign("", selector=["c999"])
 
 
+def future_child():
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        target = root / "target"
+        for stem in ["campfire", "campfire_db"]:
+            binary = target / "debug/deps" / (stem + "-fixture")
+            binary.parent.mkdir(parents=True, exist_ok=True)
+            binary.write_text("fake executable")
+            binary.chmod(0o700)
+            fingerprint = target / "debug/.fingerprint" / binary.name
+            fingerprint.mkdir(parents=True)
+            (fingerprint / "test-fixture.json").write_text("{}")
+        waiting = threading.Event()
+        class ObservedFuture(Future):
+            def result(self, *args, **kwargs):
+                waiting.set()
+                return super().result(*args, **kwargs)
+        def timeout(*args, **kwargs):
+            assert waiting.wait(2), "duplicate never waited"
+            raise subprocess.TimeoutExpired(["fake-test"], 600)
+        rows = [{"id": str(i), "file": "fixture.rb", "line": 1, "test": "duplicate",
+                 "mutation": "fake", "tests": [{"rust_file": "rust/crates/db/fixture.rs",
+                                                   "rust_test": "selected"}]} for i in range(2)]
+        args = argparse.Namespace(scratch=root / "scratch", target=target, action="baseline",
+                                  declaration=None, workers=2, previous_tests=False)
+        with patch.object(audit, "ROOT", root), patch.object(audit, "Future", ObservedFuture), \
+             patch.object(audit.subprocess, "check_output", return_value="fixture::selected: test\n"), \
+             patch.object(audit.subprocess, "run", side_effect=timeout):
+            try:
+                audit.run({"declarations": rows}, args)
+            except subprocess.TimeoutExpired:
+                print("WS12_BASELINE_EXCEPTION propagated to duplicate; no hang")
+            else:
+                raise AssertionError("timeout must propagate")
+
 if __name__ == "__main__":
-    unittest.main()
+    if "--future-child" in sys.argv:
+        future_child()
+    else:
+        unittest.main()
