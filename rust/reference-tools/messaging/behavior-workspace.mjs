@@ -8,7 +8,10 @@ export async function workspace({author:page,source,submit}) {
   await submit(page,literal);
   await waitForVisibility(filterVisibleText(page.locator('.message__body h2'),'Design review'));
   const overflow=async()=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'workspace: no horizontal overflow');
-  const profile=async()=>assert.ok(await page.evaluate(()=>{const nav=document.querySelector('.sidebar__container').getBoundingClientRect(),bar=document.querySelector('.sidebar__tools').getBoundingClientRect();return Math.abs(bar.left-nav.left)<=1&&Math.abs(bar.right-nav.right)<=1;}),'workspace: profile inside navigation');
+  const profile=async()=>{
+    const inside=await page.evaluate(()=>{const nav=document.querySelector('.sidebar__container').getBoundingClientRect(),bar=document.querySelector('.sidebar__tools').getBoundingClientRect();return Math.abs(bar.left-nav.left)<=1&&Math.abs(bar.right-nav.right)<=1;});
+    assert.ok(inside,'workspace: profile inside navigation');
+  };
   const compact=async()=>{
     await waitForVisibleProperty(page.locator('#composer textarea[name="message[markdown_source]"]'),'value','');
     await waitForVisibility(page.locator('#composer [role="tablist"], #composer [role="toolbar"], #composer trix-editor'),{state:'hidden'});
