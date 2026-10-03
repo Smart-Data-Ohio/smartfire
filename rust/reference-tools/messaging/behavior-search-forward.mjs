@@ -25,11 +25,14 @@ export async function searchForward({author:page,recipient,base,caseName,fixture
     await actOnVisible(page.getByRole('menuitem',{name:'Forward',exact:true}),'click',{});
     const dialog=page.locator('dialog[open]');await waitForVisibility(dialog,{timeout:10000});
     await actOnVisible(filterVisibleText(dialog.locator('.message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)'),'Designers'),'click',{timeout:10000});
-    const forwardedResponse=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/forwards'),{timeout:10000});
+    const forwardedResponses=[];
+    page.on('response',response=>{if(response.request().method()==='POST'&&new URL(response.url()).pathname.endsWith('/forwards')) forwardedResponses.push(response);});
     await actOnVisible(dialog.getByRole('button',{name:'Forward',exact:true}),'click',{});
-    const response=await forwardedResponse;assert.equal(response.status(),201);
-    const payload=await response.json(),forwardedId=payload.forwards[0].message.id;
     await waitForVisibility(filterVisibleText(page.locator('[data-message-actions-target="forwardStatus"]'),/Forwarded to 1 destination/),{timeout:10000});
+    // The original status assertion already observes the completed request.
+    // Read its identity without inserting another wait before that assertion.
+    assert.equal(forwardedResponses.length,1);const response=forwardedResponses[0];assert.equal(response.status(),201);
+    const payload=await response.json(),forwardedId=payload.forwards[0].message.id;
     for(const viewer of [page,recipient]) {
       // Rails :57-60 scopes to the persisted copy's identity. Its code's
       // visibility must not decide whether the preceding table lookup succeeds.
