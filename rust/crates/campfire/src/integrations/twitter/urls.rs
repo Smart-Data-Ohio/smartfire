@@ -13,6 +13,11 @@ pub struct Reference {
 pub fn is_post_url(url: &str) -> bool {
     PATTERN.is_match(url)
 }
+/// PostFetcher#quote_url: the whole value must start with a post URL. The
+/// shared pattern is unanchored for message text, where any prefix is fine.
+pub fn starts_with_post_url(url: &str) -> bool {
+    PATTERN.find(url).is_some_and(|m| m.start() == 0)
+}
 pub fn extract(text: &str) -> Vec<Reference> {
     let mut refs = Vec::<Reference>::new();
     for matched in PATTERN.captures_iter(text) {
@@ -39,6 +44,17 @@ pub fn non_code_text(html: &str) -> Result<String, campfire_richtext::dom::Parse
 mod tests {
     use super::*;
     use serde_json::{Value, json};
+    #[test]
+    fn quote_urls_must_start_with_a_post_url() {
+        assert!(starts_with_post_url("https://x.com/NASA/status/123"));
+        assert!(starts_with_post_url("https://x.com/NASA/status/123?s=20"));
+        assert!(starts_with_post_url("https://twitter.com/i/web/status/123"));
+        let prefixed = "javascript:void(0)//https://x.com/i/status/123";
+        assert!(!starts_with_post_url(prefixed));
+        assert!(is_post_url(prefixed), "text detection stays unanchored");
+        assert!(!starts_with_post_url(" https://x.com/NASA/status/123"));
+        assert!(!starts_with_post_url(""));
+    }
     #[test]
     fn ws15e_x_urls_and_non_code_text_match_pinned_rails() {
         let vectors: Value = serde_json::from_str(include_str!(concat!(

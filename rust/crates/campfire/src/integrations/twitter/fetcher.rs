@@ -370,7 +370,7 @@ fn clean_quote(quote: &Value) -> Result<Option<Value>, ()> {
     let url = json_value_to_s(&quote["url"]);
     let author = &quote["author"];
     Ok(Some(
-        json!({"url":urls::is_post_url(&url).then_some(url),"author_name":clean_text(&author["name"],4000)?,"author_handle":clean_handle(&author["screen_name"]),"text":text}),
+        json!({"url":urls::starts_with_post_url(&url).then_some(url),"author_name":clean_text(&author["name"],4000)?,"author_handle":clean_handle(&author["screen_name"]),"text":text}),
     ))
 }
 #[cfg(test)]
