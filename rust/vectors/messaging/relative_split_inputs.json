@@ -1,0 +1,3261 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "zone": "UTC",
+      "input": "in 0 minutes",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "in 0 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 1 minute",
+      "parse": {
+        "value": "2026-03-02 16:01:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:01:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 1 minute",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 9223372036854775807 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:07:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:07:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775807 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 9223372036854775808 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:08:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:08:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775808 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 999999999999999999999999999 hours",
+      "parse": {
+        "value": "114079458624521151474449-09-27 07:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "114079458624521151474449-09-27 07:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999999999 hours",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 2147483648 days",
+      "parse": {
+        "value": "5881636-09-10 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "5881636-09-10 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2147483648 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 3652059 days",
+      "parse": {
+        "value": "12025-03-01 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "12025-03-01 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 3652059 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 999999999999999999999 weeks",
+      "parse": {
+        "value": "19165349048919555473-07-07 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "19165349048919555473-07-07 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999 weeks",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 2 hr",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hr",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 2 hrs",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hrs",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 2min",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2min",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 2 mins",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 mins",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 2 days suffix",
+      "parse": {
+        "value": "2026-03-04 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-04 16:00:00.000000",
+          "suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 days suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "in 2 weeks\nbody",
+      "parse": {
+        "value": "2026-03-16 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-16 16:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 weeks\nbody",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 25:00 suffix",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 25:00 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:60 title",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:60 title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:30:60 tail",
+      "parse": {
+        "value": "2026-03-05 14:31:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 14:31:00.000000",
+          "tail"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30:60 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "2026-03-05 14:30 +05:30 suffix",
+      "parse": {
+        "value": "2026-03-05 14:30:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 14:30:00.000000",
+          "+05:30 suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30 +05:30 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "tomorrow 24:00 body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "tomorrow 24:00 body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "today at 9pm body",
+      "parse": {
+        "value": "2026-03-02 21:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 21:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "today at 9pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "at 12pm text",
+      "parse": {
+        "value": "2026-03-03 12:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 12:00:00.000000",
+          "text"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "at 12pm text",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "at 0pm body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "at 0pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "monday 24:00 tail",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "monday 24:00 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "next monday junk",
+      "parse": {
+        "value": "2026-03-09 09:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-09 09:00:00.000000",
+          "junk"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday junk",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "next monday 8pm title",
+      "parse": {
+        "value": "2026-03-09 20:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-09 20:00:00.000000",
+          "title"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday 8pm title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "xmonday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "xmonday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "\u0000tomorrow\u0000",
+      "parse": {
+        "value": "2026-03-03 09:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 09:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "tomorrow",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": " tomorrow ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          " tomorrow ",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "\tfriday\n",
+      "parse": {
+        "value": "2026-03-06 09:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-06 09:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "review tomorrow at 9am",
+      "parse": {
+        "value": "2026-03-02 09:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-03 09:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "reviewfriday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "reviewfriday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "review in 2 days",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-04 16:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "review 2026-03-05 14:30",
+      "parse": {
+        "value": "2026-03-05 14:30:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-05 14:30:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "friday",
+      "parse": {
+        "value": "2026-03-06 09:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-06 09:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": "   ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": null,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": false,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "false",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": true,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "true",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": 17,
+      "parse": {
+        "value": "2026-03-17 00:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "17",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": [],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": [
+        "tomorrow"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": [
+        "tomorrow",
+        "note"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\", \"note\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": {},
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": {
+        "at": "tomorrow"
+      },
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"at\" => \"tomorrow\"}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "UTC",
+      "input": {
+        "nested": [
+          null,
+          "friday"
+        ]
+      },
+      "parse": {
+        "value": "2026-03-02 00:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"nested\" => [nil, \"friday\"]}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 0 minutes",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "in 0 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 1 minute",
+      "parse": {
+        "value": "2026-03-02 16:01:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:01:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 1 minute",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 9223372036854775807 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:07:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:07:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775807 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 9223372036854775808 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:08:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:08:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775808 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 999999999999999999999999999 hours",
+      "parse": {
+        "value": "114079458624521151474449-09-27 07:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "114079458624521151474449-09-27 07:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999999999 hours",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 2147483648 days",
+      "parse": {
+        "value": "5881636-09-10 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "5881636-09-10 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2147483648 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 3652059 days",
+      "parse": {
+        "value": "12025-03-01 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "12025-03-01 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 3652059 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 999999999999999999999 weeks",
+      "parse": {
+        "value": "19165349048919555473-07-07 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "19165349048919555473-07-07 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999 weeks",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 2 hr",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hr",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 2 hrs",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hrs",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 2min",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2min",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 2 mins",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 mins",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 2 days suffix",
+      "parse": {
+        "value": "2026-03-04 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-04 16:00:00.000000",
+          "suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 days suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "in 2 weeks\nbody",
+      "parse": {
+        "value": "2026-03-16 15:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-16 15:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 weeks\nbody",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 25:00 suffix",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 25:00 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:60 title",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:60 title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:30:60 tail",
+      "parse": {
+        "value": "2026-03-05 19:31:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 19:31:00.000000",
+          "tail"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30:60 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "2026-03-05 14:30 +05:30 suffix",
+      "parse": {
+        "value": "2026-03-05 19:30:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 19:30:00.000000",
+          "+05:30 suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30 +05:30 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "tomorrow 24:00 body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "tomorrow 24:00 body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "today at 9pm body",
+      "parse": {
+        "value": "2026-03-03 02:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 02:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "today at 9pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "at 12pm text",
+      "parse": {
+        "value": "2026-03-02 17:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 17:00:00.000000",
+          "text"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "at 12pm text",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "at 0pm body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "at 0pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "monday 24:00 tail",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "monday 24:00 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "next monday junk",
+      "parse": {
+        "value": "2026-03-09 13:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-09 13:00:00.000000",
+          "junk"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday junk",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "next monday 8pm title",
+      "parse": {
+        "value": "2026-03-10 00:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-10 00:00:00.000000",
+          "title"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday 8pm title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "xmonday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "xmonday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "\u0000tomorrow\u0000",
+      "parse": {
+        "value": "2026-03-03 14:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 14:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "tomorrow",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": " tomorrow ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          " tomorrow ",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "\tfriday\n",
+      "parse": {
+        "value": "2026-03-06 14:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-06 14:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "review tomorrow at 9am",
+      "parse": {
+        "value": "2026-03-02 14:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-03 14:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "reviewfriday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "reviewfriday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "review in 2 days",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-04 16:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "review 2026-03-05 14:30",
+      "parse": {
+        "value": "2026-03-05 19:30:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-05 19:30:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "friday",
+      "parse": {
+        "value": "2026-03-06 14:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-06 14:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": "   ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": null,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": false,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "false",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": true,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "true",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": 17,
+      "parse": {
+        "value": "2026-03-17 04:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "17",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": [],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": [
+        "tomorrow"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": [
+        "tomorrow",
+        "note"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\", \"note\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": {},
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": {
+        "at": "tomorrow"
+      },
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"at\" => \"tomorrow\"}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "America/New_York",
+      "input": {
+        "nested": [
+          null,
+          "friday"
+        ]
+      },
+      "parse": {
+        "value": "2026-03-02 05:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"nested\" => [nil, \"friday\"]}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 0 minutes",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "in 0 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 1 minute",
+      "parse": {
+        "value": "2026-03-02 16:01:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:01:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 1 minute",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 9223372036854775807 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:07:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:07:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775807 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 9223372036854775808 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:08:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:08:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775808 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 999999999999999999999999999 hours",
+      "parse": {
+        "value": "114079458624521151474449-09-27 07:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "114079458624521151474449-09-27 07:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999999999 hours",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 2147483648 days",
+      "parse": {
+        "value": "5881636-09-10 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "5881636-09-10 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2147483648 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 3652059 days",
+      "parse": {
+        "value": "12025-03-01 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "12025-03-01 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 3652059 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 999999999999999999999 weeks",
+      "parse": {
+        "value": "19165349048919555473-07-07 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "19165349048919555473-07-07 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999 weeks",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 2 hr",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hr",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 2 hrs",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hrs",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 2min",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2min",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 2 mins",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 mins",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 2 days suffix",
+      "parse": {
+        "value": "2026-03-04 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-04 16:00:00.000000",
+          "suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 days suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "in 2 weeks\nbody",
+      "parse": {
+        "value": "2026-03-16 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-16 16:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 weeks\nbody",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 25:00 suffix",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 25:00 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:60 title",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:60 title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:30:60 tail",
+      "parse": {
+        "value": "2026-03-05 03:31:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 03:31:00.000000",
+          "tail"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30:60 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "2026-03-05 14:30 +05:30 suffix",
+      "parse": {
+        "value": "2026-03-05 03:30:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 03:30:00.000000",
+          "+05:30 suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30 +05:30 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "tomorrow 24:00 body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "tomorrow 24:00 body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "today at 9pm body",
+      "parse": {
+        "value": "2026-03-03 10:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 10:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "today at 9pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "at 12pm text",
+      "parse": {
+        "value": "2026-03-03 01:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 01:00:00.000000",
+          "text"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "at 12pm text",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "at 0pm body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "at 0pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "monday 24:00 tail",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "monday 24:00 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "next monday junk",
+      "parse": {
+        "value": "2026-03-15 22:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-15 22:00:00.000000",
+          "junk"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday junk",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "next monday 8pm title",
+      "parse": {
+        "value": "2026-03-16 09:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-16 09:00:00.000000",
+          "title"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday 8pm title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "xmonday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "xmonday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "\u0000tomorrow\u0000",
+      "parse": {
+        "value": "2026-03-03 22:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 22:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "tomorrow",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": " tomorrow ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          " tomorrow ",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "\tfriday\n",
+      "parse": {
+        "value": "2026-03-05 22:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 22:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "review tomorrow at 9am",
+      "parse": {
+        "value": "2026-03-02 22:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-03 22:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "reviewfriday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "reviewfriday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "review in 2 days",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-04 16:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "review 2026-03-05 14:30",
+      "parse": {
+        "value": "2026-03-05 03:30:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-05 03:30:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "friday",
+      "parse": {
+        "value": "2026-03-05 22:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 22:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": "   ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": null,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": false,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "false",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": true,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "true",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": 17,
+      "parse": {
+        "value": "2026-03-16 13:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "17",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": [],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": [
+        "tomorrow"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": [
+        "tomorrow",
+        "note"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\", \"note\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": {},
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": {
+        "at": "tomorrow"
+      },
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"at\" => \"tomorrow\"}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Australia/Lord_Howe",
+      "input": {
+        "nested": [
+          null,
+          "friday"
+        ]
+      },
+      "parse": {
+        "value": "2026-03-02 13:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"nested\" => [nil, \"friday\"]}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 0 minutes",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "in 0 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 1 minute",
+      "parse": {
+        "value": "2026-03-02 16:01:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:01:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 1 minute",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 9223372036854775807 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:07:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:07:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775807 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 9223372036854775808 minutes",
+      "parse": {
+        "value": "17536621479641-10-30 10:08:00.000000"
+      },
+      "leading": {
+        "value": [
+          "17536621479641-10-30 10:08:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 9223372036854775808 minutes",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 999999999999999999999999999 hours",
+      "parse": {
+        "value": "114079458624521151474449-09-27 07:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "114079458624521151474449-09-27 07:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999999999 hours",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 2147483648 days",
+      "parse": {
+        "value": "5881636-09-10 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "5881636-09-10 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2147483648 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 3652059 days",
+      "parse": {
+        "value": "12025-03-01 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "12025-03-01 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 3652059 days",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 999999999999999999999 weeks",
+      "parse": {
+        "value": "19165349048919555473-07-07 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "19165349048919555473-07-07 16:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 999999999999999999999 weeks",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 2 hr",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hr",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 2 hrs",
+      "parse": {
+        "value": "2026-03-02 18:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 18:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 hrs",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 2min",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2min",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 2 mins",
+      "parse": {
+        "value": "2026-03-02 16:02:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 16:02:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 mins",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 2 days suffix",
+      "parse": {
+        "value": "2026-03-04 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-04 16:00:00.000000",
+          "suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 days suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "in 2 weeks\nbody",
+      "parse": {
+        "value": "2026-03-16 16:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-16 16:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "in 2 weeks\nbody",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 25:00 suffix",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 25:00 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:60 title",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:60 title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:30:60 tail",
+      "parse": {
+        "value": "2026-03-05 01:31:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 01:31:00.000000",
+          "tail"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30:60 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "2026-03-05 14:30 +05:30 suffix",
+      "parse": {
+        "value": "2026-03-05 01:30:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 01:30:00.000000",
+          "+05:30 suffix"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "2026-03-05 14:30 +05:30 suffix",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "tomorrow 24:00 body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "tomorrow 24:00 body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "today at 9pm body",
+      "parse": {
+        "value": "2026-03-03 08:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 08:00:00.000000",
+          "body"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "today at 9pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "at 12pm text",
+      "parse": {
+        "value": "2026-03-02 23:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-02 23:00:00.000000",
+          "text"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "at 12pm text",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "at 0pm body",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "at 0pm body",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "monday 24:00 tail",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "monday 24:00 tail",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "next monday junk",
+      "parse": {
+        "value": "2026-03-15 20:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-15 20:00:00.000000",
+          "junk"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday junk",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "next monday 8pm title",
+      "parse": {
+        "value": "2026-03-16 07:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-16 07:00:00.000000",
+          "title"
+        ]
+      },
+      "trailing": {
+        "value": [
+          "next monday 8pm title",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "xmonday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "xmonday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "\u0000tomorrow\u0000",
+      "parse": {
+        "value": "2026-03-03 20:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-03 20:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "tomorrow",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": " tomorrow ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          " tomorrow ",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "\tfriday\n",
+      "parse": {
+        "value": "2026-03-05 20:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 20:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "review tomorrow at 9am",
+      "parse": {
+        "value": "2026-03-02 20:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-03 20:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "reviewfriday",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "reviewfriday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "review in 2 days",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-04 16:00:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "review 2026-03-05 14:30",
+      "parse": {
+        "value": "2026-03-05 01:30:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "review",
+          "2026-03-05 01:30:00.000000"
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "friday",
+      "parse": {
+        "value": "2026-03-05 20:00:00.000000"
+      },
+      "leading": {
+        "value": [
+          "2026-03-05 20:00:00.000000",
+          null
+        ]
+      },
+      "trailing": {
+        "value": [
+          "friday",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": "   ",
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": null,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          null,
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": false,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "false",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": true,
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "true",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": 17,
+      "parse": {
+        "value": "2026-03-16 11:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "17",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": [],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": [
+        "tomorrow"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": [
+        "tomorrow",
+        "note"
+      ],
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "[\"tomorrow\", \"note\"]",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": {},
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": {
+        "at": "tomorrow"
+      },
+      "parse": {
+        "value": null
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"at\" => \"tomorrow\"}",
+          null
+        ]
+      }
+    },
+    {
+      "zone": "Pacific/Apia",
+      "input": {
+        "nested": [
+          null,
+          "friday"
+        ]
+      },
+      "parse": {
+        "value": "2026-03-02 11:00:00.000000"
+      },
+      "leading": {
+        "value": null
+      },
+      "trailing": {
+        "value": [
+          "{\"nested\" => [nil, \"friday\"]}",
+          null
+        ]
+      }
+    }
+  ]
+}

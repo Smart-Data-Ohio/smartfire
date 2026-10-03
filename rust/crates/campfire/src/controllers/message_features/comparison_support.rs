@@ -55,6 +55,24 @@ pub(super) async fn embed_streams(
     }
     (client, server)
 }
+/// Rails publishes each callback/job batch in order even when Cable delivery reorders it.
+/// Observe actual Hub output under its publication lock, independently of the receiver.
+/// Negative control: reverse the real presenter batch (check_publication_mutants.py).
+pub(super) async fn published_frames(
+    app: &crate::controllers::presenters::test_support::TestApp,
+    client: &mut crate::channels::tests::support::Client,
+    expected: &Value,
+    context: &str,
+) {
+    // Socket receipt is the existing completion barrier for asynchronous jobs.
+    // Every received frame was recorded before fanout; snapshot only afterwards.
+    frames(app, client, expected, context).await;
+    let actual = app.publications().take().into_iter().map(|(stream, payload)| {
+        json!({"stream":stream,"html":serde_json::from_str::<Value>(&payload).unwrap()})
+    }).collect::<Vec<_>>();
+    assert_eq!(json!(actual), *expected, "ordered publication differs from Rails: {context}");
+}
+
 /// Cable uses independent subscription callbacks. Rails' publication transcript is
 /// ordered, but live Redis/worker-pool delivery is not. Preserve every envelope,
 /// HTML byte and duplicate while allowing only arrival order to vary.
@@ -174,4 +192,43 @@ pub(super) fn same_row(actual: &Value, expected: &Value, context: &str) {
             assert_eq!(got, want, "{context}.{key}");
         }
     }
+}
+
+/// The actual callback is queued on this current-thread runtime and cannot start
+/// until the comparator awaits. Producer control: taking the publication snapshot
+/// before the socket receive deterministically fails with an empty actual batch.
+/// See reference-tools/messaging/check_capture_completion.py.
+#[tokio::test(flavor = "current_thread")]
+async fn ordered_capture_waits_for_actual_callback_publication_without_sleep() {
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/older_provider_callbacks.json"
+    )).unwrap();
+    let group = &oracle["groups"][0];
+    let step = &group["steps"][0];
+    assert_eq!(step["kind"], "github");
+    let app = super::quote_integration_tests::app_rows(group["rows"].clone()).await;
+    let (mut client, server) = super::quote_integration_tests::stream(&app).await;
+    assert!(app.publications().take().is_empty());
+    let state = app.booted.app.clone();
+    let id = step["id"].as_i64().unwrap();
+    let input = step["attributes"].clone();
+    let callback = tokio::spawn(async move {
+        state.db.write(move |tx| {
+            let attrs = input.as_object().unwrap().iter().map(|(key, value)| {
+                let key = match key.as_str() {
+                    "title" => "title",
+                    "state" => "state",
+                    "review_decision" => "review_decision",
+                    "check_status" => "check_status",
+                    _ => panic!("unlisted GitHub callback input"),
+                };
+                (key, rusqlite::types::Value::Text(value.as_str().unwrap().into()))
+            }).collect::<Vec<_>>();
+            crate::integrations::github::pull_requests::update(tx, id, &attrs).map(|_| ())
+        }).await.unwrap();
+    });
+    published_frames(&app, &mut client, &step["frames"], "deferred actual callback").await;
+    callback.await.unwrap();
+    client.assert_silent().await;
+    server.abort();
 }

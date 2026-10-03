@@ -159,7 +159,7 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
             .await;
             release.notify_one();
             stopping.await;
-            super::comparison_support::frames(
+            super::comparison_support::published_frames(
                 &app,
                 &mut client,
                 &job["frames"],

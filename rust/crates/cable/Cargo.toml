@@ -3,6 +3,9 @@ name = "campfire_cable"
 version = "0.1.0"
 edition.workspace = true
 
+[features]
+test-support = []
+
 [dependencies]
 rails_compat.workspace = true
 tokio.workspace = true

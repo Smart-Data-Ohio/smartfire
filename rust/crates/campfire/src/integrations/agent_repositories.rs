@@ -100,43 +100,27 @@ impl State {
         events.dedup();
         let requests = db
             .read(move |conn| {
-                let mut result = vec![];
-                for id in events {
-                    let Some(event) =
-                        campfire_db::models::agent_delivery::AgentEvent::find(conn, id)?
-                    else {
-                        continue;
-                    };
-                    if event.agent_id != agent {
-                        continue;
-                    }
-                    let (thread, surface) = if campfire_db::models::agent_delivery::WORK_TYPES
-                        .contains(&event.event_type.as_str())
-                    {
-                        (
-                            event
-                                .metadata
-                                .get("thread_id")
-                                .map(campfire_db::models::agent_delivery::ruby_i64),
-                            Surface::Work,
-                        )
-                    } else {
-                        (
-                            event
-                                .message_id
-                                .map(|message| campfire_db::Message::find_by_id(conn, message))
-                                .transpose()?
-                                .flatten()
-                                .and_then(|message| message.thread_id),
-                            Surface::Messages,
-                        )
-                    };
-                    if let Some(thread) = thread {
-                        result.extend(
-                            requests(conn, agent, &[thread], surface)?
-                                .into_iter()
-                                .map(|(entry, request)| (id, entry, request)),
-                        );
+                if events.is_empty() {
+                    return Ok(vec![]);
+                }
+                let mut query = conn.prepare("SELECT e.id,e.event_type,e.metadata,m.thread_id FROM agent_events e LEFT JOIN messages m ON m.id=e.message_id WHERE e.agent_id=? AND e.id IN (SELECT value FROM json_each(?)) ORDER BY e.id")?;
+                let rows = query.query_map(params![agent,serde_json::json!(events).to_string()],|row| {
+                    let kind:String=row.get(1)?;
+                    let metadata=row.get::<_,Option<serde_json::Value>>(2)?.unwrap_or_default();
+                    let work=campfire_db::models::agent_delivery::WORK_TYPES.contains(&kind.as_str());
+                    let thread = if work {metadata.get("thread_id").map(campfire_db::models::agent_delivery::ruby_i64)} else {row.get(3)?};
+                    Ok((row.get::<_,i64>(0)?,thread,work))
+                })?.collect::<std::result::Result<Vec<_>,_>>()?;
+                let work_threads=rows.iter().filter(|r|r.2).filter_map(|r|r.1).collect::<Vec<_>>();
+                let message_threads=rows.iter().filter(|r|!r.2).filter_map(|r|r.1).collect::<Vec<_>>();
+                let mut work:HashMap<i64,Vec<_>>=HashMap::new();
+                let mut messages:HashMap<i64,Vec<_>>=HashMap::new();
+                for (thread,entry,request) in requests_by_thread(conn,agent,&work_threads,Surface::Work)? {work.entry(thread).or_default().push((entry,request));}
+                for (thread,entry,request) in requests_by_thread(conn,agent,&message_threads,Surface::Messages)? {messages.entry(thread).or_default().push((entry,request));}
+                let mut result=Vec::new();
+                for (event,thread,is_work) in rows {
+                    if let Some(requests)=thread.and_then(|thread|if is_work {work.get(&thread)} else {messages.get(&thread)}) {
+                        result.extend(requests.iter().cloned().map(|(entry,request)|(event,entry,request)));
                     }
                 }
                 Ok(result)
@@ -265,6 +249,17 @@ fn requests(
     threads: &[i64],
     surface: Surface,
 ) -> Result<Vec<(RepositoryEntry, RepositoryRequest)>> {
+    Ok(requests_by_thread(conn, agent, threads, surface)?
+        .into_iter()
+        .map(|(_, entry, request)| (entry, request))
+        .collect())
+}
+fn requests_by_thread(
+    conn: &Connection,
+    agent: i64,
+    threads: &[i64],
+    surface: Surface,
+) -> Result<Vec<(i64, RepositoryEntry, RepositoryRequest)>> {
     if threads.is_empty() {
         return Ok(vec![]);
     }
@@ -308,12 +303,19 @@ fn requests(
     let Some(user) = Agent::find(conn, agent)?.and_then(|a| a.owner_id) else {
         return Ok(vec![]);
     };
-    let account = conn.query_row(
-        "SELECT id FROM github_connected_accounts WHERE user_id=?",
-        [user], |r| r.get::<_, i64>(0),
-    ).optional()?;
-    let Some(account) = account else { return Ok(vec![]); };
-    if !current(conn, agent, user, account)? { return Ok(vec![]); }
+    let account = conn
+        .query_row(
+            "SELECT id FROM github_connected_accounts WHERE user_id=?",
+            [user],
+            |r| r.get::<_, i64>(0),
+        )
+        .optional()?;
+    let Some(account) = account else {
+        return Ok(vec![]);
+    };
+    if !current(conn, agent, user, account)? {
+        return Ok(vec![]);
+    }
     let mut result = vec![];
     let mut seen = HashSet::new();
     for &thread in threads {
@@ -322,6 +324,7 @@ fn requests(
         }
         for (id, owner, repo) in work.remove(&thread).unwrap_or_default() {
             result.push((
+                thread,
                 RepositoryEntry::WorkLink(id),
                 RepositoryRequest {
                     account_id: account,
@@ -333,6 +336,7 @@ fn requests(
         }
         if let Some((owner, repo)) = messages.remove(&thread) {
             result.push((
+                thread,
                 RepositoryEntry::Thread(thread),
                 RepositoryRequest {
                     account_id: account,

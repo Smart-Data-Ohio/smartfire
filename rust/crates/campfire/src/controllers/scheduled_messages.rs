@@ -434,6 +434,9 @@ pub async fn send_now(c: &mut Ctx) -> Result {
 async fn payload(c: &mut Ctx, row: &ScheduledMessage, status: StatusCode) -> Result {
     let zone = features::user_zone(c).await?;
     let stamp = |time: campfire_db::Timestamp| {
+        if time.try_jiff().is_none() {
+            return features::json_time_in_zone(time, zone.tz());
+        }
         zone.format(
             time.jiff(),
             if zone.tz().to_offset_info(time.jiff()).abbreviation() == "UTC" {

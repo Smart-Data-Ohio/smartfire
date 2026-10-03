@@ -130,6 +130,7 @@ pub(super) async fn stream(app:&TestApp) -> (crate::channels::tests::support::Cl
 pub(super) async fn stream_with_cookie(app: &TestApp, cookie: &str) -> (crate::channels::tests::support::Client, tokio::task::JoinHandle<()>) {
     use crate::channels::tests::support::{Client,bind_listener,identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    app.publications();
     let listener=bind_listener().await; let address=listener.local_addr().unwrap();
     let router=app.booted.router.clone();
     let server=tokio::spawn(async move { axum::serve(listener,router).await.unwrap() });
