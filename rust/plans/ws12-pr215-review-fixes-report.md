@@ -1,3 +1,5 @@
+> Historical checkpoint at 9df601e0. Current coverage accounting and verification are in [ws12-pr215-coverage-report.md](ws12-pr215-coverage-report.md); this file retains the earlier receipts.
+
 # PR #215 review fixes — WS12 checkpoint
 
 Branch: `rust/ws12-board-automations-3`. Verified code SHA: `5d08b771a00863f2acded1ffce114a1d0c8bb43f`.

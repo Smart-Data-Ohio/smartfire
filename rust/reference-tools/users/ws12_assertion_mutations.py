@@ -110,6 +110,7 @@ def restore(scratch):
 def run(catalog, args):
     logs = args.scratch / "logs" / args.action
     logs.mkdir(parents=True, exist_ok=True)
+    (args.scratch / "tmp").mkdir(parents=True, exist_ok=True)
     binaries = {}
     listed = {}
     for kind, stem in [("db", "campfire_db"), ("app", "campfire")]:
@@ -121,6 +122,7 @@ def run(catalog, args):
         listed[kind] = [line[:-6] for line in subprocess.check_output(
             [str(choices[0]), "--list"], text=True).splitlines() if line.endswith(": test")]
     rows = [row for row in catalog["declarations"] if not args.declaration or row["id"] in args.declaration]
+    assert rows and (not args.declaration or set(args.declaration) <= {row["id"] for row in rows}), "unknown/empty declaration selection"
     baseline_cache = {}
     cache_lock = threading.Lock()
 
@@ -164,6 +166,9 @@ def run(catalog, args):
             text = path.read_text()
             summaries = re.findall(r"^test result:.*$", text, re.M)
             assert summaries, (row["id"], "no executed test summary", text[-1000:])
+            count = re.search(r"(\d+) passed; (\d+) failed; (\d+) ignored;", summaries[-1])
+            assert count and int(count[1]) + int(count[2]) == len(set(names)) and int(count[3]) == 0, \
+                (row["id"], "all selected assertions must run", summaries)
             group = {"kind": kind, "tests": list(dict.fromkeys(names)), "exit": done.returncode,
                      "hits": text.count("WS12_COVERAGE_HIT " + row["mutation"]),
                      "assertion_failed": "assertion `" in text or "assertion failed:" in text,
@@ -187,6 +192,8 @@ def run(catalog, args):
           f"{sum(r['hits'] > 0 for r in results)} activated; "
           f"{sum(r['rejected'] for r in results)} rejected; "
           f"{sum(not r['rejected'] for r in results)} survived")
+    if args.action == "baseline" and any(r["rejected"] for r in results):
+        raise SystemExit("baseline failed; do not credit this campaign")
 
 
 if __name__ == "__main__":
