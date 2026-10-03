@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {actOnVisible,waitForVisibility,waitForVisibleProperty,waitForVisibleCount,waitForCondition,filterVisibleText} from './behavior-visibility.mjs';
 export const WORKSPACE_CASE='workspace follows the system theme and mobile navigation remains reachable';
 export async function workspace({author:page,source,submit}) {
-  const literal=source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split('    MARKDOWN')[0].split('\n').map(line=>line.slice(4)).join('\n');
+  const literal=source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split('  MARKDOWN')[0].split('\n').map(line=>line.slice(4)).join('\n');
   await page.emulateMedia({colorScheme:'light'});
   await submit(page,literal);
   await waitForVisibility(filterVisibleText(page.locator('.message__body h2'),'Design review'));

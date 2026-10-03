@@ -459,7 +459,7 @@ for file in files:
                         with sqlite3.connect(database) as conn:
                             if case == "workspace follows the system theme and mobile navigation remains reachable":
                                 reference_source = subprocess.check_output(["git","show",f"{PIN}:test/system/workspace_markdown_test.rb"],cwd=ROOT,text=True)
-                                literal=textwrap.dedent(reference_source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("    MARKDOWN")[0])
+                                literal=textwrap.dedent(reference_source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("  MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=654632876 AND markdown_source=?",(literal,)).fetchone()[0]==1
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=201306877 AND markdown_source=?",("Mobile draft\r\n",)).fetchone()[0]==1
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
@@ -518,7 +518,7 @@ for file in files:
                             elif case == CASES["workspace_markdown"][1]:
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", ("First line\nSecond line",)).fetchone()[0] == 1
                             elif case == CASES["workspace_markdown"][2]:
-                                payload = textwrap.dedent(source.decode().split("payload = <<~'MARKDOWN'\n")[1].split("    MARKDOWN")[0])
+                                payload = textwrap.dedent(source.decode().split("payload = <<~'MARKDOWN'\n")[1].split("  MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (payload,)).fetchone()[0] == 1
                             elif case == "Markdown replies and file attachments remain usable":
                                 parent = conn.execute("SELECT id FROM messages WHERE markdown_source='**A useful point** with `inline code`.'").fetchone()
