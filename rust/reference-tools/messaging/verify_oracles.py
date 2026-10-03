@@ -15,7 +15,7 @@ NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links
          "reminder_push", "quote_integration", "root_cache", "panels", "date_inputs", "review_saved_race", "review_dates", "date_compact_widths", "providers", "provider_edits", "event_cards", "date_coercions", "composer", "composer_sti", "twitter_preloads", "twitter_cards", "twitter_text", "provider_callbacks", "agent_command", "user_coercions", "date_years",
          "ws12_consumers", "provider_batch", "private_provider_pages", "search_headers",
          "older_provider_callbacks", "bounded_provider_callbacks", "mapped_provider_callbacks",
-         "older_owner_callbacks"]
+         "older_owner_callbacks", "older_calendar_callbacks", "older_calendar_jobs", "older_embed_jobs"]
 for name in NAMES:
     storage = Path(tempfile.mkdtemp(prefix=f"{name}-", dir=SCRATCH))
     shutil.copytree(ROOT / "rust/parity/.seed/default", storage, dirs_exist_ok=True)
