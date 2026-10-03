@@ -19,6 +19,7 @@ import {codeHighlighting} from './behavior-code.mjs';
 import {threadContinuation,continuationCases} from './behavior-thread-continuation.mjs';
 import {workControllers} from './behavior-work-controllers.mjs';
 import {mobileContinuation} from './behavior-mobile-continuation.mjs';
+import {workspace,WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motion,motionCases} from './behavior-motion.mjs';
 import {nativePhone,PHONE_CASE} from './behavior-native-phone.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
@@ -53,7 +54,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       // data-test-motion="off" input (application.html.erb:2). Our servers use
       // the production reference image. Supply that test-only input before
       // parsing either app; this does not claim the server emits the attribute.
-      const pinnedTestMotion = caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      const pinnedTestMotion = caseName===WORKSPACE_CASE || caseName==='Markdown replies and file attachments remain usable' || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
       if(pinnedTestMotion) await context.addInitScript(()=>{
         const apply=()=>document.documentElement?.setAttribute('data-test-motion','off');
         apply();new MutationObserver(apply).observe(document,{childList:true,subtree:true});
@@ -354,6 +355,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     if (file==='workspace_markdown') {
       const source=execFileSync('git',['show','d7c7de92:test/system/workspace_markdown_test.rb'],{encoding:'utf8'});
       const heredoc=(start,indent)=>source.split(start)[1].split(`${' '.repeat(indent)}MARKDOWN`)[0].split('\n').map(line=>line.slice(indent+2)).join('\n');
+      if(caseName===WORKSPACE_CASE) {await workspace({author,source,submit});return;}
       if (caseName==='Markdown messages reach other users and editing preserves the original source') {
         const markdown=heredoc("MARKDOWN = <<~'MARKDOWN'.freeze\n",2);
         await submit(author,markdown);

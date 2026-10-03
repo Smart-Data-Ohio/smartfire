@@ -33,6 +33,7 @@ CASES = {
     "channel_threads_controller": ['converts a thread to work, assigns an eligible owner, and keeps an audit trail', 'work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable', 'assigned owner can change work status but cannot reassign it', 'only a thread manager can remove work tracking', 'a manager can assign an eligible agent and the agent is notified', 'the owner picker lists eligible agents with profiles and excludes ineligible ones', 'a member who cannot manage the thread cannot assign an agent', 'ordinary thread fields remain separate from work tracking'],
     "sending_messages": ["sending messages between two users", "editing messages", "deleting messages"],
     "workspace_markdown": [
+        "workspace follows the system theme and mobile navigation remains reachable",
         "Markdown messages reach other users and editing preserves the original source",
         "desktop keyboard composition keeps line breaks and sends once after composition ends",
         "untrusted markup stays inert in the delivered message",
@@ -367,7 +368,7 @@ for file in files:
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if file == "channel_threads_controller":
+            if file == "channel_threads_controller" or case == "workspace follows the system theme and mobile navigation remains reachable":
                 run_env['WS8BM_WORK_DATABASES']=json.dumps({
                     f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db/production.sqlite3'),
                     f'http://127.0.0.1:{ports[1]}':str(work / 'db/production.sqlite3'),
@@ -456,7 +457,14 @@ for file in files:
                     databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
                     for database in databases:
                         with sqlite3.connect(database) as conn:
-                            if file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
+                            if case == "workspace follows the system theme and mobile navigation remains reachable":
+                                reference_source = subprocess.check_output(["git","show",f"{PIN}:test/system/workspace_markdown_test.rb"],cwd=ROOT,text=True)
+                                literal=textwrap.dedent(reference_source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("    MARKDOWN")[0])
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=654632876 AND markdown_source=?",(literal,)).fetchone()[0]==1
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=201306877 AND markdown_source=?",("Mobile draft\r\n",)).fetchone()[0]==1
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]==seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]+2
+                            elif file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     for table in (["messages","channel_threads","users","rooms"] if file == "motion" else ["messages","channel_threads"]):
                                         query=f"SELECT * FROM {table} ORDER BY id"

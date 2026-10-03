@@ -78,7 +78,8 @@ export async function motion({author:page,base,caseName,fixture}) {
     await waitUntil(page,()=>document.activeElement?.getAttribute('aria-label')==='Open workspace navigation','motion: focus returns to opener');
   } else if(caseName===motionCases[1]) {
     const show=page.locator('button').filter({hasText:'Show members'});
-    try {const visible=await visibleMatch(show,{timeout:5000});await click(visible);}catch(error){if(error.name!=='TimeoutError')throw error;}
+    let showButton;try {showButton=await visibleMatch(show,{timeout:5000});}catch(error){if(error.name!=='TimeoutError')throw error;}
+    if(showButton)await click(showButton);
     await waitForCondition(async()=>await visibleCount(page.locator('#channel-members .member-panel__member'))>=2,{timeout:10000});
     const boxes=page.locator('#channel-members input[type="checkbox"]');await waitForVisibility(boxes,{state:'hidden'});
     const lefts=()=>page.locator('#channel-members .member-panel__member .member-panel__avatar').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().left));
@@ -87,7 +88,7 @@ export async function motion({author:page,base,caseName,fixture}) {
     await actOnVisible(page.locator(`#channel-members [data-member-id="${fixture.jason_id}"] button.profile-card-name`),'click',{modifiers:['Control']});
     await waitForVisibility(boxes);await waitForVisibility(page.locator('#channel-members [data-multi-select-target="bar"]'));
     assert.deepEqual(await lefts(),before,'motion: member-select positions');assert.equal(await height(),beforeHeight,'motion: member-select height');
-    await click(boxes.locator(`:scope:not(#select-member-${fixture.jason_id})`).last());
+    await click(page.locator(`#channel-members input[type="checkbox"]:not(#select-member-${fixture.jason_id})`).last());
     await waitForVisibility(filterVisibleText(page.locator('#channel-members [data-multi-select-target="messageButton"]'),'Message (2)'));
     assert.deepEqual(await lefts(),before,'motion: second-select positions');assert.equal(await height(),beforeHeight);
     for(let index=0;index<await boxes.count();index++) {const box=boxes.nth(index);if(await box.isChecked())await click(box);}

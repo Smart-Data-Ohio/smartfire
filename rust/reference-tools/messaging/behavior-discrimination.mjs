@@ -1,6 +1,7 @@
 // Credit only the assertion named by the served mutation. Source anchors keep
 // this contract reviewable without line-number drift. Unknown failures fail closed.
 import {readFileSync} from 'node:fs';
+import {WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motionCases} from './behavior-motion.mjs';
 import {workControllerCases} from './behavior-work-controllers.mjs';
 const helpers=new Set(['behavior-visibility.mjs','behavior-text.mjs']);
@@ -25,6 +26,7 @@ export function assertionFrames(error) {
 const target=(module,anchor,message)=>({module:`behavior-${module}.mjs`,anchor,message});
 const D=new Map();
 const add=(names,module,anchor,message)=>{for(const name of names) D.set(name,[target(module,anchor,message)]);};
+add([WORKSPACE_CASE],'workspace',"'workspace: profile inside navigation'");
 for(const [index,anchor] of [
   [0,"'motion: drawer starts off-canvas'"],
   [1,"'motion: member-select positions'"],

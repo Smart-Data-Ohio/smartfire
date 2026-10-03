@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {workControllerCases} from './behavior-work-controllers.mjs';
 import {mutationTarget} from './behavior-discrimination.mjs';
+import {WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motionCases} from './behavior-motion.mjs';
 import {actionMutations} from './behavior-action-mutations.mjs';
 const list='controllers/message_list_controller-';
@@ -11,6 +12,7 @@ const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
   ...actionMutations,
+  [WORKSPACE_CASE,['messages-','.message__quick-reaction {','#sidebar .sidebar__tools { margin-left: 20px !important; }\n.message__quick-reaction {']],
   [motionCases[0],['messages-','.message__quick-reaction {','#sidebar .sidebar__container { transition-duration: 0s !important; }\n.message__quick-reaction {']],
   [motionCases[1],['messages-','.message__quick-reaction {','#channel-members .is-selecting .member-panel__avatar { transform: translateX(10px) !important; }\n.message__quick-reaction {']],
   [motionCases[2],['messages-','.message__quick-reaction {','#main-content:has(.multi-select-bar:not([hidden])) .people-directory__row { transform: translateY(10px) !important; }\n.message__quick-reaction {']],
