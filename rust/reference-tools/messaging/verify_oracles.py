@@ -16,6 +16,16 @@ NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links
          "ws12_consumers", "provider_batch", "private_provider_pages", "search_headers",
          "older_provider_callbacks", "bounded_provider_callbacks", "mapped_provider_callbacks",
          "older_owner_callbacks", "older_calendar_callbacks", "older_calendar_jobs", "older_embed_jobs", "pin_poll_scaling", "exceptional_inputs", "slash_named", "older_calendar_execution", "older_embed_children", "older_embed_failures", "final_state_siblings"]
+# Main's #213 adds a stored non-HTTP quote case. Its golden uses the exact
+# reviewed Rails template revision, while every other corpus keeps the shared pin.
+TWITTER_ENV = dict(ENV, PARITY_IMAGE="ws8bm2-reference:twitter-955af4c37",
+                   PARITY_REFERENCE_REVISION="955af4c3781bef07b97b7aefce12c376110a812c")
+if subprocess.run(["docker", "image", "inspect", TWITTER_ENV["PARITY_IMAGE"]],
+                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
+    subprocess.run([str(ROOT / "rust/reference-tools/messaging/build-twitter-reference.sh")],
+                   cwd=ROOT, env=ENV, check=True)
+subprocess.run(["python3", str(ROOT / "rust/reference-tools/messaging/features-reference-check.py")],
+               cwd=ROOT, env=TWITTER_ENV, check=True)
 for name in NAMES:
     storage = Path(tempfile.mkdtemp(prefix=f"{name}-", dir=SCRATCH))
     shutil.copytree(ROOT / "rust/parity/.seed/default", storage, dirs_exist_ok=True)
@@ -23,7 +33,7 @@ for name in NAMES:
                "--time", "2026-03-02T16:00:00Z", "--freeze",
                str(ROOT / f"rust/reference-tools/{'embeds' if name in ('twitter_cards','twitter_text') else 'messaging'}/{name}.rb"),
                f"/rails/storage/db/{name}.json"]
-    run = subprocess.run(command, cwd=ROOT, env=ENV, capture_output=True, text=True)
+    run = subprocess.run(command, cwd=ROOT, env=TWITTER_ENV if name == "twitter_cards" else ENV, capture_output=True, text=True)
     (storage / "runner.log").write_text(run.stdout + run.stderr)
     assert run.returncode == 0, f"{name}: see {storage}/runner.log"
     actual = (storage / f"db/{name}.json").read_bytes()
