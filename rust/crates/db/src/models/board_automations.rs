@@ -1,6 +1,5 @@
 //! app/models/board_automations/{sla_dispatcher,digest_dispatcher}.rb.
 //! Eligibility is loaded across boards in batches. Only unclaimed due work acquires a writer.
-use crate::broadcasts::{Broadcast, Partial, room_dom_id, room_messages};
 use crate::sql::{query_all, query_one};
 use crate::{
     BoardSlaNudge, BoardStaleDigest, ChannelThread, Connection, Database, Event, Message,
@@ -17,6 +16,15 @@ pub struct DispatchStats {
     pub pushes: usize,
     pub notes: usize,
     pub failed_ids: Vec<i64>,
+}
+
+/// One rendering batch, still publishing an individual messages/_message append per note.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DigestNotes {
+    pub message_ids: Vec<i64>,
+}
+impl crate::Broadcast for DigestNotes {
+    const KIND: &'static str = "board_automations.digest_notes";
 }
 #[derive(Clone)]
 struct SlaCandidate {
@@ -79,7 +87,7 @@ WHERE b.type='Rooms::Board' AND b.deleted_at IS NULL AND r.work_status!='done' A
 /// Repeat sweeps read but never open a claim transaction. Each new stage commits its source,
 /// inbox record and optional durable BoardNudgeJob atomically through the merged model API.
 pub async fn dispatch_sla(db: &Database, now: Timestamp) -> Result<DispatchStats> {
-    let pending = db.read(move |conn| {
+    let (pending, recipients) = db.read(move |conn| {
         let candidates = query_all(conn,&format!("{SLA_SELECT} ORDER BY r.id,t.id"),[],SlaCandidate::from_row)?;
         let claims: HashSet<_> = query_all(conn,
             "SELECT n.channel_thread_id,n.work_status,n.stage,n.status_entered_at FROM board_sla_nudges n JOIN channel_threads t ON t.id=n.channel_thread_id JOIN board_sla_rules r ON r.room_id=t.room_id AND r.work_status=t.work_status",
@@ -92,7 +100,12 @@ pub async fn dispatch_sla(db: &Database, now: Timestamp) -> Result<DispatchStats
                 }
             }
         }
-        Ok(pending)
+        let ids: HashSet<_> = pending.iter().filter_map(|(candidate,stage)| candidate.recipient(stage)).collect();
+        let recipients = if ids.is_empty() { BTreeMap::new() } else {
+            query_all(conn,"SELECT * FROM users WHERE id IN (SELECT value FROM json_each(?))",[serde_json::json!(ids).to_string()],User::from_row)?
+                .into_iter().map(|user|(user.id,user)).collect()
+        };
+        Ok((pending, Arc::new(recipients)))
     }).await?;
     let mut stats = DispatchStats::default();
     let pushed = Arc::new(Mutex::new(HashSet::new()));
@@ -103,6 +116,7 @@ pub async fn dispatch_sla(db: &Database, now: Timestamp) -> Result<DispatchStats
             continue;
         }
         let pushed_before = Arc::clone(&pushed);
+        let recipients = Arc::clone(&recipients);
         let outcome = db
             .write(move |tx| {
                 // Recheck the crossing and recipient in the source transaction. A concurrent status
@@ -117,11 +131,18 @@ pub async fn dispatch_sla(db: &Database, now: Timestamp) -> Result<DispatchStats
                     c.room_id == candidate.room_id
                         && c.status == candidate.status
                         && c.entered == candidate.entered
+                        && c.due("nudge", now)
+                        && c.due(stage, now)
                 }) else {
                     return Ok(None);
                 };
                 let Some(recipient) = fresh.recipient(stage) else {
                     return Ok(None);
+                };
+                // A reassignment can introduce a recipient after the initial batch read.
+                let user = match recipients.get(&recipient) {
+                    Some(user) => user.clone(),
+                    None => User::find(tx.conn(), recipient)?,
                 };
                 let push = !pushed_before
                     .lock()
@@ -135,7 +156,7 @@ pub async fn dispatch_sla(db: &Database, now: Timestamp) -> Result<DispatchStats
                     stage: Some(stage.into()),
                     status_entered_at: Some(candidate.entered),
                 };
-                match BoardSlaNudge::claim_and_notify(tx, input, push) {
+                match BoardSlaNudge::claim_and_notify_for_dispatch(tx, input, &user, push) {
                     Ok(_) => Ok(Some((recipient, push))),
                     Err(crate::Error::RecordInvalid(_)) => Ok(None),
                     Err(error) if error.is_record_not_unique() => Ok(None),
@@ -164,7 +185,7 @@ pub async fn dispatch_sla(db: &Database, now: Timestamp) -> Result<DispatchStats
 struct StalePost {
     thread: ChannelThread,
     owner_name: Option<String>,
-    creator_id: i64,
+    entered: Timestamp,
     nudge_minutes: i64,
 }
 fn stale_posts(conn: &Connection, now: Timestamp) -> Result<BTreeMap<i64, Vec<StalePost>>> {
@@ -184,18 +205,18 @@ ORDER BY b.id,t.work_status_changed_at,t.id
             Ok(StalePost {
                 thread: ChannelThread::from_row(r)?,
                 owner_name: r.get("owner_name")?,
-                creator_id: r.get("board_creator")?,
+                entered: r.get("work_status_changed_at")?,
                 nudge_minutes: r.get("nudge_after_minutes")?,
             })
         },
     )?;
     let mut boards = BTreeMap::<i64, Vec<StalePost>>::new();
     for post in posts {
-        if post.thread.work_status_changed_at.is_some_and(|at| {
-            at <= now.ago(SignedDuration::from_secs(
+        if post.entered
+            <= now.ago(SignedDuration::from_secs(
                 post.nudge_minutes.saturating_mul(60),
             ))
-        }) {
+        {
             boards.entry(post.thread.room_id).or_default().push(post);
         }
     }
@@ -214,13 +235,14 @@ pub async fn dispatch_digests(db: &Database, now: Timestamp) -> Result<DispatchS
     }).await?;
     let mut stats = DispatchStats::default();
     let on = now.jiff().to_zoned(TimeZone::UTC).date();
+    let mut posted = Vec::new();
     for (room_id, posts) in boards {
         let result: Result<_> = async {
-            let room = rooms
-                .get(&room_id)
-                .expect("eligible board was preloaded")
-                .clone();
-            let Some(mut claim) = db
+            // RoomDestroyJob can finish between selecting posts and loading their boards.
+            let Some(room) = rooms.get(&room_id).cloned() else {
+                return Ok(false);
+            };
+            let Some(claim) = db
                 .write(move |tx| BoardStaleDigest::claim_for_room(tx, room_id, on))
                 .await?
             else {
@@ -229,10 +251,9 @@ pub async fn dispatch_digests(db: &Database, now: Timestamp) -> Result<DispatchS
             stats.claims += 1;
             let text = digest_text(&posts, now);
             let creator = creators
-                .get(&posts[0].creator_id)
+                .get(&room.creator_id)
                 .cloned()
                 .ok_or(crate::Error::RecordNotFound("User"))?;
-            let broadcast_room = room.clone();
             let message = db
                 .write(move |tx| {
                     Message::create_quiet_note(
@@ -244,20 +265,7 @@ pub async fn dispatch_digests(db: &Database, now: Timestamp) -> Result<DispatchS
                 })
                 .await?;
             stats.notes += 1;
-            let message_id = message.id;
-            // Rails posts and broadcasts before digest.update!. A later association failure
-            // retains both the committed quiet note and the daily claim.
-            db.write(move |tx| {
-                tx.emit_after_commit(Event::broadcast(&Broadcast::append(
-                    room_messages(&broadcast_room),
-                    room_dom_id(&broadcast_room, Some("messages")),
-                    Partial::Message { message_id },
-                )));
-                Ok(())
-            })
-            .await?;
-            db.write(move |tx| claim.attach_message(tx, &message))
-                .await?;
+            posted.push((claim, message));
             Ok(true)
         }
         .await;
@@ -269,6 +277,25 @@ pub async fn dispatch_digests(db: &Database, now: Timestamp) -> Result<DispatchS
             }
         }
     }
+    if !posted.is_empty() {
+        let notes = DigestNotes {
+            message_ids: posted.iter().map(|(_, message)| message.id).collect(),
+        };
+        // Post and broadcast before digest.update!, retaining both if association fails.
+        db.write(move |tx| {
+            tx.emit_after_commit(Event::broadcast(&notes));
+            Ok(())
+        })
+        .await?;
+        for (mut claim, message) in posted {
+            let room_id = claim.room_id;
+            if let Err(error) = db.write(move |tx| claim.attach_message(tx, &message)).await {
+                tracing::error!(room_id,%error,"Board stale digest failed");
+                stats.failed_ids.push(room_id);
+            }
+        }
+    }
+    stats.failed_ids.sort_unstable();
     Ok(stats)
 }
 fn digest_text(posts: &[StalePost], now: Timestamp) -> String {
@@ -278,14 +305,9 @@ fn digest_text(posts: &[StalePost], now: Timestamp) -> String {
         if n == 1 { "post" } else { "posts" }
     )];
     for post in posts.iter().take(20) {
-        let minutes = (now.as_microsecond()
-            - post
-                .thread
-                .work_status_changed_at
-                .expect("stale post has entry")
-                .as_microsecond())
-        .div_euclid(60_000_000)
-        .max(0);
+        let minutes = (now.as_microsecond() - post.entered.as_microsecond())
+            .div_euclid(60_000_000)
+            .max(0);
         let age = if minutes < 60 {
             format!(
                 "{minutes} {}",

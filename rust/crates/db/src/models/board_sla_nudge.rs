@@ -96,6 +96,15 @@ impl BoardSlaNudge {
         if User::find_by_id(conn, input.recipient_id)?.is_none() {
             errors.add("recipient", "must exist");
         }
+        Self::validate_attributes(conn, input, existing_id, &mut errors)?;
+        Ok(errors)
+    }
+    fn validate_attributes(
+        conn: &Connection,
+        input: &NewBoardSlaNudge,
+        existing_id: Option<i64>,
+        errors: &mut Errors,
+    ) -> Result<()> {
         let status = input.work_status.as_deref();
         if status.is_none_or(campfire_richtext::ruby::is_blank) {
             errors.add("work_status", "can't be blank");
@@ -122,11 +131,14 @@ impl BoardSlaNudge {
                 "already fired for this status crossing",
             );
         }
-        Ok(errors)
+        Ok(())
     }
     /// Saving the claim alone has no inbox or push callback, as in Rails.
     pub fn create(tx: &mut Tx<'_>, input: NewBoardSlaNudge) -> Result<Self> {
         Self::validate(tx.conn(), &input, None)?.into_result()?;
+        Self::insert(tx, input)
+    }
+    fn insert(tx: &mut Tx<'_>, input: NewBoardSlaNudge) -> Result<Self> {
         let now = tx.now();
         Ok(tx.conn().query_row(
             "INSERT INTO board_sla_nudges(room_id,channel_thread_id,recipient_id,work_status,stage,status_entered_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) RETURNING *",
@@ -138,6 +150,28 @@ impl BoardSlaNudge {
         tx.savepoint(move |tx| {
             let nudge = Self::create(tx, input)?;
             ActivityItem::record_board_sla_nudge(tx, &nudge)?;
+            if push {
+                tx.emit_after_commit(Event::job(&super::notification_push::BoardNudgeJob {
+                    nudge_id: nudge.id,
+                }));
+            }
+            Ok(nudge)
+        })
+    }
+    /// The dispatcher's transaction rechecks board, thread and recipient eligibility together.
+    /// Reuse its batched recipient instead of reloading each belongs_to for every stage.
+    pub(crate) fn claim_and_notify_for_dispatch(
+        tx: &mut Tx<'_>,
+        input: NewBoardSlaNudge,
+        recipient: &User,
+        push: bool,
+    ) -> Result<Self> {
+        tx.savepoint(move |tx| {
+            let mut errors = Errors::default();
+            Self::validate_attributes(tx.conn(), &input, None, &mut errors)?;
+            errors.into_result()?;
+            let nudge = Self::insert(tx, input)?;
+            ActivityItem::record_board_sla_nudge_for_recipient(tx, &nudge, recipient)?;
             if push {
                 tx.emit_after_commit(Event::job(&super::notification_push::BoardNudgeJob {
                     nudge_id: nudge.id,

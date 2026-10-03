@@ -7,13 +7,33 @@ use campfire_kit::{Ctx, Error, Result, StatusCode};
 
 pub async fn update_sla_rules(c: &mut Ctx) -> Result {
     let room = board(c).await?;
-    let submitted = c.params.get("sla_rules").map(|p| p.to_json());
+    let mut submitted = c.params.get("sla_rules").map(|p| p.to_json());
+    if let Some(serde_json::Value::Array(values)) = &submitted {
+        // Strong Parameters filters scalar array entries out. The resulting [] converts
+        // to an empty hash, whereas retained hashes cannot convert to key/value pairs.
+        if values.iter().any(serde_json::Value::is_object) {
+            return Err(Error::BadRequest("invalid SLA rules array".into()));
+        }
+        submitted = Some(serde_json::json!({}));
+    }
     // Rails fetches an unpermitted empty Parameters object if no accepted rule is present.
     let accepted = submitted.as_ref().is_some_and(serde_json::Value::is_object);
     if !accepted {
         return Err(Error::internal(anyhow::anyhow!(
             "unable to convert unpermitted parameters to hash"
         )));
+    }
+    if campfire_db::models::channel_thread::WORK_STATUSES
+        .iter()
+        .any(|status| {
+            submitted
+                .as_ref()
+                .and_then(|value| value.get(status))
+                .is_some_and(serde_json::Value::is_array)
+        })
+    {
+        // Approved difference: Rails raises before applying this malformed form.
+        return Err(Error::BadRequest("invalid SLA status array".into()));
     }
     let updates: Vec<_> = campfire_db::models::channel_thread::WORK_STATUSES
         .iter()

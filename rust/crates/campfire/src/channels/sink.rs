@@ -38,6 +38,9 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// it still run.
 fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
+        campfire_db::models::board_automations::DigestNotes::KIND => decode(request).and_then(|notes| {
+            app.map_or(Ok(()), |app| super::board_digests::deliver(cable, app, &notes))
+        }),
         campfire_db::models::huddle_effects::StageEndedNote::KIND => decode::<campfire_db::models::huddle_effects::StageEndedNote>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_ended_note(app,e.message_id))),
         campfire_db::models::huddle_effects::StagePanel::KIND => decode::<campfire_db::models::huddle_effects::StagePanel>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stage_panel(app,e.room_id,e.membership_id))),
         campfire_db::models::huddle_effects::StreamChanged::KIND => decode::<campfire_db::models::huddle_effects::StreamChanged>(request).and_then(|e|app.map_or(Ok(()),|app|super::huddle_effects::stream_changed(app,e.room_id))),

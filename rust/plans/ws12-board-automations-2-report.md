@@ -5,6 +5,137 @@ surface; WS12 as a whole remains partial. The complete owned-file audit and rema
 boundaries are in `rust/plans/ws12-board-automations-2-unported.md`. The generic recorder API is
 still WS12-owned continuation work, so this is not an owner-blocked-only stop.
 
+## PR #206 review corrections
+
+This section supersedes the earlier database-only performance measurements below. The review
+was reproduced from `ae99f082b` in the dedicated `ws12-fix206` worktree. No stacked branch or
+agent-controller/agent-work source was changed. The reviewer scratch directory was read-only;
+the producers and regressions use copies under this worktree.
+
+| Finding | Result and regression |
+| --- | --- |
+| P2 malformed SLA arrays delete rules | Fixed. Reject retained top-level hashes-in-arrays and nested status arrays before rule reads or mutations. Rails-accepted empty/scalar arrays still remove rules and audit exactly. The complete-response settings differential verifies unchanged rules and zero audits on malformed arrays. |
+| P2 absent assignee becomes user 0 | Fixed. Carry an optional form foreign key through validation; missing/null/blank values cannot resolve an eligible ID-0 user. Explicit ID 0 remains valid. Strings use Rails integer casting, including underscored IDs. The settings differential checks 422 form bytes/no writes for absent values and successful underscored/explicit-zero assignments. |
+| P2 destruction aborts sweeps | Fixed. Skip missing preloaded rooms; retain owned non-null status-entry timestamps and remove row-dependent indexing/expectations. Actual room destruction at three read boundaries leaves the healthy digest/SLA board running, with Rails destruction differentials. Concurrent two-handle sweeps still claim exactly once. The only remaining sweep `expect`s protect the in-memory deduplication mutex, not database rows. |
+| P2 integrated reads exceed Rails growth | Fixed. Batch SLA recipient users and reuse the fresh transactional association check for claims/recording. Batch digest partial rendering without fragment-cache reads; reuse the persisted new-note body and reconcile reference removals with set-based deletes. Full-app growth assertions include every reader, writer, production callback and broadcast rendering. |
+| P2 Unicode whitespace cannot clear timers | Fixed. Reuse the existing Active Support `String#blank?` Unicode-whitespace helper. NBSP, em-space, ideographic and mixed whitespace clear/audit/redirect exactly like Rails; half-blank invalid forms preserve complete Rails errors and facts. |
+| P3 decimal-prefix casts | Fixed. Handle `0d`/`0D` after an optional sign. All 48 review cast cases now match casts, validity, complete validation errors and messages; decimal-prefix HTTP cases also match the invalid form value and response bytes. |
+
+### Approved differences
+
+The lead-approved malformed-array response difference is explicit in the HTTP regression:
+Rails raises and returns 500; Rust returns its existing empty-body 400 bad-request response
+(`text/html; charset=UTF-8`, no redirect). Both retain all existing rules and assignments and
+write no automation audit. Four corpus responses exercise this difference. The Rust check
+does not mask the Rails response or silently replace the persisted expected facts.
+Accepted `sla_rules: []` and scalar arrays preserve Rails' 302 removal/audit behavior.
+The existing source/inbox/job atomicity and approved Rails source-drift pins documented below
+are unchanged.
+
+### Failing-first evidence and Rails oracles
+
+Before implementation, the added regressions produced these receipts in
+`rust/.scratch/pr206-fixes/logs/before-review.log` and `before-settings-all.log`:
+
+```text
+APP_DISPATCH sla-mixed-10 run=0: fields_differ=[]; Rust_reads=322; Rails_reads=268; bound=32766
+APP_DISPATCH sla-mixed-100 run=0: fields_differ=[]; Rust_reads=3202; Rails_reads=2668; bound=64
+APP_DISPATCH digest-mixed-10 run=0: fields_differ=[]; Rust_reads=363; Rails_reads=61; bound=32766
+APP_DISPATCH digest-mixed-100 run=0: fields_differ=[]; Rust_reads=3603; Rails_reads=601; bound=64
+REVIEW decimal casts: 48 inputs; 4 differences
+PR206 independent digest delete race: normal RoomDestroyJob completed; dispatcher_panicked=true; healthy_board_claims=0
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 2576 filtered out; finished in 4.77s
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 1295 filtered out; finished in 0.10s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2577 filtered out; finished in 17.70s
+```
+
+The aggregate settings failure independently reproduced deletion/audits for nested SLA arrays,
+inverted empty-array handling, erroneous missing/null/blank ID-0 assignments, rejected
+underscored IDs and rejected Unicode clears. The model failure reproduced exactly `0d10`,
+`0d42`, `+0D42` and `-0d42`. These failures preceded the corresponding implementation changes.
+
+Checked-in producers, inputs and replay instructions:
+`reference-tools/board_automations/review/README.md`. The pinned image was
+`ws12-reference:boards-b908ebc2`. Settings, dispatch and deletion producers check the existing
+Rails source hashes; the cast producer checks dispatch/model hashes too. Rails was recaptured
+for all original review vectors; JSON equality with the copied original outcomes was verified.
+The additional quoted-title dispatch case was independently captured twice with identical
+JSON, and Rails asserts that it creates 64 distinct quote references. Default, first_run and
+agents_ui seeds were validated against the pinned Rails app (29/4/40 passed, zero failures).
+
+### Full-app SELECT executions
+
+The probe encloses the dispatch call through the production broadcast sink, with all database
+readers and the writer traced. Assertions and diagnostic rendering comparisons run after the
+probe stops. New/repeat cases use two due posts with both SLA stages, mixed owners and creators,
+and real persisted job/reference callbacks. Settings is the authenticated full GET/render path
+with 10/100 assignment choices. These are the reviewer's app-path measurements, not DB-only
+counts. The 100-board sweeps cap every connection at 64 bound variables.
+
+| Path | Rust 10 | Rails 10 | Rust 100 | Rails 100 |
+| --- | ---: | ---: | ---: | ---: |
+| SLA new | 163 | 268 | 1603 | 2668 |
+| SLA repeat | 2 | 62 | 2 | 602 |
+| Digest new | 64 | 61 | 487 | 601 |
+| Digest repeat | 1 | 41 | 1 | 401 |
+| Settings | 14 | 14 | 14 | 14 |
+
+From 10 to 100 boards, SLA new grows by 1440 SELECTs versus Rails' 2400; digest new grows by
+423 versus Rails' 540. Repeat sweeps and settings have zero growth. Digest's small fixed batch
+overhead explains its three additional reads at 10 boards; its per-board growth meets the
+requested Rails ceiling. Every digest's batched message partial matches the former shared
+renderer byte-for-byte and in order, including 32 notes plus 64 quoted sources under the
+64-variable limit. Association loaders bind one JSON list so referenced messages and users
+cannot overflow the limit even when they exceed the root-note batch size.
+
+The shared reference reconciliation changes preserve reference IDs/timestamps, creations,
+validation, fetch jobs and callback ordering. They remove only existing-list/body SELECTs
+charged to note creation; no callback domain is skipped. Ordinary message creation retains
+its association validations. The broadcast still precedes claim attachment; post/attachment
+failures retain the same committed claims/notes and allow healthy boards to finish.
+
+### Review verification and cleanup
+
+All three required gates passed with Rust 1.98.1, `CI=1`, `CARGO_BUILD_JOBS=4`, and the existing
+`~/.cargo/config.toml` rustc throttle unchanged. Full workspace tests include `html5ever` and
+use eight test threads. Pinned libvips/ffmpeg from the reference image were supplied through
+task-local `LD_LIBRARY_PATH`/`PATH`; `CI=1` requires media version equality. Tests ran in a
+bubblewrap network namespace, isolating their localhost services from other workers and the
+model server. Clippy and release-input checks used the same owned target directory.
+
+The task-local Cargo helper sets `CARGO_TARGET_DIR=rust/.scratch/pr206-fixes/target` and separate
+mail/cable/GitHub test port ranges, then executes `mise exec rust@1.98.1 -- cargo "$@"` from
+`rust/`. The executed Cargo commands were:
+
+```bash
+cargo test --locked --workspace --no-fail-fast -- --test-threads=8
+cargo test --locked -p campfire -p campfire_db review_pr206 -- --test-threads=4 --nocapture
+cargo clippy --locked --workspace --all-targets -- -D warnings
+ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo check --locked -p campfire
+```
+
+Raw principal summary lines, with the complete 61 workspace summaries and full-app read
+receipts preserved in [review-verification.txt](ws12-board-automations-2-review-verification.txt):
+
+```text
+test result: ok. 2571 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 700.34s
+test result: ok. 1294 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 121.88s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2576 filtered out; finished in 19.89s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1295 filtered out; finished in 0.24s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 46s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 47.39s
+```
+
+The workspace aggregate is **4602 passed, 0 failed, 16 existing ignores**; this is an aggregate
+of Cargo's raw summaries, not a Cargo-generated line. No new ignore was introduced. Full
+workspace, focused review replay, strict clippy and release-input checks each exited zero.
+Logs remain under `rust/.scratch/pr206-fixes/logs/`. The four test-export JSON files generated
+under `rust/target` were preserved in `rust/.scratch/pr206-fixes/test-exports/` before cleanup.
+
+Owned target cleanup removed exactly `rust/.scratch/pr206-fixes/target` (25G) and `rust/target`
+(40K), after checking that no process used either. Zero owned target directories remain;
+no target in another worktree was touched.
+
 ## Completed
 
 - The #200 ID-0 review correction excludes an existing claim ID only when one is supplied.

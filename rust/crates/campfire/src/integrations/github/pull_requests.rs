@@ -130,13 +130,10 @@ impl PullRequest {
         if ids.is_empty() {
             return Ok(result);
         }
-        let sql = format!(
-            "SELECT r.message_id,p.* FROM github_pull_requests p JOIN github_pull_request_references r ON r.github_pull_request_id=p.id WHERE r.message_id IN ({}) ORDER BY p.owner,p.repo,p.number",
-            vec!["?"; ids.len()].join(",")
-        );
+        let sql = "SELECT r.message_id,p.* FROM github_pull_requests p JOIN github_pull_request_references r ON r.github_pull_request_id=p.id WHERE r.message_id IN (SELECT value FROM json_each(?)) ORDER BY p.owner,p.repo,p.number";
         for row in conn
-            .prepare(&sql)?
-            .query_map(rusqlite::params_from_iter(ids), |row| {
+            .prepare(sql)?
+            .query_map([serde_json::json!(ids).to_string()], |row| {
                 Ok((row.get::<_, i64>("message_id")?, Self::from_row(row)?))
             })?
         {

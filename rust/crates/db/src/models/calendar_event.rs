@@ -153,13 +153,10 @@ impl CalendarEvent {
         if ids.is_empty() {
             return Ok(result);
         }
-        let sql = format!(
-            "SELECT r.message_id,e.* FROM events e JOIN event_references r ON r.event_id=e.id JOIN messages m ON m.id=r.message_id AND m.room_id=e.room_id WHERE r.message_id IN ({}) ORDER BY e.starts_at,e.id",
-            crate::sql::placeholders(ids.len())
-        );
+        let sql = "SELECT r.message_id,e.* FROM events e JOIN event_references r ON r.event_id=e.id JOIN messages m ON m.id=r.message_id AND m.room_id=e.room_id WHERE r.message_id IN (SELECT value FROM json_each(?)) ORDER BY e.starts_at,e.id";
         for row in conn
-            .prepare(&sql)?
-            .query_map(rusqlite::params_from_iter(ids), |row| {
+            .prepare(sql)?
+            .query_map([serde_json::json!(ids).to_string()], |row| {
                 Ok((row.get::<_, i64>("message_id")?, Self::from_row(row)?))
             })?
         {

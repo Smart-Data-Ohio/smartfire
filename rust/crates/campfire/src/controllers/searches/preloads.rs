@@ -31,12 +31,16 @@ pub(crate) struct Preloads {
 }
 impl Preloads {
     pub fn load(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
-        Self::load_for(p, messages, false)
+        Self::load_for(p, messages, false, true)
     }
     pub fn load_payload(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
-        Self::load_for(p, messages, true)
+        Self::load_for(p, messages, true, false)
     }
-    fn load_for(p: &Presenter<'_>, messages: &[Message], payload: bool) -> Result<Self> {
+    /// Detached broadcasts render directly, without fragment keys or HTTP validators.
+    pub fn load_broadcast(p: &Presenter<'_>, messages: &[Message]) -> Result<Self> {
+        Self::load_for(p, messages, false, false)
+    }
+    fn load_for(p: &Presenter<'_>, messages: &[Message], payload: bool, cached: bool) -> Result<Self> {
         let records = if payload {
             RenderingRecords::load_payload(p.conn, messages)?
         } else {
@@ -110,15 +114,10 @@ impl Preloads {
         let linked = if payload || ids.is_empty() {
             Vec::new()
         } else {
-            let sql = format!(
-                "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN ({})",
-                std::iter::repeat_n("?", ids.len())
-                    .collect::<Vec<_>>()
-                    .join(",")
-            );
+            let sql = "SELECT DISTINCT message_id FROM github_pull_request_references WHERE message_id IN (SELECT value FROM json_each(?))";
             p.conn
-                .prepare(&sql)?
-                .query_map(rusqlite::params_from_iter(&ids), |r| r.get::<_, i64>(0))?
+                .prepare(sql)?
+                .query_map([serde_json::json!(ids).to_string()], |r| r.get::<_, i64>(0))?
                 .collect::<std::result::Result<Vec<_>, _>>()?
         };
         let prs =
@@ -189,7 +188,7 @@ impl Preloads {
                 );
             }
         }
-        let cache = if payload {
+        let cache = if !cached {
             Default::default()
         } else {
             crate::controllers::presenters::message_cache_preloads::CacheFacts::load(

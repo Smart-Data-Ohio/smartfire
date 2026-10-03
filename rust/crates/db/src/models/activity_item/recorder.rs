@@ -130,6 +130,14 @@ impl ActivityItem {
         let Some(user) = User::find_by_id(tx.conn(), nudge.recipient_id)? else {
             return Ok(None);
         };
+        Self::record_board_sla_nudge_for_recipient(tx, nudge, &user)
+    }
+
+    pub(crate) fn record_board_sla_nudge_for_recipient(
+        tx: &mut Tx<'_>,
+        nudge: &crate::BoardSlaNudge,
+        user: &User,
+    ) -> Result<Option<Self>> {
         if !user.is_active() || user.is_bot() {
             return Ok(None);
         }
@@ -140,7 +148,7 @@ impl ActivityItem {
             nudge.id,
             None,
             "work_sla",
-            Some(&user),
+            Some(user),
         )
     }
 
