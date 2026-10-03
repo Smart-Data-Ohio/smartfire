@@ -9,6 +9,7 @@ pub mod composition_page;
 pub mod navigation;
 pub mod edit_sections;
 pub mod boards;
+pub mod board_automations;
 
 mod header;
 pub use header::{HeaderIdentity, header_identity};

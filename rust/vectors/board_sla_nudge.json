@@ -365,6 +365,30 @@
       "activity_delta": 0
     },
     {
+      "name": "duplicate-id-zero",
+      "input": {
+        "room_id": 486777696,
+        "channel_thread_id": 970000001,
+        "recipient_id": 127326141,
+        "work_status": "in_progress",
+        "stage": "nudge",
+        "status_entered_at": "2026-03-02 14:00:00"
+      },
+      "duplicate": true,
+      "valid": false,
+      "errors": {
+        "status_entered_at": [
+          "already fired for this status crossing"
+        ]
+      },
+      "full_messages": [
+        "Status entered at already fired for this status crossing"
+      ],
+      "waited": null,
+      "recipients": null,
+      "activity_delta": 0
+    },
+    {
       "name": "new-stage",
       "input": {
         "room_id": 486777696,

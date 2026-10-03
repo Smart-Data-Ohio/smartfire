@@ -10,6 +10,7 @@
 pub mod activity;
 pub mod agents;
 pub mod broadcasts;
+pub(crate) mod board_digests;
 pub(crate) mod message_features;
 mod github_notifier;
 mod github_cards;

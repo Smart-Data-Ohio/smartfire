@@ -122,6 +122,36 @@ impl ActivityItem {
         )
     }
 
+    /// The newly claimed nudge authorizes its sole recipient; reuse the reviewed recorder.
+    pub(crate) fn record_board_sla_nudge(
+        tx: &mut Tx<'_>,
+        nudge: &crate::BoardSlaNudge,
+    ) -> Result<Option<Self>> {
+        let Some(user) = User::find_by_id(tx.conn(), nudge.recipient_id)? else {
+            return Ok(None);
+        };
+        Self::record_board_sla_nudge_for_recipient(tx, nudge, &user)
+    }
+
+    pub(crate) fn record_board_sla_nudge_for_recipient(
+        tx: &mut Tx<'_>,
+        nudge: &crate::BoardSlaNudge,
+        user: &User,
+    ) -> Result<Option<Self>> {
+        if !user.is_active() || user.is_bot() {
+            return Ok(None);
+        }
+        Self::record_authorized_with_recipient(
+            tx,
+            user.id,
+            "BoardSlaNudge",
+            nudge.id,
+            None,
+            "work_sla",
+            Some(user),
+        )
+    }
+
     fn record_authorized(
         tx: &mut Tx<'_>,
         user_id: i64,

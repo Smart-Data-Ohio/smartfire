@@ -79,9 +79,8 @@ impl Post {
         let mut result: HashMap<i64, Vec<Self>> =
             message_ids.iter().map(|id| (*id, Vec::new())).collect();
         for ids in message_ids.chunks(900) {
-            let placeholders = vec!["?"; ids.len()].join(",");
-            let mut query = conn.prepare(&format!("SELECT p.*, r.message_id AS reference_message_id FROM twitter_posts p JOIN twitter_post_references r ON r.twitter_post_id=p.id WHERE r.message_id IN ({placeholders}) ORDER BY r.id"))?;
-            for row in query.query_map(rusqlite::params_from_iter(ids), |row| {
+            let mut query = conn.prepare("SELECT p.*, r.message_id AS reference_message_id FROM twitter_posts p JOIN twitter_post_references r ON r.twitter_post_id=p.id WHERE r.message_id IN (SELECT value FROM json_each(?)) ORDER BY r.id")?;
+            for row in query.query_map([serde_json::json!(ids).to_string()], |row| {
                 Ok((
                     row.get::<_, i64>("reference_message_id")?,
                     Self::from_row(row)?,

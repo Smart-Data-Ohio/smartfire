@@ -15,6 +15,7 @@ pub mod stage_participation;
 pub mod categories;
 pub mod closeds;
 pub mod boards;
+pub mod board_automations;
 pub mod directs;
 pub mod events;
 pub mod favorites;
@@ -850,3 +851,6 @@ mod boards_read_tests;
 mod boards_domain_tests;
 #[cfg(test)]
 mod boards_rails_cases;
+
+#[cfg(test)]
+mod board_automation_tests;
