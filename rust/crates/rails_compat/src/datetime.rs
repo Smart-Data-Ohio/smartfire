@@ -51,6 +51,26 @@ pub fn deserialize<T: TimeValue>(value: &str) -> Option<T> {
         .flatten()
 }
 
+/// SQLite3 returns BLOBs as Ruby ASCII-8BIT strings. Date._parse replaces
+/// non-ASCII bytes with separators, including invalid UTF-8. Preserve the
+/// original byte length for its 128-byte limit before applying the shared cast.
+pub fn deserialize_sqlite_blob<T: TimeValue>(value: &[u8]) -> Option<T> {
+    if value.len() > 128 {
+        return None;
+    }
+    let text: String = value
+        .iter()
+        .map(|byte| {
+            if byte.is_ascii() {
+                char::from(*byte)
+            } else {
+                ' '
+            }
+        })
+        .collect();
+    deserialize(&text)
+}
+
 fn cast_parts<T: TimeValue>(
     parts: crate::date_parse::Parts,
     zone: &jiff::tz::TimeZone,

@@ -2,7 +2,9 @@
 system assertions on separate private copies of the committed `agents_ui`
 seed. Build that seed with the pinned image, build the normal Rust binary and
 the pinned Playwright Docker image supplies its committed browser dependencies.
-Ports 52797–52799 belong to WS11-ui.
+Ports 52797–52799 are the defaults. Concurrent worktrees must use their own
+`PARITY_NAMESPACE` and `PARITY_OWNER`, plus unused `WS11UI_SYSTEM_REFERENCE_PORT`,
+`WS11UI_SYSTEM_CANDIDATE_PORT` and `WS11UI_SYSTEM_TARGET_PORT` values.
 
 This runner compares behavior; it captures no screenshots and performs no
 pixel work. Rails uses the pin plus exactly the approved status-popup layout.
@@ -36,7 +38,8 @@ probes compare no pixels and change no waits or concurrency.
 `inbox_lifecycle.sh --check` records eleven raw HTTP responses around real saved-item
 reminder dispatch, handling, re-arming the same reminder, and deleting its message.
 `check_inbox_lifecycle.py` proves the HTTP replay rejects deliberate faults in
-each of those writers. The global deleted-source 404 body remains WS9-owned; its
+each of those writers, after a passing unmutated baseline. Missing seeds or
+failures outside the intended assertions invalidate the check. The global deleted-source 404 body remains WS9-owned; its
 status and the source-removal/access assertions still run.
 
 The behavior browser now uses `system_browser.sh`: the same pinned Playwright

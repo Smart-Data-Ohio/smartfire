@@ -318,7 +318,8 @@ async fn ledger_redacts_content_when_viewer_agent_membership_or_read_grant_is_mi
             .get(&path)
             .await
             .text()
-            .contains("Ledger private content")
+            .contains("Ledger private content"),
+        "ledger content requires the agent's read_messages grant"
     );
     let read_grant = test
         .booted
