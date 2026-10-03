@@ -75,7 +75,7 @@ python3 rust/reference-tools/users/ws12_inventory.py
 python3 rust/reference-tools/users/summarize_ws12_tests.py .scratch/pr215-coverage/logs/workspace-final.log
 ```
 
-Final raw gate summaries are appended after completion. Full raw receipts stay in `.scratch/pr215-coverage/logs/`; every declaration points to its own raw producer-probe log. The scratch Cargo target is deleted after verification.
+Final raw gate summaries follow below. Full raw receipts stay in `.scratch/pr215-coverage/logs/`; every declaration points to its own raw producer-probe log. The scratch Cargo target and both clones' generated target directories were deleted after verification.
 
 Coverage remains partial: **51 flags belong to WS11-API, 48 to WS12, and 3 to WS11-UI**. The full list follows. The generic recorder's AgentBudgetNotice adapter remains WS12 implementation work; WS11's typed budget-notice reader is already merged. This is not an owner-blocked-only checkpoint.
 
@@ -183,3 +183,107 @@ Coverage remains partial: **51 flags belong to WS11-API, 48 to WS12, and 3 to WS
 | `test/system/boards_test.rb:86` — a non-member cannot open the board | WS12 | Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. |
 | `test/controllers/channel_threads_controller_test.rb:433` — the owner picker lists eligible agents with profiles and excludes ineligible ones | WS12 | Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test. |
 | `test/controllers/channel_threads_controller_test.rb:496` — ordinary thread fields remain separate from work tracking | WS12 | Only a board owner-metadata request fails. The original ordinary-thread name update separated from work tracking is not the rejecting HTTP assertion. |
+
+Final raw receipts:
+
+```text
+rails-handled-final.log
+WS12_HANDLED_SEQUENCE_RAILS 4 sequential HTTP responses and persisted states; 0 masks
+rails-private-pr-final.log
+WS12_PRIVATE_PR_OWNER_RAILS 2 HTTP responses; disconnected redaction and connected-owner title/branch; 0 masks
+systematic-campaign.log
+WS12_COVERAGE_CAMPAIGN 176 declarations; 166 activated; 157 rejected; 19 survived
+c166-retargeted-control.log
+WS12_COVERAGE_CAMPAIGN 1 declarations; 1 activated; 1 rejected; 0 survived
+reconciliation-final.log
+WS12 assertion reconciliation: 231 declarations; 129 executed mutation-backed mappings; 102 explicitly flagged; 0 missing or non-running credited tests
+ledger-guard-final.log
+WS12 assertion reconciliation: 231 declarations; 129 executed mutation-backed mappings; 102 explicitly flagged; 0 missing or non-running credited tests
+WS12_LEDGER_NEGATIVE_CONTROL missing receipt: rejected at no producer-mutation receipt
+WS12_LEDGER_NEGATIVE_CONTROL surviving control: rejected at unsupported mutation result
+WS12_LEDGER_NEGATIVE_CONTROL unexercised producer: rejected at producer not exercised
+WS12_LEDGER_NEGATIVE_CONTROLS 3 rejected; 0 false credits
+inventory.log
+WS12 Rails inventory: 488 declarations; 102 deferred; 8 existing peer tests; 378 ported
+workspace-final-totals.log
+WS12 workspace totals: 4757 passed; 0 failed; 16 ignored; 61 result summaries
+WS12 visible missing-seed notices: 0; intentional missing-seed unit test passed: True
+clippy-final.log
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 03s
+release-inputs-final.log
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 27s
+WS12_NEW_VECTORS byte-identical regenerated output; 0 masks
+.....
+----------------------------------------------------------------------
+Ran 5 tests in 0.005s
+
+OK
+```
+
+Raw complete workspace test summaries:
+
+```text
+test result: ok. 2666 passed; 0 failed; 7 ignored; 0 measured; 0 filtered out; finished in 1004.18s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.59s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.50s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 1353 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 174.56s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.53s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.97s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.01s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.10s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.31s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.41s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.70s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.25s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.86s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.26s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.89s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+The final source/input comparison checked 2,336 tracked Rust, vector, vendor and CI inputs byte for byte against the fresh clone. No producer mutation remains in crates/. All commands reported here were executed; failed assertions above are intentional producer controls. No stash, Python model-server action, or write to a reviewer evidence directory occurred.
