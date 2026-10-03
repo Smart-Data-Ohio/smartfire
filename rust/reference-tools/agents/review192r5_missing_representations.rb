@@ -5,13 +5,26 @@ require "digest"
 extend ActiveSupport::Testing::TimeHelpers
 ApplicationJob.queue_adapter = :test
 Rails.logger = ActiveSupport::Logger.new($stderr)
+rack_app = Rack::Builder.parse_file(Rails.root.join("config.ru").to_s)
+# Fixture entropy at the nonce generator, not a response/header mask.
+Rails.application.config.content_security_policy_nonce_generator = ->(_request) { "AAECAwQFBgcICQoLDA0ODw==" }
 kind=ARGV.fetch(0)
 raise "unknown case" unless %w[video_preview video_variant jpeg_variant].include?(kind)
+def all_headers(reply)
+  reply.headers.each_with_object({}) do |(header, value), result|
+    name = header.downcase
+    raise "duplicate header name #{name}" if result.key?(name)
+    values = Array(value)
+    raise "duplicate header values #{name}: #{values.inspect}" unless values.length == 1
+    result[name] = values
+  end
+end
 def response(session,path)
-  session.get(path,headers:{"Accept"=>"*/*"})
+  session.get(path,headers:{"Accept"=>"*/*", "SERVER_PROTOCOL"=>"HTTP/1.1"})
+  raise "wrong protocol" unless session.request.env.fetch("SERVER_PROTOCOL") == "HTTP/1.1"
   reply=session.response
-  {path:path,status:reply.status,body_base64:Base64.strict_encode64(reply.body.b),body_bytes:reply.body.bytesize,
-   headers:%w[Content-Type Cache-Control Content-Disposition Content-Length Location Last-Modified ETag Accept-Ranges Content-Transfer-Encoding].to_h{|header|[header,reply.headers[header]]}}
+  {request_protocol:session.request.env.fetch("SERVER_PROTOCOL"),path:path,status:reply.status,body_base64:Base64.strict_encode64(reply.body.b),body_bytes:reply.body.bytesize,
+   headers:all_headers(reply)}
 end
 travel_to Time.utc(2026,3,2,16) do
   original=ActiveStorage::Blob.find(kind=="jpeg_variant" ? 1 : 9)
@@ -31,9 +44,9 @@ travel_to Time.utc(2026,3,2,16) do
   routes=Rails.application.routes.url_helpers
   redirect=routes.rails_blob_representation_path(signed_blob_id:source.signed_id,variation_key:key,filename:source.filename.to_s)
   proxy=routes.rails_blob_representation_proxy_path(signed_blob_id:source.signed_id,variation_key:key,filename:source.filename.to_s)
-  session=ActionDispatch::Integration::Session.new(Rails.application);session.host! "campfire.test"
+  session=ActionDispatch::Integration::Session.new(rack_app);session.host! "campfire.test"
   baseline_redirect=response(session,redirect)
-  baseline_disk=response(session,URI.parse(baseline_redirect[:headers]["Location"]).request_uri)
+  baseline_disk=response(session,URI.parse(baseline_redirect[:headers]["location"].first).request_uri)
   baseline_proxy=response(session,proxy)
   raise "positive control failed" unless [baseline_redirect[:status],baseline_disk[:status],baseline_proxy[:status]]==[302,200,200]
   missing=kind=="video_preview" ? preview : image
@@ -41,7 +54,7 @@ travel_to Time.utc(2026,3,2,16) do
   before=%w[active_storage_blobs active_storage_attachments active_storage_variant_records].to_h{|table|[table,ActiveRecord::Base.connection.select_all("SELECT * FROM #{table} ORDER BY id").to_a]}
   ApplicationJob.queue_adapter.enqueued_jobs.clear
   reply=response(session,redirect)
-  disk=response(session,URI.parse(reply[:headers]["Location"]).request_uri)
+  disk=response(session,URI.parse(reply[:headers]["location"].first).request_uri)
   proxied=response(session,proxy)
   repeated=response(session,redirect)
   after=before.keys.to_h{|table|[table,ActiveRecord::Base.connection.select_all("SELECT * FROM #{table} ORDER BY id").to_a]}

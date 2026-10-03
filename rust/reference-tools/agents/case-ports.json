@@ -1458,6 +1458,94 @@
           "rust": "ws11_next_assignment_ledger_failure_rolls_back_history"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "rust_file": "rust/crates/campfire/src/channels/sink/stream_remaining_cases.rs",
+      "cases": [
+        {
+          "rails": "stream start broadcasts the append without the unread broadcast",
+          "rust": "ws11_next2_stream_start_without_unreads"
+        },
+        {
+          "rails": "finalize fires every side effect exactly once",
+          "rust": "ws11_next2_stream_finalize_every_side_effect_once"
+        },
+        {
+          "rails": "appends re-render without firing side effects",
+          "rust": "ws11_next2_stream_appends_render_without_side_effects"
+        },
+        {
+          "rails": "a coalesced update sends a trailing broadcast with the final text",
+          "rust": "ws11_next2_stream_trailing_final_text"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+      "cases": [
+        {
+          "rails": "create bot",
+          "rust": "ws11_next2_bot_factory_fixed_entropy"
+        },
+        {
+          "rails": "reset bot key",
+          "rust": "ws11_next2_bot_reset_fixed_entropy"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs",
+      "cases": [
+        {
+          "rails": "deliver message by webhook",
+          "rust": "ws11_next2_bot_actual_queued_delivery"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+      "cases": [
+        {
+          "rails": "two agents assigning posts to each other stop at the hop limit",
+          "rust": "ws11_next2_assignment_agent_hops_stop_at_limit"
+        },
+        {
+          "rails": "deleting a thread without an agent owner emits nothing",
+          "rust": "ws11_next2_assignment_delete_no_agent_emits_nothing"
+        },
+        {
+          "rails": "a human assignment starts a new root at hop 0",
+          "rust": "ws11_next2_assignment_human_starts_root_zero"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs",
+      "cases": [
+        {
+          "rails": "deleting an agent-owned thread emits work_unassigned",
+          "rust": "ws11_next2_assignment_deleted_owner_snapshot_delivery"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/agent_budgets_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_next2_cases_test.rs",
+      "cases": [
+        {
+          "rails": "a stranger cannot read another agent's budget item",
+          "rust": "ws11_next2_budget_stranger_cannot_read_owner_item"
+        },
+        {
+          "rails": "an agent-created handoff counts toward no budget, even with caps exhausted",
+          "rust": "ws11_next2_budget_handoff_ignores_exhausted_caps"
+        }
+      ]
     }
   ],
   "boundary_deferred": {

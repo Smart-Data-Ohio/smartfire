@@ -69,10 +69,22 @@ pub fn content_security_policy(livekit_url: Option<String>) -> ContentSecurityPo
         .report_only(false)
 }
 
+#[cfg(test)]
+tokio::task_local! { static FIXED_PROXY_NONCE: (); }
+
+#[cfg(test)]
+pub(crate) async fn with_proxy_fixture_nonce<T>(request: impl std::future::Future<Output = T>) -> T {
+    FIXED_PROXY_NONCE.scope((), request).await
+}
+
 /// `content_security_policy_nonce_generator`: one nonce per session (Turbo Drive keeps the first
 /// page's policy in force), the session id hashed so it never shows in the page, and a random one
 /// while the session has no id yet.
 pub fn csp_nonce(session_id: Option<&str>) -> String {
+    #[cfg(test)]
+    if FIXED_PROXY_NONCE.try_with(|()| ()).is_ok() {
+        return "AAECAwQFBgcICQoLDA0ODw==".into();
+    }
     match session_id.filter(|id| !id.is_empty()) {
         Some(id) => STANDARD.encode(Sha256::digest(format!("csp-nonce:{id}"))),
         None => STANDARD.encode(rand::random::<[u8; 16]>()),

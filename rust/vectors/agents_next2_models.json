@@ -1,0 +1,236 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "create_bot": {
+      "id": 1901800001,
+      "name": "Bender",
+      "role": "bot",
+      "status": "active",
+      "first": "1901800001-5M0aLYwQyBXOXa5Wsz6NZb11EE4tW2",
+      "second": null,
+      "plaintext": null,
+      "digest": "aaf402e02932d4f28f1f1115b44fd22b6a17b658f58402d28db3bfa02b404ae9",
+      "stored_key": "BOT_KEY",
+      "first_auth": 1901800001,
+      "second_auth": null,
+      "entropy_calls": [
+        12
+      ]
+    },
+    "reset_key": {
+      "id": 1901800001,
+      "name": "Bender",
+      "role": "bot",
+      "status": "active",
+      "first": "1901800001-5M0aLYwQyBXOXa5Wsz6NZb11EE4tW2",
+      "second": "1901800001-R4kme9anwWRuz3sSoBXiB8Li8ioZPP",
+      "plaintext": null,
+      "digest": "0407766bd9a404176a49d833d5f0d8ead8a34b937a5f734e4c6e370dece4edce",
+      "stored_key": "BOT_KEY",
+      "first_auth": null,
+      "second_auth": 1901800001,
+      "entropy_calls": [
+        12,
+        12
+      ]
+    },
+    "hop_limit": {
+      "events": [
+        {
+          "agent_id": 1901800022,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "actor_id": 1901800011,
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none",
+          "metadata": {
+            "thread_id": 1901820001,
+            "title": "Post 1",
+            "work_status": "in_progress",
+            "assigned_by": "Loop Agent A",
+            "hop": 0
+          }
+        },
+        {
+          "agent_id": 1901800012,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "actor_id": 1901800021,
+          "hop": 1,
+          "detail": null,
+          "webhook_status": "none",
+          "metadata": {
+            "thread_id": 1901820002,
+            "title": "Post 2",
+            "work_status": "in_progress",
+            "assigned_by": "Loop Agent B",
+            "hop": 1
+          }
+        },
+        {
+          "agent_id": 1901800022,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "actor_id": 1901800011,
+          "hop": 2,
+          "detail": null,
+          "webhook_status": "none",
+          "metadata": {
+            "thread_id": 1901820003,
+            "title": "Post 3",
+            "work_status": "in_progress",
+            "assigned_by": "Loop Agent A",
+            "hop": 2
+          }
+        },
+        {
+          "agent_id": 1901800012,
+          "event_type": "delivery_suppressed_hop_limit",
+          "outcome": "suppressed",
+          "actor_id": 1901800021,
+          "hop": 3,
+          "detail": "Hop limit reached (hop 3)",
+          "webhook_status": "none",
+          "metadata": {
+            "thread_id": 1901820004,
+            "title": "Post 4",
+            "work_status": "in_progress",
+            "assigned_by": "Loop Agent B",
+            "hop": 3
+          }
+        }
+      ],
+      "threads": [
+        [
+          1901820001,
+          1901800011,
+          1901800021
+        ],
+        [
+          1901820002,
+          1901800021,
+          1901800011
+        ],
+        [
+          1901820003,
+          1901800011,
+          1901800021
+        ],
+        [
+          1901820004,
+          1901800021,
+          1901800011
+        ]
+      ],
+      "same_chain": true,
+      "history": [
+        [
+          1901820001,
+          "work_assignment",
+          1901800011,
+          null,
+          1901800021
+        ],
+        [
+          1901820002,
+          "work_assignment",
+          1901800021,
+          null,
+          1901800011
+        ],
+        [
+          1901820003,
+          "work_assignment",
+          1901800011,
+          null,
+          1901800021
+        ],
+        [
+          1901820004,
+          "work_assignment",
+          1901800021,
+          null,
+          1901800011
+        ]
+      ]
+    },
+    "human_root": {
+      "events": [
+        {
+          "agent_id": 1901800012,
+          "event_type": "work_assigned",
+          "outcome": "delivered",
+          "actor_id": 127326141,
+          "hop": 0,
+          "detail": null,
+          "webhook_status": "none",
+          "metadata": {
+            "thread_id": 1901820001,
+            "title": "Post 1",
+            "work_status": "in_progress",
+            "assigned_by": "David",
+            "hop": 0
+          }
+        }
+      ],
+      "threads": [
+        [
+          1901820001,
+          127326141,
+          1901800011
+        ]
+      ],
+      "same_chain": true,
+      "history": [
+        [
+          1901820001,
+          "work_assignment",
+          127326141,
+          null,
+          1901800011
+        ]
+      ]
+    },
+    "delete_no_owner": {
+      "exists": false,
+      "events": 0,
+      "jobs": 0
+    },
+    "budget_viewer": {
+      "status": "too_many_requests",
+      "error": "Daily message budget exceeded (1/day)",
+      "stranger": 0,
+      "owner": 1
+    },
+    "budget_handoff": {
+      "first_ok": true,
+      "second_ok": true,
+      "initial_usage": {
+        "messages": 0,
+        "board_posts": 0,
+        "external_actions": 0
+      },
+      "final_usage": {
+        "messages": 1,
+        "board_posts": 0,
+        "external_actions": 0
+      },
+      "owner": 1901800011,
+      "handoffs": [
+        [
+          1901820001,
+          394959859,
+          1901800012,
+          "Halfway there"
+        ],
+        [
+          1901820002,
+          394959859,
+          1901800012,
+          "Still yours"
+        ]
+      ]
+    }
+  }
+}

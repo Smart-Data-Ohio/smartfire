@@ -30,6 +30,7 @@ for script, filename in [
     ('attachments_http_contract.rb', 'agent_attachments_http.json'),
     ('permissions_http_contract.rb', 'agent_permissions_http.json'),
     ('review192_contract.rb', 'agent_review192_http.json'),
+    ('array_read_contract.rb', 'agent_array_reads_http.json'),
     ('review192r2_attachment_diagnosis.rb', 'agent_review192r2_attachment.json'),
     ('review192r3_attachment_diagnosis.rb', 'agent_review192r3_attachment.json'),
 ]:
@@ -42,3 +43,5 @@ for script, filename in [
     print('WS11-api captured ' + filename, flush=True)
 
 subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-r5-representations.py"), str(output)], cwd=root, env=env, check=True)
+
+subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-blob-proxy-headers.py"), str(output)], cwd=root, env=env, check=True)
