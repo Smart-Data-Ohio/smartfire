@@ -76,6 +76,7 @@ pub fn all_emoji(text: &str) -> bool {
 }
 
 /// `Time#to_fs(:number)`: `%Y%m%d%H%M%S` in UTC (the app's time zone).
+#[cfg(test)]
 pub fn to_fs_number(time: jiff::Timestamp) -> String {
     time.strftime("%Y%m%d%H%M%S").to_string()
 }
@@ -90,9 +91,13 @@ pub fn avatar_token(secrets: &Secrets, user_id: i64) -> String {
 
 /// `fresh_user_avatar_path(user)`.
 pub fn avatar_path(secrets: &Secrets, user: &User) -> String {
+    avatar_path_in_zone(secrets, user, &campfire_views::time::Zone::utc())
+}
+
+pub fn avatar_path_in_zone(secrets: &Secrets, user: &User, zone: &campfire_views::time::Zone) -> String {
     campfire_routes::fresh_user_avatar(
         avatar_token(secrets, user.id),
-        to_fs_number(user.updated_at.jiff()),
+        zone.to_fs(user.updated_at.jiff(), "number"),
     )
 }
 
@@ -1224,6 +1229,10 @@ impl<'a> Presenter<'a> {
 
 /// A `User` row as the users views see it.
 pub fn user_summary(secrets: &Secrets, user: &User) -> campfire_views::users::UserSummary {
+    user_summary_in_zone(secrets, user, &campfire_views::time::Zone::utc())
+}
+
+pub fn user_summary_in_zone(secrets: &Secrets, user: &User, zone: &campfire_views::time::Zone) -> campfire_views::users::UserSummary {
     use campfire_views::users::{Role, Status};
     campfire_views::users::UserSummary {
         id: user.id,
@@ -1240,7 +1249,7 @@ pub fn user_summary(secrets: &Secrets, user: &User) -> campfire_views::users::Us
             campfire_db::Status::Deactivated => Status::Deactivated,
             campfire_db::Status::Banned => Status::Banned,
         },
-        avatar_path: avatar_path(secrets, user),
+        avatar_path: avatar_path_in_zone(secrets, user, zone),
         two_factor_enabled: false,
         google_identity_email: None,
         email_self_changed: false,

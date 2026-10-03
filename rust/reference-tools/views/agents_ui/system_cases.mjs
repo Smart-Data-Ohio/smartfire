@@ -1,14 +1,35 @@
 // Behavior only: the original Rails system assertions, no screenshots or pixels.
 import fs from 'node:fs';
+import net from 'node:net';
+import { connectUpstream } from '../../../parity/capture/forward.ts';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+// Reject the broken host path before looking for any browser dependencies.
+if (process.env.WS11UI_HOST_NETWORK === fs.readlinkSync('/proc/self/ns/net')) throw new Error('browser must have an isolated network namespace');
 const require = createRequire(path.resolve('rust/parity/package.json'));
 const { chromium } = require('playwright');
 // Playwright's assertion library lives in @playwright/test, which this harness
 // deliberately does not add. Poll the same selector/text predicates directly.
 const [base, labelsFile, database, scenario] = process.argv.slice(2);
 const labels = JSON.parse(fs.readFileSync(labelsFile, 'utf8'));
-const browser = await chromium.launch({executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox']});
+// The browser's network namespace is stable while other workers start Docker containers.
+// Forward unmodified HTTP and WebSocket bytes to the existing loopback servers.
+let upstreamProxy;
+if (process.env.PARITY_UPSTREAM_SOCKET) {
+  const origin = new URL(base);
+  upstreamProxy = net.createServer(client => {
+    const upstream = connectUpstream(origin.hostname, Number(origin.port), () => {
+      client.pipe(upstream); upstream.pipe(client); client.resume();
+    });
+    client.pause();
+    const close = () => { client.destroy(); upstream.destroy(); };
+    client.on('error', close); upstream.on('error', close);
+    client.on('close', close); upstream.on('close', close);
+  });
+  await new Promise(resolve => upstreamProxy.listen(Number(origin.port), origin.hostname, resolve));
+  console.log('Agent browser network: isolated namespace, unchanged upstream bytes');
+}
+const browser = await chromium.launch({...(process.env.CHROMIUM_PATH ? {executablePath: process.env.CHROMIUM_PATH} : {}), headless: true, args: ['--no-sandbox']});
 let passed = 0, failed = 0;
 const groups = new Map();
 const frozen = Date.parse(scenario === 'budget' ? '2026-03-03T16:00:00Z' : '2026-03-02T16:00:00Z');
@@ -28,11 +49,12 @@ async function joinRoom(page, room) {
 async function run(file, name, user, check) {
   const counts = groups.get(file) || [0,0]; groups.set(file, counts);
   const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
-  await context.addCookies([{name: 'session_token', value: labels[`session_cookies.${user}`], url: base, httpOnly: true}]);
+  if (scenario !== 'network-probe') await context.addCookies([{name: 'session_token', value: labels[`session_cookies.${user}`], url: base, httpOnly: true}]);
   await context.addInitScript(ms => {const Real = Date; globalThis.Date = class extends Real {constructor(...args) {super(...(args.length ? args : [ms]));} static now() {return ms;}};}, frozen);
   const page = await context.newPage(); page.setDefaultTimeout(2000);
   page.on('console', msg => {if (msg.type()==='error') console.log('BROWSER ERROR '+msg.text());});
   page.on('pageerror', error => console.log('PAGE ERROR '+error.message));
+  page.on('requestfailed', request => console.log('REQUEST FAILED '+request.method()+' '+new URL(request.url()).pathname+' '+request.failure()?.errorText));
   try { await check(page); passed++; counts[0]++; console.log(`PASS ${file}: ${name}`); }
   catch (error) { failed++; counts[1]++; console.log(`FAIL ${file}: ${name}: ${`${new URL(page.url()).pathname}: ${String(error.message).split('\n').slice(0,6).join(' | ')}`}`); }
   finally {
@@ -41,7 +63,13 @@ async function run(file, name, user, check) {
   }
 }
 try {
-  if (scenario === 'work') {
+  if (scenario === 'network-probe') {
+    await run('harness_network', 'held response survives Docker bridge churn', 'david', async page => {
+      await visit(page, `${base}/network-probe`);
+      const body = await page.evaluate(async () => (await fetch('/network-probe', {method:'POST',body:'held request'})).text());
+      if (body !== '<h1>stable network</h1>') throw new Error('forwarder changed response bytes');
+    });
+  } else if (scenario === 'work') {
     await run('agent_work_assignment_test.rb', 'assigns an agent and renders its API status change after refresh', 'jz', async page => {
       await joinRoom(page, labels['rooms.designers']);
       if (!await page.locator("#thread-panel[aria-hidden='false']").isVisible()) await page.getByRole('button',{name:'Show threads',exact:true}).click();
@@ -182,5 +210,6 @@ print(thread[0])`,database,String(labels['system.work_bot'])]);
   }
   for (const [file,[ok,bad]] of groups) console.log(`${file}: ${ok} passed; ${bad} failed`);
   console.log(`Agent system behavior: ${passed} passed; ${failed} failed; 0 deferred`);
-} finally {await browser.close();}
+} finally {await browser.close();
+  if (upstreamProxy) upstreamProxy.close();}
 process.exitCode = failed ? 1 : 0;

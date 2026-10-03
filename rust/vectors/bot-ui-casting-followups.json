@@ -1,0 +1,3563 @@
+{
+  "reference": "d7c7de92",
+  "expiry": [
+    {
+      "zone": "Etc/UCT",
+      "input_index": 0,
+      "stored": "9999-01-01 00:00:00.999999",
+      "render": "9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 1,
+      "stored": "9999-01-01 01:00:00.000001",
+      "render": "9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 2,
+      "stored": "9999-01-01 21:59:59.000001",
+      "render": "9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 3,
+      "stored": "9999-01-01 23:59:59.999999",
+      "render": "9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 4,
+      "stored": "9999-12-31 00:00:00.999999",
+      "render": "9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 5,
+      "stored": "9999-12-31 01:00:00.000001",
+      "render": "9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 6,
+      "stored": "9999-12-31 21:59:59.000001",
+      "render": "9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 7,
+      "stored": "9999-12-31 23:59:59.999999",
+      "render": "9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 8,
+      "stored": "-9999-01-01 00:00:00.999999",
+      "render": "-9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 9,
+      "stored": "-9999-01-01 01:00:00.000001",
+      "render": "-9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 10,
+      "stored": "-9999-01-01 21:59:59.000001",
+      "render": "-9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 11,
+      "stored": "-9999-01-01 23:59:59.999999",
+      "render": "-9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 12,
+      "stored": "-9999-12-31 00:00:00.999999",
+      "render": "-9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 13,
+      "stored": "-9999-12-31 01:00:00.000001",
+      "render": "-9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 14,
+      "stored": "-9999-12-31 21:59:59.000001",
+      "render": "-9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 15,
+      "stored": "-9999-12-31 23:59:59.999999",
+      "render": "-9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 16,
+      "stored": "10000-01-01 00:00:00.999999",
+      "render": "10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 17,
+      "stored": "10000-01-01 01:00:00.000001",
+      "render": "10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 18,
+      "stored": "10000-01-01 21:59:59.000001",
+      "render": "10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 19,
+      "stored": "10000-01-01 23:59:59.999999",
+      "render": "10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 20,
+      "stored": "10000-12-31 00:00:00.999999",
+      "render": "10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 21,
+      "stored": "10000-12-31 01:00:00.000001",
+      "render": "10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 22,
+      "stored": "10000-12-31 21:59:59.000001",
+      "render": "10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 23,
+      "stored": "10000-12-31 23:59:59.999999",
+      "render": "10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 24,
+      "stored": "-10000-01-01 00:00:00.999999",
+      "render": "-10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 25,
+      "stored": "-10000-01-01 01:00:00.000001",
+      "render": "-10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 26,
+      "stored": "-10000-01-01 21:59:59.000001",
+      "render": "-10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 27,
+      "stored": "-10000-01-01 23:59:59.999999",
+      "render": "-10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 28,
+      "stored": "-10000-12-31 00:00:00.999999",
+      "render": "-10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 29,
+      "stored": "-10000-12-31 01:00:00.000001",
+      "render": "-10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 30,
+      "stored": "-10000-12-31 21:59:59.000001",
+      "render": "-10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 31,
+      "stored": "-10000-12-31 23:59:59.999999",
+      "render": "-10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 32,
+      "stored": "0001-01-01 00:00:00.999999",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 33,
+      "stored": "0001-01-01 01:00:00.000001",
+      "render": "0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 34,
+      "stored": "0001-01-01 21:59:59.000001",
+      "render": "0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 35,
+      "stored": "0001-01-01 23:59:59.999999",
+      "render": "0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 36,
+      "stored": "0001-12-31 00:00:00.999999",
+      "render": "0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 37,
+      "stored": "0001-12-31 01:00:00.000001",
+      "render": "0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 38,
+      "stored": "0001-12-31 21:59:59.000001",
+      "render": "0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 39,
+      "stored": "0001-12-31 23:59:59.999999",
+      "render": "0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 40,
+      "stored": "0000-01-01 00:00:00.999999",
+      "render": "0000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 41,
+      "stored": "0000-01-01 01:00:00.000001",
+      "render": "0000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 42,
+      "stored": "0000-01-01 21:59:59.000001",
+      "render": "0000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 43,
+      "stored": "0000-01-01 23:59:59.999999",
+      "render": "0000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 44,
+      "stored": "0000-12-31 00:00:00.999999",
+      "render": "0000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 45,
+      "stored": "0000-12-31 01:00:00.000001",
+      "render": "0000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 46,
+      "stored": "0000-12-31 21:59:59.000001",
+      "render": "0000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 47,
+      "stored": "0000-12-31 23:59:59.999999",
+      "render": "0000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 48,
+      "stored": "-0001-01-01 00:00:00.999999",
+      "render": "-0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 49,
+      "stored": "-0001-01-01 01:00:00.000001",
+      "render": "-0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 50,
+      "stored": "-0001-01-01 21:59:59.000001",
+      "render": "-0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 51,
+      "stored": "-0001-01-01 23:59:59.999999",
+      "render": "-0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 52,
+      "stored": "-0001-12-31 00:00:00.999999",
+      "render": "-0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 53,
+      "stored": "-0001-12-31 01:00:00.000001",
+      "render": "-0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 54,
+      "stored": "-0001-12-31 21:59:59.000001",
+      "render": "-0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 55,
+      "stored": "-0001-12-31 23:59:59.999999",
+      "render": "-0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 56,
+      "stored": "9999-12-31 10:14:59.123456",
+      "render": "9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 57,
+      "stored": "10000-01-01 03:29:59.123456",
+      "render": "10000-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 58,
+      "stored": "9999-12-31 15:14:59.123456",
+      "render": "9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 59,
+      "stored": "10000-01-01 00:43:07.123456",
+      "render": "10000-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 60,
+      "stored": "9999-12-31 23:40:27.123456",
+      "render": "9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 61,
+      "stored": "9999-12-31 00:00:01.123456",
+      "render": "9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 62,
+      "stored": "10000-01-01 23:59:57.123456",
+      "render": "10000-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 63,
+      "stored": "-9999-12-31 10:14:59.123456",
+      "render": "-9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 64,
+      "stored": "-9998-01-01 03:29:59.123456",
+      "render": "-9998-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 65,
+      "stored": "-9999-12-31 15:14:59.123456",
+      "render": "-9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 66,
+      "stored": "-9998-01-01 00:43:07.123456",
+      "render": "-9998-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 67,
+      "stored": "-9999-12-31 23:40:27.123456",
+      "render": "-9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 68,
+      "stored": "-9999-12-31 00:00:01.123456",
+      "render": "-9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 69,
+      "stored": "-9998-01-01 23:59:57.123456",
+      "render": "-9998-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 70,
+      "stored": "0001-12-31 10:14:59.123456",
+      "render": "0001-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 71,
+      "stored": "0002-01-01 03:29:59.123456",
+      "render": "0002-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 72,
+      "stored": "0001-12-31 15:14:59.123456",
+      "render": "0001-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 73,
+      "stored": "0002-01-01 00:43:07.123456",
+      "render": "0002-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 74,
+      "stored": "0001-12-31 23:40:27.123456",
+      "render": "0001-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 75,
+      "stored": "0001-12-31 00:00:01.123456",
+      "render": "0001-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 76,
+      "stored": "0002-01-01 23:59:57.123456",
+      "render": "0002-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 77,
+      "stored": "0000-12-31 10:14:59.123456",
+      "render": "0000-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 78,
+      "stored": "0001-01-01 03:29:59.123456",
+      "render": "0001-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 79,
+      "stored": "0000-12-31 15:14:59.123456",
+      "render": "0000-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 80,
+      "stored": "0001-01-01 00:43:07.123456",
+      "render": "0001-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 81,
+      "stored": "0000-12-31 23:40:27.123456",
+      "render": "0000-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 82,
+      "stored": "0000-12-31 00:00:01.123456",
+      "render": "0000-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 83,
+      "stored": "0001-01-01 23:59:57.123456",
+      "render": "0001-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 84,
+      "stored": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 85,
+      "stored": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 86,
+      "stored": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 87,
+      "stored": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 88,
+      "stored": "9999-12-31 10:00:00",
+      "render": "9999-12-31T10:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 89,
+      "stored": "0001-01-01 00:00:00",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 90,
+      "stored": "2026-04-05 02:45:00",
+      "render": "2026-04-05T02:45:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 91,
+      "stored": "2026-11-01 01:30:00",
+      "render": "2026-11-01T01:30:00Z"
+    },
+    {
+      "zone": "Etc/UCT",
+      "input_index": 92,
+      "stored": "2030-06-15 12:34:56",
+      "render": "2030-06-15T12:34:56Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 0,
+      "stored": "9999-01-01 00:00:00.999999",
+      "render": "9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 1,
+      "stored": "9999-01-01 01:00:00.000001",
+      "render": "9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 2,
+      "stored": "9999-01-01 21:59:59.000001",
+      "render": "9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 3,
+      "stored": "9999-01-01 23:59:59.999999",
+      "render": "9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 4,
+      "stored": "9999-12-31 00:00:00.999999",
+      "render": "9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 5,
+      "stored": "9999-12-31 01:00:00.000001",
+      "render": "9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 6,
+      "stored": "9999-12-31 21:59:59.000001",
+      "render": "9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 7,
+      "stored": "9999-12-31 23:59:59.999999",
+      "render": "9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 8,
+      "stored": "-9999-01-01 00:00:00.999999",
+      "render": "-9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 9,
+      "stored": "-9999-01-01 01:00:00.000001",
+      "render": "-9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 10,
+      "stored": "-9999-01-01 21:59:59.000001",
+      "render": "-9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 11,
+      "stored": "-9999-01-01 23:59:59.999999",
+      "render": "-9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 12,
+      "stored": "-9999-12-31 00:00:00.999999",
+      "render": "-9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 13,
+      "stored": "-9999-12-31 01:00:00.000001",
+      "render": "-9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 14,
+      "stored": "-9999-12-31 21:59:59.000001",
+      "render": "-9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 15,
+      "stored": "-9999-12-31 23:59:59.999999",
+      "render": "-9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 16,
+      "stored": "10000-01-01 00:00:00.999999",
+      "render": "10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 17,
+      "stored": "10000-01-01 01:00:00.000001",
+      "render": "10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 18,
+      "stored": "10000-01-01 21:59:59.000001",
+      "render": "10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 19,
+      "stored": "10000-01-01 23:59:59.999999",
+      "render": "10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 20,
+      "stored": "10000-12-31 00:00:00.999999",
+      "render": "10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 21,
+      "stored": "10000-12-31 01:00:00.000001",
+      "render": "10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 22,
+      "stored": "10000-12-31 21:59:59.000001",
+      "render": "10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 23,
+      "stored": "10000-12-31 23:59:59.999999",
+      "render": "10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 24,
+      "stored": "-10000-01-01 00:00:00.999999",
+      "render": "-10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 25,
+      "stored": "-10000-01-01 01:00:00.000001",
+      "render": "-10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 26,
+      "stored": "-10000-01-01 21:59:59.000001",
+      "render": "-10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 27,
+      "stored": "-10000-01-01 23:59:59.999999",
+      "render": "-10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 28,
+      "stored": "-10000-12-31 00:00:00.999999",
+      "render": "-10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 29,
+      "stored": "-10000-12-31 01:00:00.000001",
+      "render": "-10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 30,
+      "stored": "-10000-12-31 21:59:59.000001",
+      "render": "-10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 31,
+      "stored": "-10000-12-31 23:59:59.999999",
+      "render": "-10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 32,
+      "stored": "0001-01-01 00:00:00.999999",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 33,
+      "stored": "0001-01-01 01:00:00.000001",
+      "render": "0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 34,
+      "stored": "0001-01-01 21:59:59.000001",
+      "render": "0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 35,
+      "stored": "0001-01-01 23:59:59.999999",
+      "render": "0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 36,
+      "stored": "0001-12-31 00:00:00.999999",
+      "render": "0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 37,
+      "stored": "0001-12-31 01:00:00.000001",
+      "render": "0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 38,
+      "stored": "0001-12-31 21:59:59.000001",
+      "render": "0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 39,
+      "stored": "0001-12-31 23:59:59.999999",
+      "render": "0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 40,
+      "stored": "0000-01-01 00:00:00.999999",
+      "render": "0000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 41,
+      "stored": "0000-01-01 01:00:00.000001",
+      "render": "0000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 42,
+      "stored": "0000-01-01 21:59:59.000001",
+      "render": "0000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 43,
+      "stored": "0000-01-01 23:59:59.999999",
+      "render": "0000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 44,
+      "stored": "0000-12-31 00:00:00.999999",
+      "render": "0000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 45,
+      "stored": "0000-12-31 01:00:00.000001",
+      "render": "0000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 46,
+      "stored": "0000-12-31 21:59:59.000001",
+      "render": "0000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 47,
+      "stored": "0000-12-31 23:59:59.999999",
+      "render": "0000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 48,
+      "stored": "-0001-01-01 00:00:00.999999",
+      "render": "-0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 49,
+      "stored": "-0001-01-01 01:00:00.000001",
+      "render": "-0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 50,
+      "stored": "-0001-01-01 21:59:59.000001",
+      "render": "-0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 51,
+      "stored": "-0001-01-01 23:59:59.999999",
+      "render": "-0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 52,
+      "stored": "-0001-12-31 00:00:00.999999",
+      "render": "-0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 53,
+      "stored": "-0001-12-31 01:00:00.000001",
+      "render": "-0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 54,
+      "stored": "-0001-12-31 21:59:59.000001",
+      "render": "-0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 55,
+      "stored": "-0001-12-31 23:59:59.999999",
+      "render": "-0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 56,
+      "stored": "9999-12-31 10:14:59.123456",
+      "render": "9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 57,
+      "stored": "10000-01-01 03:29:59.123456",
+      "render": "10000-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 58,
+      "stored": "9999-12-31 15:14:59.123456",
+      "render": "9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 59,
+      "stored": "10000-01-01 00:43:07.123456",
+      "render": "10000-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 60,
+      "stored": "9999-12-31 23:40:27.123456",
+      "render": "9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 61,
+      "stored": "9999-12-31 00:00:01.123456",
+      "render": "9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 62,
+      "stored": "10000-01-01 23:59:57.123456",
+      "render": "10000-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 63,
+      "stored": "-9999-12-31 10:14:59.123456",
+      "render": "-9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 64,
+      "stored": "-9998-01-01 03:29:59.123456",
+      "render": "-9998-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 65,
+      "stored": "-9999-12-31 15:14:59.123456",
+      "render": "-9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 66,
+      "stored": "-9998-01-01 00:43:07.123456",
+      "render": "-9998-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 67,
+      "stored": "-9999-12-31 23:40:27.123456",
+      "render": "-9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 68,
+      "stored": "-9999-12-31 00:00:01.123456",
+      "render": "-9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 69,
+      "stored": "-9998-01-01 23:59:57.123456",
+      "render": "-9998-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 70,
+      "stored": "0001-12-31 10:14:59.123456",
+      "render": "0001-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 71,
+      "stored": "0002-01-01 03:29:59.123456",
+      "render": "0002-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 72,
+      "stored": "0001-12-31 15:14:59.123456",
+      "render": "0001-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 73,
+      "stored": "0002-01-01 00:43:07.123456",
+      "render": "0002-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 74,
+      "stored": "0001-12-31 23:40:27.123456",
+      "render": "0001-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 75,
+      "stored": "0001-12-31 00:00:01.123456",
+      "render": "0001-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 76,
+      "stored": "0002-01-01 23:59:57.123456",
+      "render": "0002-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 77,
+      "stored": "0000-12-31 10:14:59.123456",
+      "render": "0000-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 78,
+      "stored": "0001-01-01 03:29:59.123456",
+      "render": "0001-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 79,
+      "stored": "0000-12-31 15:14:59.123456",
+      "render": "0000-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 80,
+      "stored": "0001-01-01 00:43:07.123456",
+      "render": "0001-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 81,
+      "stored": "0000-12-31 23:40:27.123456",
+      "render": "0000-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 82,
+      "stored": "0000-12-31 00:00:01.123456",
+      "render": "0000-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 83,
+      "stored": "0001-01-01 23:59:57.123456",
+      "render": "0001-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 84,
+      "stored": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 85,
+      "stored": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 86,
+      "stored": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 87,
+      "stored": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 88,
+      "stored": "9999-12-31 10:00:00",
+      "render": "9999-12-31T10:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 89,
+      "stored": "0001-01-01 00:00:00",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 90,
+      "stored": "2026-04-05 02:45:00",
+      "render": "2026-04-05T02:45:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 91,
+      "stored": "2026-11-01 01:30:00",
+      "render": "2026-11-01T01:30:00Z"
+    },
+    {
+      "zone": "Etc/Universal",
+      "input_index": 92,
+      "stored": "2030-06-15 12:34:56",
+      "render": "2030-06-15T12:34:56Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 0,
+      "stored": "9999-01-01 00:00:00.999999",
+      "render": "9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 1,
+      "stored": "9999-01-01 01:00:00.000001",
+      "render": "9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 2,
+      "stored": "9999-01-01 21:59:59.000001",
+      "render": "9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 3,
+      "stored": "9999-01-01 23:59:59.999999",
+      "render": "9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 4,
+      "stored": "9999-12-31 00:00:00.999999",
+      "render": "9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 5,
+      "stored": "9999-12-31 01:00:00.000001",
+      "render": "9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 6,
+      "stored": "9999-12-31 21:59:59.000001",
+      "render": "9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 7,
+      "stored": "9999-12-31 23:59:59.999999",
+      "render": "9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 8,
+      "stored": "-9999-01-01 00:00:00.999999",
+      "render": "-9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 9,
+      "stored": "-9999-01-01 01:00:00.000001",
+      "render": "-9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 10,
+      "stored": "-9999-01-01 21:59:59.000001",
+      "render": "-9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 11,
+      "stored": "-9999-01-01 23:59:59.999999",
+      "render": "-9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 12,
+      "stored": "-9999-12-31 00:00:00.999999",
+      "render": "-9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 13,
+      "stored": "-9999-12-31 01:00:00.000001",
+      "render": "-9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 14,
+      "stored": "-9999-12-31 21:59:59.000001",
+      "render": "-9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 15,
+      "stored": "-9999-12-31 23:59:59.999999",
+      "render": "-9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 16,
+      "stored": "10000-01-01 00:00:00.999999",
+      "render": "10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 17,
+      "stored": "10000-01-01 01:00:00.000001",
+      "render": "10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 18,
+      "stored": "10000-01-01 21:59:59.000001",
+      "render": "10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 19,
+      "stored": "10000-01-01 23:59:59.999999",
+      "render": "10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 20,
+      "stored": "10000-12-31 00:00:00.999999",
+      "render": "10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 21,
+      "stored": "10000-12-31 01:00:00.000001",
+      "render": "10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 22,
+      "stored": "10000-12-31 21:59:59.000001",
+      "render": "10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 23,
+      "stored": "10000-12-31 23:59:59.999999",
+      "render": "10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 24,
+      "stored": "-10000-01-01 00:00:00.999999",
+      "render": "-10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 25,
+      "stored": "-10000-01-01 01:00:00.000001",
+      "render": "-10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 26,
+      "stored": "-10000-01-01 21:59:59.000001",
+      "render": "-10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 27,
+      "stored": "-10000-01-01 23:59:59.999999",
+      "render": "-10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 28,
+      "stored": "-10000-12-31 00:00:00.999999",
+      "render": "-10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 29,
+      "stored": "-10000-12-31 01:00:00.000001",
+      "render": "-10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 30,
+      "stored": "-10000-12-31 21:59:59.000001",
+      "render": "-10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 31,
+      "stored": "-10000-12-31 23:59:59.999999",
+      "render": "-10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 32,
+      "stored": "0001-01-01 00:00:00.999999",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 33,
+      "stored": "0001-01-01 01:00:00.000001",
+      "render": "0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 34,
+      "stored": "0001-01-01 21:59:59.000001",
+      "render": "0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 35,
+      "stored": "0001-01-01 23:59:59.999999",
+      "render": "0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 36,
+      "stored": "0001-12-31 00:00:00.999999",
+      "render": "0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 37,
+      "stored": "0001-12-31 01:00:00.000001",
+      "render": "0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 38,
+      "stored": "0001-12-31 21:59:59.000001",
+      "render": "0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 39,
+      "stored": "0001-12-31 23:59:59.999999",
+      "render": "0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 40,
+      "stored": "0000-01-01 00:00:00.999999",
+      "render": "0000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 41,
+      "stored": "0000-01-01 01:00:00.000001",
+      "render": "0000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 42,
+      "stored": "0000-01-01 21:59:59.000001",
+      "render": "0000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 43,
+      "stored": "0000-01-01 23:59:59.999999",
+      "render": "0000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 44,
+      "stored": "0000-12-31 00:00:00.999999",
+      "render": "0000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 45,
+      "stored": "0000-12-31 01:00:00.000001",
+      "render": "0000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 46,
+      "stored": "0000-12-31 21:59:59.000001",
+      "render": "0000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 47,
+      "stored": "0000-12-31 23:59:59.999999",
+      "render": "0000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 48,
+      "stored": "-0001-01-01 00:00:00.999999",
+      "render": "-0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 49,
+      "stored": "-0001-01-01 01:00:00.000001",
+      "render": "-0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 50,
+      "stored": "-0001-01-01 21:59:59.000001",
+      "render": "-0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 51,
+      "stored": "-0001-01-01 23:59:59.999999",
+      "render": "-0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 52,
+      "stored": "-0001-12-31 00:00:00.999999",
+      "render": "-0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 53,
+      "stored": "-0001-12-31 01:00:00.000001",
+      "render": "-0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 54,
+      "stored": "-0001-12-31 21:59:59.000001",
+      "render": "-0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 55,
+      "stored": "-0001-12-31 23:59:59.999999",
+      "render": "-0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 56,
+      "stored": "9999-12-31 10:14:59.123456",
+      "render": "9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 57,
+      "stored": "10000-01-01 03:29:59.123456",
+      "render": "10000-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 58,
+      "stored": "9999-12-31 15:14:59.123456",
+      "render": "9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 59,
+      "stored": "10000-01-01 00:43:07.123456",
+      "render": "10000-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 60,
+      "stored": "9999-12-31 23:40:27.123456",
+      "render": "9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 61,
+      "stored": "9999-12-31 00:00:01.123456",
+      "render": "9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 62,
+      "stored": "10000-01-01 23:59:57.123456",
+      "render": "10000-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 63,
+      "stored": "-9999-12-31 10:14:59.123456",
+      "render": "-9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 64,
+      "stored": "-9998-01-01 03:29:59.123456",
+      "render": "-9998-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 65,
+      "stored": "-9999-12-31 15:14:59.123456",
+      "render": "-9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 66,
+      "stored": "-9998-01-01 00:43:07.123456",
+      "render": "-9998-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 67,
+      "stored": "-9999-12-31 23:40:27.123456",
+      "render": "-9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 68,
+      "stored": "-9999-12-31 00:00:01.123456",
+      "render": "-9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 69,
+      "stored": "-9998-01-01 23:59:57.123456",
+      "render": "-9998-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 70,
+      "stored": "0001-12-31 10:14:59.123456",
+      "render": "0001-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 71,
+      "stored": "0002-01-01 03:29:59.123456",
+      "render": "0002-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 72,
+      "stored": "0001-12-31 15:14:59.123456",
+      "render": "0001-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 73,
+      "stored": "0002-01-01 00:43:07.123456",
+      "render": "0002-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 74,
+      "stored": "0001-12-31 23:40:27.123456",
+      "render": "0001-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 75,
+      "stored": "0001-12-31 00:00:01.123456",
+      "render": "0001-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 76,
+      "stored": "0002-01-01 23:59:57.123456",
+      "render": "0002-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 77,
+      "stored": "0000-12-31 10:14:59.123456",
+      "render": "0000-12-31T10:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 78,
+      "stored": "0001-01-01 03:29:59.123456",
+      "render": "0001-01-01T03:29:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 79,
+      "stored": "0000-12-31 15:14:59.123456",
+      "render": "0000-12-31T15:14:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 80,
+      "stored": "0001-01-01 00:43:07.123456",
+      "render": "0001-01-01T00:43:07Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 81,
+      "stored": "0000-12-31 23:40:27.123456",
+      "render": "0000-12-31T23:40:27Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 82,
+      "stored": "0000-12-31 00:00:01.123456",
+      "render": "0000-12-31T00:00:01Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 83,
+      "stored": "0001-01-01 23:59:57.123456",
+      "render": "0001-01-01T23:59:57Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 84,
+      "stored": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 85,
+      "stored": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 86,
+      "stored": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 87,
+      "stored": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 88,
+      "stored": "9999-12-31 10:00:00",
+      "render": "9999-12-31T10:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 89,
+      "stored": "0001-01-01 00:00:00",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 90,
+      "stored": "2026-04-05 02:45:00",
+      "render": "2026-04-05T02:45:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 91,
+      "stored": "2026-11-01 01:30:00",
+      "render": "2026-11-01T01:30:00Z"
+    },
+    {
+      "zone": "Etc/Zulu",
+      "input_index": 92,
+      "stored": "2030-06-15 12:34:56",
+      "render": "2030-06-15T12:34:56Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 0,
+      "stored": "9999-01-01 00:00:00.999999",
+      "render": "9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 1,
+      "stored": "9999-01-01 01:00:00.000001",
+      "render": "9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 2,
+      "stored": "9999-01-01 21:59:59.000001",
+      "render": "9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 3,
+      "stored": "9999-01-01 23:59:59.999999",
+      "render": "9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 4,
+      "stored": "9999-12-31 00:00:00.999999",
+      "render": "9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 5,
+      "stored": "9999-12-31 01:00:00.000001",
+      "render": "9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 6,
+      "stored": "9999-12-31 21:59:59.000001",
+      "render": "9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 7,
+      "stored": "9999-12-31 23:59:59.999999",
+      "render": "9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 8,
+      "stored": "-9999-01-01 00:00:00.999999",
+      "render": "-9999-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 9,
+      "stored": "-9999-01-01 01:00:00.000001",
+      "render": "-9999-01-01T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 10,
+      "stored": "-9999-01-01 21:59:59.000001",
+      "render": "-9999-01-01T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 11,
+      "stored": "-9999-01-01 23:59:59.999999",
+      "render": "-9999-01-01T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 12,
+      "stored": "-9999-12-31 00:00:00.999999",
+      "render": "-9999-12-31T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 13,
+      "stored": "-9999-12-31 01:00:00.000001",
+      "render": "-9999-12-31T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 14,
+      "stored": "-9999-12-31 21:59:59.000001",
+      "render": "-9999-12-31T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 15,
+      "stored": "-9999-12-31 23:59:59.999999",
+      "render": "-9999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 16,
+      "stored": "10000-01-01 00:00:00.999999",
+      "render": "10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 17,
+      "stored": "10000-01-01 01:00:00.000001",
+      "render": "10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 18,
+      "stored": "10000-01-01 21:59:59.000001",
+      "render": "10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 19,
+      "stored": "10000-01-01 23:59:59.999999",
+      "render": "10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 20,
+      "stored": "10000-12-31 00:00:00.999999",
+      "render": "10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 21,
+      "stored": "10000-12-31 01:00:00.000001",
+      "render": "10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 22,
+      "stored": "10000-12-31 21:59:59.000001",
+      "render": "10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 23,
+      "stored": "10000-12-31 23:59:59.999999",
+      "render": "10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 24,
+      "stored": "-10000-01-01 00:00:00.999999",
+      "render": "-10000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 25,
+      "stored": "-10000-01-01 01:00:00.000001",
+      "render": "-10000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 26,
+      "stored": "-10000-01-01 21:59:59.000001",
+      "render": "-10000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 27,
+      "stored": "-10000-01-01 23:59:59.999999",
+      "render": "-10000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 28,
+      "stored": "-10000-12-31 00:00:00.999999",
+      "render": "-10000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 29,
+      "stored": "-10000-12-31 01:00:00.000001",
+      "render": "-10000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 30,
+      "stored": "-10000-12-31 21:59:59.000001",
+      "render": "-10000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 31,
+      "stored": "-10000-12-31 23:59:59.999999",
+      "render": "-10000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 32,
+      "stored": "0001-01-01 00:00:00.999999",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 33,
+      "stored": "0001-01-01 01:00:00.000001",
+      "render": "0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 34,
+      "stored": "0001-01-01 21:59:59.000001",
+      "render": "0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 35,
+      "stored": "0001-01-01 23:59:59.999999",
+      "render": "0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 36,
+      "stored": "0001-12-31 00:00:00.999999",
+      "render": "0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 37,
+      "stored": "0001-12-31 01:00:00.000001",
+      "render": "0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 38,
+      "stored": "0001-12-31 21:59:59.000001",
+      "render": "0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 39,
+      "stored": "0001-12-31 23:59:59.999999",
+      "render": "0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 40,
+      "stored": "0000-01-01 00:00:00.999999",
+      "render": "0000-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 41,
+      "stored": "0000-01-01 01:00:00.000001",
+      "render": "0000-01-01T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 42,
+      "stored": "0000-01-01 21:59:59.000001",
+      "render": "0000-01-01T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 43,
+      "stored": "0000-01-01 23:59:59.999999",
+      "render": "0000-01-01T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 44,
+      "stored": "0000-12-31 00:00:00.999999",
+      "render": "0000-12-31T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 45,
+      "stored": "0000-12-31 01:00:00.000001",
+      "render": "0000-12-31T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 46,
+      "stored": "0000-12-31 21:59:59.000001",
+      "render": "0000-12-31T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 47,
+      "stored": "0000-12-31 23:59:59.999999",
+      "render": "0000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 48,
+      "stored": "-0001-01-01 00:00:00.999999",
+      "render": "-0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 49,
+      "stored": "-0001-01-01 01:00:00.000001",
+      "render": "-0001-01-01T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 50,
+      "stored": "-0001-01-01 21:59:59.000001",
+      "render": "-0001-01-01T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 51,
+      "stored": "-0001-01-01 23:59:59.999999",
+      "render": "-0001-01-01T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 52,
+      "stored": "-0001-12-31 00:00:00.999999",
+      "render": "-0001-12-31T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 53,
+      "stored": "-0001-12-31 01:00:00.000001",
+      "render": "-0001-12-31T01:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 54,
+      "stored": "-0001-12-31 21:59:59.000001",
+      "render": "-0001-12-31T21:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 55,
+      "stored": "-0001-12-31 23:59:59.999999",
+      "render": "-0001-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 56,
+      "stored": "9999-12-31 10:14:59.123456",
+      "render": "9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 57,
+      "stored": "10000-01-01 03:29:59.123456",
+      "render": "10000-01-01T03:29:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 58,
+      "stored": "9999-12-31 15:14:59.123456",
+      "render": "9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 59,
+      "stored": "10000-01-01 00:43:07.123456",
+      "render": "10000-01-01T00:43:07Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 60,
+      "stored": "9999-12-31 23:40:27.123456",
+      "render": "9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 61,
+      "stored": "9999-12-31 00:00:01.123456",
+      "render": "9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 62,
+      "stored": "10000-01-01 23:59:57.123456",
+      "render": "10000-01-01T23:59:57Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 63,
+      "stored": "-9999-12-31 10:14:59.123456",
+      "render": "-9999-12-31T10:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 64,
+      "stored": "-9998-01-01 03:29:59.123456",
+      "render": "-9998-01-01T03:29:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 65,
+      "stored": "-9999-12-31 15:14:59.123456",
+      "render": "-9999-12-31T15:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 66,
+      "stored": "-9998-01-01 00:43:07.123456",
+      "render": "-9998-01-01T00:43:07Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 67,
+      "stored": "-9999-12-31 23:40:27.123456",
+      "render": "-9999-12-31T23:40:27Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 68,
+      "stored": "-9999-12-31 00:00:01.123456",
+      "render": "-9999-12-31T00:00:01Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 69,
+      "stored": "-9998-01-01 23:59:57.123456",
+      "render": "-9998-01-01T23:59:57Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 70,
+      "stored": "0001-12-31 10:14:59.123456",
+      "render": "0001-12-31T10:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 71,
+      "stored": "0002-01-01 03:29:59.123456",
+      "render": "0002-01-01T03:29:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 72,
+      "stored": "0001-12-31 15:14:59.123456",
+      "render": "0001-12-31T15:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 73,
+      "stored": "0002-01-01 00:43:07.123456",
+      "render": "0002-01-01T00:43:07Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 74,
+      "stored": "0001-12-31 23:40:27.123456",
+      "render": "0001-12-31T23:40:27Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 75,
+      "stored": "0001-12-31 00:00:01.123456",
+      "render": "0001-12-31T00:00:01Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 76,
+      "stored": "0002-01-01 23:59:57.123456",
+      "render": "0002-01-01T23:59:57Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 77,
+      "stored": "0000-12-31 10:14:59.123456",
+      "render": "0000-12-31T10:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 78,
+      "stored": "0001-01-01 03:29:59.123456",
+      "render": "0001-01-01T03:29:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 79,
+      "stored": "0000-12-31 15:14:59.123456",
+      "render": "0000-12-31T15:14:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 80,
+      "stored": "0001-01-01 00:43:07.123456",
+      "render": "0001-01-01T00:43:07Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 81,
+      "stored": "0000-12-31 23:40:27.123456",
+      "render": "0000-12-31T23:40:27Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 82,
+      "stored": "0000-12-31 00:00:01.123456",
+      "render": "0000-12-31T00:00:01Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 83,
+      "stored": "0001-01-01 23:59:57.123456",
+      "render": "0001-01-01T23:59:57Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 84,
+      "stored": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 85,
+      "stored": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 86,
+      "stored": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 87,
+      "stored": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 88,
+      "stored": "9999-12-31 10:00:00",
+      "render": "9999-12-31T10:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 89,
+      "stored": "0001-01-01 00:00:00",
+      "render": "0001-01-01T00:00:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 90,
+      "stored": "2026-04-05 02:45:00",
+      "render": "2026-04-05T02:45:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 91,
+      "stored": "2026-11-01 01:30:00",
+      "render": "2026-11-01T01:30:00Z"
+    },
+    {
+      "zone": "UTC",
+      "input_index": 92,
+      "stored": "2030-06-15 12:34:56",
+      "render": "2030-06-15T12:34:56Z"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 0,
+      "stored": "9999-01-01 00:00:00.999999",
+      "render": "9999-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 1,
+      "stored": "9999-01-01 01:00:00.000001",
+      "render": "9999-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 2,
+      "stored": "9999-01-01 21:59:59.000001",
+      "render": "9999-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 3,
+      "stored": "9999-01-01 23:59:59.999999",
+      "render": "9999-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 4,
+      "stored": "9999-12-31 00:00:00.999999",
+      "render": "9999-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 5,
+      "stored": "9999-12-31 01:00:00.000001",
+      "render": "9999-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 6,
+      "stored": "9999-12-31 21:59:59.000001",
+      "render": "9999-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 7,
+      "stored": "9999-12-31 23:59:59.999999",
+      "render": "9999-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 8,
+      "stored": "-9999-01-01 00:00:00.999999",
+      "render": "-9999-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 9,
+      "stored": "-9999-01-01 01:00:00.000001",
+      "render": "-9999-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 10,
+      "stored": "-9999-01-01 21:59:59.000001",
+      "render": "-9999-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 11,
+      "stored": "-9999-01-01 23:59:59.999999",
+      "render": "-9999-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 12,
+      "stored": "-9999-12-31 00:00:00.999999",
+      "render": "-9999-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 13,
+      "stored": "-9999-12-31 01:00:00.000001",
+      "render": "-9999-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 14,
+      "stored": "-9999-12-31 21:59:59.000001",
+      "render": "-9999-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 15,
+      "stored": "-9999-12-31 23:59:59.999999",
+      "render": "-9999-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 16,
+      "stored": "10000-01-01 00:00:00.999999",
+      "render": "10000-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 17,
+      "stored": "10000-01-01 01:00:00.000001",
+      "render": "10000-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 18,
+      "stored": "10000-01-01 21:59:59.000001",
+      "render": "10000-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 19,
+      "stored": "10000-01-01 23:59:59.999999",
+      "render": "10000-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 20,
+      "stored": "10000-12-31 00:00:00.999999",
+      "render": "10000-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 21,
+      "stored": "10000-12-31 01:00:00.000001",
+      "render": "10000-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 22,
+      "stored": "10000-12-31 21:59:59.000001",
+      "render": "10000-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 23,
+      "stored": "10000-12-31 23:59:59.999999",
+      "render": "10000-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 24,
+      "stored": "-10000-01-01 00:00:00.999999",
+      "render": "-10000-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 25,
+      "stored": "-10000-01-01 01:00:00.000001",
+      "render": "-10000-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 26,
+      "stored": "-10000-01-01 21:59:59.000001",
+      "render": "-10000-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 27,
+      "stored": "-10000-01-01 23:59:59.999999",
+      "render": "-10000-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 28,
+      "stored": "-10000-12-31 00:00:00.999999",
+      "render": "-10000-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 29,
+      "stored": "-10000-12-31 01:00:00.000001",
+      "render": "-10000-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 30,
+      "stored": "-10000-12-31 21:59:59.000001",
+      "render": "-10000-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 31,
+      "stored": "-10000-12-31 23:59:59.999999",
+      "render": "-10000-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 32,
+      "stored": "0001-01-01 00:00:00.999999",
+      "render": "0001-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 33,
+      "stored": "0001-01-01 01:00:00.000001",
+      "render": "0001-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 34,
+      "stored": "0001-01-01 21:59:59.000001",
+      "render": "0001-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 35,
+      "stored": "0001-01-01 23:59:59.999999",
+      "render": "0001-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 36,
+      "stored": "0001-12-31 00:00:00.999999",
+      "render": "0001-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 37,
+      "stored": "0001-12-31 01:00:00.000001",
+      "render": "0001-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 38,
+      "stored": "0001-12-31 21:59:59.000001",
+      "render": "0001-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 39,
+      "stored": "0001-12-31 23:59:59.999999",
+      "render": "0001-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 40,
+      "stored": "0000-01-01 00:00:00.999999",
+      "render": "0000-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 41,
+      "stored": "0000-01-01 01:00:00.000001",
+      "render": "0000-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 42,
+      "stored": "0000-01-01 21:59:59.000001",
+      "render": "0000-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 43,
+      "stored": "0000-01-01 23:59:59.999999",
+      "render": "0000-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 44,
+      "stored": "0000-12-31 00:00:00.999999",
+      "render": "0000-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 45,
+      "stored": "0000-12-31 01:00:00.000001",
+      "render": "0000-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 46,
+      "stored": "0000-12-31 21:59:59.000001",
+      "render": "0000-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 47,
+      "stored": "0000-12-31 23:59:59.999999",
+      "render": "0000-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 48,
+      "stored": "-0001-01-01 00:00:00.999999",
+      "render": "-0001-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 49,
+      "stored": "-0001-01-01 01:00:00.000001",
+      "render": "-0001-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 50,
+      "stored": "-0001-01-01 21:59:59.000001",
+      "render": "-0001-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 51,
+      "stored": "-0001-01-01 23:59:59.999999",
+      "render": "-0001-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 52,
+      "stored": "-0001-12-31 00:00:00.999999",
+      "render": "-0001-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 53,
+      "stored": "-0001-12-31 01:00:00.000001",
+      "render": "-0001-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 54,
+      "stored": "-0001-12-31 21:59:59.000001",
+      "render": "-0001-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 55,
+      "stored": "-0001-12-31 23:59:59.999999",
+      "render": "-0001-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 56,
+      "stored": "9999-12-31 10:14:59.123456",
+      "render": "9999-12-31T10:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 57,
+      "stored": "10000-01-01 03:29:59.123456",
+      "render": "10000-01-01T03:29:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 58,
+      "stored": "9999-12-31 15:14:59.123456",
+      "render": "9999-12-31T15:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 59,
+      "stored": "10000-01-01 00:43:07.123456",
+      "render": "10000-01-01T00:43:07+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 60,
+      "stored": "9999-12-31 23:40:27.123456",
+      "render": "9999-12-31T23:40:27+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 61,
+      "stored": "9999-12-31 00:00:01.123456",
+      "render": "9999-12-31T00:00:01+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 62,
+      "stored": "10000-01-01 23:59:57.123456",
+      "render": "10000-01-01T23:59:57+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 63,
+      "stored": "-9999-12-31 10:14:59.123456",
+      "render": "-9999-12-31T10:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 64,
+      "stored": "-9998-01-01 03:29:59.123456",
+      "render": "-9998-01-01T03:29:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 65,
+      "stored": "-9999-12-31 15:14:59.123456",
+      "render": "-9999-12-31T15:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 66,
+      "stored": "-9998-01-01 00:43:07.123456",
+      "render": "-9998-01-01T00:43:07+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 67,
+      "stored": "-9999-12-31 23:40:27.123456",
+      "render": "-9999-12-31T23:40:27+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 68,
+      "stored": "-9999-12-31 00:00:01.123456",
+      "render": "-9999-12-31T00:00:01+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 69,
+      "stored": "-9998-01-01 23:59:57.123456",
+      "render": "-9998-01-01T23:59:57+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 70,
+      "stored": "0001-12-31 10:14:59.123456",
+      "render": "0001-12-31T10:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 71,
+      "stored": "0002-01-01 03:29:59.123456",
+      "render": "0002-01-01T03:29:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 72,
+      "stored": "0001-12-31 15:14:59.123456",
+      "render": "0001-12-31T15:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 73,
+      "stored": "0002-01-01 00:43:07.123456",
+      "render": "0002-01-01T00:43:07+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 74,
+      "stored": "0001-12-31 23:40:27.123456",
+      "render": "0001-12-31T23:40:27+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 75,
+      "stored": "0001-12-31 00:00:01.123456",
+      "render": "0001-12-31T00:00:01+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 76,
+      "stored": "0002-01-01 23:59:57.123456",
+      "render": "0002-01-01T23:59:57+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 77,
+      "stored": "0000-12-31 10:14:59.123456",
+      "render": "0000-12-31T10:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 78,
+      "stored": "0001-01-01 03:29:59.123456",
+      "render": "0001-01-01T03:29:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 79,
+      "stored": "0000-12-31 15:14:59.123456",
+      "render": "0000-12-31T15:14:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 80,
+      "stored": "0001-01-01 00:43:07.123456",
+      "render": "0001-01-01T00:43:07+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 81,
+      "stored": "0000-12-31 23:40:27.123456",
+      "render": "0000-12-31T23:40:27+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 82,
+      "stored": "0000-12-31 00:00:01.123456",
+      "render": "0000-12-31T00:00:01+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 83,
+      "stored": "0001-01-01 23:59:57.123456",
+      "render": "0001-01-01T23:59:57+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 84,
+      "stored": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 85,
+      "stored": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 86,
+      "stored": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 87,
+      "stored": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 88,
+      "stored": "9999-12-31 10:00:00",
+      "render": "9999-12-31T10:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 89,
+      "stored": "0001-01-01 00:00:00",
+      "render": "0001-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 90,
+      "stored": "2026-04-05 02:45:00",
+      "render": "2026-04-05T02:45:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 91,
+      "stored": "2026-11-01 01:30:00",
+      "render": "2026-11-01T01:30:00+00:00"
+    },
+    {
+      "zone": "Etc/GMT",
+      "input_index": 92,
+      "stored": "2030-06-15 12:34:56",
+      "render": "2030-06-15T12:34:56+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 0,
+      "stored": "9999-01-01 00:00:00.999999",
+      "render": "9999-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 1,
+      "stored": "9999-01-01 01:00:00.000001",
+      "render": "9999-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 2,
+      "stored": "9999-01-01 21:59:59.000001",
+      "render": "9999-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 3,
+      "stored": "9999-01-01 23:59:59.999999",
+      "render": "9999-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 4,
+      "stored": "9999-12-31 00:00:00.999999",
+      "render": "9999-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 5,
+      "stored": "9999-12-31 01:00:00.000001",
+      "render": "9999-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 6,
+      "stored": "9999-12-31 21:59:59.000001",
+      "render": "9999-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 7,
+      "stored": "9999-12-31 23:59:59.999999",
+      "render": "9999-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 8,
+      "stored": "-9999-01-01 00:01:15.999999",
+      "render": "-9999-01-01T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 9,
+      "stored": "-9999-01-01 01:01:15.000001",
+      "render": "-9999-01-01T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 10,
+      "stored": "-9999-01-01 22:01:14.000001",
+      "render": "-9999-01-01T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 11,
+      "stored": "-9999-01-02 00:01:14.999999",
+      "render": "-9999-01-01T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 12,
+      "stored": "-9999-12-31 00:01:15.999999",
+      "render": "-9999-12-31T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 13,
+      "stored": "-9999-12-31 01:01:15.000001",
+      "render": "-9999-12-31T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 14,
+      "stored": "-9999-12-31 22:01:14.000001",
+      "render": "-9999-12-31T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 15,
+      "stored": "-9998-01-01 00:01:14.999999",
+      "render": "-9999-12-31T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 16,
+      "stored": "10000-01-01 00:00:00.999999",
+      "render": "10000-01-01T00:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 17,
+      "stored": "10000-01-01 01:00:00.000001",
+      "render": "10000-01-01T01:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 18,
+      "stored": "10000-01-01 21:59:59.000001",
+      "render": "10000-01-01T21:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 19,
+      "stored": "10000-01-01 23:59:59.999999",
+      "render": "10000-01-01T23:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 20,
+      "stored": "10000-12-31 00:00:00.999999",
+      "render": "10000-12-31T00:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 21,
+      "stored": "10000-12-31 01:00:00.000001",
+      "render": "10000-12-31T01:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 22,
+      "stored": "10000-12-31 21:59:59.000001",
+      "render": "10000-12-31T21:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 23,
+      "stored": "10000-12-31 23:59:59.999999",
+      "render": "10000-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 24,
+      "stored": "-10000-01-01 00:01:15.999999",
+      "render": "-10000-01-01T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 25,
+      "stored": "-10000-01-01 01:01:15.000001",
+      "render": "-10000-01-01T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 26,
+      "stored": "-10000-01-01 22:01:14.000001",
+      "render": "-10000-01-01T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 27,
+      "stored": "-10000-01-02 00:01:14.999999",
+      "render": "-10000-01-01T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 28,
+      "stored": "-10000-12-31 00:01:15.999999",
+      "render": "-10000-12-31T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 29,
+      "stored": "-10000-12-31 01:01:15.000001",
+      "render": "-10000-12-31T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 30,
+      "stored": "-10000-12-31 22:01:14.000001",
+      "render": "-10000-12-31T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 31,
+      "stored": "-9999-01-01 00:01:14.999999",
+      "render": "-10000-12-31T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 32,
+      "stored": "0001-01-01 00:01:15.999999",
+      "render": "0001-01-01T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 33,
+      "stored": "0001-01-01 01:01:15.000001",
+      "render": "0001-01-01T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 34,
+      "stored": "0001-01-01 22:01:14.000001",
+      "render": "0001-01-01T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 35,
+      "stored": "0001-01-02 00:01:14.999999",
+      "render": "0001-01-01T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 36,
+      "stored": "0001-12-31 00:01:15.999999",
+      "render": "0001-12-31T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 37,
+      "stored": "0001-12-31 01:01:15.000001",
+      "render": "0001-12-31T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 38,
+      "stored": "0001-12-31 22:01:14.000001",
+      "render": "0001-12-31T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 39,
+      "stored": "0002-01-01 00:01:14.999999",
+      "render": "0001-12-31T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 40,
+      "stored": "0000-01-01 00:01:15.999999",
+      "render": "0000-01-01T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 41,
+      "stored": "0000-01-01 01:01:15.000001",
+      "render": "0000-01-01T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 42,
+      "stored": "0000-01-01 22:01:14.000001",
+      "render": "0000-01-01T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 43,
+      "stored": "0000-01-02 00:01:14.999999",
+      "render": "0000-01-01T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 44,
+      "stored": "0000-12-31 00:01:15.999999",
+      "render": "0000-12-31T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 45,
+      "stored": "0000-12-31 01:01:15.000001",
+      "render": "0000-12-31T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 46,
+      "stored": "0000-12-31 22:01:14.000001",
+      "render": "0000-12-31T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 47,
+      "stored": "0001-01-01 00:01:14.999999",
+      "render": "0000-12-31T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 48,
+      "stored": "-0001-01-01 00:01:15.999999",
+      "render": "-0001-01-01T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 49,
+      "stored": "-0001-01-01 01:01:15.000001",
+      "render": "-0001-01-01T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 50,
+      "stored": "-0001-01-01 22:01:14.000001",
+      "render": "-0001-01-01T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 51,
+      "stored": "-0001-01-02 00:01:14.999999",
+      "render": "-0001-01-01T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 52,
+      "stored": "-0001-12-31 00:01:15.999999",
+      "render": "-0001-12-31T00:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 53,
+      "stored": "-0001-12-31 01:01:15.000001",
+      "render": "-0001-12-31T01:00:00-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 54,
+      "stored": "-0001-12-31 22:01:14.000001",
+      "render": "-0001-12-31T21:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 55,
+      "stored": "0000-01-01 00:01:14.999999",
+      "render": "-0001-12-31T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 56,
+      "stored": "9999-12-31 10:14:59.123456",
+      "render": "9999-12-31T10:14:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 57,
+      "stored": "10000-01-01 03:29:59.123456",
+      "render": "10000-01-01T03:29:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 58,
+      "stored": "9999-12-31 15:14:59.123456",
+      "render": "9999-12-31T15:14:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 59,
+      "stored": "10000-01-01 00:43:07.123456",
+      "render": "10000-01-01T00:43:07+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 60,
+      "stored": "9999-12-31 23:40:27.123456",
+      "render": "9999-12-31T23:40:27+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 61,
+      "stored": "9999-12-31 00:00:01.123456",
+      "render": "9999-12-31T00:00:01+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 62,
+      "stored": "10000-01-01 23:59:57.123456",
+      "render": "10000-01-01T23:59:57+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 63,
+      "stored": "-9999-12-31 10:14:59.123456",
+      "render": "-9999-12-31T10:13:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 64,
+      "stored": "-9998-01-01 03:29:59.123456",
+      "render": "-9998-01-01T03:28:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 65,
+      "stored": "-9999-12-31 15:14:59.123456",
+      "render": "-9999-12-31T15:13:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 66,
+      "stored": "-9998-01-01 00:43:07.123456",
+      "render": "-9998-01-01T00:41:52-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 67,
+      "stored": "-9999-12-31 23:40:27.123456",
+      "render": "-9999-12-31T23:39:12-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 68,
+      "stored": "-9999-12-31 00:00:01.123456",
+      "render": "-9999-12-30T23:58:46-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 69,
+      "stored": "-9998-01-01 23:59:57.123456",
+      "render": "-9998-01-01T23:58:42-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 70,
+      "stored": "0001-12-31 10:14:59.123456",
+      "render": "0001-12-31T10:13:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 71,
+      "stored": "0002-01-01 03:29:59.123456",
+      "render": "0002-01-01T03:28:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 72,
+      "stored": "0001-12-31 15:14:59.123456",
+      "render": "0001-12-31T15:13:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 73,
+      "stored": "0002-01-01 00:43:07.123456",
+      "render": "0002-01-01T00:41:52-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 74,
+      "stored": "0001-12-31 23:40:27.123456",
+      "render": "0001-12-31T23:39:12-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 75,
+      "stored": "0001-12-31 00:00:01.123456",
+      "render": "0001-12-30T23:58:46-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 76,
+      "stored": "0002-01-01 23:59:57.123456",
+      "render": "0002-01-01T23:58:42-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 77,
+      "stored": "0000-12-31 10:14:59.123456",
+      "render": "0000-12-31T10:13:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 78,
+      "stored": "0001-01-01 03:29:59.123456",
+      "render": "0001-01-01T03:28:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 79,
+      "stored": "0000-12-31 15:14:59.123456",
+      "render": "0000-12-31T15:13:44-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 80,
+      "stored": "0001-01-01 00:43:07.123456",
+      "render": "0001-01-01T00:41:52-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 81,
+      "stored": "0000-12-31 23:40:27.123456",
+      "render": "0000-12-31T23:39:12-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 82,
+      "stored": "0000-12-31 00:00:01.123456",
+      "render": "0000-12-30T23:58:46-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 83,
+      "stored": "0001-01-01 23:59:57.123456",
+      "render": "0001-01-01T23:58:42-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 84,
+      "stored": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31 23:59:59.999999",
+      "render": "9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 85,
+      "stored": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999998-01-01 00:01:14.999999",
+      "render": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-12-31T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 86,
+      "stored": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31 23:59:59.999999",
+      "render": "10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 87,
+      "stored": "-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999-01-01 00:01:14.999999",
+      "render": "-10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000-12-31T23:59:59-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 88,
+      "stored": "9999-12-31 10:00:00",
+      "render": "9999-12-31T10:00:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 89,
+      "stored": "0001-01-01 00:00:00",
+      "render": "0000-12-31T23:58:45-00:01"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 90,
+      "stored": "2026-04-05 01:45:00",
+      "render": "2026-04-05T02:45:00+01:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 91,
+      "stored": "2026-11-01 01:30:00",
+      "render": "2026-11-01T01:30:00+00:00"
+    },
+    {
+      "zone": "Europe/London",
+      "input_index": 92,
+      "stored": "2030-06-15 11:34:56",
+      "render": "2030-06-15T12:34:56+01:00"
+    }
+  ],
+  "save_list": [
+    {
+      "input": "9999-12-31 23:59:59.999999",
+      "zone": "Etc/UCT",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "9999-12-31 23:59:59.999999",
+      "expiry_tag": "<time datetime=\"9999-12-31T23:59:59Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "-9999-01-01 00:00:00.000001",
+      "zone": "Etc/UCT",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "-9999-01-01 00:00:00.000001",
+      "expiry_tag": "<time datetime=\"-9999-01-01T00:00:00Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "0001-01-01 00:00:00.999999",
+      "zone": "Etc/UCT",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "0001-01-01 00:00:00.999999",
+      "expiry_tag": "<time datetime=\"0001-01-01T00:00:00Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "0000-12-31 23:59:59.999999",
+      "zone": "Etc/UCT",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "0000-12-31 23:59:59.999999",
+      "expiry_tag": "<time datetime=\"0000-12-31T23:59:59Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "9999-12-31 23:59:59.999999",
+      "zone": "Etc/Universal",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "9999-12-31 23:59:59.999999",
+      "expiry_tag": "<time datetime=\"9999-12-31T23:59:59Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "-9999-01-01 00:00:00.000001",
+      "zone": "Etc/Universal",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "-9999-01-01 00:00:00.000001",
+      "expiry_tag": "<time datetime=\"-9999-01-01T00:00:00Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "0001-01-01 00:00:00.999999",
+      "zone": "Etc/Universal",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "0001-01-01 00:00:00.999999",
+      "expiry_tag": "<time datetime=\"0001-01-01T00:00:00Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "0000-12-31 23:59:59.999999",
+      "zone": "Etc/Universal",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "0000-12-31 23:59:59.999999",
+      "expiry_tag": "<time datetime=\"0000-12-31T23:59:59Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "9999-12-31 23:59:59.999999",
+      "zone": "Etc/Zulu",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "9999-12-31 23:59:59.999999",
+      "expiry_tag": "<time datetime=\"9999-12-31T23:59:59Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "-9999-01-01 00:00:00.000001",
+      "zone": "Etc/Zulu",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "-9999-01-01 00:00:00.000001",
+      "expiry_tag": "<time datetime=\"-9999-01-01T00:00:00Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "0001-01-01 00:00:00.999999",
+      "zone": "Etc/Zulu",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "0001-01-01 00:00:00.999999",
+      "expiry_tag": "<time datetime=\"0001-01-01T00:00:00Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "0000-12-31 23:59:59.999999",
+      "zone": "Etc/Zulu",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "0000-12-31 23:59:59.999999",
+      "expiry_tag": "<time datetime=\"0000-12-31T23:59:59Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "2030-06-15 12:34:56",
+      "zone": "Etc/UCT",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "2030-06-15 12:34:56",
+      "expiry_tag": "<time datetime=\"2030-06-15T12:34:56Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "2030-06-15 12:34:56",
+      "zone": "Etc/Universal",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "2030-06-15 12:34:56",
+      "expiry_tag": "<time datetime=\"2030-06-15T12:34:56Z\" data-local-time-target=\"datetime\"></time>"
+    },
+    {
+      "input": "2030-06-15 12:34:56",
+      "zone": "Etc/Zulu",
+      "save_status": 201,
+      "list_status": 200,
+      "stored": "2030-06-15 12:34:56",
+      "expiry_tag": "<time datetime=\"2030-06-15T12:34:56Z\" data-local-time-target=\"datetime\"></time>"
+    }
+  ],
+  "sudo": [
+    {
+      "raw": "1e20",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused\" id=\"unused\" value=\"1.0e+20\" /><input type=\"hidden\" name=\"github_connection[unused]\" id=\"github_connection_unused\" value=\"1.0e+20\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    },
+    {
+      "raw": "1e21",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused\" id=\"unused\" value=\"1.0e+21\" /><input type=\"hidden\" name=\"github_connection[unused]\" id=\"github_connection_unused\" value=\"1.0e+21\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    },
+    {
+      "raw": "1e-5",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused\" id=\"unused\" value=\"1.0e-05\" /><input type=\"hidden\" name=\"github_connection[unused]\" id=\"github_connection_unused\" value=\"1.0e-05\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    },
+    {
+      "raw": "1e-6",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused\" id=\"unused\" value=\"1.0e-06\" /><input type=\"hidden\" name=\"github_connection[unused]\" id=\"github_connection_unused\" value=\"1.0e-06\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    },
+    {
+      "raw": "1e-7",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused\" id=\"unused\" value=\"1.0e-07\" /><input type=\"hidden\" name=\"github_connection[unused]\" id=\"github_connection_unused\" value=\"1.0e-07\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    },
+    {
+      "raw": "9007199254740993.0",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused\" id=\"unused\" value=\"9.007199254740992e+15\" /><input type=\"hidden\" name=\"github_connection[unused]\" id=\"github_connection_unused\" value=\"9.007199254740992e+15\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    },
+    {
+      "raw": "4.9406564584124654e-324",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused\" id=\"unused\" value=\"5.0e-324\" /><input type=\"hidden\" name=\"github_connection[unused]\" id=\"github_connection_unused\" value=\"5.0e-324\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    },
+    {
+      "raw": "{\"a\":[1e999,null,1e-7],\"b\":9007199254740993.0}",
+      "challenge_status": 302,
+      "status": 200,
+      "form": "<form class=\"flex flex-column gap\" data-controller=\"auto-submit\" action=\"/account/bots/394959859/github_connection?access_token=good\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/account/bots/394959859/github_connection?access_token=good\" />\n      <input type=\"hidden\" name=\"unused[a][]\" id=\"unused_a_\" /><input type=\"hidden\" name=\"unused[a][]\" id=\"unused_a_\" value=\"1.0e-07\" /><input type=\"hidden\" name=\"unused[b]\" id=\"unused_b\" value=\"9.007199254740992e+15\" /><input type=\"hidden\" name=\"github_connection[unused][a][]\" id=\"github_connection_unused_a_\" /><input type=\"hidden\" name=\"github_connection[unused][a][]\" id=\"github_connection_unused_a_\" value=\"1.0e-07\" /><input type=\"hidden\" name=\"github_connection[unused][b]\" id=\"github_connection_unused_b\" value=\"9.007199254740992e+15\" />\n      <input type=\"submit\" name=\"commit\" value=\"Continue\" class=\"btn btn--reversed center txt-large\" data-disable-with=\"Continue\" />\n</form>"
+    }
+  ],
+  "size": [
+    {
+      "digits": 1001,
+      "bytes": 1012,
+      "storable": true,
+      "status": 500
+    },
+    {
+      "digits": 1002,
+      "bytes": 1013,
+      "storable": true,
+      "status": 500
+    },
+    {
+      "digits": 2035,
+      "bytes": 2046,
+      "storable": true,
+      "status": 302
+    },
+    {
+      "digits": 2036,
+      "bytes": 2047,
+      "storable": true,
+      "status": 302
+    },
+    {
+      "digits": 2037,
+      "bytes": 2048,
+      "storable": true,
+      "status": 302
+    },
+    {
+      "digits": 2038,
+      "bytes": 2049,
+      "storable": false,
+      "status": 302
+    }
+  ]
+}

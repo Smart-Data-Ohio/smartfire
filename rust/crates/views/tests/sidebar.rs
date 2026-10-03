@@ -11,6 +11,7 @@ fn fixtures() -> Vec<Value> {
 }
 fn direct(row: &Value) -> users::SidebarDirect {
     users::SidebarDirect {
+        avatar_zone: campfire_views::time::Zone::utc(),
         room_id: row["room_id"].as_i64().unwrap(),
         unread: row["unread"].as_bool().unwrap(),
         updated_at_epoch: row["updated_at_epoch"].as_str().unwrap().into(),

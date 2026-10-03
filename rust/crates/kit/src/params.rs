@@ -43,6 +43,9 @@ pub enum Param {
     Null,
     Bool(bool),
     Number(serde_json::Number),
+    /// Exact Ruby Integer digits produced only by an explicitly scoped parser.
+    /// Cookie Value serialization retains the text; its Rails byte size omits quotes.
+    BigInteger(String),
     Str(String),
     File(Arc<UploadedFile>),
     Array(Vec<Param>),
@@ -94,6 +97,7 @@ impl Param {
             Param::Null => Some(String::new()),
             Param::Bool(b) => Some(b.to_string()),
             Param::Number(n) => Some(n.to_string()),
+            Param::BigInteger(n) => Some(n.clone()),
             Param::Str(s) => Some(s.clone()),
             _ => None,
         }
@@ -104,7 +108,7 @@ impl Param {
         match self {
             Param::Null => true,
             Param::Bool(b) => !b,
-            Param::Number(_) | Param::File(_) => false,
+            Param::Number(_) | Param::BigInteger(_) | Param::File(_) => false,
             Param::Str(s) => s.chars().all(char::is_whitespace),
             Param::Array(items) => items.is_empty(),
             Param::Hash(map) => map.is_empty(),
@@ -126,7 +130,7 @@ impl Param {
             Param::Null => Value::Null,
             Param::Bool(b) => Value::Bool(*b),
             Param::Number(n) => Value::Number(n.clone()),
-            Param::Str(s) => Value::String(s.clone()),
+            Param::Str(s) | Param::BigInteger(s) => Value::String(s.clone()),
             Param::File(file) => serde_json::json!({
                 "original_filename": file.original_filename,
                 "content_type": file.content_type,
@@ -733,7 +737,7 @@ fn ruby_class(param: &Param) -> &'static str {
         Param::Null => "NilClass",
         Param::Bool(true) => "TrueClass",
         Param::Bool(false) => "FalseClass",
-        Param::Number(_) => "Integer",
+        Param::Number(_) | Param::BigInteger(_) => "Integer",
         Param::Str(_) => "String",
         Param::File(_) => "ActionDispatch::Http::UploadedFile",
         Param::Array(_) => "Array",
