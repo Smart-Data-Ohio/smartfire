@@ -2,6 +2,7 @@
 //! minutes/hours are elapsed time. Rails preserves periods for civil changes;
 //! fresh local parses prefer DST at folds and advance hourly through gaps.
 use crate::Timestamp;
+use bnum::types::I512;
 use jiff::{
     SignedDuration, Span,
     civil::{Date, DateTime, Time},
@@ -231,22 +232,27 @@ fn from_match(c: &Captures<'_>, zone: &TimeZone, now: Timestamp) -> Option<Times
     }
     let zoned = now.jiff().to_zoned(zone.clone());
     if let Some(amount) = c.name("amount") {
-        let n = amount.as_str().parse::<i64>().ok()?;
-        if n <= 0 {
+        let n = amount.as_str().parse::<I512>().ok()?;
+        if n <= I512::ZERO {
             return None;
         }
         let unit = c.name("unit")?.as_str().to_ascii_lowercase();
         return if unit.starts_with("min") || unit.starts_with("h") {
             let multiplier = if unit.starts_with("min") { 60 } else { 3600 };
-            Some(Timestamp::from_jiff(
-                now.jiff()
-                    .checked_add(SignedDuration::from_secs(n.checked_mul(multiplier)?))
-                    .ok()?,
-            ))
+            // Ruby keeps Integer durations exact, including beyond i64 and Jiff's
+            // civil range. Split only at Gregorian cycles, using the shared
+            // Timestamp encoding rather than narrowing the requested duration.
+            let seconds = n.checked_mul(I512::from(multiplier))?;
+            let cycle = I512::from(146_097_i64 * 86_400);
+            let remainder = i64::try_from(seconds % cycle).ok()?;
+            let (proxy, shift) = now
+                .since(SignedDuration::from_secs(remainder))
+                .calendar_proxy();
+            Timestamp::from_wide_shifted_jiff(proxy, shift + seconds / cycle * I512::from(400))
         } else {
-            add_days(
+            relative_days(
                 now,
-                n.checked_mul(if unit.starts_with("week") { 7 } else { 1 })?,
+                n.checked_mul(I512::from(if unit.starts_with("week") { 7 } else { 1 }))?,
                 zone,
             )
         };
@@ -275,6 +281,27 @@ fn from_match(c: &Captures<'_>, zone: &TimeZone, now: Timestamp) -> Option<Times
         add_days(time, 1, zone)
     } else {
         Some(time)
+    }
+}
+/// ActiveSupport::Duration applies civil days before resolving the target period.
+/// A bounded 400-year remainder avoids Span's panic on large day counts. Use
+/// TZInfo's real transition boundary for the actual year, never the proxy year.
+fn relative_days(now: Timestamp, days: I512, zone: &TimeZone) -> Option<Timestamp> {
+    let original = now.jiff().to_zoned(zone.clone());
+    let cycle = I512::from(146_097);
+    let target = original
+        .datetime()
+        .checked_add(Span::new().days(i64::try_from(days % cycle).ok()?))
+        .ok()?;
+    let naive = Timestamp::from_wide_shifted_jiff(
+        target.to_zoned(TimeZone::UTC).ok()?.timestamp(),
+        days / cycle * I512::from(400),
+    )?;
+    if let Some(offset) = boundary_offset(zone, naive.transition_second(), true) {
+        Some(naive.ago(SignedDuration::from_secs(offset)))
+    } else {
+        let dt = naive.try_jiff()?.to_zoned(TimeZone::UTC).datetime();
+        resolve(dt, zone, Some(original.timestamp()))
     }
 }
 pub fn parse(text: &str, zone_name: &str, now: Timestamp) -> Option<Timestamp> {

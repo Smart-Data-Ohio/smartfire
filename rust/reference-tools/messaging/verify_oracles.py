@@ -15,7 +15,8 @@ NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links
          "reminder_push", "quote_integration", "root_cache", "panels", "date_inputs", "review_saved_race", "review_dates", "date_compact_widths", "providers", "provider_edits", "event_cards", "date_coercions", "composer", "composer_sti", "twitter_preloads", "twitter_cards", "twitter_text", "provider_callbacks", "agent_command", "user_coercions", "date_years",
          "ws12_consumers", "provider_batch", "private_provider_pages", "search_headers",
          "older_provider_callbacks", "bounded_provider_callbacks", "mapped_provider_callbacks",
-         "older_owner_callbacks", "older_calendar_callbacks", "older_calendar_jobs", "older_embed_jobs", "pin_poll_scaling", "exceptional_inputs", "slash_named", "older_calendar_execution", "older_embed_children", "older_embed_failures", "final_state_siblings"]
+         "older_owner_callbacks", "older_calendar_callbacks", "older_calendar_jobs", "older_embed_jobs", "pin_poll_scaling", "exceptional_inputs", "slash_named", "older_calendar_execution", "older_embed_children", "older_embed_failures", "final_state_siblings",
+         "calendar_retry_consumers", "relative_split_inputs", "container_inputs", "relative_consumers"]
 # Main's #213 adds a stored non-HTTP quote case. Its golden uses the exact
 # reviewed Rails template revision, while every other corpus keeps the shared pin.
 TWITTER_ENV = dict(ENV, PARITY_IMAGE="ws8bm2-reference:twitter-955af4c37",

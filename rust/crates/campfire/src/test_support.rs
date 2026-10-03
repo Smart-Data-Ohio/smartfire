@@ -164,3 +164,18 @@ pub async fn with_auth_inputs<T>(inputs: campfire_db::FixtureAuthInputs, future:
 pub fn auth_inputs() -> Option<Arc<campfire_db::FixtureAuthInputs>> {
     AUTH_INPUTS.try_with(Arc::clone).ok()
 }
+
+// Supplied before boot and copied into this database's existing fixture provider.
+// Parallel apps and production entropy remain independent.
+tokio::task_local! {
+    static MESSAGE_INPUTS: Arc<campfire_db::database::FixtureInputs>;
+}
+pub async fn with_message_inputs<T>(
+    inputs: campfire_db::database::FixtureInputs,
+    future: impl Future<Output = T>,
+) -> T {
+    MESSAGE_INPUTS.scope(Arc::new(inputs), future).await
+}
+pub fn message_inputs() -> Option<Arc<campfire_db::database::FixtureInputs>> {
+    MESSAGE_INPUTS.try_with(Arc::clone).ok()
+}
