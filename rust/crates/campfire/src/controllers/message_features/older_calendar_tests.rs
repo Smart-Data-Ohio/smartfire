@@ -24,7 +24,7 @@ fn title(tx: &mut campfire_db::Tx<'_>, id: i64, text: &str) -> campfire_db::Resu
 }
 async fn callbacks(check_reads: bool) {
     let mut counts = HashMap::new();
-    let mut frame_count=0;
+    let mut frame_count = 0;
     for group in oracle()["groups"].as_array().unwrap() {
         let app = app_rows(group["rows"].clone()).await;
         for path in [
@@ -117,14 +117,7 @@ async fn callbacks(check_reads: bool) {
                 }
             }
             frame_count += step["frames"].as_array().unwrap().len();
-            for expected in step["frames"].as_array().unwrap() {
-                let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
-                assert_eq!(
-                    actual["message"], expected["html"],
-                    "{name}: {}",
-                    expected["stream"]
-                );
-            }
+            super::comparison_support::frames(&app, &mut client, &step["frames"], &name).await;
             client.assert_silent().await;
         }
         let result: campfire_db::Result<()> = app
@@ -304,10 +297,13 @@ async fn older_calendar_meet_jobs_match_rails_frames_and_retry_or_noop_outcomes(
             } else {
                 drain.calendar(&app).await;
             }
-            for frame in case["frames"].as_array().unwrap() {
-                let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
-                assert_eq!(actual["message"], frame["html"], "job {name}");
-            }
+            super::comparison_support::frames(
+                &app,
+                &mut client,
+                &case["frames"],
+                &format!("job {name}"),
+            )
+            .await;
             client.assert_silent().await;
             runner.shutdown(Duration::from_secs(1)).await;
             let calls=recorded.calls.lock().unwrap().iter().map(|c| {assert_eq!(c["access_token"],FIXTURE_TOKEN);json!({"method":c["method"],"path":c["path"],"body":serde_json::from_str::<Value>(c["body"].as_str().unwrap()).unwrap()})}).collect::<Vec<_>>();
