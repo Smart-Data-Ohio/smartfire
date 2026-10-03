@@ -8,6 +8,7 @@ readback checks both applications, even when the normal driver stops at Rails.
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import shlex
@@ -158,26 +159,30 @@ def main():
         text = (output / f'{mode}.log').read_text()
         rows = [json.loads(line.removeprefix('WS8bm real producer rows: ')) for line in text.splitlines() if line.startswith('WS8bm real producer rows: ')]
         assert len(rows) == 2, mode + ': missing independent paired readback'
+        def intended_on_both(marker):
+            return all(any(marker in chunk for chunk in re.findall(
+                rf'WS8bm positive application FAILED: {app}:.*?(?=WS8bm failed application:|WS8bm positive application FAILED:|\Z)',
+                text,re.S)) for app in ['Rails','Rust'])
         escape = args.expect_escapes and mode in {'extra-foreign-event','rewrite-history-client-id'}
         if escape:
             valid = result.returncode == 0 and all(row['row_assertion']=='PASS' for row in rows)
             valid &= (all(row['global_event_delta']==4 and row['target_event_delta']==2 for row in rows)
                       if mode=='extra-foreign-event' else all(row['history_client_id']=='corrupted-work-history' for row in rows))
         elif mode == 'extra-foreign-event':
-            intended = all(any(line.startswith(f'WS8bm positive application FAILED: {app}:')
-                                  and 'work-event-count:' in line for line in text.splitlines())
-                           for app in ['Rails','Rust'])
-            valid = (result.returncode != 0 and intended
+            valid = (result.returncode != 0 and intended_on_both('work-event-count:')
                      and all(row['global_event_delta']==2 and row['target_event_delta']==1 for row in rows))
         elif mode == 'rewrite-history-client-id':
             valid = (result.returncode != 0 and all(row['history_client_id']=='corrupted-work-history'
                      and row['row_assertion']=='FAIL' and 'work-history identity:' in row.get('row_error','') for row in rows))
         elif mode == 'missing-history':
-            valid = result.returncode != 0 and all(row['events']==[] for row in rows) and ('work-event-count:' in text or '0 !== 2' in text)
+            valid = (result.returncode != 0 and intended_on_both('work-event-count:')
+                     and all(row['events']==[] and row['thread'][0]=='planned' for row in rows))
         elif mode == 'allow-reassignment':
-            valid = result.returncode != 0 and text.count('200 !== 403') >= 2 and all(row['thread'][1]==773523953 for row in rows)
+            valid = result.returncode != 0 and intended_on_both('200 !== 403') and all(row['thread'][1]==773523953 for row in rows)
         else:
-            valid = result.returncode != 0 and all(row['agent_events']==0 and row['row_assertion']=='FAIL' for row in rows)
+            valid = (result.returncode != 0 and intended_on_both('agent-event-count:')
+                     and all(row['agent_events']==0 and row['row_assertion']=='FAIL'
+                             and 'agent-event-count:' in row.get('row_error','') for row in rows))
         failed += not valid
         print(f'WS8bm real producer discrimination: {mode}: ' + ('ESCAPED as expected at baseline' if escape and valid else 'REJECTED on Rails and Rust at intended assertion' if valid else 'INVALID or unexpected result'),flush=True)
         for row in rows:

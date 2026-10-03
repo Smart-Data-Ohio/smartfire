@@ -744,6 +744,7 @@ fn message_controller_model_refuses_untracking_with_owner_omitted_like_rails() {
 #[test]
 fn message_controller_separate_stale_work_changes_match_rails_history() {
     let t = channel_thread_test::frozen();
+    channel_thread_test::create_thread(&t, "designers", "jz", None, Some("Foreign work history"));
     let thread = t.write(|tx| {
         ChannelThread::create(
             tx,
