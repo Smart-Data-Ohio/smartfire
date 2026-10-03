@@ -287,7 +287,10 @@ fn router(app: &App, kit: Kit) -> Router {
         axum::routing::post(campfire_kit::unparsed_action(controllers::github::webhooks::create))
             .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
     };
-    let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
+    let dispatch = || axum::routing::any(
+        campfire_kit::action(dispatch_with_fragment_cache)
+            .json_body_parser(controllers::accounts::bots::github_connections::scoped_json_body_params),
+    );
     let routes = Router::new()
         .merge(
             app.cable

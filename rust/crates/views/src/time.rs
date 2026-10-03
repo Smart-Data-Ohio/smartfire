@@ -49,10 +49,14 @@ impl Zone {
     }
 
     pub fn format(&self, instant: jiff::Timestamp, format: &str) -> String {
-        instant
-            .to_zoned(self.tz.clone())
-            .strftime(format)
-            .to_string()
+        let local = instant.to_zoned(self.tz.clone());
+        let year = local.year();
+        let format = if year < 0 {
+            format.replace("%Y", &format!("-{:04}", year.unsigned_abs()))
+        } else {
+            format.to_owned()
+        };
+        local.strftime(&format).to_string()
     }
 
     pub fn iso8601(&self, instant: jiff::Timestamp) -> String {

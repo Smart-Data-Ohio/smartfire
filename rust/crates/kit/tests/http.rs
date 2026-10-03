@@ -402,6 +402,40 @@ async fn method_override_from_form_param_and_header() {
 }
 
 #[tokio::test]
+async fn pr196_r4_json_parser_observes_effective_method_through_real_router() {
+    fn parser(method: &axum::http::Method, _: &str, _: &[u8]) -> Option<std::result::Result<campfire_kit::ParamMap, campfire_kit::params::ParamError>> {
+        let mut params = campfire_kit::ParamMap::new();
+        params.insert("parser_method", campfire_kit::Param::Str(method.to_string()));
+        Some(Ok(params))
+    }
+    async fn selected(c: &mut Ctx) -> Result {
+        let parsed = c.param_str("parser_method").unwrap().to_owned();
+        c.set_header("x-parser-method", &parsed);
+        let original = c.request.original_method.to_string();
+        c.set_header("x-original-method", &original);
+        Ok(c.head(StatusCode::OK))
+    }
+    let router = Router::new().route("/parser", axum::routing::any(action(selected).json_body_parser(parser)));
+    let app = campfire_kit::app(router, kit_with(KitConfig::default()));
+    let oracle: serde_json::Value = serde_json::from_str(include_str!("../../../vectors/bot-ui-render-replay.json")).unwrap();
+    let mut failures = Vec::new();
+    for case in oracle["methods"].as_array().unwrap() {
+        let request = post("/parser")
+            .header(header::CONTENT_TYPE, "application/json")
+            .header("x-http-method-override", case["override"].as_str().unwrap())
+            .body(AxumBody::from("{\"value\":true}" )).unwrap();
+        let reply = send(&app, request).await;
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_eq!(reply.header("x-original-method"), Some("POST"));
+        if reply.header("x-parser-method") != case["effective_method"].as_str() {
+            failures.push((case["override"].clone(), reply.header("x-parser-method").map(str::to_owned)));
+        }
+    }
+    println!("R4 adapter effective methods: 7 compared; {} mismatches", failures.len());
+    assert!(failures.is_empty(), "{failures:?}");
+}
+
+#[tokio::test]
 async fn multipart_uploads_with_method_override() {
     let boundary = "----campfire";
     let body = format!(
