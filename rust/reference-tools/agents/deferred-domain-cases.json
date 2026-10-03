@@ -1,16 +1,16 @@
 {
   "reference_pin": "d7c7de92",
-  "status": "partial",
+  "status": "peer-owned evidence deferred; all WS11-owned names compared",
   "meaning": "Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.",
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "No named comparisons are deferred. Absent/blank HTTP credentials are covered by real REST/MCP invalid-auth vectors; the former HTTP boundary note is closed.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "19 named comparisons plus a production WebSocket comparison of three byte-identical append/update/final phases. Four complete start/trailing and every-side-effect names still await full named-case comparisons; remaining reference/dependency peers remain flagged.",
+    "test/models/message_streaming_test.rb": "All 23 names compared. Four complete start/finalize/append/trailing projections now retain actual socket HTML, both users' unread broadcasts, activity, ledger, index and logical queued arguments. External-reference adapters retain their owners.",
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
-    "test/models/user/bot_test.rb": "Twelve named digest/authentication/plaintext-scrub/reply-token cases are compared, including room binding, expiry and membership/deactivation. Two fixed SecureRandom-stub create/reset cases and one actual queued webhook execution comparison remain deferred.",
-    "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred.",
-    "test/models/channel_thread_agent_assignment_test.rb": "Nine named ledger/history/outer-commit/rollback comparisons now use installed WS12 producers and pinned Rails rows/jobs. Twenty individual comparisons remain: WS12 owner eligibility/work mutations, and further WS11 hop/deletion/root callback cases. API vectors are additional evidence only."
+    "test/models/user/bot_test.rb": "All 15 names compared, including fixed generator entropy at the real create/reset boundary and actual durable queued delivery with a controlled dialer only.",
+    "test/models/agent_budgets_test.rb": "All 11 names compared. The two remaining names now exercise merged WS12 ActivityItem.accessible_to and agent_work::handoff_work, with real usage and handoff rows.",
+    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 owner eligibility/work mutation names retain their owner."
   },
   "files": [
     {
@@ -81,38 +81,7 @@
         "an agent result update records the event with the agent as actor",
         "an agent cannot write the result of work it does not own",
         "an agent cannot move work it does not own",
-        "an agent status update rejects unknown statuses and long notes",
-        "two agents assigning posts to each other stop at the hop limit",
-        "deleting an agent-owned thread emits work_unassigned",
-        "deleting a thread without an agent owner emits nothing",
-        "a human assignment starts a new root at hop 0"
-      ]
-    },
-    {
-      "rails_file": "test/models/message_streaming_test.rb",
-      "owner": "WS11 finalization; WS12 activity; WS14/15 external reference sync",
-      "remaining_named_case_ports": [
-        "stream start broadcasts the append without the unread broadcast",
-        "finalize fires every side effect exactly once",
-        "appends re-render without firing side effects",
-        "a coalesced update sends a trailing broadcast with the final text"
-      ]
-    },
-    {
-      "rails_file": "test/models/user/bot_test.rb",
-      "owner": "WS11 bot domain/removal; WS11-api by-bot HTTP surface",
-      "remaining_named_case_ports": [
-        "create bot",
-        "reset bot key",
-        "deliver message by webhook"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_budgets_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "a stranger cannot read another agent's budget item",
-        "an agent-created handoff counts toward no budget, even with caps exhausted"
+        "an agent status update rejects unknown statuses and long notes"
       ]
     }
   ]

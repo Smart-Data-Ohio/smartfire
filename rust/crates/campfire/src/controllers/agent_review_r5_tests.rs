@@ -58,20 +58,152 @@ fn compare(reply: &Reply, expected: &Value, label: &str) {
     );
 }
 fn compare_headers(reply: &Reply, expected: &Value, label: &str) {
-    let transfer = expected["headers"]
-        .get("Content-Transfer-Encoding")
-        .expect("the Rails oracle must compare transfer encoding");
-    // Check this independent drift before media-derived Content-Length values.
-    assert_eq!(
-        reply.header("Content-Transfer-Encoding"),
-        transfer.as_str(),
-        "{label}: Content-Transfer-Encoding"
+    let actual = reply
+        .headers
+        .keys()
+        .map(|name| {
+            let values = reply
+                .headers
+                .get_all(name)
+                .iter()
+                .map(|value| value.to_str().unwrap().to_owned())
+                .collect::<Vec<_>>();
+            (name.as_str().to_owned(), serde_json::json!(values))
+        })
+        .collect::<serde_json::Map<_, _>>();
+    compare_full_proxy_headers(
+        &Value::Object(actual),
+        &expected["headers"],
+        label.contains("proxy"),
     );
-    for (header, value) in expected["headers"].as_object().unwrap() {
-        assert_eq!(reply.header(header), value.as_str(), "{label}: {header}");
+}
+
+pub(super) fn compare_full_proxy_headers(actual: &Value, expected: &Value, streamed: bool) {
+    let mut actual = actual.as_object().expect("all response headers").clone();
+    let mut expected = expected
+        .as_object()
+        .expect("all Rails response headers")
+        .clone();
+    for headers in [&actual, &expected] {
+        for (name, values) in headers {
+            assert_eq!(
+                values.as_array().expect("header values").len(),
+                1,
+                "duplicate {name}"
+            );
+            assert!(values[0].is_string(), "{name}: header value");
+            let value = values[0].as_str().unwrap();
+            assert!(!value.contains(['\r', '\n']), "{name}: newline in header");
+            match name.as_str() {
+                "date" => {
+                    httpdate::parse_http_date(value).expect("valid HTTP Date");
+                }
+                "x-request-id" => {
+                    let id = uuid::Uuid::parse_str(value).expect("UUID request ID");
+                    assert_eq!(id.get_version_num(), 4);
+                    assert_eq!(id.to_string(), value);
+                }
+                "x-runtime" => {
+                    let (seconds, fraction) = value.split_once('.').expect("runtime decimal");
+                    assert!(!seconds.is_empty() && seconds.bytes().all(|c| c.is_ascii_digit()));
+                    assert_eq!(fraction.len(), 6);
+                    assert!(fraction.bytes().all(|c| c.is_ascii_digit()));
+                }
+                _ => {}
+            }
+        }
+    }
+    for name in ["date", "x-request-id", "x-runtime"] {
+        assert_eq!(
+            actual.contains_key(name),
+            expected.contains_key(name),
+            "per-request header presence: {name}"
+        );
+        actual.remove(name);
+        expected.remove(name);
+    }
+    if streamed {
+        for (name, value) in [
+            ("permissions-policy", crate::security::PERMISSIONS_POLICY),
+            ("referrer-policy", "strict-origin-when-cross-origin"),
+            ("x-content-type-options", "nosniff"),
+            ("x-frame-options", "SAMEORIGIN"),
+            ("x-permitted-cross-domain-policies", "none"),
+            ("x-xss-protection", "0"),
+        ] {
+            assert!(expected.get(name).is_none(), "Rails streamed {name}");
+            assert_eq!(
+                actual.remove(name),
+                Some(serde_json::json!([value])),
+                "approved addition {name}"
+            );
+        }
+    }
+    assert_eq!(actual, expected, "every non-approved response header");
+}
+
+#[test]
+fn ws11_proxy_header_oracle_rejects_unapproved_changes() {
+    let vector: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/agent_blob_proxy_headers.json"
+    ))
+    .unwrap();
+    for case in vector["cases"].as_array().unwrap() {
+        let expected = &case["headers"];
+        let mut actual = expected.clone();
+        for (name, value) in crate::security::default_headers() {
+            actual[name.as_str()] = serde_json::json!([value.to_str().unwrap()]);
+        }
+        compare_full_proxy_headers(&actual, expected, true);
+        for name in ["date", "x-request-id", "x-runtime"] {
+            if expected.get(name).is_some() {
+                let mut changed = actual.clone();
+                changed.as_object_mut().unwrap().remove(name);
+                assert!(
+                    std::panic::catch_unwind(|| compare_full_proxy_headers(
+                        &changed, expected, true
+                    ))
+                    .is_err(),
+                    "must reject missing {name}"
+                );
+            }
+        }
+        for (name, value) in [
+            (
+                "content-transfer-encoding",
+                serde_json::json!(["unexpected"]),
+            ),
+            ("x-unexpected", serde_json::json!(["new"])),
+            ("content-type", serde_json::json!(["wrong"])),
+            ("x-request-id", serde_json::json!(["same", "same"])),
+            ("x-frame-options", serde_json::json!(["DENY"])),
+        ] {
+            let mut changed = actual.clone();
+            changed[name] = value;
+            assert!(
+                std::panic::catch_unwind(|| compare_full_proxy_headers(&changed, expected, true))
+                    .is_err(),
+                "must reject {name}"
+            );
+        }
+        let mut changed = actual.clone();
+        changed
+            .as_object_mut()
+            .unwrap()
+            .remove("content-security-policy");
+        // A missing CSP must be rejected whenever that response renders it.
+        if expected.get("content-security-policy").is_some() {
+            assert!(
+                std::panic::catch_unwind(|| compare_full_proxy_headers(&changed, expected, true))
+                    .is_err()
+            );
+        }
     }
 }
 async fn missing(kind: &str, route: &str) {
+    crate::security::with_proxy_fixture_nonce(missing_with_nonce(kind, route)).await
+}
+async fn missing_with_nonce(kind: &str, route: &str) {
     let vectors: Value = serde_json::from_str(include_str!(
         "../../../../vectors/agent_review192r5_representations.json"
     ))
@@ -204,4 +336,68 @@ cases! {
     pr192_r5_video_missing_variant_proxy=>"video_variant","proxy";
     pr192_r5_jpeg_missing_variant_redirect=>"jpeg_variant","redirect";
     pr192_r5_jpeg_missing_variant_proxy=>"jpeg_variant","proxy";
+}
+
+#[tokio::test]
+async fn ws11_next2_blob_proxy_every_header_and_body() {
+    crate::security::with_proxy_fixture_nonce(async {
+        let vector: Value = serde_json::from_str(include_str!(
+            "../../../../vectors/agent_blob_proxy_headers.json"
+        ))
+        .unwrap();
+        let app = TestApp::boot_frozen()
+            .await
+            .expect("default seed required")
+            .without_job_runner()
+            .await;
+        let storage = app.booted.app.storage.clone();
+        let id = app
+            .db()
+            .write(move |tx| {
+                let staged = storage
+                    .stage_bytes(
+                        b"proxy header fixture\n",
+                        campfire_storage::Filename::new("fixture.txt"),
+                        Some("text/plain"),
+                    )
+                    .unwrap();
+                let blob = staged.insert(tx.conn(), tx.now().jiff()).unwrap();
+                crate::active_storage::keep_after_commit(tx, staged);
+                Ok(blob.id)
+            })
+            .await
+            .unwrap();
+        assert_eq!(id, vector["blob_id"].as_i64().unwrap());
+        let blob = fixed_key(&app, id, "ws11api-next2-blob").await;
+        let path = campfire_storage::paths::blob_proxy_path(
+            &*app.booted.app.storage.verifier,
+            &blob,
+            None,
+        );
+        assert_eq!(path, vector["path"].as_str().unwrap());
+        app.db()
+            .write(|tx| {
+                tx.conn().execute("DELETE FROM background_jobs", [])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let rows = super::agent_review_tests::snapshot(&app).await;
+        for case in vector["cases"].as_array().unwrap() {
+            if case["name"] == "missing" {
+                app.booted.app.storage.service.delete(&blob.key).unwrap();
+            }
+            let mut req = request(&path);
+            if let Some(range) = case["range"].as_str() {
+                req = req.header("range", range);
+            }
+            let reply = app.anonymous().send(req).await;
+            // The proxy controller selects Live::Response for ranges too.
+            compare(&reply, case, "blob proxy");
+            assert_eq!(super::agent_review_tests::snapshot(&app).await, rows);
+        }
+        assert!(!app.booted.app.storage.service.exist(&blob.key));
+        println!("WS11 blob proxy: 4 responses; all headers/body bytes; rows/jobs unchanged");
+    })
+    .await;
 }

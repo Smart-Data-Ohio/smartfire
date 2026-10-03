@@ -32,10 +32,7 @@ pub(super) async fn operation(c: &Ctx, agent_id: i64, args: Value) -> Result<Ser
         let mut ids=vec![];
         lookup_ids(&args["message_id"],&mut ids)?;
         ids.sort_unstable();
-        let mut message=None;
-        for id in ids {
-            if let Some(found)=Message::find_by_id(tx.conn(),id)? { message=Some(found);break; }
-        }
+        let message=campfire_db::models::agent_reading::message_by_ids(tx.conn(),&ids)?;
         let Some(message)=message else {return Ok(ServiceResult::fail("Message not found",404));};
         if Room::find_for_user(tx.conn(),agent.user_id,message.room_id)?.is_none() {
             return Ok(ServiceResult::fail("Message not found",404));
