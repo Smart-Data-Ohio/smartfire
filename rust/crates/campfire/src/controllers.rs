@@ -1226,6 +1226,8 @@ mod agent_work_validation_tests;
 #[cfg(test)]
 mod agent_work_writes_tests;
 #[cfg(test)]
+mod agent_work_named_tests;
+#[cfg(test)]
 mod ws12_agent_work_query_tests;
 #[cfg(test)]
 mod ws12_activity_helper_named_tests;

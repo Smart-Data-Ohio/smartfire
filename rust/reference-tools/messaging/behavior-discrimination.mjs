@@ -1,6 +1,7 @@
 // Credit only the assertion named by the served mutation. Source anchors keep
 // this contract reviewable without line-number drift. Unknown failures fail closed.
 import {readFileSync} from 'node:fs';
+import {workControllerCases} from './behavior-work-controllers.mjs';
 const helpers=new Set(['behavior-visibility.mjs','behavior-text.mjs']);
 export function assertionFrames(error) {
   const frames=[];
@@ -67,7 +68,13 @@ add(['message update preserves the input state','boost by another user preserves
 add(['the toolbar stays hidden until hover or focus and labels every action'],'toolbar',"page.locator('.message__toolbar'),0");
 add(['quick-react creates a boost from the toolbar','keyboard users reach the toolbar from a focused message','the emoji picker searches and reacts','the picker remembers recent reactions'],'toolbar','reaction-chip__count');
 add(['reply and thread buttons drive the composer and the thread panel'],'toolbar','[data-thread-panel-target="create"]');
-add(['the more button opens the shared menu for its message','opens message actions from context menu and keyboard, and cancels a moving long press'],'actions',"page.locator('#message-actions-menu:not([hidden])')");
+add(['the more button opens the shared menu for its message'],'actions',"page.locator('#message-actions-menu:not([hidden])')");
+// onContextMenu is used only by the initial right click. Keyboard and long
+// press call the same menu assertion through unaffected handlers.
+D.set('opens message actions from context menu and keyboard, and cancels a moving long press',[{
+  ...target('actions','await assertMenuOpen(page)'),
+  phase:target('actions','await openMenu(page)'),
+}]);
 add(['the picker shows category tabs and switches between them'],'toolbar',"await tab('people')");
 add(['the picker loads its emoji data only on first open'],'toolbar',"assert.equal((await resources()).some(url=>url.endsWith('.json')&&url.includes('emoji')),false)");
 add(['the picker Custom tab reacts with a workspace icon'],'toolbar',"option('Acme Corp').locator('img')");
@@ -114,6 +121,26 @@ D.set('a stream replacing the tab-stop message while focus is elsewhere keeps th
 add(['picker arrows move through options, Enter selects, and Escape returns focus'],'toolbar',"focused('Grinning face with big eyes')");
 D.set('the picker remembers recent reactions',[target('toolbar',"await waitForVisibility(option('Grinning face'))")]);
 D.set('picker tabs move with arrow keys and switch the grid',[target('toolbar',"await tab('people')")]);
+// Continuation -2 retains its additional paired/controller scopes.
+add(workControllerCases,'work-controllers',"assert.equal(body.thread.name,'Design discussion')");
+add(['thread code stays readable in both themes and scrolls within a narrow screen'],'code',"code.locator('.code-token')");
+// The fieldset min-width probe overflows the scrollable main element, not
+// the clipped document. This is the original content-overflow assertion
+// (mobile_layout_test.rb:56); an earlier document assertion is not its target.
+add(['the profile page fits phone widths without scrolling sideways'],'mobile-continuation','assert.ok(result.mainOverflow<=0');
+add(['headers outside the workspace shell stay opaque over scrolled content'],'mobile-continuation',"includes(header.background)");
+add(['headers outside the workspace shell never cover the page or its scrollbar'],'mobile-continuation','assert.ok(layout.panelTop>=layout.navBottom');
+add(['pages outside the workspace shell show no drawer toggle that opens nothing'],'mobile-continuation',"waitForVisibleCount(page.getByRole('button',{name:'Open workspace navigation'");
+add(['every drawer destination has one toggle that opens the drawer on itself'],'mobile-continuation',"click(page.getByRole('button',{name:'Open workspace navigation'");
+add(['text fields stay at 16px on touch devices without changing the desktop look'],'mobile-continuation','assert.ok(await size(selector)>=16');
+add(['tracks work, assigns an owner, completes and reopens it without losing the conversation'],'thread-continuation',"text(target('workStatusLabel'),'Planned')");
+add(['shows work-thread guidance in the new-thread form and on the work page'],'thread-continuation',"text(createForm.locator('details.thread-panel__guide:not([open]) summary')");
+add(['keeps the new-thread guidance usable on a phone'],'thread-continuation',"visibleMatch(panel.locator('details.thread-panel__guide summary'))");
+add(['shows work assignment activity to the owner and opens the exact thread'],'thread-continuation',"text(target('workOwnerLabel'),'Kevin',10000)");
+add(['keeps the thread drawer usable on a phone and preserves the channel'],'',"filterVisibleText(panel.locator('[data-thread-panel-target=\"conversationTitle\"]'),name)");
+add(['opens a shared thread message link around an older post'],'thread-continuation',"panel.locator('.message-area__return-to-latest'),{timeout:10000}");
+add(['marks a joined thread read only while the conversation is visible'],'thread-continuation','await read(false)');
+add(['keeps an anchored older thread unread when a new reply arrives'],'thread-continuation','await read(true)');
 // behavior.mjs is the dispatcher (there is no dash in its basename).
 for(const specs of D.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 const V=new Map();
@@ -147,7 +174,8 @@ variant(['transparent-hover-body'],'toolbar',"row.locator('[data-reply-target=\"
 variant(['transparent-room-header'],'actions',"page.locator('.room-header__name')");
 variant(['hidden-code-visible-token'],'','waitForVisibility(code,');
 variant(['transparent-initial-heading'],'','message.locator(\'h2\')');
-variant(['hidden-body-visible-presentation','hidden-submitted-body-visible-strong'],'','waitForVisibleContentCount(');
+variant(['hidden-body-visible-presentation'],'','waitForVisibleContentCount(');
+variant(['hidden-submitted-body-visible-strong'],'',"await text(page,'First message stays exact.')");
 variant(['transparent-thread-body'],'','panel.locator(\'.thread-panel__thread-content .message__body\')');
 variant(['hidden-conversation-visible-children'],'','panel.locator(\'[data-thread-panel-target="conversation"]\')');
 variant(['hidden-safety-body-visible-code'],'',"message.locator('.message__body'),'Safety check'");
@@ -162,7 +190,7 @@ variant(['transparent-cleared-thread-draft'],'composer',"waitForVisibleProperty(
 variant(['transparent-boost-draft-after-edit','transparent-boost-draft-after-delivery'],'boosts',"locator('input[name=\"boost[content]\"]'),'fill'");
 variant(['transparent-older-search-text'],'search-forward',"byVisibleText(page.locator('#search-results'),'system paging alpha',{exact:true})");
 variant(['transparent-initial-url-text'],'search-forward',"'nothing linked yet'");
-variant(['hidden-initial-composer-conversation'],'composer','panel.locator(\'[data-thread-panel-target="conversation"]\')');
+variant(['hidden-initial-composer-conversation'],'composer','await initialConversationAfterCreate()');
 variant(['delayed-negative-removal'],'message-list',"row(id),{state:'hidden'}");
 variant(['hidden-url-loading-text'],'search-forward',"'Loading post'");
 variant(['transparent-url-editor'],'',"actOnVisible(page.getByRole('combobox'");
@@ -172,6 +200,7 @@ variant(['transparent-ban-text'],'message-destinations',"browser.locator('button
 variant(['transparent-device-text'],'attach-menu',"menu.locator('[role=\"menuitem\"]'),'From this device'");
 variant(['transparent-drive-text','transparent-phone-drive-text'],'attach-menu',"menu.locator('[role=\"menuitem\"]'),'From Google Drive'");
 variant(['transparent-boost-delete-text'],'boosts',"boost.locator('button'),'Delete this boost'");
+variant(['wrong-permission-status','wrong-validation-status'],'work-controllers','assert.equal(response.status,expected');
 for(const specs of V.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 for(const [name,label] of [
   ['missing-thumb-aria-label','React with thumbs up'],['missing-picker-aria-label','Add reaction'],
@@ -192,7 +221,7 @@ export function mutationTarget(caseName,variant) {
 }
 export function rejectionEvidence(caseName,variant,probe,error) {
   const expected=mutationTarget(caseName,variant),frames=assertionFrames(error);
-  const matched=expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor)));
+  const matched=expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor))&&(!target.phase||frames.some(frame=>frame.module===target.phase.module&&frame.source.includes(target.phase.anchor))));
   const reasons=[];
   if(!probe.ready) reasons.push('startup failed');
   if(!probe.applied) reasons.push('mutation not served');
@@ -203,6 +232,7 @@ export function rejectionEvidence(caseName,variant,probe,error) {
   if(probe.observers?.length&&!probe.observed?.length) reasons.push('mutated DOM state not encountered');
   if(probe.requiredAction&&!probe.observed?.some(state=>state.action===probe.requiredAction.action&&state.target===probe.requiredAction.target)) reasons.push('mutated action not encountered');
   if(probe.requiresReleaseClick&&!probe.observed?.some(state=>state.releaseClick&&state.brokenGuard&&state.menuVisible)) reasons.push('mutated release click not encountered');
+  if(probe.requiredMessageText&&!probe.observed?.some(state=>state.messageText===probe.requiredMessageText&&(state.opacity==='0'||state.visibility==='hidden'||state.display==='none'))) reasons.push('intended message mutation state not encountered');
   if(probe.requiresHiddenState&&!probe.observed?.some(state=>state.opacity==='0'||state.visibility==='hidden'||state.display==='none')) reasons.push('hidden mutation state not encountered');
   return {valid:reasons.length===0,reasons,expected,actual:frames,observed:probe.observed||[]};
 }

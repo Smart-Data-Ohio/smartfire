@@ -3,10 +3,56 @@
 kind = ARGV.fetch(0)
 # The production parity seed has many extra provider/state examples. The
 # pinned list regressions use just the three original Designers fixtures.
-if %w[message_list message_destinations history boosts toolbar interactions actions-mobile thread-pr].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-") || kind.start_with?("highlight")
+if %w[workspace-upload message_list message_destinations history boosts toolbar interactions actions-mobile thread-pr].include?(kind) || kind.start_with?("unread-") || kind.start_with?("composer-") || kind.start_with?("highlight")
   Room.find(654632876).root_messages.where.not(id: [309456473, 908005739, 607264868]).destroy_all
 end
 case kind
+when "mobile-layout"
+  # MobileLayoutTest signs in JZ from the ordinary fixtures, which contain no
+  # enrolled credential or remembered device. The rich parity seed adds both
+  # for authentication coverage; remove just those unrelated extras here.
+  user=User.find(773523953)
+  user.two_factor_credential&.destroy!
+  TwoFactorRememberedDevice.where(user:).destroy_all
+when "board-touch"
+  user=User.find(773523953)
+  board=Rooms::Board.create_for({name:"Launch",creator:user},users:[user])
+  post=ChannelThread.create!(room:board,creator:user,name:"Ship it",work_status:"planned")
+  File.write(Rails.root.join("storage/db/browser-fixture.json"),JSON.generate(board_id:board.id,post_id:post.id))
+when "work-controller"
+  room=Room.find(654632876);creator=User.find(773523953)
+  thread=ChannelThread.create!(room:,creator:,name:"Design discussion")
+  ThreadMembership.join!(thread,creator)
+  scenario=ARGV[1].to_s
+  if scenario.start_with?("assigned owner", "only a thread manager")
+    thread.update!(work_status:"planned",work_owner_id:712064548)
+  elsif scenario.start_with?("the owner picker", "a member who")
+    thread.update!(work_status:"planned")
+  end
+  message=thread.messages.create!(room:,creator:,markdown_source:"Keep this history",client_message_id:"work-history")
+  metadata={thread_id:thread.id,history_message_id:message.id}
+  %w[eligible suspended outside reader botless].each do |kind|
+    bot=User.create_bot!(name:"#{kind.capitalize} Owner Agent")
+    metadata[:"#{kind}_id"]=bot.id
+    room.memberships.grant_to(bot) unless kind=="outside"
+    next if kind=="botless"
+    agent=bot.create_agent!(kind: :workspace,owner:User.find(127326141))
+    agent.update!(provider:"TestLab",description:"Does the work") if kind=="eligible"
+    AgentGrant.create!(agent:,room: kind=="outside" ? nil : room,granted_by:User.find(127326141),capability:kind=="reader" ? "read_messages" : "post_messages")
+    agent.suspend! if kind=="suspended"
+    metadata[:eligible_agent_id]=agent.id if kind=="eligible"
+  end
+  # A removed member retains their identity. This is the same inactive-owner
+  # state as :343's deactivate, without deactivating Kevin's test session.
+  revoked=User.create!(name:"Kevin",email_address:"revoked@fixtures.test",password:"test-password",role: :member)
+  revoked_thread=ChannelThread.create!(room:,creator:,name:"Revoked work owner",work_status:"planned")
+  room.memberships.grant_to(revoked)
+  revoked_thread.update_work!(actor:creator,work_owner_id:revoked.id)
+  revoked.deactivate
+  metadata[:revoked_thread_id]=revoked_thread.id
+  File.write(Rails.root.join("storage/db/browser-fixture.json"),JSON.generate(metadata))
+when "workspace-upload"
+  # The original workspace fixture has only the three root messages above.
 when "message_list"
   # No additional rows are needed.
 when "message_destinations"
@@ -79,12 +125,33 @@ when /^highlight/
   replacement = eval(source.match(/replacement = ("(?:[^"\\]|\\.)*")/m)[1])
   wait = File.read(Rails.root.join("storage/db/application-system-reference.rb")).match(/HIGHLIGHT_WAIT = (\d+)/)[1].to_i
   metadata = { samples: samples.to_a, literal_code_source: literal, code_source:, code_replacement: replacement, highlight_wait: wait }
-  if kind == "highlight-search"
+  if kind == "highlight-thread"
+    room=Room.find(654632876);author=User.find(773523953)
+    thread=ChannelThread.create!(room:,creator:author,name:"Code review")
+    ThreadMembership.join!(thread,author)
+    code='const greeting: string = "' + 'Hello '*40 + '";'
+    message=thread.messages.create!(room:,creator:author,markdown_source:"```ts\n#{code}\n```",client_message_id:"thread-code")
+    metadata[:code_thread_id]=thread.id;metadata[:code_thread_message_id]=message.id
+  elsif kind == "highlight-search"
     body = "HighlightSearchExample\n\n```javascript\nconst value = true;\n```"
     message = Room.find(654632876).messages.create!(creator: User.find(773523953), markdown_source: body, client_message_id: "highlight-search-example")
     metadata[:code_search_id] = message.id
   end
   File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(metadata))
+when "thread-anchor", "thread-anchor-race"
+  race = kind == "thread-anchor-race"
+  room = Room.find(654632876)
+  author = User.find(773523953)
+  thread = ChannelThread.create!(room:, creator: author, name: race ? "Anchored unread race" : "Shared anchor thread")
+  member = ThreadMembership.join!(thread, author)
+  count = race ? Message::PAGE_SIZE * 3 + 1 : Message::PAGE_SIZE * 2 + 5
+  first = count.seconds.ago
+  messages = count.times.map do |index|
+    thread.messages.create!(room:, creator: author, markdown_source: "#{race ? 'Anchored race' : 'Shared anchor'} post #{index}",
+      client_message_id: "#{kind}-#{index}", created_at: race ? first + index.seconds : Time.current)
+  end
+  member.update!(unread_at: nil)
+  File.write(Rails.root.join("storage/db/browser-fixture.json"), JSON.generate(thread_id: thread.id, anchor_id: messages[5].id, page_size: Message::PAGE_SIZE))
 when "thread-pr"
   message = Room.find(654632876).messages.create!(creator: User.find(773523953),
     markdown_source: "review https://github.com/rails/rails/pull/12", client_message_id: "system-discuss-flow")

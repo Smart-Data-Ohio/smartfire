@@ -1,10 +1,10 @@
 # WS8bm named Rails controller case inventory
 
-Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim that the cases are unimplemented. The report records independently executed Rust aggregate tests and Rails reference counts separately. 146 of 156 declarations have scoped evidence; the remaining 10 work declarations are blocked only on WS12. Entries with explicit evidence below are attributed; other entries still require case-level Rust attribution/signoff. 32 Drive declarations now have direct request/row and socket evidence in the root/thread matrix; the earlier 71 entries retain their scoped evidence. This records assertion scope, not new one-to-one Rust tests. No one-to-one port count is claimed. Behaviour browser execution has a separate 135-case named ledger in `ws8bm-system-cases.json`; no pixel sign-off is claimed.
+Pinned reference: `d7c7de92`. All 156 named declarations have scoped evidence; no owner-blocked controller declaration remains after the WS12 work/service merges. The ten new attributions use eight paired real HTTP checks and two Rails-derived direct-model regressions (see the continuation checkpoint in ws8bm-report.md). Earlier entries retain their stated request, response, persisted-row and socket scopes. This ledger records assertion attribution, not execution of all original Ruby controller files or 156 one-to-one Rust test functions. The verifier checks every name against the pin. Behaviour browser execution has a separate 135-case named ledger in `ws8bm-system-cases.json`; no pixel sign-off is claimed.
 
 ## test/controllers/messages_controller_test.rb
 
-56 named declarations have scoped Rust evidence below; WS8b-r and WS14e integration is merged. Reference execution counts are in the main report.
+56 named declarations have scoped Rust evidence below; WS8b-r and WS14e integration is merged. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - index returns the last page by default — WS8bm. Attributed to `messages::paging_tests::pages_match_rails_tuple_edges_formats_and_etag_bytes` (complete pinned Rails page/response comparisons).
 - index is not found for a soft-deleted room — WS8bm. Attributed to `messages::http_tests::deleted_room_is_inaccessible_even_with_a_lingering_membership` (actual requests with retained membership).
@@ -64,7 +64,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - system note actions report no edit or delete — WS8bm. Attributed to `messages::root_tests::actions_match_rails_for_two_members_without_shared_viewer_state` (complete actions JSON for two viewers includes the system-note fixture).
 ## test/controllers/messages_drive_attachments_test.rb
 
-19 named declarations; all have scoped Rust evidence below. Reference execution counts are in the main report.
+19 named declarations; all have scoped Rust evidence below. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - create with drive_file_ids stores them in order — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
 - create with attachments and no text is valid — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
@@ -88,7 +88,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/messages/cached_fragment_csrf_test.rb
 
-4 named declarations have scoped cache/security evidence through the merged room shell and all six forms. Reference execution counts are in the main report.
+4 named declarations have scoped cache/security evidence through the merged room shell and all six forms. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - a cached message page serves no viewer's tokens to the next — WS8bm. `messages::csrf_tests::cached_pages_refreshes_and_thread_pages_reuse_tokenless_fragments_across_sessions`: actual two-viewer HTTP, pointer-identical cache hits, exact Rails reaction/legacy/poll/GitHub fragments, no session-bound values. Production token-leak mutation rejected.
 - a cached refresh serves no viewer's tokens to the next — WS8bm. Same actual two-viewer refresh/cache/byte assertions in `messages::csrf_tests`.
@@ -97,14 +97,14 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/messages/legacy_presentation_cache_test.rb
 
-2 named declarations; both have scoped Rust evidence below. Reference execution counts are in the main report.
+2 named declarations; both have scoped Rust evidence below. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - fragments cached before the autolink fix aren't served after it — WS8bm. `messages::declaration_tests::legacy_v2_fragment_and_page_validators_cannot_serve_the_vulnerable_autolink_render`: store the real vulnerable Rails v2 fragment in the actual cache; exact safe v3 bytes are rendered instead.
 - pages validated before the autolink fix aren't revalidated after it — WS8bm. Same legacy-cache regression: actual requests with old ETag and Last-Modified return 200 with the exact Rails validator and safe fragment.
 
 ## test/controllers/messages/boosts_controller_test.rb
 
-17 named declarations have scoped Rust evidence below; complete merged room/browser signoff remains pending. Reference execution counts are in the main report.
+17 named declarations have scoped Rust evidence below; complete merged room/browser signoff remains pending. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - create — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
 - destroy — WS8bm. Attributed to `messages::boosts_tests::modern_boosts_match_rails_toggle_coercion_duplicate_and_destroy_rows` and `channels::tests::hub_test::message_parity::modern_reaction_replacements_match_rails_bytes_through_ws7` (46 HTTP response/persisted-row scenarios and 44 complete reaction frames, including icon aliases, duplicate removal, trailing space and multicodepoint pairs).
@@ -125,7 +125,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - the reaction tooltip lists reactors as plain text, never interactive content — WS8bm; the same test's complete `index_hostile_name` component escapes an interactive-looking reactor name. Merged room HTTP/browser signoff remains pending; this component comparison alone is not that signoff.
 ## test/controllers/channel_threads_controller_test.rb
 
-24 named declarations; 14 have scoped Rust evidence below; the remaining 10 work declarations are blocked on WS12. Reference execution counts are in the main report.
+24 named declarations; all have scoped Rust evidence below after the WS12 work/service merges. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - creation accepts nested thread message parameters and joins only the creator — WS8bm. Attributed to `channel_threads::write_tests::lifecycle_actions_match_rails_responses_and_atomic_rows` (nested_create request and complete persisted members/messages match Rails).
 - retried creation with the same first-message client id returns the existing thread — WS8bm. Attributed to `messages::review_tests::scalar_retry_paths_match_rails_bytes_and_rows`: complete responses/rows for true, false, numeric, string and blank IDs; actual pinned Rails oracle.
@@ -141,19 +141,19 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - closed listing finds stale threads in SQL with one threads query — WS8bm. `channel_threads::declaration_tests::closed_listing_uses_one_thread_query_including_locked_and_stale_without_writes`: actual seeded HTTP/rows and per-database reader SQL capture. Closed JSON is byte-identical to the pinned Rails request oracle. Index growth regression failed 33 versus 69 queries before batching; see report for current verification.
 - a deleted starter is represented explicitly so open clients clear its preview — WS8bm. Attributed to `channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes` (show_deleted_parent exact JSON and complete owned HTML body).
 - content anchors only a message in the requested thread — WS8bm. Attributed to `channel_threads::content_tests::content_scopes_room_and_anchor_without_joining_and_denies_bots` (HTTP cross-thread/cross-room anchors denied and membership unchanged).
-- converts a thread to work, assigns an eligible owner, and keeps an audit trail — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- assigned owner can change work status but cannot reassign it — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- only a thread manager can remove work tracking — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- the work model also protects conversion when the owner field is omitted — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- work status updates from separate stale instances produce one event per real change — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- a manager can assign an eligible agent and the agent is notified — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- the owner picker lists eligible agents with profiles and excludes ineligible ones — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- a member who cannot manage the thread cannot assign an agent — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
-- ordinary thread fields remain separate from work tracking — WS12 / WS11; WS8bm HTTP seam. BLOCKED on WS12 work/board controller implementation (flagged 501; no pass claim).
+- converts a thread to work, assigns an eligible owner, and keeps an audit trail — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
+- work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
+- assigned owner can change work status but cannot reassign it — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
+- only a thread manager can remove work tracking — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
+- the work model also protects conversion when the owner field is omitted — WS12 implementation / WS8bm attribution. `work_mutations_test::message_controller_model_refuses_untracking_with_owner_omitted_like_rails` compares the actual Forbidden result and unchanged status/owner/event rows with pinned Rails callbacks; a real omitted-owner guard mutant fails this test.
+- work status updates from separate stale instances produce one event per real change — WS12 implementation / WS8bm attribution. `work_mutations_test::message_controller_separate_stale_work_changes_match_rails_history` compares independently loaded instances, the exact global two-event delta (Rails :404), and ordered event actors/types/before/after status with pinned Rails callbacks; real stale-instance and foreign-thread-event producer mutants fail this test.
+- a manager can assign an eligible agent and the agent is notified — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
+- the owner picker lists eligible agents with profiles and excludes ineligible ones — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
+- a member who cannot manage the thread cannot assign an agent — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
+- ordinary thread fields remain separate from work tracking — WS12 implementation / WS8bm attribution. `behavior-work-controllers.mjs` and `behavior_work_rows.py`: the exact named paired check uses authenticated, real-CSRF HTTP on both apps, the original JSON/status assertions, global work-event snapshots before/after every PATCH (including refusals), the original work-history client-ID lookup/identity, and persisted work/history/agent-event rows. Fresh-clone evidence and fixture differences are in the continuation checkpoint of ws8bm-report.md.
 ## test/controllers/channel_thread_messages_controller_test.rb
 
-12 named declarations; all have scoped Rust controller/publisher evidence below; merged room-shell destination rendering remains an integration check. Reference execution counts are in the main report.
+12 named declarations; all have scoped Rust controller/publisher evidence below; merged room-shell destination rendering remains an integration check. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - a post joins and reopens an unlocked closed thread atomically — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (post request; exact joined/closed/message-count state).
 - locked threads block every edit and post while delete stays author-or-admin — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (locked_post, locked_update and locked_delete exact responses and rows).
@@ -169,7 +169,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - thread system notes cannot be edited or deleted — WS8bm. Attributed to `channel_thread_messages::write_tests::thread_writes_match_rails_rows_retries_drive_sets_locks_and_response_bytes` (note_update/note_delete exact Rails refusals; rows retained).
 ## test/controllers/channel_thread_messages_drive_attachments_test.rb
 
-13 named declarations; all have scoped Rust evidence below. Reference execution counts are in the main report.
+13 named declarations; all have scoped Rust evidence below. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - create with drive_file_ids stores them and reports them in JSON — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
 - create with attachments and no text is valid — WS8bm. Attributed to `messages::drive_tests::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback` (30 exact primary responses and row deltas; additional member-role refusals; complete show/edit bytes, live generic chips and consent-independent markup).
@@ -187,7 +187,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 
 ## test/controllers/message_forwards_controller_test.rb
 
-7 named declarations; all have scoped Rust evidence below. WS12 still owns board panes. Reference execution counts are in the main report.
+7 named declarations; all have scoped Rust evidence below. WS12 still owns board panes. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - destinations returns reachable rooms and unlocked threads without caching — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (destinations/global_destinations exact body and no-store response).
 - nested destination endpoint supports a thread message — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (nested_destinations exact response body/headers).
@@ -198,7 +198,7 @@ Pinned reference: `d7c7de92`. This is a case attribution backlog, not a claim th
 - destinations cost a constant number of queries as reachable rooms grow — WS8bm. `message_forwards_tests::forward_picker_excludes_boards_names_directs_and_keeps_query_count_constant`: actual direct-room label and isolated reader-query capture before/after six reachable rooms with threads; existing complete Rails picker bytes retained.
 ## test/controllers/message_forward_sources_controller_test.rb
 
-2 named declarations have scoped Rust evidence below. Reference execution counts are in the main report.
+2 named declarations have scoped Rust evidence below. Named scope and current differential/browser receipts are in the main report; it distinguishes fresh checks from retained earlier evidence.
 
 - source endpoint is no-store and keeps inaccessible source identity out of the response — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (source_inaccessible complete response/no-store after removing source membership).
 - source endpoint returns only the canonical URL to a viewer who still has access — WS8bm. Attributed to `message_forwards_tests::pickers_refusals_and_private_source_urls_match_rails_bytes` (source_visible/source_global/nested_source complete JSON and cache headers).
