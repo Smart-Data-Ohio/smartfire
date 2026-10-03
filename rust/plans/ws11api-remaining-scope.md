@@ -1,7 +1,7 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-4` after merging main `699ea1c4a`, including #216.
-#206, #209, #212 and #214 are also included. Open #215 was not merged or used as a dependency. The pinned Rails reference remains `d7c7de92`. This is an implementation audit
+Updated on `rust/ws11api-next-4` after merging main `1d3b69b8f`, including #216 and the subsequent #215 merge.
+#206, #209, #212 and #214 are also included. #215 merged while this round was verifying. Its 16 comparisons and Recorder read-cost review remain deferred as requested for this WS8-only follow-up. The pinned Rails reference remains `d7c7de92`. This is an implementation audit
 and an exact named-case ledger, not a claim that every possible input is tested.
 
 ## Implementation status
@@ -77,7 +77,7 @@ The pinned domain inventory has 378 cases in 26 files. The previous ledger was
 | Previously deferred group | Fresh evidence on main | Still deferred |
 | --- | --- | --- |
 | 34 WS8 built-in commands | All 35 built-in cases freshly executed in Rails; 63 observations byte-identical to the owner vectors; 34 newly mapped names | 0 |
-| 16 WS12 owner eligibility/work mutation cases | Named-case integration remains in review | 16, owner WS12, PR #215 |
+| 16 WS12 owner eligibility/work mutation cases | PR #215 merged during verification; separate fresh replay/mapping remains outside this round | 16, owner WS12 |
 
 The ledger is now **362 comparisons, 16 deferred**. The already mapped OOO
 badge/notice case is replayed but counted only once. The 34 newly mapped names
@@ -103,13 +103,13 @@ The array lookup sweep additionally fixes thread/cursor/reaction N+1 lookups,
 preserves Rails' global/scoped selection and permission order, and handles
 40,000 candidates with one JSON bind. All WS11-owned named comparisons are now
 closed. **Only peer-owned evidence remains**; none is called an unmerged service
-blocker. The remaining owner test integration awaits #215. The exact remaining names follow.
+blocker. The remaining owner comparisons come from newly merged #215 and await a separate fresh Rails replay/mapping round. The exact remaining names follow.
 
 ### test/models/channel_thread_agent_assignment_test.rb
 
-Owner: WS12 eligibility/mutation named comparisons, open PR #215; WS11 agent callbacks are complete.
+Owner: WS12 eligibility/mutation named comparisons, merged PR #215; WS11 agent callbacks are complete.
 
-Reason: WS12 owns these eight owner-eligibility/viewer and eight mutation/validation named comparisons in #215; its Recorder read costs stay with that owner. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
+Reason: these eight owner-eligibility/viewer and eight mutation/validation comparisons remain deferred by the requested scope. #215 merged during verification and is included through main; its new named tests are not mapped here without a separate fresh Rails replay. Recorder read-cost review stays with WS12. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
 
 - an active member agent with post_messages is an eligible work owner
 - a legacy agent keeps post eligibility through the fallback
@@ -138,11 +138,10 @@ identity/hop/actor facts, eligibility reads and post-insert/update ledger reload
 Complete current authorization and fresh private-account sealing remain. Query
 growth stays flat at 5/50 owned rows; exact before/after totals are recorded in
 ws11api-next-3-report.md. Required WS11 auth, response and event reads remain;
-those costs are not assigned to peers. The largest remaining fixed gap is inside
+those costs are not assigned to peers. At the preceding API checkpoint, the largest fixed gap was inside
 WS12's `agent_work::{find_owned,writable,update_work,set_result,handoff_work}`,
 `ChannelThread::{create_board_post,update_work,update_result}` and their after-commit
 board rendering. They repeat thread/room/owner membership/capability reads and complete
-board render preloads per callback. WS12 owns those service/read-boundary optimizations;
-this branch names them without changing their transaction or policy contract.
+board render preloads per callback. WS12 owns those service/read-boundary optimizations; #215 now includes owner read-cost work. This round does not independently reassess those costs or change the transaction/policy contract.
 `work_threads.rs` and `presenters/boards.rs` remain untouched. WS15g/WS15e retain external
 GitHub/Fizzy clients and account authorization. WS11-ui owns account/agent HTML pages.
