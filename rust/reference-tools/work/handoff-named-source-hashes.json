@@ -1,0 +1,6 @@
+{
+  "test/models/channel_thread_handoff_test.rb": "524a427f7f32702f0d3688ab5b2ef090c645914fbfa199ca24182aceadfb4238",
+  "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
+  "app/models/work_handoff.rb": "3fd8c5af4ef8dff0945d1b5a114ffd5788debf11c06c70fca3a8d15d39f35ab2",
+  "app/models/work_thread_event.rb": "d6b62b3f5bab3141a3284be84b5ad387a127430754b880fb7db0aa0a6b430c19"
+}
