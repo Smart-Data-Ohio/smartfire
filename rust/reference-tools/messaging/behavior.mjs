@@ -43,8 +43,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
     if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
       await nativePhone(base);return;
     }
-    if(caseName===NATIVE_MOTION_CASE&&!negative&&!selectedMutant) {
-      await nativeMotion(base);return;
+    if(caseName===NATIVE_MOTION_CASE) {
+      await nativeMotion(base,probe,negative||!!selectedMutant);return;
     }
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
@@ -540,7 +540,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
   } catch(error) {
     console.error('WS8bm failed application:',base,caseName);
-    probe.observed=(await Promise.all((probe.observers||[]).map(observe=>observe()))).flat();
+    probe.observed=[...(probe.observed||[]),...(await Promise.all((probe.observers||[]).map(observe=>observe()))).flat()];
     if(caseName==='discusses a pull request from its card') {
       for(const context of contexts) for(const page of context.pages()) {
         console.error('WS8bm discussion diagnostic:',JSON.stringify({url:page.url(),threadResponses,

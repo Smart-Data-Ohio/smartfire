@@ -14,8 +14,11 @@ Capybara.default_max_wait_time = 2
 Capybara.app_host = ENV.fetch("WS8BM_NATIVE_BASE")
 Capybara.register_driver :ws8bm_native_phone do |app|
   options = Selenium::WebDriver::Chrome::Options.new
+  options.add_option("goog:loggingPrefs", {browser: "ALL"})
   options.binary = "/usr/lib/chromium/chromium"
   %w[--headless=new --ozone-platform=headless --no-sandbox --disable-dev-shm-usage --mute-audio --window-size=1400,1400].each { |arg| options.add_argument(arg) }
+  options.add_argument("--proxy-server=#{ENV.fetch("WS8BM_NATIVE_PROXY")}") if ENV["WS8BM_NATIVE_PROXY"]
+  options.add_argument("--proxy-bypass-list=<-loopback>") if ENV["WS8BM_NATIVE_PROXY"]
   Capybara::Selenium::Driver.new(app, browser: :remote, url: "http://127.0.0.1:52023", options: options)
 end
 Capybara.default_driver = :ws8bm_native_phone
@@ -24,11 +27,19 @@ class Ws8bmNativePhoneTest < Minitest::Test
   include Capybara::Minitest::Assertions
   include SystemTestHelper
   def setup
+    if ENV["WS8BM_NATIVE_PROXY"]
+      # Match translated served negatives: fetch the real mutated assets,
+      # never a service-worker cache. Positive native controls retain it.
+      driver=page.driver.browser
+      driver.extend(Selenium::WebDriver::DriverExtensions::HasCDP) unless driver.respond_to?(:execute_cdp)
+      driver.execute_cdp("Network.setBypassServiceWorker", bypass: true)
+    end
     visit Capybara.app_host + "/up"
     cookie = JSON.parse(File.read("/proof/sessions.json"))["sessions"].find { |entry| entry["user_name"] == "JZ" }["cookie_header"]
     name, value = cookie.split("=", 2)
     page.driver.browser.manage.add_cookie(name: name, value: value, path: "/")
-    visit Capybara.app_host + "/rooms/654632876"
+    location = JSON.parse(File.read("/proof/native-location.json"))
+    visit Capybara.app_host + (location["label"] == "motion" ? "/rooms/201306877" : "/rooms/654632876")
     assert_selector "#composer", wait: 15
     page.document.synchronize(15) do
       raise Capybara::ExpectationNotMet, "Stimulus startup" unless page.evaluate_script('!!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById("composer"),"composer")')
@@ -51,6 +62,22 @@ class Ws8bmNativePhoneTest < Minitest::Test
     JS
   end
   def teardown
+    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "motion"
+      begin
+        begin
+          driver=page.driver.browser
+          driver.extend(Selenium::WebDriver::DriverExtensions::HasLogs) unless driver.respond_to?(:logs)
+          puts "WS8bm native browser logs: #{JSON.generate(driver.logs.get(:browser).map { |entry| {level: entry.level, message: entry.message} })}"
+        rescue StandardError => error
+          puts "WS8bm native log diagnostic failure: #{error.class}: #{error.message}"
+        end
+        state=page.evaluate_script('(() => { const surface=document.querySelector("#sidebar .sidebar__container"); return {room:location.pathname,open:document.querySelector("#sidebar")?.classList.contains("open"),duration:surface?getComputedStyle(surface).transitionDuration:null,transform:surface?getComputedStyle(surface).transform:null}; })()')
+        puts "WS8bm native mutation state: #{JSON.generate(state)}"
+      rescue StandardError => error
+        puts "WS8bm native diagnostic failure: #{error.class}: #{error.message}"
+      end
+      puts "WS8bm native failures: #{JSON.generate(failures.map { |failure| {assertion: failure.is_a?(Minitest::Assertion),message: failure.message,backtrace: failure.backtrace} })}"
+    end
     puts "WS8bm native phone event trace #{Capybara.app_host}: #{JSON.generate(page.evaluate_script('window.__ws8bmPhoneTrace||[]'))}"
   ensure
     Capybara.reset_sessions!

@@ -210,17 +210,21 @@ if args.mutant:
     env["WS8BM_MUTANT"] = args.mutant
 else:
     env.pop("WS8BM_MUTANT", None)
+browser_image = "ws8bm-browser-reference-d7c7de92"
+subprocess.run(["docker", "build", "--build-context", f"current_schema={ROOT / 'db'}", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/messaging/browser.Dockerfile"), "-t", browser_image, str(RUST)], cwd=ROOT, check=True)
+env["PARITY_IMAGE"] = browser_image
 subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"], cwd=ROOT, env=env, check=True)
-subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
-subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
-subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
+# Build every host this invocation uses, including on a cold target. A
+# paused-only case uses TestApp's real binary and needs no second app build.
 # Preserve continuation's upload boundary as well as URL/PR jobs.
 paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable", "workspace follows the system theme and mobile navigation remains reachable"}
 needs_paused_jobs=not args.slice and any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
+selected_names=[name for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case]
+if args.slice or any(name not in paused_job_cases for name in selected_names):
+    subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 test_host=build_host(ROOT,env) if needs_paused_jobs else None
-browser_image = "ws8bm-browser-reference-d7c7de92"
-subprocess.run(["docker", "build", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/messaging/browser.Dockerfile"), "-t", browser_image, str(RUST)], cwd=ROOT, check=True)
-env["PARITY_IMAGE"] = browser_image
+subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
+subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
 visibility_atom = subprocess.check_output([
     "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
     "exec", "ruby", "-rselenium-webdriver", "-e",

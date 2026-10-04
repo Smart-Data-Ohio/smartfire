@@ -9,6 +9,6 @@ export function extractMotion(source) {
   assert.ok(start>=0&&end>start&&helpers>end,'pinned motion source boundaries');
   return {body:source.slice(start,end).replace(`test "${NATIVE_MOTION_CASE}" do`,'def test_phone'),helpers:source.slice(helpers,source.lastIndexOf('\nend'))};
 }
-export async function nativeMotion(base) {
-  await nativePhone(base,{sourcePath:'test/system/motion_test.rb',extract:extractMotion,line:26,label:'motion'});
+export async function nativeMotion(base,probe={},mutated=false) {
+  await nativePhone(base,{sourcePath:'test/system/motion_test.rb',extract:extractMotion,line:26,label:'motion',probe,...(mutated?{mutation:['messages-','.message__quick-reaction {','#sidebar .sidebar__container { transition-duration: 0s !important; }\n.message__quick-reaction {']}: {})});
 }
