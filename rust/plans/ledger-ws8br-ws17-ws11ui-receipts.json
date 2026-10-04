@@ -556,17 +556,6 @@
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
     },
     {
-      "id": "P0154",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "test": "profile shows the meeting fetch notice when a refresh failed",
-      "rust_tests": [
-        "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
-      "assertion_count": 2,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
       "id": "P0155",
       "file": "test/controllers/users/profiles_controller_test.rb",
       "test": "profile asks to reconnect for meeting status left on after disconnect",
@@ -674,18 +663,6 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0164",
       "assertion_count": 3,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
-      "id": "P0165",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "test": "profile shows the connected account with a disconnect button",
-      "rust_tests": [
-        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-        "controllers::users::profile_sections_tests::calendar_only"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
-      "assertion_count": 2,
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
     },
     {
@@ -807,17 +784,6 @@
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
     },
     {
-      "id": "P0176",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "test": "linking a github login strips and downcases it",
-      "rust_tests": [
-        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
-      "assertion_count": 2,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
       "id": "P0177",
       "file": "test/controllers/users/profiles_controller_test.rb",
       "test": "a github login cannot be claimed by a second user",
@@ -917,17 +883,6 @@
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
     },
     {
-      "id": "P0186",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "test": "clearing a github login unlinks it",
-      "rust_tests": [
-        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
-      "assertion_count": 2,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
       "id": "P0187",
       "file": "test/controllers/users/profiles_controller_test.rb",
       "test": "changing email requires the current password",
@@ -957,28 +912,6 @@
         "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0189",
-      "assertion_count": 3,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
-      "id": "P0190",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "test": "changing email with the current password records a self-change",
-      "rust_tests": [
-        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
-      "assertion_count": 3,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
-      "id": "P0191",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "test": "other profile edits and case-only email edits need no password and record nothing",
-      "rust_tests": [
-        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
       "assertion_count": 3,
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
     },
@@ -1246,17 +1179,6 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0101",
       "assertion_count": 6,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
-      "id": "P0102",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "test": "configured installation names the operator and contact",
-      "rust_tests": [
-        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
-      "assertion_count": 5,
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
     },
     {
@@ -1786,17 +1708,6 @@
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0275",
       "assertion_count": 5,
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
-    },
-    {
-      "id": "P0276",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "test": "service worker fetch and notification logic",
-      "rust_tests": [
-        "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
-      ],
-      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
-      "assertion_count": 2,
-      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
     }
   ],
   "review240_assertion_tests": [
@@ -1914,5 +1825,21 @@
       "source_bytes_restored": true,
       "restored_baseline_summary": "Summary [   2.877s] 5 tests run: 5 passed, 2853 skipped"
     }
-  }
+  },
+  "history": [
+    {
+      "date": "2026-10-04",
+      "previous_broad_closed_count": 129,
+      "reopened_original_ids": [
+        "P0102",
+        "P0154",
+        "P0165",
+        "P0176",
+        "P0186",
+        "P0190",
+        "P0191",
+        "P0276"
+      ]
+    }
+  ]
 }

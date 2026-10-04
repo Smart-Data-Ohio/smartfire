@@ -1461,6 +1461,70 @@
       "line": 153,
       "test": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
       "ledger": "rust/plans/ws8br-rails-cases.json"
+    },
+    {
+      "id": "P0102",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "line": 165,
+      "test": "configured installation names the operator and contact",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus."
+    },
+    {
+      "id": "P0154",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 73,
+      "test": "profile shows the meeting fetch notice when a refresh failed",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE."
+    },
+    {
+      "id": "P0165",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 189,
+      "test": "profile shows the connected account with a disconnect button",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test."
+    },
+    {
+      "id": "P0176",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 303,
+      "test": "linking a github login strips and downcases it",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value."
+    },
+    {
+      "id": "P0186",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 398,
+      "test": "clearing a github login unlinks it",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login."
+    },
+    {
+      "id": "P0190",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 432,
+      "test": "changing email with the current password records a self-change",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value."
+    },
+    {
+      "id": "P0191",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 442,
+      "test": "other profile edits and case-only email edits need no password and record nothing",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "The security corpus checks Submitted name rather than the original Dave name."
+    },
+    {
+      "id": "P0276",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "line": 50,
+      "test": "service worker fetch and notification logic",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
     }
   ],
   "ws8br_sidebar_original_receipts": [
@@ -1793,6 +1857,21 @@
         "P0273",
         "P0274",
         "P0275",
+        "P0276"
+      ]
+    },
+    {
+      "date": "2026-10-04",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+      "assertion_audit": "399 sites; reopened eight insufficient original receipts",
+      "reopened_original_ids": [
+        "P0102",
+        "P0154",
+        "P0165",
+        "P0176",
+        "P0186",
+        "P0190",
+        "P0191",
         "P0276"
       ]
     }

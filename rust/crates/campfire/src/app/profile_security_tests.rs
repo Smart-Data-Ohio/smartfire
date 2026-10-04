@@ -214,10 +214,19 @@ async fn profile_guard_fields_errors_and_security_writes_match_pinned_rails() {
                     .header("x-forwarded-for", "127.0.0.1"),
             )
             .await;
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&page.text()).unwrap();
+        let password_fields = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|id| {
+                dom.name(*id) == "input" && dom.attr(*id, "name") == Some("user[current_password]")
+            })
+            .count();
         assert_eq!(
-            page.text().contains("id=\"user_current_password\""),
-            name != "passwordless",
-            "{name}"
+            password_fields,
+            usize::from(name != "passwordless"),
+            "{name}: exact password field selector"
         );
         let mut request = Req::new(Method::PATCH, "/users/me/profile")
             .header("user-agent", CHROME)
@@ -252,9 +261,19 @@ async fn profile_guard_fields_errors_and_security_writes_match_pinned_rails() {
             response.text()
         );
         if response.status == StatusCode::FOUND {
-            assert_eq!(response.location(), Some("http://campfire.test/users/me/profile"), "{name}");
+            assert_eq!(
+                response.location(),
+                Some("http://campfire.test/users/me/profile"),
+                "{name}"
+            );
         }
         let saved = a.db().read(|c| User::find(c, DAVID)).await.unwrap();
+        if name == "new_is_not_current" {
+            assert!(
+                saved.authenticate("secret123456"),
+                "existing password remains authenticatable after refused profile write"
+            );
+        }
         assert_eq!(json!(saved.email_address), case["email"], "{name}");
         assert_eq!(json!(saved.name), case["name"], "{name}");
         assert_eq!(json!(saved.bio), case["bio"], "{name}");

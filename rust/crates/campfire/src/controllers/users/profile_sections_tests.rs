@@ -88,6 +88,9 @@ async fn configured_calendar_profile_uses_real_account_metadata_and_forms() {
         let input = &case["input"];
         let connected = input["connected"] == true;
         let calendar = input["calendar"] == true;
+        if !(connected && calendar) {
+            assert!(fragment.contains("Connect Google Calendar"), "{}: original connect label", case["name"]);
+        }
         assert!(!fragment.contains("not configured"));
         assert_eq!(
             fragment.contains("Connected as fixture&lt;&amp;&gt;@example.test"),

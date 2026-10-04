@@ -265,3 +265,62 @@ Summary [   2.877s] 5 tests run: 5 passed, 2853 skipped
 The private validation clone, tool download and temporary control-output directories
 are removed after recording these summaries. Small raw logs remain in the worktree's
 untracked `.scratch/ledger-cutover-b/`; no test consumes them.
+
+## PR #244 assertion audit (current)
+
+Merged main at ea94edeaa, keeping the parent's e635996 fixes. The original 120
+Rails declarations and 399 assertion sites remain pinned to d7c7de92; runtime
+fixtures now use main's approved 78b9b1546 reference refresh. The complete human
+mapping is `ledger-ws8br-ws17-ws11ui-b-assertions.md`, generated from the audited
+JSON manifest. Every row points to the actual check, with the oracle case and
+observable value; original code and historical insufficient receipts are retained.
+
+112 declarations remain closed. Eight are reopened: P0102, P0154, P0165, P0176,
+P0186, P0190, P0191 and P0276. Their exact gaps are listed in the mapping and the
+remaining JSON. In particular, byte-identical service-worker source does not prove
+that a Node subprocess passed, and clearing an already-null login does not prove
+unlinking a linked account. The remaining broad inventory is now 216, not 208.
+
+The tests now check actual OAuth configuration, administrator/member roles,
+password authentication after a refused write, exact password-field selectors,
+connect-button labels, the typed notification read after save, and full layout
+meta selector values/cardinality. These are test-only changes. Complete existing
+byte and DOM comparisons remain in place.
+
+Validation (worktree baseline):
+
+```text
+     Summary [  17.014s] 29 tests run: 29 passed, 2829 skipped
+     Summary [   8.699s] 18 tests run: 18 passed, 2840 skipped
+```
+
+All eight affected Rails corpora regenerate byte-identically with zero differences.
+The mutation run temporarily changed 15 actual writers/readers/templates, with
+18 distinct credited tests. All failed at their intended checks; no compile or
+transport failure was accepted. The producer inputs were restored before the
+100-test baseline. Historical receipts above are unchanged.
+
+Commands executed from this worktree (CI=1, four test threads, approved pinned
+media runner; these are targeted runs, not a new full fresh-clone receipt):
+
+```sh
+python3 rust/reference-tools/check-controller-receipt-discrimination.py
+cargo nextest run --locked --workspace --exclude html5ever -j 4 -E "$(cat ../.scratch/ledger-audit/credited-expression)"
+python3 rust/reference-tools/check-controller-assertion-receipts.py --nextest-list .scratch/ledger-audit/list.json --native-log .scratch/ledger-audit/restored.log
+python3 rust/reference-tools/check-cutover-ledgers.py --nextest-list .scratch/ledger-audit/list.json --native-log .scratch/ledger-audit/restored.log
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+bash rust/ci/with-release-inputs.sh cargo build --locked --workspace --bins
+```
+
+Raw completed summary lines:
+
+```text
+Controller receipt discrimination: 15 actual producer defects rejected by 18 distinct tests; 0 invalid controls
+     Summary [  63.861s] 100 tests run: 100 passed (1 slow), 4881 skipped
+Controller per-assertion receipts: 120 audited declarations (112 closed, 8 reopened); 399 assertion sites; 70 enabled native test identities passed; 11 explicit reopened gaps; 0 unaccounted assertions
+Cutover current branch: 100 credited test identities passed in the supplied current workspace run
+Cutover ledger receipts: 25 historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; 121 broad WS8 closures; 1 approved queue supersession; 0 inconsistent records
+Cutover ledger remains partial: 216 broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 57s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 25s
+```

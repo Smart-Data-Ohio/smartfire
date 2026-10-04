@@ -79,6 +79,8 @@ mod tests {
         let Some(app) = TestApp::boot().await else {
             return;
         };
+        assert!(!app.booted.app.config.google_client.configured());
+        assert!(!app.booted.app.google.sign_in().config.configured());
         for ua in [
             "",
             "curl/8.0",

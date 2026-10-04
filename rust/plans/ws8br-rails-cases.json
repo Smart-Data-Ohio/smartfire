@@ -1568,7 +1568,7 @@
           "name": "configured installation names the operator and contact",
           "line": 165,
           "cutover_id": "P0102",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -1579,13 +1579,30 @@
                 "cutover_id": "P0102",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "configured installation names the operator and contact",
+                "line": 165,
+                "cutover_id": "P0102",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
+                "assertion_count": 5
+              },
+              "reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus."
             }
           ],
           "rust_tests": [
             "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
-          "assertion_count": 5
+          "assertion_count": 5,
+          "cutover_reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus."
         },
         {
           "name": "operator name is escaped and malicious contact email is dropped",
@@ -1683,7 +1700,7 @@
       "declared_count": 18,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "ported-current-assertion-receipts",
+      "status": "partial-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -3063,7 +3080,7 @@
           "name": "profile shows the meeting fetch notice when a refresh failed",
           "line": 73,
           "cutover_id": "P0154",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -3074,13 +3091,30 @@
                 "cutover_id": "P0154",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows the meeting fetch notice when a refresh failed",
+                "line": 73,
+                "cutover_id": "P0154",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
+                "assertion_count": 2
+              },
+              "reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE."
             }
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
-          "assertion_count": 2
+          "assertion_count": 2,
+          "cutover_reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE."
         },
         {
           "name": "profile asks to reconnect for meeting status left on after disconnect",
@@ -3316,7 +3350,7 @@
           "name": "profile shows the connected account with a disconnect button",
           "line": 189,
           "cutover_id": "P0165",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -3327,6 +3361,23 @@
                 "cutover_id": "P0165",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows the connected account with a disconnect button",
+                "line": 189,
+                "cutover_id": "P0165",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+                  "controllers::users::profile_sections_tests::calendar_only"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
+                "assertion_count": 2
+              },
+              "reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test."
             }
           ],
           "rust_tests": [
@@ -3334,7 +3385,8 @@
             "controllers::users::profile_sections_tests::calendar_only"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
-          "assertion_count": 2
+          "assertion_count": 2,
+          "cutover_reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test."
         },
         {
           "name": "profile offers a reconnect when Google rejected the connection",
@@ -3578,7 +3630,7 @@
           "name": "linking a github login strips and downcases it",
           "line": 303,
           "cutover_id": "P0176",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -3589,13 +3641,30 @@
                 "cutover_id": "P0176",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "linking a github login strips and downcases it",
+                "line": 303,
+                "cutover_id": "P0176",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
+                "assertion_count": 2
+              },
+              "reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value."
             }
           ],
           "rust_tests": [
             "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
-          "assertion_count": 2
+          "assertion_count": 2,
+          "cutover_reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value."
         },
         {
           "name": "a github login cannot be claimed by a second user",
@@ -3808,7 +3877,7 @@
           "name": "clearing a github login unlinks it",
           "line": 398,
           "cutover_id": "P0186",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -3819,13 +3888,30 @@
                 "cutover_id": "P0186",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "clearing a github login unlinks it",
+                "line": 398,
+                "cutover_id": "P0186",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
+                "assertion_count": 2
+              },
+              "reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login."
             }
           ],
           "rust_tests": [
             "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
-          "assertion_count": 2
+          "assertion_count": 2,
+          "cutover_reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login."
         },
         {
           "name": "changing email requires the current password",
@@ -3900,7 +3986,7 @@
           "name": "changing email with the current password records a self-change",
           "line": 432,
           "cutover_id": "P0190",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -3911,19 +3997,36 @@
                 "cutover_id": "P0190",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "changing email with the current password records a self-change",
+                "line": 432,
+                "cutover_id": "P0190",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
+                "assertion_count": 3
+              },
+              "reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value."
             }
           ],
           "rust_tests": [
             "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
-          "assertion_count": 3
+          "assertion_count": 3,
+          "cutover_reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value."
         },
         {
           "name": "other profile edits and case-only email edits need no password and record nothing",
           "line": 442,
           "cutover_id": "P0191",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -3934,13 +4037,30 @@
                 "cutover_id": "P0191",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "other profile edits and case-only email edits need no password and record nothing",
+                "line": 442,
+                "cutover_id": "P0191",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
+                "assertion_count": 3
+              },
+              "reason": "The security corpus checks Submitted name rather than the original Dave name."
             }
           ],
           "rust_tests": [
             "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
-          "assertion_count": 3
+          "assertion_count": 3,
+          "cutover_reason": "The security corpus checks Submitted name rather than the original Dave name."
         },
         {
           "name": "profile asks for the current password only when the account has one",
@@ -4201,7 +4321,7 @@
       "declared_count": 57,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "ported-current-assertion-receipts",
+      "status": "partial-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -5426,7 +5546,7 @@
           "name": "service worker fetch and notification logic",
           "line": 50,
           "cutover_id": "P0276",
-          "cutover_disposition": "ported-current-assertion-receipt",
+          "cutover_disposition": "acceptance-receipt-pending",
           "history": [
             {
               "date": "2026-10-04",
@@ -5437,19 +5557,36 @@
                 "cutover_id": "P0276",
                 "cutover_disposition": "acceptance-receipt-pending"
               }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "service worker fetch and notification logic",
+                "line": 50,
+                "cutover_id": "P0276",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
+                "assertion_count": 2
+              },
+              "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
             }
           ],
           "rust_tests": [
             "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
-          "assertion_count": 2
+          "assertion_count": 2,
+          "cutover_reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "ported-current-assertion-receipts",
+      "status": "partial-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -7274,7 +7411,7 @@
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
     "approved_queue_supersessions": 1,
     "sidebar_original_receipts_pending": 8,
-    "broad_original_receipts_pending": 208,
+    "broad_original_receipts_pending": 216,
     "geometry_only_excluded": 3,
     "partial": true,
     "broad_original_receipts_superseded": 9,
@@ -7312,7 +7449,7 @@
         }
       }
     ],
-    "broad_original_assertion_receipts": 120,
+    "broad_original_assertion_receipts": 112,
     "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md"
   }
 }

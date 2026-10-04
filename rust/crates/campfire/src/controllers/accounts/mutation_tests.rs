@@ -6,6 +6,12 @@ use campfire_db::{Account, User};
 #[tokio::test]
 async fn account_and_ban_mutations_authorize_before_writes_and_audits() {
     let app = TestApp::boot_frozen().await.expect("seed required");
+    assert!(
+        app.db()
+            .read(|conn| Ok(User::find(conn, KEVIN)?.is_member()))
+            .await
+            .unwrap()
+    );
     let mut member = app.sign_in(KEVIN).await;
     let (count, before_account, before_user) = app
         .db()
@@ -85,6 +91,12 @@ async fn account_mutations_and_audits_match_pinned_rails_http_vectors() {
 
 async fn run_mutation_cases(selected: Option<&str>) {
     let app = TestApp::boot_frozen().await.expect("seed required");
+    assert!(
+        app.db()
+            .read(|conn| Ok(User::find(conn, DAVID)?.is_administrator()))
+            .await
+            .unwrap()
+    );
     let cases: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../vectors/users_account_mutations.json"
     ))
@@ -94,7 +106,13 @@ async fn run_mutation_cases(selected: Option<&str>) {
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
         .await;
     assert_eq!(confirmed.status, StatusCode::FOUND);
-    for case in cases["cases"].as_array().unwrap().iter().chain(cases["deferred_agent_owner_cases"].as_array().unwrap()).filter(|case| selected.is_none_or(|name| case["name"] == name)) {
+    for case in cases["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(cases["deferred_agent_owner_cases"].as_array().unwrap())
+        .filter(|case| selected.is_none_or(|name| case["name"] == name))
+    {
         let setup = case.clone();
         let isolated_unban = matches!(selected, Some("unban_banned" | "deactivate_self"));
         let (old_code,active)=app.db().write(move |tx| {
@@ -132,10 +150,12 @@ async fn run_mutation_cases(selected: Option<&str>) {
             "{}",
             case["name"]
         );
-        let path=case["path"].as_str().unwrap();
-        let subject_id=if path.starts_with("/account/users/") || path.starts_with("/users/") {
-            path.split('/').find_map(|part|part.parse::<i64>().ok())
-        } else {None};
+        let path = case["path"].as_str().unwrap();
+        let subject_id = if path.starts_with("/account/users/") || path.starts_with("/users/") {
+            path.split('/').find_map(|part| part.parse::<i64>().ok())
+        } else {
+            None
+        };
         let owner_removed = case["name"] == "deactivate_self";
         let (state,rows)=app.db().read(move |conn|{
             if owner_removed {
@@ -157,11 +177,25 @@ async fn run_mutation_cases(selected: Option<&str>) {
         }).await.unwrap();
         assert_eq!(state, case["state"], "{}", case["name"]);
         if selected == Some("deactivate_self") {
-            assert_eq!(rows.len(), 2, "one agent suspension and one user deactivation audit");
-            assert_eq!(rows.iter().filter(|r| r["action"] == "user.deactivate").count(), 1);
-            assert_eq!(rows.iter().filter(|r| r["action"] == "agent.suspend").count(), 1);
+            assert_eq!(
+                rows.len(),
+                2,
+                "one agent suspension and one user deactivation audit"
+            );
+            assert_eq!(
+                rows.iter()
+                    .filter(|r| r["action"] == "user.deactivate")
+                    .count(),
+                1
+            );
+            assert_eq!(
+                rows.iter()
+                    .filter(|r| r["action"] == "agent.suspend")
+                    .count(),
+                1
+            );
         } else if selected.is_some() {
-            assert_eq!(rows.len(),1,"{}: exactly one audit row",case["name"]);
+            assert_eq!(rows.len(), 1, "{}: exactly one audit row", case["name"]);
         }
         assert_eq!(
             serde_json::json!(rows),

@@ -40,6 +40,9 @@ for record in records:
     for assertion in record['assertions']:
         assert assertion['rust_test'] in record['rust_tests']
         assert assertion['observation'] and assertion['checks']
+        if assertion.get('disposition') == 'missing-discriminating-assertion':
+            assert record['record_status'] == 'reopened' and assertion['historical_insufficient_receipt']
+            continue
         assert assertion['assertion_scope'], f"missing executed assertion scope: {assertion}"
         assert not assertion['assertion_anchor'].startswith(('fn ', 'async fn ')), f"function declaration is not assertion evidence: {assertion}"
         path, line = assertion['assertion_source'].rsplit(':', 1)
@@ -52,4 +55,6 @@ for record in records:
         assert name in passed, f'no actual pass receipt: {name}'
         credited.add(name)
     assertions += len(record['assertions'])
-print(f'Controller per-assertion receipts: {len(records)} original declarations; {assertions} assertion sites; {len(credited)} enabled native test identities passed; 0 missing receipts')
+closed = sum(r['record_status'] == 'closed' for r in records)
+gaps = sum(a.get('disposition') == 'missing-discriminating-assertion' for r in records for a in r['assertions'])
+print(f'Controller per-assertion receipts: {len(records)} audited declarations ({closed} closed, {len(records)-closed} reopened); {assertions} assertion sites; {len(credited)} enabled native test identities passed; {gaps} explicit reopened gaps; 0 unaccounted assertions')

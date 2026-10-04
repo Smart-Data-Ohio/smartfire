@@ -56,6 +56,61 @@ async fn check_cases(names: &[&str]) {
         let page = app.david().get("/users/me/profile").await;
         assert_eq!(page.status, axum::http::StatusCode::OK, "{name}");
         let body = page.text();
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&body).unwrap();
+        let nodes = dom.descendants(root);
+        let html_start = body.find("<html ").unwrap();
+        let html_end = html_start + body[html_start..].find('>').unwrap();
+        let html_tag = body[html_start..=html_end].replacen("<html", "<div", 1);
+        let mut html_dom = campfire_richtext::dom::Dom::new();
+        let html_root = html_dom.parse_fragment(&(html_tag + "</div>")).unwrap();
+        for (name, value) in [("data-theme", "theme"), ("data-text-size", "text_size")] {
+            assert_eq!(
+                html_dom
+                    .descendants(html_root)
+                    .into_iter()
+                    .filter(|id| html_dom.name(*id) == "div"
+                        && html_dom.attr(*id, name) == case["attributes"][value].as_str())
+                    .count(),
+                1,
+                "{name}: exact html selector"
+            );
+        }
+        let expected_meta = format!(
+            "{}{}{}",
+            case["sound_meta"].as_str().unwrap(),
+            case["drive_meta"].as_str().unwrap(),
+            case["time_zone_meta"].as_str().unwrap()
+        );
+        let mut expected_dom = campfire_richtext::dom::Dom::new();
+        let expected_root = expected_dom.parse_fragment(&expected_meta).unwrap();
+        for name in [
+            "notification-dnd",
+            "quiet-hours",
+            "quiet-hours-zone",
+            "meeting-quiet",
+            "ooo-quiet",
+            "google-drive-previews",
+            "current-user-time-zone",
+        ] {
+            let actual: Vec<_> = nodes
+                .iter()
+                .filter(|id| dom.name(**id) == "meta" && dom.attr(**id, "name") == Some(name))
+                .map(|id| dom.attr(*id, "content"))
+                .collect();
+            let expected: Vec<_> = expected_dom
+                .descendants(expected_root)
+                .into_iter()
+                .filter(|id| {
+                    expected_dom.name(*id) == "meta" && expected_dom.attr(*id, "name") == Some(name)
+                })
+                .map(|id| expected_dom.attr(id, "content"))
+                .collect();
+            assert_eq!(
+                actual, expected,
+                "{name}: exact meta selector values and cardinality"
+            );
+        }
         // ProfilesControllerTest's light theme also pins the exact color-scheme cardinality.
         if *name == "manual_dnd" {
             assert_eq!(

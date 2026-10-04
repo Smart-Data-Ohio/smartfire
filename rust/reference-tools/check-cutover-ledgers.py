@@ -73,7 +73,7 @@ if args.native_log:
     passed = set(re.findall(r'^\s*PASS\s+\[[^\]]+\]\s+\([^)]+\)\s+\S+\s+(\S+)', args.native_log.read_text(), re.M))
     credited = {r['test'] for r in receipts['ci_passes']} | {r['rust_test'] for r in changed if 'rust_test' in r} | new_tests | {r['test'] for r in receipts['review240_assertion_tests']}
     assert credited <= passed, f'credited current tests did not pass: {sorted(credited-passed)}'
-    print(f'Cutover current branch: {len(credited)} credited test identities passed in the fresh-clone workspace run')
+    print(f'Cutover current branch: {len(credited)} credited test identities passed in the supplied current workspace run')
 if args.browser_log:
     passed = set(re.findall(r'^\s*PASS\s+\[[^\]]+\]\s+\([^)]+\)\s+\S+\s+(\S+)', args.browser_log.read_text(), re.M))
     assert browser_tests <= passed, f'registered browser tests did not pass: {sorted(browser_tests-passed)}'
