@@ -9,6 +9,8 @@ pub(crate) mod boosts_tests;
 #[cfg(test)]
 mod upload_tests;
 #[cfg(test)]
+mod attachment_processing_tests;
+#[cfg(test)]
 mod review_tests;
 pub mod pins;
 pub mod by_bots;
