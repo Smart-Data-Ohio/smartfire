@@ -14,7 +14,9 @@ async fn boot() -> TestApp {
     // The request vectors were recorded with --freeze. A ticking seed clock adds
     // setup/scheduling time to relative expiries and makes them depend on CI load.
     let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
-        crate::controllers::presenters::test_support::SEED_NOW.parse().unwrap(),
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
     ));
     let app = TestApp::boot_with_clock(clock)
         .await
@@ -37,11 +39,23 @@ async fn ws17_status_fixture_freezes_request_database_and_transaction_clocks() {
     let expected = crate::controllers::presenters::test_support::SEED_NOW
         .parse::<jiff::Timestamp>()
         .unwrap();
-    assert_eq!(app.booted.app.clock.now(), expected, "request clock must match frozen Rails vectors");
-    assert_eq!(app.db().env().now(), Timestamp::from_jiff(expected), "database clock must match frozen Rails vectors");
+    assert_eq!(
+        app.booted.app.clock.now(),
+        expected,
+        "request clock must match frozen Rails vectors"
+    );
+    assert_eq!(
+        app.db().env().now(),
+        Timestamp::from_jiff(expected),
+        "database clock must match frozen Rails vectors"
+    );
     app.db()
         .write(move |tx| {
-            assert_eq!(tx.now(), Timestamp::from_jiff(expected), "transaction clock must match frozen Rails vectors");
+            assert_eq!(
+                tx.now(),
+                Timestamp::from_jiff(expected),
+                "transaction clock must match frozen Rails vectors"
+            );
             Ok(())
         })
         .await
@@ -63,6 +77,10 @@ impl Drop for Server {
     }
 }
 async fn subscribe(app: &TestApp) -> (Server, Client) {
+    subscribe_with_cookie(app, &david_cookie()).await
+}
+
+async fn subscribe_with_cookie(app: &TestApp, cookie: &str) -> (Server, Client) {
     let listener = bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = app.booted.router.clone();
@@ -77,7 +95,7 @@ async fn subscribe(app: &TestApp) -> (Server, Client) {
         .insert("origin", format!("http://{address}").parse().unwrap());
     request
         .headers_mut()
-        .insert("cookie", david_cookie().parse().unwrap());
+        .insert("cookie", cookie.parse().unwrap());
     request.headers_mut().insert(
         "sec-websocket-protocol",
         "actioncable-v1-json".parse().unwrap(),
@@ -330,7 +348,9 @@ async fn ws17_seeded_enabled_2fa_settings_errors_match_the_actual_rails_failure(
     // The request vectors were recorded with --freeze. A ticking seed clock adds
     // setup/scheduling time to relative expiries and makes them depend on CI load.
     let clock = std::sync::Arc::new(campfire_kit::clock::FrozenClock::new(
-        crate::controllers::presenters::test_support::SEED_NOW.parse().unwrap(),
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
     ));
     let app = TestApp::boot_with_clock(clock)
         .await

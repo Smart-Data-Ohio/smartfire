@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "now": 1790769600,
   "rows": [
     {
@@ -388,6 +388,72 @@
     },
     {
       "spec": {
+        "name": "delete_missing",
+        "operation": "delete",
+        "responses": [
+          [
+            404,
+            "{}"
+          ]
+        ],
+        "event_id": "missing-id"
+      },
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/missing-id",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::NotFound",
+        "message": "Google calendar entry not found",
+        "unavailable": false
+      },
+      "credentials": {
+        "access_token": "access-token",
+        "expires_at": 1790773200,
+        "disconnected_reason": null
+      }
+    },
+    {
+      "spec": {
+        "name": "delete_server_error",
+        "operation": "delete",
+        "responses": [
+          [
+            500,
+            "{}"
+          ]
+        ],
+        "event_id": "some-id"
+      },
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/calendar/v3/calendars/primary/events/some-id",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::Error",
+        "message": "Google Calendar request failed (500)",
+        "unavailable": false
+      },
+      "credentials": {
+        "access_token": "access-token",
+        "expires_at": 1790773200,
+        "disconnected_reason": null
+      }
+    },
+    {
+      "spec": {
         "name": "401_survives_refresh",
         "operation": "calendar",
         "responses": [
@@ -498,6 +564,39 @@
       "error": {
         "class": "Google::Client::Unavailable",
         "message": "Google token refresh failed (503)",
+        "unavailable": true
+      },
+      "credentials": {
+        "access_token": "access-token",
+        "expires_at": 1790766000,
+        "disconnected_reason": null
+      }
+    },
+    {
+      "spec": {
+        "name": "refresh_500",
+        "operation": "calendar",
+        "responses": [
+          [
+            500,
+            "boom"
+          ]
+        ],
+        "expired": true
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/token",
+          "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&refresh_token=refresh-token&grant_type=refresh_token",
+          "content_type": "application/x-www-form-urlencoded",
+          "access_token": null
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::Unavailable",
+        "message": "Google token refresh failed (500)",
         "unavailable": true
       },
       "credentials": {
@@ -652,7 +751,7 @@
         "responses": [
           [
             200,
-            "{\"files\":[]}"
+            "{\"files\":[{\"id\":\"1AbcDefGhIjKlMnOpQrSt\",\"name\":\"Q3 Planning\",\"mimeType\":\"application/vnd.google-apps.document\",\"modifiedTime\":\"2026-09-16T10:30:00.000Z\",\"owners\":[{\"displayName\":\"Riel\"}],\"webViewLink\":\"https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit\"},{\"id\":\"2BcdEfgHiJkLmNoPqRsTu\",\"name\":\"Budget 2026\",\"mimeType\":\"application/vnd.google-apps.spreadsheet\",\"modifiedTime\":\"2026-09-15T09:00:00.000Z\",\"owners\":[{\"displayName\":\"Jon\"}],\"webViewLink\":\"https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit\"}]}"
           ]
         ],
         "query": ""
@@ -667,7 +766,32 @@
         }
       ],
       "result": {
-        "files": []
+        "files": [
+          {
+            "id": "1AbcDefGhIjKlMnOpQrSt",
+            "name": "Q3 Planning",
+            "mimeType": "application/vnd.google-apps.document",
+            "modifiedTime": "2026-09-16T10:30:00.000Z",
+            "owners": [
+              {
+                "displayName": "Riel"
+              }
+            ],
+            "webViewLink": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit"
+          },
+          {
+            "id": "2BcdEfgHiJkLmNoPqRsTu",
+            "name": "Budget 2026",
+            "mimeType": "application/vnd.google-apps.spreadsheet",
+            "modifiedTime": "2026-09-15T09:00:00.000Z",
+            "owners": [
+              {
+                "displayName": "Jon"
+              }
+            ],
+            "webViewLink": "https://docs.google.com/spreadsheets/d/2BcdEfgHiJkLmNoPqRsTu/edit"
+          }
+        ]
       },
       "error": null,
       "credentials": {
@@ -861,6 +985,101 @@
     },
     {
       "spec": {
+        "name": "list_empty_pages_cap",
+        "operation": "pages",
+        "responses": [
+          [
+            200,
+            "{\"items\":[],\"nextPageToken\":\"more\"}"
+          ],
+          [
+            200,
+            "{\"items\":[],\"nextPageToken\":\"more\"}"
+          ],
+          [
+            200,
+            "{\"items\":[],\"nextPageToken\":\"more\"}"
+          ],
+          [
+            200,
+            "{\"items\":[],\"nextPageToken\":\"more\"}"
+          ]
+        ]
+      },
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-09-30T13%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-09-30T13%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken&pageToken=more",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-09-30T13%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken&pageToken=more",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        },
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-30T11%3A00%3A00Z&timeMax=2026-09-30T13%3A00%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken&pageToken=more",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": {
+        "items": []
+      },
+      "error": null,
+      "credentials": {
+        "access_token": "access-token",
+        "expires_at": 1790773200,
+        "disconnected_reason": null
+      }
+    },
+    {
+      "spec": {
+        "name": "list_events_window",
+        "operation": "pages",
+        "responses": [
+          [
+            200,
+            "{\"items\":[]}"
+          ]
+        ],
+        "time_min": "2026-09-23T09:30:00Z",
+        "time_max": "2026-09-24T10:30:00Z"
+      },
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/calendar/v3/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=2026-09-23T09%3A30%3A00Z&timeMax=2026-09-24T10%3A30%3A00Z&fields=items%28eventType%2Cstart%2Cend%2Cstatus%2Ctransparency%2Cattendees%28self%2CresponseStatus%29%29%2CnextPageToken",
+          "body": "",
+          "content_type": "application/json",
+          "access_token": "access-token"
+        }
+      ],
+      "result": {
+        "items": []
+      },
+      "error": null,
+      "credentials": {
+        "access_token": "access-token",
+        "expires_at": 1790773200,
+        "disconnected_reason": null
+      }
+    },
+    {
+      "spec": {
         "name": "list_events_429",
         "operation": "pages",
         "responses": [
@@ -968,27 +1187,63 @@
     },
     {
       "spec": {
-        "name": "exchange_success",
-        "operation": "exchange",
+        "name": "list_events_expired_revoked",
+        "operation": "pages",
         "responses": [
           [
-            200,
-            "{\"access_token\":\"disposable-exchange-token\",\"expires_in\":3600}"
+            400,
+            "{\"error\":\"invalid_grant\"}"
           ]
-        ]
+        ],
+        "expired": true
       },
       "requests": [
         {
           "method": "POST",
           "path": "/token",
-          "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&code=disposable-code&redirect_uri=http%3A%2F%2Ftest.host%2Fgoogle%2Fcallback&grant_type=authorization_code",
+          "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&refresh_token=refresh-token&grant_type=refresh_token",
+          "content_type": "application/x-www-form-urlencoded",
+          "access_token": null
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::Unauthorized",
+        "message": "Google rejected the refresh token",
+        "unavailable": false
+      },
+      "credentials": {
+        "access_token": "access-token",
+        "expires_at": 1790766000,
+        "disconnected_reason": "Google rejected the connection"
+      }
+    },
+    {
+      "spec": {
+        "name": "exchange_success",
+        "operation": "exchange",
+        "responses": [
+          [
+            200,
+            "{\"access_token\":\"new-access-token\",\"refresh_token\":\"new-refresh-token\",\"expires_in\":3600,\"id_token\":\"eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJ0ZXN0LWNsaWVudC1pZCIsImV4cCI6MTc5MDc3MzIwMCwiZW1haWwiOiJkYXZpZEBnbWFpbC50ZXN0Iiwic3ViIjoiZ29vZ2xlLXN1Yi0xMjMifQ.dGVzdC1zaWduYXR1cmU\"}"
+          ]
+        ],
+        "code": "auth-code"
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/token",
+          "body": "client_id=test-client-id&client_secret=FAKE-google-client-secret&code=auth-code&redirect_uri=http%3A%2F%2Ftest.host%2Fgoogle%2Fcallback&grant_type=authorization_code",
           "content_type": "application/x-www-form-urlencoded",
           "access_token": null
         }
       ],
       "result": {
-        "access_token": "disposable-exchange-token",
-        "expires_in": 3600
+        "access_token": "new-access-token",
+        "refresh_token": "new-refresh-token",
+        "expires_in": 3600,
+        "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6InRlc3Qta2V5IiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJ0ZXN0LWNsaWVudC1pZCIsImV4cCI6MTc5MDc3MzIwMCwiZW1haWwiOiJkYXZpZEBnbWFpbC50ZXN0Iiwic3ViIjoiZ29vZ2xlLXN1Yi0xMjMifQ.dGVzdC1zaWduYXR1cmU"
       },
       "error": null,
       "credentials": {
@@ -1165,6 +1420,38 @@
       "error": {
         "class": "Google::Client::Unavailable",
         "message": "Google token revoke failed (429)",
+        "unavailable": true
+      },
+      "credentials": {
+        "access_token": "access-token",
+        "expires_at": 1790773200,
+        "disconnected_reason": null
+      }
+    },
+    {
+      "spec": {
+        "name": "revoke_500",
+        "operation": "revoke",
+        "responses": [
+          [
+            500,
+            "{}"
+          ]
+        ]
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/revoke",
+          "body": "token=disposable-revoke-token",
+          "content_type": "application/x-www-form-urlencoded",
+          "access_token": null
+        }
+      ],
+      "result": null,
+      "error": {
+        "class": "Google::Client::Unavailable",
+        "message": "Google token revoke failed (500)",
         "unavailable": true
       },
       "credentials": {
@@ -1407,6 +1694,11 @@
       "client_id": "test-client-id",
       "client_secret": "secret",
       "configured": true
+    },
+    {
+      "client_id": "",
+      "client_secret": "",
+      "configured": false
     },
     {
       "client_id": "",

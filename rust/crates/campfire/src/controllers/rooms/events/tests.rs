@@ -447,12 +447,32 @@ async fn event_write_controller_security_and_validation() {
             .status,
         StatusCode::FORBIDDEN
     );
+    let event_id = head.id;
+    assert_eq!(
+        app.db()
+            .read(move |c| Ok(CalendarEvent::find(c, event_id)?.title))
+            .await
+            .unwrap(),
+        "Controller planning"
+    );
     assert_eq!(
         jason
             .write(Req::new(Method::PATCH, &format!("{path}/cancel")))
             .await
             .status,
         StatusCode::FORBIDDEN
+    );
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE users SET role=1 WHERE id=?", [JASON])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        jason.get(&format!("{path}/edit")).await.status,
+        StatusCode::OK
     );
     let mut david = app.david();
     assert_eq!(

@@ -331,18 +331,33 @@ mod tests {
     }
     #[test]
     fn credentials_are_encrypted_and_cleanup_expires_in_one_day() {
-        let db = TestDb::new();
+        let db = TestDb::with_clock(
+            crate::TestClock::frozen_at(Timestamp::from_jiff(
+                "2026-09-23T12:00:00Z".parse().unwrap(),
+            )),
+            4,
+        );
         let secrets = Secrets::new("FAKE-connection-secret");
         let enc = ArEncryption::new(&secrets);
         db.write(move |tx| {
-            let grant = grant(tx)?;
-            let mut account = GoogleAccount::save_connection(tx, &enc, grant)?;
+            let mut grant = grant(tx)?;
+            let expires_at =
+                Timestamp::from_jiff(tx.now().jiff() + jiff::SignedDuration::from_hours(1));
+            grant.access_token_expires_at = Some(expires_at);
+            let account = GoogleAccount::save_connection(tx, &enc, grant)?;
+            let raw: String = tx.conn().query_row(
+                "SELECT refresh_token FROM google_accounts WHERE id=?",
+                [account.id],
+                |row| row.get(0),
+            )?;
+            assert_ne!(raw, "FAKE-refresh");
+            let mut account = GoogleAccount::for_user(tx.conn(), account.user_id)?.unwrap();
             assert_eq!(
                 account.refresh_token(&enc).unwrap().as_deref(),
                 Some("FAKE-refresh")
             );
             assert!(account.usable(tx, &enc)?);
-            assert!(account.access_token_expired(&enc, tx.now()).unwrap());
+            assert!(!account.access_token_expired(&enc, tx.now()).unwrap());
             assert!(account.refresh_token.as_deref().unwrap().starts_with('{'));
             assert!(
                 !account
@@ -352,9 +367,12 @@ mod tests {
                     .contains("FAKE-refresh")
             );
             let blob = account.cleanup_snapshot(&secrets, tx.now().jiff()).unwrap();
+            assert!(!blob.contains("FAKE-refresh"));
             let snapshot =
                 calendar_credentials::decrypt_snapshot(&secrets, &blob, tx.now().jiff()).unwrap();
             assert_eq!(snapshot.refresh_token.as_deref(), Some("FAKE-refresh"));
+            assert_eq!(snapshot.access_token.as_deref(), Some("FAKE-access"));
+            assert_eq!(snapshot.access_token_expires_at, Some(expires_at.jiff()));
             assert!(
                 calendar_credentials::decrypt(
                     &secrets,
@@ -363,26 +381,56 @@ mod tests {
                 )
                 .is_none()
             );
+            // GoogleCalendarTestHelper#corrupt_google_token! changes the persisted envelope,
+            // then reloads the model before asking for a cleanup snapshot.
+            let mut tampered = raw.into_bytes();
+            let middle = tampered.len() / 2;
+            tampered[middle] = if tampered[middle] == b'A' { b'B' } else { b'A' };
+            tx.conn().execute(
+                "UPDATE google_accounts SET refresh_token=? WHERE id=?",
+                params![String::from_utf8(tampered).unwrap(), account.id],
+            )?;
+            let account = GoogleAccount::for_user(tx.conn(), account.user_id)?.unwrap();
+            assert!(
+                account
+                    .cleanup_snapshot(&secrets, tx.now().jiff())
+                    .is_none()
+            );
             Ok(())
         });
     }
     #[test]
     fn unreadable_grant_disconnects_without_disclosing_tokens_and_reconnect_heals_it() {
         let db = TestDb::new();
-        let enc = ArEncryption::new(&Secrets::new("FAKE-original-key"));
-        let wrong = ArEncryption::new(&Secrets::new("FAKE-rotated-key"));
+        let secrets = Secrets::new("FAKE-original-key");
+        let enc = ArEncryption::new(&secrets);
         db.write(move |tx| {
             let mut grant = grant(tx)?;
             let id = grant.user_id;
-            let mut account = GoogleAccount::save_connection(tx, &enc, grant)?;
-            assert!(!account.usable(tx, &wrong)?);
+            let account = GoogleAccount::save_connection(tx, &enc, grant)?;
+            let raw: String = tx.conn().query_row(
+                "SELECT refresh_token FROM google_accounts WHERE id=?",
+                [account.id],
+                |row| row.get(0),
+            )?;
+            let mut tampered = raw.into_bytes();
+            let middle = tampered.len() / 2;
+            tampered[middle] = if tampered[middle] == b'A' { b'B' } else { b'A' };
+            tx.conn().execute(
+                "UPDATE google_accounts SET refresh_token=? WHERE id=?",
+                params![String::from_utf8(tampered).unwrap(), account.id],
+            )?;
+            let mut account = GoogleAccount::for_user(tx.conn(), id)?.unwrap();
+            assert!(!account.usable(tx, &enc)?);
+            let account = GoogleAccount::for_user(tx.conn(), id)?.unwrap();
             assert_eq!(
                 account.disconnected_reason.as_deref(),
                 Some(UNREADABLE_TOKEN_REASON)
             );
+            assert!(!account.connected());
             assert!(
                 account
-                    .cleanup_snapshot(&Secrets::new("FAKE-rotated-key"), tx.now().jiff())
+                    .cleanup_snapshot(&secrets, tx.now().jiff())
                     .is_none()
             );
             grant = ConnectionGrant {
@@ -397,6 +445,40 @@ mod tests {
             assert!(account.connected());
             assert!(account.drive());
             assert!(!account.calendar());
+            Ok(())
+        });
+    }
+    #[test]
+    fn drive_grant_tracks_each_persisted_scope_set() {
+        let db = TestDb::new();
+        let enc = ArEncryption::new(&Secrets::new("FAKE-drive-scope-key"));
+        db.write(move |tx| {
+            let g = grant(tx)?;
+            let account = GoogleAccount::save_connection(tx, &enc, g)?;
+            let account = GoogleAccount::for_user(tx.conn(), account.user_id)?.unwrap();
+            assert!(!account.drive());
+            for (scopes, expected) in [
+                (format!("openid email {CALENDAR_SCOPE}"), false),
+                (format!("openid email {CALENDAR_SCOPE} {DRIVE_SCOPE}"), true),
+                (
+                    format!(
+                        "openid email {CALENDAR_SCOPE} https://www.googleapis.com/auth/drive.metadata.readonly"
+                    ),
+                    false,
+                ),
+            ] {
+                let grant = ConnectionGrant {
+                    user_id: account.user_id,
+                    email: account.email.clone(),
+                    access_token: account.access_token(&enc).unwrap(),
+                    access_token_expires_at: account.access_token_expires_at,
+                    refresh_token: None,
+                    scopes: Some(scopes.clone()),
+                };
+                GoogleAccount::save_connection(tx, &enc, grant)?;
+                let account = GoogleAccount::for_user(tx.conn(), account.user_id)?.unwrap();
+                assert_eq!(account.drive(), expected, "{scopes}");
+            }
             Ok(())
         });
     }

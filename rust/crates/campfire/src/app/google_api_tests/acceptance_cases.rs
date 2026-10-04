@@ -85,7 +85,15 @@ async fn google_client_errors_exchange_revoke_and_paging_match_pinned_rails() {
                     a.db(),
                     &a.booted.app.secrets,
                     DAVID,
-                    ApiRequest::calendar(Method::DELETE, &format!("{}/gone-id", api::EVENTS), None),
+                    ApiRequest::calendar(
+                        Method::DELETE,
+                        &format!(
+                            "{}/{}",
+                            api::EVENTS,
+                            spec["event_id"].as_str().unwrap_or("gone-id")
+                        ),
+                        None,
+                    ),
                     now,
                 )
                 .await
@@ -115,15 +123,24 @@ async fn google_client_errors_exchange_revoke_and_paging_match_pinned_rails() {
                     a.db(),
                     &a.booted.app.secrets,
                     DAVID,
-                    now.ago(jiff::SignedDuration::from_hours(1)),
-                    now.since(jiff::SignedDuration::from_hours(1)),
+                    spec["time_min"]
+                        .as_str()
+                        .map(|at| Timestamp::from_jiff(at.parse().unwrap()))
+                        .unwrap_or_else(|| now.ago(jiff::SignedDuration::from_hours(1))),
+                    spec["time_max"]
+                        .as_str()
+                        .map(|at| Timestamp::from_jiff(at.parse().unwrap()))
+                        .unwrap_or_else(|| now.since(jiff::SignedDuration::from_hours(1))),
                     now,
                 )
                 .await
             }
             "exchange" => {
-                api.exchange_code("disposable-code", "http://test.host/google/callback")
-                    .await
+                api.exchange_code(
+                    spec["code"].as_str().unwrap_or("disposable-code"),
+                    "http://test.host/google/callback",
+                )
+                .await
             }
             "revoke" => api
                 .revoke_token(Some("disposable-revoke-token"))
