@@ -21,5 +21,5 @@ travel_to Time.utc(2026,3,2,16) do
   credentials[:duplicate]=credential.call
   generated,secret=AgentCredential.create_with_secret!(agent:agent,created_by:human,name:"Generated")
   credentials[:generated]={secret_length:secret.length,digest_matches:generated.token_digest==AgentCredential.digest(secret),display_from_digest:generated.token_last_four==generated.token_digest[0,4],plaintext_stored:generated.attributes.values.include?(secret)}
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",grants:grants,credentials:credentials)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],grants:grants,credentials:credentials)
 end

@@ -86,4 +86,4 @@ user_input=->(u) {{id:u.id,name:u.name,avatar_path:Rails.application.routes.url_
     end
   end
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',sidebar_revision:'2e20b24c',cases:cases,parts:parts})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],sidebar_revision:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases,parts:parts})

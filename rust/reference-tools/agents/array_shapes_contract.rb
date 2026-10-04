@@ -64,4 +64,4 @@ travel_to Time.utc(2026,3,2,16) do
   end
  end
 end
-puts JSON.pretty_generate(reference_pin:'d7c7de92',projection_tables:tables,json_columns:json_columns,cases:results)
+puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],projection_tables:tables,json_columns:json_columns,cases:results)

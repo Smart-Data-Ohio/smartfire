@@ -17,4 +17,4 @@ rows = values.map do |input|
   end
   {input:, lines:, error:, saved:, phrases: user.keyword_alerts.order(:phrase).pluck(:phrase), errors: user.errors.map { |e| [e.attribute.to_s, e.message] }}
 end
-puts JSON.generate(reference: "d7c7de92", rows:)
+puts JSON.generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:)

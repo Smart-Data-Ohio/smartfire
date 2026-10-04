@@ -38,5 +38,5 @@ selects={
  'messages'=>"id IN (#{ids})",'action_text_rich_texts'=>"record_type='Message' AND record_id IN (#{ids})",'boosts'=>"message_id IN (#{ids})",'polls'=>"message_id IN (#{ids})",'poll_options'=>"poll_id=#{poll_ids}",'poll_votes'=>"poll_id=#{poll_ids}",'message_pins'=>"message_id IN (#{ids})",'active_storage_blobs'=>"id=#{blob.id}",'active_storage_attachments'=>"record_type='Message' AND record_id IN (#{ids})"
 }
 rows=selects.to_h{|table,where|[table,ActiveRecord::Base.connection.select_all("SELECT * FROM #{table} WHERE #{where} ORDER BY id").to_a]}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:,room_id:room.id,bot_id:bot.id,html:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:,room_id:room.id,bot_id:bot.id,html:)+"\n")
 puts "WS8bm2 preload Rails oracle: #{html.size} complete message fragments; #{rows.size} committed fixture tables"

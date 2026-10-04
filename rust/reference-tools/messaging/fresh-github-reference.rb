@@ -13,5 +13,5 @@ card.update_columns(fetch_requested_at: nil)
 Github::PullRequestReferenceSync.call(message.reload)
 rows << { name: "existing_reference", stale: card.reload.stale?, fetches: count.call }
 raise "unexpected fresh reference behavior" unless rows.map { |row| [row[:stale], row[:fetches]] } == [[false, 1], [false, 1]]
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:) + "\n")
 puts "WS8bm fresh GitHub reference: Rails enqueues the new reference; unchanged fresh reference enqueues nothing"

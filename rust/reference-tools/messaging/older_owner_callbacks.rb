@@ -109,5 +109,5 @@ groups=[]
   groups << {kind:kind,size:size,model_id:model.id,thread_id:thread.id,rows:rows,old_ids:messages.map(&:id),callback:callback,jobs:jobs}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:groups)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:groups)+"\n")
 puts "WS8bm2 older-owner Rails: #{groups.size} groups; #{groups.sum{|g|g[:callback][:frames].size}} callback frames; #{groups.sum{|g|g[:jobs].size}} network jobs; #{groups.sum{|g|g[:jobs].sum{|j|j[:frames].size}}} job frames; 4 silent rollbacks"

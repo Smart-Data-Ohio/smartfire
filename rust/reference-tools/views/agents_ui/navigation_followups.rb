@@ -134,5 +134,5 @@ cases.each do |entry|
   end
   ActiveSupport::ExecutionContext.clear
 end
-puts JSON.pretty_generate(reference: 'd7c7de92', status_reference: '2e20b24c', caching: true, cases:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), status_reference: ENV.fetch("PARITY_REFERENCE_SHA"), caching: true, cases:)
 warn "Rails navigation follow-ups differential: #{cases.size} fixtures; #{cases.sum { |entry| entry[:steps].size }} controller responses"

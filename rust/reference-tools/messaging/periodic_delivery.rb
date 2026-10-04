@@ -50,5 +50,5 @@ source.fetch('groups').each do |group|
   end
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:)+"\n")
 puts "WS8bm2 periodic Rails: #{groups.size} scenarios; #{groups.sum { |g| g[:steps].size }} real registered ticks; full rows, jobs and root frames"

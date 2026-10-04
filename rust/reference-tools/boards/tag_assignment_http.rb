@@ -50,5 +50,5 @@ common.each { |sql|ActiveRecord::Base.connection.execute(sql) }
  rows << {name:,method:,path:,input:,setup:common+sequences+extra+[rule],status:browser.response.status,body:browser.response.body}
  ActiveSupport::IsolatedExecutionState.clear
 end
-puts JSON.pretty_generate(reference:'d7c7de92 plus approved board drift',rows:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),rows:)
 warn "Rails tag auto-assignment HTTP oracle: #{rows.size} complete committed responses; 0 masks"

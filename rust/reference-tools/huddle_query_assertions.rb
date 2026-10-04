@@ -100,7 +100,7 @@ class HuddleQueryAssertions
     _,queries=capture { @grant.revoke! }
     raise "non-stage queried streams" if queries.any? { |q|q[:sql].match?(/FROM "streams"/) }
     cases << {name:"nonstage_no_stream_query",input:state,queries:queries}
-    puts JSON.pretty_generate(reference_pin:"d7c7de92",now:NOW.to_i,cases:cases)
+    puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:NOW.to_i,cases:cases)
   ensure
     travel_back
   end

@@ -23,5 +23,5 @@ travel_to base do
   message.reload.finalize_stream_quietly!
   Message::StreamTrailingBroadcastJob.perform_now(*jobs.first)
   result[:frames]=frames
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:result}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:result}.as_json)
 end

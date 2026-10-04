@@ -17,7 +17,7 @@ class HuddleModerationOracle
     Huddle::CleanupJob.define_singleton_method(:perform_later) {|*_|}
     cases=[]
     {host_mute:{}, host_unmute:{muted:true,action:'unmute'},host_disconnect:{action:'disconnect'},repeat_mute:{muted:true},noop_unmute:{action:'unmute'},admin_mute:{actor:0},admin_self_unmute:{actor:0,target:0,muted:true,action:'unmute'},host_self_mute:{target:1},host_self_unmute:{target:1,muted:true,action:'unmute'},host_self_disconnect:{target:1,action:'disconnect'},host_admin_mute:{target:0},host_admin_unmute:{target:0,action:'unmute',muted:true},host_admin_disconnect:{target:0,action:'disconnect'},speaker_mute:{actor:2,target:1},speaker_unmute:{actor:2,target:1,action:'unmute'},speaker_disconnect:{actor:2,target:1,action:'disconnect'},unknown_target:{unknown:true},outsider:{outsider:true},plain_room:{type:'Rooms::Open',actor:0},voice_admin_mute:{type:'Rooms::Voice',actor:0},voice_admin_unmute:{type:'Rooms::Voice',actor:0,muted:true,action:'unmute'},voice_member_mute:{type:'Rooms::Voice'},mute_stream_without_grant:{stream:true,no_grant:true},repeat_mute_ends_stream:{stream:true,muted:true},unmute_keeps_stream:{stream:true,muted:true,action:'unmute'},disconnect_stream_without_grant:{stream:true,no_grant:true,action:'disconnect'},html_redirect:{format:'html'},turbo_stage:{format:'turbo_stream'},turbo_voice:{type:'Rooms::Voice',actor:0,format:'turbo_stream'}}.each {|name,opts|cases << scenario(name.to_s,opts)}
-    puts JSON.pretty_generate({reference_pin:'d7c7de92',now:Time.current.to_i,cases:cases})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,cases:cases})
   ensure
     travel_back
   end

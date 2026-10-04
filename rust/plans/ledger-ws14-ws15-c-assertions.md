@@ -12,7 +12,7 @@ The original Mocha queue expectation includes an exact body predicate. Rust exec
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/models/event/reminder_pusher_test.rb:38](../../test/models/event/reminder_pusher_test.rb#L38)<br>`pool.expects(:queue).with do \|payload, _subscriptions\|` | [rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs:330](../../rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs#L330)<br>`assert_eq!(requests.len(), 1)`<br><br>[rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs:332](../../rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs#L332)<br>`assert_eq!( payload["options"]["body"], "Starts in 15 minutes: Launch party planning in Lounge" )` |
+| [test/models/event/reminder_pusher_test.rb:38](../../test/models/event/reminder_pusher_test.rb#L38)<br>`pool.expects(:queue).with do \|payload, _subscriptions\|` | [rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs:357](../../rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs#L357)<br>`assert_eq!(requests.len(), 1)`<br><br>[rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs:359](../../rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs#L359)<br>`assert_eq!( payload["options"]["body"], "Starts in 15 minutes: Launch party planning in Lounge" )` |
 
 ## WS14e-057
 
@@ -24,7 +24,7 @@ The original already-ended event is tested, plus a recently ended event (start -
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/models/event/reminder_pusher_test.rb:121](../../test/models/event/reminder_pusher_test.rb#L121)<br>`Rails.configuration.x.web_push_pool.expects(:queue).never` | [rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs:361](../../rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs#L361)<br>`assert!(service.server.received().is_empty())` |
+| [test/models/event/reminder_pusher_test.rb:121](../../test/models/event/reminder_pusher_test.rb#L121)<br>`Rails.configuration.x.web_push_pool.expects(:queue).never` | [rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs:388](../../rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs#L388)<br>`assert!(service.server.received().is_empty())` |
 
 ## WS14g-004
 
@@ -692,4 +692,3 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 | [test/models/google_account_test.rb:64](../../test/models/google_account_test.rb#L64)<br>`assert_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:607](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L607)<br>`assert!( a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
 | [test/models/google_account_test.rb:68](../../test/models/google_account_test.rb#L68)<br>`assert_not_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:623](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L623)<br>`assert!( !a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
 | [test/models/google_account_test.rb:72](../../test/models/google_account_test.rb#L72)<br>`assert_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:630](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L630)<br>`assert!( a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
-

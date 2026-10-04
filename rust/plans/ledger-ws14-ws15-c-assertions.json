@@ -15,15 +15,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
-              "line": 330,
-              "end_line": 330,
+              "line": 357,
+              "end_line": 357,
               "function": "cutover_c_reminder_real_job_delivers_venue_suffix_in_encrypted_push",
               "text": "assert_eq!(requests.len(), 1)"
             },
             {
               "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
-              "line": 332,
-              "end_line": 335,
+              "line": 359,
+              "end_line": 362,
               "function": "cutover_c_reminder_real_job_delivers_venue_suffix_in_encrypted_push",
               "text": "assert_eq!(\n        payload[\"options\"][\"body\"],\n        \"Starts in 15 minutes: Launch party planning in Lounge\"\n    )"
             }
@@ -46,8 +46,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
-              "line": 361,
-              "end_line": 361,
+              "line": 388,
+              "end_line": 388,
               "function": "cutover_c_reminder_real_job_suppresses_ended_events_with_recent_running_control",
               "text": "assert!(service.server.received().is_empty())"
             }

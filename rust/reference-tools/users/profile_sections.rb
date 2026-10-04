@@ -23,5 +23,5 @@ cases=[['unconfigured',false,nil],['missing',true,nil],['calendar_only',true,nil
   input={calendar_configured:Google::Client.configured?,account_exists:!!account,connected:!!account&.connected?,calendar:!!account&.calendar?,drive:!!account&.drive?,email:account&.email || ''}
   {name:name,input:input,scopes:scopes,reason:reason,html:renderer.render(partial:'users/profiles/google_calendar',locals:{user:user})}
 end
-puts JSON.pretty_generate(reference:'d7c7de92',google_calendar:cases)
-warn "Rails profile sections oracle: #{cases.size} complete Google Calendar fragments; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),google_calendar:cases)
+warn "Rails profile sections oracle: #{cases.size} complete Google Calendar fragments; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

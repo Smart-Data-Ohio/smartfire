@@ -54,4 +54,4 @@ travel_to Time.utc(2026, 3, 2, 16) do
     User.where(id: ids).delete_all
   end
 end
-puts JSON.pretty_generate({reference: "d7c7de92", rows: rows})
+puts JSON.pretty_generate({reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows: rows})

@@ -115,7 +115,23 @@ async fn google_calendar_cleanup_skips_unreadable_blob_and_supports_legacy_snaps
     calendar::cleanup(&a.booted.app, vec![], legacy, None)
         .await
         .unwrap();
-    assert_eq!(r.calls.lock().unwrap()[0]["path"], "/revoke");
+    assert_eq!(
+        *r.calls.lock().unwrap(),
+        vec![
+            json!({"method":"POST","path":"/revoke","body":"token=refresh-token","content_type":"application/x-www-form-urlencoded","access_token":null})
+        ]
+    );
+    r.calls.lock().unwrap().clear();
+    r.answer(200, json!({}));
+    calendar::cleanup(&a.booted.app, vec![], json!(blob(&a)), None)
+        .await
+        .unwrap();
+    assert_eq!(
+        *r.calls.lock().unwrap(),
+        vec![
+            json!({"method":"POST","path":"/revoke","body":"token=refresh-token","content_type":"application/x-www-form-urlencoded","access_token":null})
+        ]
+    );
 }
 #[tokio::test]
 async fn google_calendar_watch_starts_before_stop_and_permanent_failure_keeps_old_channel() {

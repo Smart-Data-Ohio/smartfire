@@ -1,6 +1,8 @@
 # Acceptance gaps from test/models/google/client_test.rb. No live HTTP is allowed.
 require 'json'
 require 'net/http'
+load File.join(ENV.fetch('PARITY_WORK'), 'reference-tools/google/google_calendar_test_helper.rb')
+helper = Object.new.extend(GoogleCalendarTestHelper)
 ENV['GOOGLE_CLIENT_ID'] = 'test-client-id'
 ENV['GOOGLE_CLIENT_SECRET'] = 'FAKE-google-client-secret'
 now = Time.utc(2026, 9, 30, 12)
@@ -33,22 +35,32 @@ end
   add.call("calendar_403_#{reason}", 'calendar', [[403, {error: {errors: [{reason: reason}]}}.to_json]])
 end
 add.call('delete_gone', 'delete', [[410, '{}']])
+add.call('delete_missing', 'delete', [[404, '{}']], event_id: 'missing-id')
+add.call('delete_server_error', 'delete', [[500, '{}']], event_id: 'some-id')
 add.call('401_survives_refresh', 'calendar', [[401, '{}'], [200, refresh], [401, '{}']])
 add.call('refresh_429', 'calendar', [[429, '{}']], expired: true)
 add.call('refresh_503', 'calendar', [[503, '{}']], expired: true)
+add.call('refresh_500', 'calendar', [[500, 'boom']], expired: true)
 [[403, '{}'], [404, '{}'], [429, '{}']].each { |status, body| add.call("drive_#{status}", 'drive', [[status, body]]) }
 add.call('drive_expired', 'drive', [[200, refresh], [200, {id: '1AbcDefGhIjKlMnOpQrSt', name: 'Fixture'}.to_json]], expired: true)
-add.call('list_recent', 'list', [[200, {files: []}.to_json]], query: '')
+add.call('list_recent', 'list', [[200, helper.send(:drive_list_payload).to_json]], query: '')
 add.call('list_blank', 'list', [[200, {files: []}.to_json]], query: '   ')
 add.call('list_expired', 'list', [[200, refresh], [200, {files: []}.to_json]], query: '', expired: true)
 add.call('list_quota', 'list', [[403, {error: {errors: [{reason: 'rateLimitExceeded'}]}}.to_json]], query: '')
 add.call('list_pages_cap', 'pages', (1..Google::Client::LIST_MAX_PAGES).map { |n| [200, {items: [{id: "page-#{n}"}], nextPageToken: "next-#{n}"}.to_json] })
+add.call('list_empty_pages_cap', 'pages', Array.new(Google::Client::LIST_MAX_PAGES) { [200, {items: [], nextPageToken: 'more'}.to_json] })
+add.call('list_events_window', 'pages', [[200, {items: []}.to_json]],
+  time_min: '2026-09-23T09:30:00Z', time_max: '2026-09-24T10:30:00Z')
 add.call('list_events_429', 'pages', [[429, '{}']])
 add.call('list_events_quota', 'pages', [[403, {error: {errors: [{reason: 'quotaExceeded'}]}}.to_json]])
 add.call('list_events_revoked', 'pages', [[401, '{}'], [400, {error: 'invalid_grant'}.to_json]])
-add.call('exchange_success', 'exchange', [[200, {access_token: 'disposable-exchange-token', expires_in: 3600}.to_json]])
+add.call('list_events_expired_revoked', 'pages', [[400, {error: 'invalid_grant'}.to_json]], expired: true)
+add.call('exchange_success', 'exchange', [[200, {
+  access_token: 'new-access-token', refresh_token: 'new-refresh-token', expires_in: 3600,
+  id_token: helper.send(:google_id_token, exp: now.to_i + 3600)
+}.to_json]], code: 'auth-code')
 add.call('exchange_failure', 'exchange', [[400, {error: 'invalid_grant'}.to_json]])
-[200, 204, 400, 403, 429, 503].each { |status| add.call("revoke_#{status}", 'revoke', [[status, '{}']]) }
+[200, 204, 400, 403, 429, 500, 503].each { |status| add.call("revoke_#{status}", 'revoke', [[status, '{}']]) }
 {'open_timeout' => Net::OpenTimeout, 'read_timeout' => Net::ReadTimeout, 'connection_refused' => Errno::ECONNREFUSED, 'connection_reset' => Errno::ECONNRESET, 'dropped_connection' => EOFError}.each do |name, klass|
   add.call(name, 'calendar', [], transport: klass.name)
 end
@@ -64,11 +76,12 @@ rows = cases.map do |spec|
   begin
     value = case spec[:operation]
     when 'calendar' then client.insert_event({})
-    when 'delete' then client.delete_event('gone-id')
+    when 'delete' then client.delete_event(spec.fetch(:event_id, 'gone-id'))
     when 'drive' then client.drive_file('1AbcDefGhIjKlMnOpQrSt')
     when 'list' then client.list_drive_files(query: spec[:query])
-    when 'pages' then client.list_events(time_min: now - 3600, time_max: now + 3600)
-    when 'exchange' then Google::Client.exchange_code(code: 'disposable-code', redirect_uri: 'http://test.host/google/callback')
+    when 'pages' then client.list_events(time_min: spec[:time_min] ? Time.iso8601(spec[:time_min]) : now - 3600,
+      time_max: spec[:time_max] ? Time.iso8601(spec[:time_max]) : now + 3600)
+    when 'exchange' then Google::Client.exchange_code(code: spec.fetch(:code, 'disposable-code'), redirect_uri: 'http://test.host/google/callback')
     when 'revoke' then Google::Client.revoke_token('disposable-revoke-token')
     end
     error = nil
@@ -78,9 +91,9 @@ rows = cases.map do |spec|
   raise "Unused responses in #{spec[:name]}" unless responses.empty?
   {spec: spec, requests: calls.dup, result: value, error: error, credentials: {access_token: credentials.access_token, expires_at: credentials.access_token_expires_at&.to_i, disconnected_reason: disconnected_reason}}
 end
-configuration = [['test-client-id', 'secret'], ['', 'secret'], ['test-client-id', ''], [' ', 'secret'], ['test-client-id', ' ']].map do |id, secret|
+configuration = [['test-client-id', 'secret'], ['', ''], ['', 'secret'], ['test-client-id', ''], [' ', 'secret'], ['test-client-id', ' ']].map do |id, secret|
   ENV['GOOGLE_CLIENT_ID'] = id; ENV['GOOGLE_CLIENT_SECRET'] = secret
   {client_id: id, client_secret: secret, configured: Google::Client.configured?}
 end
 warn "Pinned Rails Google client acceptance: #{rows.size} recorded cases; #{configuration.size} credential combinations; no Google network"
-puts JSON.pretty_generate(reference: 'd7c7de92', now: now.to_i, rows: rows, configuration: configuration)
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), now: now.to_i, rows: rows, configuration: configuration)

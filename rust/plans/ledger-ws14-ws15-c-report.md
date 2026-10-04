@@ -1,6 +1,6 @@
 # WS14 / WS15 continuation C — partial
 
-Branch `rust/ledger-ws14-ws15-c`, stacked on PR #243. Step 1 of the review request is complete on #243 at `e02e8d61d1efed439f2f749ee990035dead55a22`: all 81 closures have 271 individual Rails assertion mappings; 19 distinct native mutation tests killed their production-behavior mutations; strict clippy and the full workspace passed (5,034 tests, zero failures, 20 existing skips). The parent review head `ec35cd92` is retained through the earlier merge; the separate fix239b audit has not landed at this receipt.
+Branch `rust/ledger-ws14-ws15-c`, stacked on PR #243. Step 1 of the review request is complete on #243 at `e02e8d61d1efed439f2f749ee990035dead55a22`: all 81 closures have 271 individual Rails assertion mappings; 19 distinct native mutation tests killed their production-behavior mutations; strict clippy and the full workspace passed (5,034 tests, zero failures, 20 existing skips). The parent review head `ec35cd92` is retained through the earlier merge; the fix239b audit has subsequently landed and is merged through #243 head `31b767757`.
 
 ## Current slice
 
@@ -66,4 +66,8 @@ Exit status 0 for both. Final full-workspace/fresh-clone receipts will be append
 
 ## Precisely remaining
 
-**94 records remain open: 49 WS14g and 45 WS15g; zero WS14e.** This slice stops at the complete HTTP/job/model block before the Drive browser system files. [The exact remaining list](ledger-ws14-ws15-remaining.md) retains each ID, current inventory file:line, Rails declaration and missing assertion. None is waived or called owner-blocked. In particular, the two remaining parent reopens **WS15g-056/057** still require the real registered GitHub fetch-PR broadcast/no-broadcast checks and belong to this continuation. The fix239b parent audit is still pending and must be merged when it lands.
+**126 records remain open: 59 WS14g, 52 WS15g and 15 WS14e.** This slice stops at the complete HTTP/job/model block before the Drive browser system files. [The exact remaining list](ledger-ws14-ws15-remaining.md) retains each ID, current inventory file:line, Rails declaration and missing assertion. None is waived or called owner-blocked. In particular, the two remaining parent reopens **WS15g-056/057** still require the real registered GitHub fetch-PR broadcast/no-broadcast checks and belong to this continuation. The fix239b parent audit at `6880979a` is now merged through #243 head `31b767757`; all 32 further reopened contracts are retained.
+
+## Full parent audit merge
+
+The parent moved to `6880979acaf433e294d6eb8031e989aa9a394484` during this slice. It is merged into #243 at `31b767757`, then into C with both sides retained. The reviewed reference pin is now `78b9b1546`; the parent audit reopens 32 additional records. All original parent assertion mappings, stronger tests and historical validation hashes remain intact. The continuation verifier additionally validates B/C's exact assertion maps; its own full-run receipt is kept separately. Current C still closes the same 50 declarations, and the remaining count is **126**, not the earlier 94.

@@ -1,5 +1,5 @@
-# Our actual Rails policy/status readers at d7c7de92. No network or persisted writes.
-# PARITY_NAMESPACE=ws17 PARITY_IMAGE=triage-reference-d7c7de92:latest \
+# Our actual Rails policy/status readers at the current reference pin. No network or persisted writes.
+# PARITY_NAMESPACE=ws17 PARITY_IMAGE=campfire-reference \
 #   parity/bin/reference runner --seed default reference-tools/ws17_vectors.rb
 require "active_support/testing/time_helpers"
 include ActiveSupport::Testing::TimeHelpers
@@ -73,5 +73,5 @@ travel_to(Time.utc(2026, 9, 30, 12)) do
   end
   task = Periodic::Runner.new.instance_variable_get(:@tasks).find { |t| t.name == "presence leases" }
   presence_task = { name: task.name, seconds: task.interval.to_i }
-  puts JSON.generate({ presence_task:, integer_coercions: coercions, reference: "d7c7de92", now: base.iso8601, policies: policy_vectors, statuses: status_vectors })
+  puts JSON.generate({ presence_task:, integer_coercions: coercions, reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: base.iso8601, policies: policy_vectors, statuses: status_vectors })
 end

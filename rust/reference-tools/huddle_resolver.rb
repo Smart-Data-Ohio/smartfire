@@ -26,7 +26,7 @@ class HuddleResolverOracle
       "group_unanswered" => { second: true }, "filter_two_recipients" => { second: true, filter: :jason }
     }
     cases = variations.map { |name, options| scenario(name, options) }
-    puts JSON.pretty_generate({ reference_pin: "d7c7de92", now: Time.current.to_i, cases: cases })
+    puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.current.to_i, cases: cases })
   ensure
     Huddle::RingPolicy.quiet_check = nil
     travel_back

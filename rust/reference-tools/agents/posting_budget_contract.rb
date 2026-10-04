@@ -27,5 +27,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
       { zone: zone, now: now.iso8601(6), day: current.to_date.to_s, start: current.beginning_of_day.utc.iso8601(6), end: current.end_of_day.utc.iso8601(6), retry_after: Agents::Budgets.seconds_until_reset(now: current) }
     end
   end
-  puts JSON.pretty_generate(reference_pin: 'd7c7de92', replay: replay, malformed_replay: malformed_replay, malformed_overflow: malformed_overflow, overflow: overflow, notices: notices, reset: reset)
+  puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], replay: replay, malformed_replay: malformed_replay, malformed_overflow: malformed_overflow, overflow: overflow, notices: notices, reset: reset)
 end

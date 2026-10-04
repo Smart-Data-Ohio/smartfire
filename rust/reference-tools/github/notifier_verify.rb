@@ -16,4 +16,4 @@ end
 raise "Integration bot unexpectedly owns an agent" unless bot.agent.nil?
 raise "Notification lost its message" unless notification.message_id == message.id
 raise "Bot granted an unsubscribed open room" if Membership.where(user:bot).exists?
-puts "GitHub Notifier Rails rollback: 8 checks passed; 0 failed; reference d7c7de92"
+puts "GitHub Notifier Rails rollback: 8 checks passed; 0 failed; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

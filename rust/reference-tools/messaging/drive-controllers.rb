@@ -84,5 +84,5 @@ rows=[]
  end
 end
 Current.reset
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:rows)+"\n")
 puts "WS8bm Drive controllers: #{rows.size} actual Rails writes; complete responses, rows and frames; root/thread"

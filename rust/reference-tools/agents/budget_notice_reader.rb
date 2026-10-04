@@ -17,5 +17,5 @@ travel_to Time.utc(2026,3,2,16) do
    raise ActiveRecord::Rollback
   end
  end
- puts JSON.pretty_generate(reference_pin:'d7c7de92',results:results,missing_id:nil)
+ puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results,missing_id:nil)
 end

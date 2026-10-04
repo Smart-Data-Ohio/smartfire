@@ -259,6 +259,7 @@ fn ws17_meeting_cache_named_readers_cover_boundaries_malformed_and_epochs() {
     c.ooo_intervals = json!([]);
     c.busy_intervals = json!([[start, end]]);
     assert!(c.in_meeting(stamp(start)));
+    assert!(!c.in_ooo(stamp(start)));
     assert!(c.ooo_end_covering(stamp(start)).is_none());
     c.ooo_intervals = json!([
         ["2026-09-23T08:00:00Z", end],

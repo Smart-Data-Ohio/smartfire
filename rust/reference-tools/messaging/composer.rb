@@ -12,5 +12,5 @@ cases=[]
  ENV['GOOGLE_CLOUD_PROJECT_NUMBER']=picker ? '1234' : nil
  cases<<{room_id:r.id,room_name:ApplicationController.helpers.room_display_name(r),room_kind:r.class.model_name.param_key,thread:t&.attributes&.slice('id','name'),picker:,commands:ApplicationController.helpers.send(:slash_command_names_for,r),html:renderer.render(partial:'rooms/show/composer',locals:{room:r,thread:t,inline:true})}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',cases:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:)+"\n")
 puts "WS8bm2 composer Rails oracle: #{cases.size} complete Markdown composers including thread and Drive-share controls"

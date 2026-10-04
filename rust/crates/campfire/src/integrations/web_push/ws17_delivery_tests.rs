@@ -40,7 +40,7 @@ fn with_pool(original: &App, pool: Pool) -> App {
 }
 #[tokio::test(flavor = "multi_thread")]
 async fn ws17_durable_event_board_and_huddle_jobs_decrypt_complete_rails_json() {
-    let test = TestApp::boot()
+    let test = TestApp::boot_frozen()
         .await
         .expect("WS17 requires seeded app tests");
     let original = test.booted.app.clone();
@@ -54,6 +54,13 @@ async fn ws17_durable_event_board_and_huddle_jobs_decrypt_complete_rails_json() 
     let mut expected = Vec::<Value>::new();
     for name in [
         "event_attendees_still_members",
+        "event_inbox_switch_ignored",
+        "event_direct_organizer_title",
+        "event_three_minutes",
+        "event_singular",
+        "event_starting_now",
+        "event_recently_started",
+        "event_stale",
         "board_nudge",
         "invitation_baseline",
         "join_baseline",
@@ -114,7 +121,17 @@ async fn ws17_durable_event_board_and_huddle_jobs_decrypt_complete_rails_json() 
             app.clone(),
             crate::jobs::runner_config(&app.config),
         );
-        wait_for_jobs_and_deliveries(&db, &pool, &["Event::ReminderPushJob", "BoardAutomations::NudgePushJob", "Huddle::InvitationDeliveryJob", "Huddle::JoinDeliveryJob"]).await;
+        wait_for_jobs_and_deliveries(
+            &db,
+            &pool,
+            &[
+                "Event::ReminderPushJob",
+                "BoardAutomations::NudgePushJob",
+                "Huddle::InvitationDeliveryJob",
+                "Huddle::JoinDeliveryJob",
+            ],
+        )
+        .await;
         runner.shutdown(Duration::from_secs(5)).await;
     }
     pool.shutdown().await;
@@ -226,7 +243,17 @@ async fn ws17_ws13_wire_requests_deliver_captured_payload_and_claim_join_once() 
             app.clone(),
             crate::jobs::runner_config(&app.config),
         );
-        let wait = || wait_for_jobs_and_deliveries(&db, &pool, &["Notifications::HuddlePushJob", "Huddle::InvitationDeliveryJob", "Huddle::JoinDeliveryJob"]);
+        let wait = || {
+            wait_for_jobs_and_deliveries(
+                &db,
+                &pool,
+                &[
+                    "Notifications::HuddlePushJob",
+                    "Huddle::InvitationDeliveryJob",
+                    "Huddle::JoinDeliveryJob",
+                ],
+            )
+        };
         wait().await;
         if kind == "huddle_join" {
             db.write(move |tx| {

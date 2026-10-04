@@ -372,6 +372,12 @@ fn series_create_calendar_callbacks_match_pinned_rails_order_and_arguments() {
         .into_iter()
         .map(|e| e.id)
         .collect();
+    assert!(ids.len() >= 2);
+    assert!(
+        t.read(|c| event.series_events(c))
+            .iter()
+            .all(|e| e.meet_link_requested)
+    );
     let actual: Vec<_> = t
         .events()
         .into_iter()
@@ -394,6 +400,24 @@ fn series_create_calendar_callbacks_match_pinned_rails_order_and_arguments() {
     ))
     .unwrap();
     assert_eq!(serde_json::json!(actual), expected);
+    t.sink.take();
+    let mut singleton = attrs(&t);
+    singleton.meet_link_requested = true;
+    let singleton = t.write(move |tx| CalendarEvent::create(tx, singleton));
+    assert!(
+        t.read(|c| CalendarEvent::find(c, singleton.id))
+            .meet_link_requested
+    );
+    let jobs: Vec<_> = t
+        .events()
+        .into_iter()
+        .filter_map(|event| match event {
+            Event::Job(job) if job.class == "Calendar::MeetLinkJob" => Some(job),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(jobs.len(), 1);
+    assert_eq!(jobs[0].arguments["event_id"], singleton.id);
 }
 #[test]
 fn ws14e_security_nonmember_cannot_view_an_event() {
@@ -1245,6 +1269,67 @@ fn event_nil_series_start_matches_rails_failure_without_writes() {
         assert_eq!(t.read(|c| head.series_events(c)), before);
         assert_eq!(t.events().len(), before_events);
     }
+}
+
+// test/models/event_test.rb:138: a dispatched singleton reminder is rearmed by
+// the same announcement-producing update used by the event controller.
+#[test]
+fn singleton_time_change_rearms_a_dispatched_reminder() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let event = create(&t);
+    assert!(dispatch(&t, event.id));
+    assert!(
+        t.read(|c| CalendarEvent::find(c, event.id))
+            .reminded_at
+            .is_some()
+    );
+    let starts_at = t.now().since(SignedDuration::from_hours(48));
+    t.write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            event.id,
+            EventChanges {
+                starts_at: Some(Some(starts_at)),
+                ..Default::default()
+            },
+            "this_event",
+            Some(id("david")),
+        )
+    });
+    assert!(
+        t.read(|c| CalendarEvent::find(c, event.id))
+            .reminded_at
+            .is_none()
+    );
+}
+
+// test/models/event_test.rb:176: a later second cancellation preserves the
+// original cancellation timestamp and every existing notification row.
+#[test]
+fn cancelling_a_singleton_twice_preserves_timestamp_and_activity_rows() {
+    let t = frozen();
+    let event = create(&t);
+    respond(&t, event.id, "jason", "going", false);
+    assert!(t.write(move |tx| {
+        CalendarEvent::cancel_with_scope(tx, event.id, "this_event", Some(id("david")))
+    }));
+    let cancelled_at = t.read(|c| CalendarEvent::find(c, event.id)).cancelled_at;
+    let items = ["david", "jason", "jz", "kevin"].map(|user| item(&t, event.id, user));
+    let before = count(&t, "activity_items");
+    t.travel(60);
+    assert!(!t.write(move |tx| {
+        CalendarEvent::cancel_with_scope(tx, event.id, "this_event", Some(id("david")))
+    }));
+    assert_eq!(
+        t.read(|c| CalendarEvent::find(c, event.id)).cancelled_at,
+        cancelled_at
+    );
+    assert_eq!(count(&t, "activity_items"), before);
+    assert_eq!(
+        ["david", "jason", "jz", "kevin"].map(|user| item(&t, event.id, user)),
+        items
+    );
 }
 
 mod cutover_reference_test;

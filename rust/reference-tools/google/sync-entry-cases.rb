@@ -95,5 +95,5 @@ specs.each do |spec|
   ActiveRecord::Base.connection_pool.disconnect!;FileUtils.rm_f(["#{database}-wal","#{database}-shm"]);FileUtils.cp(backup,database);FileUtils.rm_f(backup)
  end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',now:now.iso8601,rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:now.iso8601,rows:})
 warn "Pinned Rails EntrySync: #{rows.size} consumer scenarios; recorded HTTP only"

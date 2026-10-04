@@ -35,5 +35,5 @@ cases = %w[moon.jpg pixel.bmp].map do |file|
   ActiveSupport::IsolatedExecutionState.clear
   shown.merge(stable_status: session.response.status, stable_body: Base64.strict_encode64(session.response.body))
 end
-puts JSON.pretty_generate(reference: "d7c7de92", vips: Vips.version_string, cases: cases)
-warn "Rails avatar images oracle: 2 real uploads, complete WebP and fallback SVG bodies with cache headers; libvips #{Vips.version_string}; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), vips: Vips.version_string, cases: cases)
+warn "Rails avatar images oracle: 2 real uploads, complete WebP and fallback SVG bodies with cache headers; libvips #{Vips.version_string}; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

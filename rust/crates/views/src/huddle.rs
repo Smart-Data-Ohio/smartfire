@@ -126,7 +126,7 @@ mod tests {
     fn huddle_presence_matches_fifty_pinned_rails_renders() {
         let vectors: serde_json::Value =
             serde_json::from_str(include_str!("huddle_presence_vectors.json")).unwrap();
-        assert_eq!(vectors["reference_pin"], "d7c7de92");
+        assert_eq!(vectors["reference_pin"], &include_str!("../../../parity/reference.sha").trim()[..8]);
         let cases = vectors["cases"].as_array().unwrap();
         assert_eq!(cases.len(), 50);
         for case in cases {

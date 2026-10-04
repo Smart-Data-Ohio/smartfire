@@ -320,4 +320,4 @@ specs.each_with_index do |spec,index|
     FileUtils.rm_f(snapshot)
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',now:BASE.to_i,rows:,rotated_jwks:ROTATED_JWKS,identity_token_columns:GoogleIdentity.column_names & %w[access_token refresh_token],filtered_code:ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter_param('code','private-code-fixture')})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:BASE.to_i,rows:,rotated_jwks:ROTATED_JWKS,identity_token_columns:GoogleIdentity.column_names & %w[access_token refresh_token],filtered_code:ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter_param('code','private-code-fixture')})

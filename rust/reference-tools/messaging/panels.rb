@@ -22,5 +22,5 @@ links=%w[/saved /scheduled_messages].map do |path|
   start=html.rindex('<a ',attribute);finish=html.index('</a>',attribute)+4
   {path:,html:html[start...finish]}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',panels:,links:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],panels:,links:)+"\n")
 puts "WS8bm2 panels Rails oracle: #{panels.size*2} pin panels; #{links.size} sidebar links"

@@ -43,5 +43,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   AgentStep.where(message_id: message.id).order(:id).first.destroy!
   replacement = AgentStep.create!(base)
   positions = { replacement: replacement.position, count: AgentStep.where(message_id: message.id).count }
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", validation: validation, results: results, positions: positions }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], validation: validation, results: results, positions: positions }.as_json)
 end

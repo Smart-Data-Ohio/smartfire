@@ -81,5 +81,5 @@ for path in args.maps:
         total_records += 1
         total_assertions += len(record['assertions'])
     if args.render:
-        path.with_suffix('.md').write_text('\n'.join(markdown) + '\n')
+        path.with_suffix('.md').write_text('\n'.join(markdown).rstrip() + '\n')
 print(f'Assertion maps: {total_records} records; {total_assertions} original Rails assertion calls; {missing} unmapped')

@@ -15,5 +15,5 @@ travel_to Time.utc(2026,3,2,16) do
   error=begin;message.finalize_stream!;nil;rescue=>e;e.message;end
   results={error:error,streaming:message.reload.streaming?,indexed:Message.connection.select_value("SELECT COUNT(*) FROM message_search_index WHERE rowid=#{message.id}").to_i,
     posted:agent.agent_events.where(event_type:"posted",message_id:message.id).count,presence:agent.reload.working_presence,repeated:message.finalize_stream!}
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:results}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results}.as_json)
 end

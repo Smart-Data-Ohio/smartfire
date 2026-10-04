@@ -53,5 +53,5 @@ capture.call('custom_second_reactor', :post, base, {boost: {content: ':ws8bm_ico
 capture.call('custom_first_reactor_off', :post, base, {boost: {content: ':ws8bm_icon:'}})
 capture.call('custom_first_reactor_on', :post, base, {boost: {content: ':ws8bm_icon:'}})
 capture.call('custom_second_reactor_off', :post, base, {boost: {content: ':ws8bm_icon:'}}, jason)
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', message_id: message.id, duplicates:, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], message_id: message.id, duplicates:, rows:) + "\n")
 puts "WS8bm modern-boosts oracle: #{rows.size} actual toggle/alias/legacy/duplicate/delete/coercion requests; #{rows.sum { |r| r[:frames].size }} rendered reaction replacements"

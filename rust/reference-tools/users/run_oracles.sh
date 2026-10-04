@@ -1,17 +1,38 @@
 #!/usr/bin/env bash
-# Fresh pinned Rails vectors, compared without normalization to the committed files.
+# Fresh plain pinned Rails vectors, compared without normalization to the committed files.
+# Optional probe/label arguments select a subset; without arguments all 36 run.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=${WS8BR2_ORACLE_DIR:-$ROOT/../.scratch/verified-oracles}
 mkdir -p "$OUT"
 export PARITY_NAMESPACE=ws8br2 PARITY_OWNER=ws8br2 PARITY_RUNTIME=docker
-export PARITY_IMAGE=${PARITY_IMAGE:-ws8br2-reference:d7c7de92-status-2e20b24c}
+export PARITY_IMAGE=${PARITY_IMAGE:-campfire-reference}
+revision=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$PARITY_IMAGE" | sed -n 's/^GIT_REVISION=//p')
+[ "$revision" = "$(cat "$ROOT/parity/reference.sha")" ] || { echo 'users oracles require the pinned reference image' >&2; exit 1; }
+"$ROOT/parity/bin/reference" runner --seed first_run --time 2026-03-02T16:00:00Z --freeze \
+  "$ROOT/reference-tools/users/profile_page_source_hashes.rb" > "$OUT/profile-page-source-hashes.json" 2> "$OUT/profile-page-source-hashes.log"
+if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then
+  cp "$OUT/profile-page-source-hashes.json" "$ROOT/reference-tools/users/profile-page-source-hashes.json"
+else
+  cmp "$OUT/profile-page-source-hashes.json" "$ROOT/reference-tools/users/profile-page-source-hashes.json"
+fi
+cat "$OUT/profile-page-source-hashes.log"
+only=("$@")
+count=0
 run() {
   local probe=$1 seed=$2 expected=$3 label=$4
+  if [ "${#only[@]}" -gt 0 ]; then
+    local selected=0 requested
+    for requested in "${only[@]}"; do
+      if [ "$requested" = "$probe" ] || [ "$requested" = "$label" ]; then selected=1; break; fi
+    done
+    [ "$selected" = 1 ] || return 0
+  fi
   "$ROOT/parity/bin/reference" exec --seed "$seed" --time 2026-03-02T16:00:00Z --freeze -- \
     bin/rails runner --skip-executor "/work/reference-tools/users/$probe.rb" "${@:5}" > "$OUT/$label.json" 2> "$OUT/$label.log"
   if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then cp "$OUT/$label.json" "$ROOT/$expected"; else cmp "$OUT/$label.json" "$ROOT/$expected"; fi
   rg '^Rails .* oracle:' "$OUT/$label.log"
+  count=$((count+1))
 }
 run public default vectors/users_public.json public
 run avatars default vectors/users_avatars.json avatars
@@ -43,14 +64,21 @@ run dm_picker default vectors/users_dm_picker.json dm-picker
 run joining default vectors/users_joining.json joining
 run pwa default vectors/users_pwa_default.json pwa-default
 run pwa first_run vectors/users_pwa_first_run.json pwa-first-run
+if [ "${#only[@]}" = 0 ] || [[ " ${only[*]} " == *" unread-shell "* ]]; then
 "$ROOT/parity/bin/reference" exec --seed default --time 2026-03-02T16:00:00Z --freeze -- \
   bin/rails runner --skip-executor /work/reference-tools/rooms/unread_shell.rb > "$OUT/unread-shell.json" 2> "$OUT/unread-shell.log"
 if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then cp "$OUT/unread-shell.json" "$ROOT/vectors/room_shell_unread.json"; else cmp "$OUT/unread-shell.json" "$ROOT/vectors/room_shell_unread.json"; fi
 rg '^Rails .* oracle:' "$OUT/unread-shell.log"
+count=$((count+1))
+fi
 run zones first_run crates/db/src/slash_commands/rails_zone_identifiers.json zones
 run zones first_run crates/db/src/slash_commands/rails_named_zones.json named-zones named
+run stars default vectors/users_stars.json stars
+run activity_domain default vectors/activity_domain.json activity-domain
+run generic_recorder default vectors/ws12_generic_recorder.json generic-recorder
+[ "$count" -gt 0 ] || { echo 'users oracles: no matching producer requested' >&2; exit 1; }
 if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then
-  echo 'WS8br2 oracle generation: 33 fresh unnormalized files written'
+  echo "WS8br2 oracle generation: $count fresh unnormalized files written"
 else
-  echo 'WS8br2 oracle verification: all 33 fresh files match byte for byte; no masks or normalization'
+  echo "WS8br2 oracle verification: all $count fresh files match byte for byte; no masks or normalization"
 fi

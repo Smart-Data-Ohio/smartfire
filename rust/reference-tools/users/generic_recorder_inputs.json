@@ -1,0 +1,41 @@
+{
+  "memberships": [
+    {
+      "id": 1021579704,
+      "created_at": "2026-10-03 02:26:45.799",
+      "updated_at": "2026-10-03 02:26:45.799"
+    },
+    {
+      "id": 1021579705,
+      "created_at": "2026-10-03 02:26:45.799",
+      "updated_at": "2026-10-03 02:26:45.799"
+    },
+    {
+      "id": 1021579706,
+      "created_at": "2026-10-03 02:26:45.799",
+      "updated_at": "2026-10-03 02:26:45.799"
+    }
+  ],
+  "two_factor_credentials": [
+    {
+      "id": 1,
+      "secret": "{\"p\":\"9FNOUkvUE0GDLbCusJd22QPNq/DwSLXO6xhpqQZODus=\",\"h\":{\"iv\":\"hTmnsQWV2E/xwCWz\",\"at\":\"s8c78GD48bjD0Dij+2S2MA==\",\"e\":\"QVNDSUktOEJJVA==\"}}"
+    },
+    {
+      "id": 2,
+      "secret": "{\"p\":\"JN5Qm6bnDYKntWCK9CIcZT/ePNMN0+N3yWtWNgW6hW0=\",\"h\":{\"iv\":\"9EDAny97ajbiSFu1\",\"at\":\"xrcGpWPLdhU1qRzKrC38wQ==\",\"e\":\"QVNDSUktOEJJVA==\"}}"
+    },
+    {
+      "id": 3,
+      "secret": "{\"p\":\"EOo1dfJMtc8AbXaaZI5NI3y3VLOTq+e4y1203DEBUTw=\",\"h\":{\"iv\":\"f5DVWZMafiKXGJxe\",\"at\":\"hKKtfYVNy2vODWHx+5YM5g==\",\"e\":\"QVNDSUktOEJJVA==\"}}"
+    },
+    {
+      "id": 4,
+      "secret": "{\"p\":\"/fWP5u3FsWww7v0TTkzKGl4pmT37+hqndMlnz9LcoHE=\",\"h\":{\"iv\":\"XOLUGz5YD3MYa9xw\",\"at\":\"UgAWM9hAgm0V8HO0H3EDpQ==\",\"e\":\"QVNDSUktOEJJVA==\"}}"
+    },
+    {
+      "id": 5,
+      "secret": "{\"p\":\"l8JJSO6S6NdK1Vp/iZi6l7vb8F4rhTwXyzWQAd0i/f8=\",\"h\":{\"iv\":\"wdZ6b9+BE7Sn6i88\",\"at\":\"TOJLa8T1wHaXjaXS8jbIuA==\",\"e\":\"QVNDSUktOEJJVA==\"}}"
+    }
+  ]
+}

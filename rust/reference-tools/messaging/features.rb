@@ -86,5 +86,5 @@ dates = [
   value = Time.use_zone(zone) { Time.zone.parse(raw) }
   { zone:, raw:, time: value&.utc&.iso8601(3) }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", inputs:, poll_ids: polls.map(&:id), option_ids: polls.map { |poll| poll.poll_options.map(&:id) }, message_ids: polls.map(&:message_id), html:, steps:, creates:, pins:, pin_html:, dates:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], inputs:, poll_ids: polls.map(&:id), option_ids: polls.map { |poll| poll.poll_options.map(&:id) }, message_ids: polls.map(&:message_id), html:, steps:, creates:, pins:, pin_html:, dates:) + "\n")
 puts "WS8bm2 Rails oracle: #{steps.size} poll reads/ballots; #{creates.size} poll creates; #{pins.size} pin writes; #{html.size + pin_html.size} partials; #{dates.size} zone/date probes"

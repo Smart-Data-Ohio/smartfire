@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "sources": {
     "app/controllers/two_factor/setups_controller.rb": "93d8381fc13c90f889ca73baac9d18c9b808cd06ceffddc8416aea3e1c2fe5c2",
     "app/models/two_factor_credential.rb": "ab34753f1bd9bb965d22432eb8aaf838cebad57b106133d157bf2639649c8ca0",
