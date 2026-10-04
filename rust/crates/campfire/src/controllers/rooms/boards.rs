@@ -24,6 +24,14 @@ pub async fn show(c: &mut Ctx) -> Result {
     redirect_to_room(c, room.id)
 }
 
+/// Inherited RoomsController#destroy, through the board-only room_scope.
+pub async fn destroy(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let room = set_room(c, Scope::Boards).await?;
+    super::ensure_can_delete(c, &room).await?;
+    super::destroy_room(c, room).await
+}
+
 pub async fn new(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     ensure_permission_to_create_rooms(c).await?;

@@ -1,13 +1,13 @@
-//! Offline ops commands. No HTTP boot, jobs, credentials, or migration on server startup.
+//! Offline ops commands. No HTTP boot, job runner, credentials, or migration on server startup.
 use campfire_db::{Connection, additive, migrations, schema};
 use std::path::Path;
 
-const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrate DATABASE MIGRATIONS_DIR | verify-additive-sqlite-migration BEFORE AFTER";
+const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrate DATABASE MIGRATIONS_DIR | verify-additive-sqlite-migration BEFORE AFTER | twitter-backfill-references DATABASE";
 
 pub fn run(args: &[String]) -> Option<i32> {
     if !matches!(
         args.first().map(String::as_str),
-        Some("db-check" | "db-migrate" | "verify-additive-sqlite-migration")
+        Some("db-check" | "db-migrate" | "verify-additive-sqlite-migration" | "twitter-backfill-references")
     ) {
         return None;
     }
@@ -30,6 +30,7 @@ pub fn run(args: &[String]) -> Option<i32> {
 fn execute(args: &[String]) -> Result<String, (i32, String)> {
     let fail = |error: anyhow::Error| (2, format!("ERROR: {error}"));
     match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
+        ["twitter-backfill-references", database] => twitter_backfill(Path::new(database)).map_err(fail),
         ["db-check", database] => check(Path::new(database), false).map_err(fail),
         ["db-check", "--immutable", database] => check(Path::new(database), true).map_err(fail),
         ["db-migrate", database, directory] => migrate(Path::new(database), Path::new(directory)).map_err(fail),
@@ -44,6 +45,39 @@ fn execute(args: &[String]) -> Result<String, (i32, String)> {
             }),
         _ => Err((2, USAGE.into())),
     }
+}
+
+fn twitter_backfill(database: &Path) -> anyhow::Result<String> {
+    // Refuse missing paths and incompatible schemas, without creating or migrating anything.
+    check(database, false)?;
+    let conn = Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE)?;
+    conn.busy_timeout(std::time::Duration::from_millis(schema::BUSY_TIMEOUT_MS))?;
+    conn.pragma_update(None, "foreign_keys", true)?;
+    let registry = crate::jobs::registry();
+    let config = campfire_jobs::RunnerConfig::new(
+        [
+            crate::jobs::DEFAULT_QUEUE,
+            crate::jobs::PUSH_QUEUE,
+            crate::jobs::WEBHOOKS_QUEUE,
+            crate::jobs::SLACK_IMPORT_QUEUE,
+        ]
+        .map(|queue| campfire_jobs::QueueConfig::new(queue, 1))
+        .to_vec(),
+    );
+    let (jobs, _ad_hoc) = crate::jobs::Jobs::new(&registry, &config)?;
+    let env = campfire_db::Env {
+        sink: std::sync::Arc::new(jobs),
+        ..Default::default()
+    };
+    twitter_backfill_with_env(&conn, &env)
+}
+
+fn twitter_backfill_with_env(conn: &Connection, env: &campfire_db::Env) -> anyhow::Result<String> {
+    let count = crate::integrations::twitter::references::backfill_database(conn, env)?;
+    Ok(format!(
+        "Backfilled {count} {}\n",
+        if count == 1 { "message" } else { "messages" }
+    ))
 }
 
 fn check(database: &Path, immutable: bool) -> anyhow::Result<String> {
@@ -116,8 +150,25 @@ fn migrate(database: &Path, directory: &Path) -> anyhow::Result<String> {
 }
 
 #[cfg(test)]
+mod twitter_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn twitter_operator_accepts_an_existing_database_and_prints_the_rake_summary() {
+        let dir = tempfile::tempdir().unwrap();
+        let database = dir.path().join("production.sqlite3");
+        let mut conn = Connection::open(&database).unwrap();
+        schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
+        drop(conn);
+        let args = [
+            "twitter-backfill-references".into(),
+            database.to_str().unwrap().into(),
+        ];
+        assert_eq!(execute(&args).unwrap(), "Backfilled 0 messages\n");
+    }
 
     #[test]
     fn checks_existing_schema_readonly_and_rejects_unknown_versions() {

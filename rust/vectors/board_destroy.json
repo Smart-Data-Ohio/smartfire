@@ -1,0 +1,265 @@
+{
+  "reference": "d7c7de92",
+  "notes": "Board DELETE itself raises NoMethodError at rooms_controller.rb:29 before writes: its subclass callback scopes omit destroy. These are unmodified inherited-action responses via /rooms/:id on boards; the board-route crash remains flagged pending a Rails fix/decision.",
+  "cases": [
+    {
+      "name": "admin_json",
+      "id": 2117000000,
+      "actor": 127326141,
+      "creator": 127326141,
+      "members": [
+        127326141,
+        773523953
+      ],
+      "format": "json",
+      "path": "/rooms/boards/2117000000.json",
+      "reference_path": "/rooms/2117000000.json",
+      "board_route_status": 500,
+      "response": {
+        "status": 200,
+        "body": "{\"deleted\":true,\"room_id\":2117000000}",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": "max-age=0, private, must-revalidate"
+        }
+      },
+      "flash": {},
+      "state": {
+        "deleted": true,
+        "claimed": true,
+        "memberships": 0,
+        "audit": {
+          "action": "room.destroy",
+          "actor_id": 127326141,
+          "target_type": "Room",
+          "target_id": 2117000000,
+          "target_label": "Launch",
+          "details": {
+            "name": "Launch"
+          }
+        }
+      },
+      "broadcasts": [
+        {
+          "broadcasting": "rooms",
+          "message": "<turbo-stream action=\"remove\" target=\"list_rooms_board_2117000000\"></turbo-stream>"
+        }
+      ],
+      "jobs": [
+        [
+          "Room::DestroyJob",
+          [
+            2117000000
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "creator_html",
+      "id": 2117000001,
+      "actor": 773523953,
+      "creator": 773523953,
+      "members": [
+        127326141,
+        773523953
+      ],
+      "format": "html",
+      "path": "/rooms/boards/2117000001",
+      "reference_path": "/rooms/2117000001",
+      "board_route_status": 500,
+      "response": {
+        "status": 302,
+        "body": "",
+        "headers": {
+          "content-type": "text/html; charset=utf-8",
+          "location": "http://campfire.test/",
+          "cache-control": "no-cache"
+        }
+      },
+      "flash": {
+        "notice": "Deleted #Launch"
+      },
+      "state": {
+        "deleted": true,
+        "claimed": true,
+        "memberships": 0,
+        "audit": {
+          "action": "room.destroy",
+          "actor_id": 773523953,
+          "target_type": "Room",
+          "target_id": 2117000001,
+          "target_label": "Launch",
+          "details": {
+            "name": "Launch"
+          }
+        }
+      },
+      "broadcasts": [
+        {
+          "broadcasting": "rooms",
+          "message": "<turbo-stream action=\"remove\" target=\"list_rooms_board_2117000001\"></turbo-stream>"
+        }
+      ],
+      "jobs": [
+        [
+          "Room::DestroyJob",
+          [
+            2117000001
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "admin_turbo",
+      "id": 2117000002,
+      "actor": 127326141,
+      "creator": 773523953,
+      "members": [
+        127326141,
+        773523953
+      ],
+      "format": "turbo_stream",
+      "path": "/rooms/boards/2117000002",
+      "reference_path": "/rooms/2117000002",
+      "board_route_status": 500,
+      "response": {
+        "status": 302,
+        "body": "",
+        "headers": {
+          "content-type": "text/html; charset=utf-8",
+          "location": "http://campfire.test/",
+          "cache-control": "no-cache"
+        }
+      },
+      "flash": {
+        "notice": "Deleted #Launch"
+      },
+      "state": {
+        "deleted": true,
+        "claimed": true,
+        "memberships": 0,
+        "audit": {
+          "action": "room.destroy",
+          "actor_id": 127326141,
+          "target_type": "Room",
+          "target_id": 2117000002,
+          "target_label": "Launch",
+          "details": {
+            "name": "Launch"
+          }
+        }
+      },
+      "broadcasts": [
+        {
+          "broadcasting": "rooms",
+          "message": "<turbo-stream action=\"remove\" target=\"list_rooms_board_2117000002\"></turbo-stream>"
+        }
+      ],
+      "jobs": [
+        [
+          "Room::DestroyJob",
+          [
+            2117000002
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "forbidden_member",
+      "id": 2117000003,
+      "actor": 773523953,
+      "creator": 127326141,
+      "members": [
+        127326141,
+        773523953
+      ],
+      "format": "json",
+      "path": "/rooms/boards/2117000003.json",
+      "reference_path": "/rooms/2117000003.json",
+      "board_route_status": 500,
+      "response": {
+        "status": 403,
+        "body": "",
+        "headers": {
+          "content-type": "text/html",
+          "cache-control": "no-cache"
+        }
+      },
+      "flash": {},
+      "state": {
+        "deleted": false,
+        "claimed": false,
+        "memberships": 2,
+        "audit": null
+      },
+      "broadcasts": [],
+      "jobs": []
+    },
+    {
+      "name": "inaccessible_admin",
+      "id": 2117000004,
+      "actor": 127326141,
+      "creator": 773523953,
+      "members": [
+        773523953
+      ],
+      "format": "json",
+      "path": "/rooms/boards/2117000004.json",
+      "reference_path": "/rooms/2117000004.json",
+      "board_route_status": 500,
+      "response": {
+        "status": 302,
+        "body": "",
+        "headers": {
+          "content-type": "text/html; charset=utf-8",
+          "location": "http://campfire.test/",
+          "cache-control": "no-cache"
+        }
+      },
+      "flash": {
+        "alert": "Room not found or inaccessible"
+      },
+      "state": {
+        "deleted": false,
+        "claimed": false,
+        "memberships": 1,
+        "audit": null
+      },
+      "broadcasts": [],
+      "jobs": []
+    },
+    {
+      "name": "missing",
+      "id": 2117000005,
+      "actor": 127326141,
+      "creator": 127326141,
+      "members": [
+        127326141
+      ],
+      "format": "json",
+      "path": "/rooms/boards/2117999999.json",
+      "reference_path": "/rooms/2117999999.json",
+      "board_route_status": 500,
+      "response": {
+        "status": 302,
+        "body": "",
+        "headers": {
+          "content-type": "text/html; charset=utf-8",
+          "location": "http://campfire.test/",
+          "cache-control": "no-cache"
+        }
+      },
+      "flash": {
+        "alert": "Room not found or inaccessible"
+      },
+      "state": {
+        "deleted": false,
+        "claimed": false,
+        "memberships": 1,
+        "audit": null
+      },
+      "broadcasts": [],
+      "jobs": []
+    }
+  ]
+}

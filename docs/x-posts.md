@@ -69,3 +69,16 @@ the release rehearsal runs with no network); each backfilled card
 enqueues its own fetch the first time it renders. Outside a deploy,
 `bin/rails twitter:backfill_references` runs the same sync ad hoc, does
 enqueue fetches, and prints how many messages it synced.
+
+The equivalent Rust operator command is:
+
+```sh
+campfire twitter-backfill-references /path/to/storage/db/production.sqlite3
+```
+
+It walks messages in batches of 1,000, syncs references idempotently, and
+prints the same `Backfilled N messages` summary (singular for one). Fetch
+jobs are saved durably with each message's reference changes for the
+normal job runner to process; the command starts neither the server nor
+network fetches. It requires an existing database with the current schema
+and does not create or migrate a database.

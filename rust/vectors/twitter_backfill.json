@@ -1,0 +1,140 @@
+{
+  "reference": "d7c7de92",
+  "filler_count": 1001,
+  "inputs": [
+    {
+      "id": -2,
+      "markdown": "https://x.com/negative/status/77101",
+      "html": "<p>https://x.com/negative/status/77101</p>"
+    },
+    {
+      "id": 0,
+      "markdown": "https://twitter.com/zero/statuses/77102",
+      "html": "<p>https://twitter.com/zero/statuses/77102</p>"
+    },
+    {
+      "id": 2118001001,
+      "markdown": "https://x.com/code/status/77103",
+      "html": "<pre>https://x.com/code/status/77103</pre>"
+    },
+    {
+      "id": 2118001002,
+      "markdown": "https://x.com/missing/status/77104",
+      "html": null
+    },
+    {
+      "id": 2118001003,
+      "markdown": null,
+      "html": "<p><a href=\"https://mobile.twitter.com/legacy/status/77105?s=20\">legacy</a></p>"
+    },
+    {
+      "id": 2118001004,
+      "markdown": "ordinary",
+      "html": "<p>ordinary</p>",
+      "forward_note": "https://x.com/note/status/77106"
+    },
+    {
+      "id": 2118001005,
+      "markdown": "https://x.com/dupe/status/77101",
+      "html": "<p>https://x.com/dupe/status/77101 https://x.com/a/status/77107 https://x.com/a/status/77108 https://x.com/a/status/77109 https://x.com/a/status/77110</p>"
+    }
+  ],
+  "output": "Backfilled 8 messages\n",
+  "repeated_output": "Backfilled 8 messages\n",
+  "state": {
+    "references": [
+      [
+        -2,
+        "77101"
+      ],
+      [
+        0,
+        "77102"
+      ],
+      [
+        935961886,
+        "20"
+      ],
+      [
+        935961901,
+        "1750290547908952568"
+      ],
+      [
+        2118001003,
+        "77105"
+      ],
+      [
+        2118001005,
+        "77101"
+      ],
+      [
+        2118001005,
+        "77107"
+      ],
+      [
+        2118001005,
+        "77108"
+      ],
+      [
+        2118001005,
+        "77109"
+      ]
+    ],
+    "posts": [
+      [
+        "1750290547908952568",
+        "https://x.com/37signals/status/1750290547908952568",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "20",
+        "https://x.com/jack/status/20",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "266031293945503744",
+        "https://x.com/BarackObama/status/266031293945503744",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "77101",
+        "https://x.com/negative/status/77101",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "77102",
+        "https://x.com/zero/status/77102",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "77105",
+        "https://x.com/legacy/status/77105",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "77107",
+        "https://x.com/a/status/77107",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "77108",
+        "https://x.com/a/status/77108",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "77109",
+        "https://x.com/a/status/77109",
+        "2026-03-02T16:00:00.000000Z"
+      ]
+    ],
+    "jobs": [
+      "1750290547908952568",
+      "77101",
+      "77102",
+      "77105",
+      "77107",
+      "77108",
+      "77109"
+    ]
+  }
+}
