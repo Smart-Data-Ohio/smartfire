@@ -1,0 +1,56 @@
+{
+  "owner": "PR #237, rust/ci-full-gate",
+  "status": "future-ci-registration-pending",
+  "current_main_toolchain_ci": "Ignored wrappers are skipped; the completed local paired receipt is credited, not a completed CI browser run.",
+  "required_prerequisites": [
+    "CI default seed and pinned Rails reference image",
+    "Pinned Playwright image built as for the existing browsers suite",
+    "Build the normal binary before ignored tests: cargo build --locked -p campfire --bin campfire; set WS11UI_BROWSER_BINARY to the target directory/debug/campfire"
+  ],
+  "registry": "Append these records to rust/ci/ignored-tests.json browsers; do not change existing records.",
+  "scheduling": "Seven explicit functions; mode-specific disjoint three-port leases; verified with nextest -j 4 without lowering concurrency.",
+  "records": [
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_people_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
+    }
+  ]
+}

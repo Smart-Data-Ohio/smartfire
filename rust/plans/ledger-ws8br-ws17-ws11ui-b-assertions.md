@@ -1497,4 +1497,3 @@ Status: **reopened**. Native identities:
 | --- | --- | --- |
 | `test/controllers/pwa_controller_test.rb:58` — `assert $?.success?, output` | **OPEN** | The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output. Cases: service_worker_harness.mjs. |
 | `test/controllers/pwa_controller_test.rb:59` — `assert_includes output, "all checks passed"` | **OPEN** | The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output. Cases: service_worker_harness.mjs. |
-

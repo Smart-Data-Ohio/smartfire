@@ -11,728 +11,936 @@
       "file": "test/system/audit_log_test.rb",
       "line": 12,
       "test": "admin browses filters and exports the audit log",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0288",
       "file": "test/system/audit_log_test.rb",
       "line": 36,
       "test": "audit log stays usable at phone width",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0289",
       "file": "test/system/channel_members_test.rb",
       "line": 21,
       "test": "members are online across channels and go offline after signing out",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0290",
       "file": "test/system/channel_members_test.rb",
       "line": 49,
       "test": "a bot with a checked-in agent shows online in the member panel",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0291",
       "file": "test/system/channel_members_test.rb",
       "line": 63,
       "test": "closing one tab keeps a member online until their last tab closes",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0292",
       "file": "test/system/channel_members_test.rb",
       "line": 82,
       "test": "the member panel follows channel access and remains usable on a phone",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0293",
       "file": "test/system/channel_navigation_test.rb",
       "line": 10,
       "test": "switching channels hides the progress bar and lands without a reload",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0294",
       "file": "test/system/channel_navigation_test.rb",
       "line": 34,
       "test": "browser back returns to the previous channel without a reload",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0295",
       "file": "test/system/channel_navigation_test.rb",
       "line": 53,
       "test": "slow back and forward restores never flash the channel loader",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0296",
       "file": "test/system/channel_navigation_test.rb",
       "line": 78,
       "test": "canceling a channel visit does not suppress the next page loader",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0297",
       "file": "test/system/channel_navigation_test.rb",
       "line": 95,
       "test": "shared message links also navigate without a channel loader",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0298",
       "file": "test/system/channel_navigation_test.rb",
       "line": 110,
       "test": "channel switch from the mobile drawer closes the drawer without a reload",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0299",
       "file": "test/system/channel_navigation_test.rb",
       "line": 130,
       "test": "non-room visits still show the progress bar",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0304",
       "file": "test/system/icons_test.rb",
       "line": 19,
       "test": "colon autocomplete inserts a brand shortcode that renders in both themes",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0305",
       "file": "test/system/icons_test.rb",
       "line": 47,
       "test": "room icon picker sets an icon that shows in the sidebar and header",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0306",
       "file": "test/system/icons_test.rb",
       "line": 67,
       "test": "icon rooms suppress the search arrow marker",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0307",
       "file": "test/system/icons_test.rb",
       "line": 80,
       "test": "lobehub brand icons render visibly in both themes",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0308",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 8,
       "test": "? opens the shortcut sheet everywhere except while typing",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0309",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 28,
       "test": "? while typing stays in the composer",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0310",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 37,
       "test": "ctrl+k fires while typing and inserts no link markup",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0311",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 49,
       "test": "alt+up and alt+down move between rooms",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0312",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 65,
       "test": "alt+shift+arrows jump between unread rooms",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0313",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 78,
       "test": "escape marks the current room read",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0314",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 88,
       "test": "escape while typing leaves the room unread",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0315",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 99,
       "test": "escape with a menu open closes the menu instead of marking read",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0316",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 111,
       "test": "escape with the huddle theater open yields to the theater instead of marking read",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0317",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 148,
       "test": "escape in full screen leaves the room unread",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0318",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 189,
       "test": "alt+arrows while typing stay in the room",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0319",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 204,
       "test": "ctrl+k ignores IME composition",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0320",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 216,
       "test": "ctrl+k does not open over an open modal dialog",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0321",
       "file": "test/system/keyboard_shortcuts_test.rb",
       "line": 231,
       "test": "ctrl+k still toggles the switcher closed",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0322",
       "file": "test/system/member_select_mode_test.rb",
       "line": 17,
       "test": "member rows render without checkboxes and stay inline on desktop and phone",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0323",
       "file": "test/system/member_select_mode_test.rb",
       "line": 37,
       "test": "a plain click opens the profile card outside selection mode and toggles inside it",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0324",
       "file": "test/system/member_select_mode_test.rb",
       "line": 56,
       "test": "ctrl-click and cmd-click toggle members, and dropping to zero exits the mode",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0325",
       "file": "test/system/member_select_mode_test.rb",
       "line": 76,
       "test": "ctrl-shift-click selects a range across groups and skips your own row",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0326",
       "file": "test/system/member_select_mode_test.rb",
       "line": 104,
       "test": "ctrl-shift-click on a checked checkbox adds the range instead of clearing it",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0327",
       "file": "test/system/member_select_mode_test.rb",
       "line": 121,
       "test": "a plain click opens the profile card again after the selected member leaves",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0328",
       "file": "test/system/member_select_mode_test.rb",
       "line": 135,
       "test": "esc and the exit button leave selection mode with the panel open",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0329",
       "file": "test/system/member_select_mode_test.rb",
       "line": 152,
       "test": "the exit button returns focus to the last-touched row",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0330",
       "file": "test/system/member_select_mode_test.rb",
       "line": 161,
       "test": "the exit button falls back to the first row when the last-touched row is gone",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0331",
       "file": "test/system/member_select_mode_test.rb",
       "line": 175,
       "test": "unchecking the last box returns focus to that row",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0332",
       "file": "test/system/member_select_mode_test.rb",
       "line": 184,
       "test": "esc closes the mobile drawer when only a departed member's hidden selection remains",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0333",
       "file": "test/system/member_select_mode_test.rb",
       "line": 205,
       "test": "esc on desktop leaves a departed member's hidden selection alone",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0334",
       "file": "test/system/member_select_mode_test.rb",
       "line": 222,
       "test": "esc with the row menu open closes only the menu",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0335",
       "file": "test/system/member_select_mode_test.rb",
       "line": 238,
       "test": "the selection count is announced through a dedicated status element",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0336",
       "file": "test/system/member_select_mode_test.rb",
       "line": 254,
       "test": "space toggles the focused row without opening the profile card",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0337",
       "file": "test/system/member_select_mode_test.rb",
       "line": 268,
       "test": "selection, mode, and anchor survive a presence re-render",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0338",
       "file": "test/system/member_select_mode_test.rb",
       "line": 283,
       "test": "the star row menu works in and out of selection mode",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0339",
       "file": "test/system/member_select_mode_test.rb",
       "line": 310,
       "test": "a phone long-press enters selection mode, then taps toggle and Message submits the set",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0343",
       "file": "test/system/mobile_layout_test.rb",
       "line": 113,
       "test": "pages outside the workspace shell show no drawer toggle that opens nothing",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0344",
       "file": "test/system/mobile_layout_test.rb",
       "line": 123,
       "test": "every drawer destination has one toggle that opens the drawer on itself",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0345",
       "file": "test/system/motion_test.rb",
       "line": 18,
       "test": "motion is off by default in the test environment",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0346",
       "file": "test/system/motion_test.rb",
       "line": 25,
       "test": "mobile drawer animates in, lands in place, and returns focus with motion on",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0347",
       "file": "test/system/motion_test.rb",
       "line": 72,
       "test": "member selection mode moves no rows and resizes nothing",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0348",
       "file": "test/system/motion_test.rb",
       "line": 102,
       "test": "people directory bar shifts no rows when toggling",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0349",
       "file": "test/system/motion_test.rb",
       "line": 118,
       "test": "people directory bar stays stuck while scrolling",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0350",
       "file": "test/system/motion_test.rb",
       "line": 148,
       "test": "room menu measures at full scale when clamping to the viewport edge",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0351",
       "file": "test/system/motion_test.rb",
       "line": 176,
       "test": "mobile drawer keeps the room list scroll position across close and reopen",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0352",
       "file": "test/system/motion_test.rb",
       "line": 240,
       "test": "mobile drawer reveals a current room far down the list on first open",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0353",
       "file": "test/system/motion_test.rb",
       "line": 259,
       "test": "mobile drawer reopens on the current room when it is already in view",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0370",
       "file": "test/system/people_group_dms_test.rb",
       "line": 340,
       "test": "starting a group huddle rings every other member",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0373",
       "file": "test/system/room_header_test.rb",
       "line": 17,
       "test": "phone header keeps members, call, search and More with the rest in the menu",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0374",
       "file": "test/system/room_header_test.rb",
       "line": 70,
       "test": "tablet header keeps notifications and settings visible with the rest in the menu",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0375",
       "file": "test/system/room_header_test.rb",
       "line": 111,
       "test": "desktop header is unchanged with no More button",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0376",
       "file": "test/system/room_header_test.rb",
       "line": 139,
       "test": "every phone overflow menu item works",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0377",
       "file": "test/system/room_header_test.rb",
       "line": 236,
       "test": "the overflow menu scrolls within a landscape phone viewport",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0378",
       "file": "test/system/room_header_test.rb",
       "line": 278,
       "test": "opening threads from the menu returns focus to More on close",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0379",
       "file": "test/system/room_header_test.rb",
       "line": 298,
       "test": "the overflow menu is keyboard accessible and closes on outside tap",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0380",
       "file": "test/system/room_header_test.rb",
       "line": 327,
       "test": "the overflow dot lights for unread threads, not pins, and the pins badge hides at zero",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0381",
       "file": "test/system/room_header_test.rb",
       "line": 375,
       "test": "the tour restarts from the overflow menu on phones",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0382",
       "file": "test/system/service_worker_test.rb",
       "line": 9,
       "test": "the worker caches static assets and never authenticated responses",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0383",
       "file": "test/system/service_worker_test.rb",
       "line": 26,
       "test": "the offline shell renders with working retry behavior",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0384",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 4,
       "test": "an admin deletes a channel from the room menu",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0385",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 22,
       "test": "the creator sees Delete on their own room but not on others",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0386",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 36,
       "test": "a plain member does not see Delete",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0387",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 44,
       "test": "Cancel and Escape keep the room",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0388",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 66,
       "test": "deleting the room you are in navigates you home",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0389",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 82,
       "test": "Delete is offered on every room kind for admins",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0390",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 107,
       "test": "a group dm shows Delete only for admins",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0391",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 124,
       "test": "one-to-one dms follow the server delete rule",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0392",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 139,
       "test": "Delete is reachable by arrow keys",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0393",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 158,
       "test": "deleting from the long-press menu on phones",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0394",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 183,
       "test": "a member leaves an open channel and rejoins through the join page",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0395",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 208,
       "test": "leaving a private channel warns about being re-added",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0396",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 228,
       "test": "leaving the room you are in sends you home",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0397",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 243,
       "test": "the last member out leaves the room behind for no one to lose",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0398",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 256,
       "test": "Leave is offered on every room kind and never deletes",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0399",
       "file": "test/system/sidebar_room_menu_test.rb",
       "line": 291,
       "test": "a member leaves a group dm from the menu",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0404",
       "file": "test/system/timezone_detection_test.rb",
       "line": 4,
       "test": "the browser does not report its zone without a CSRF token",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0405",
       "file": "test/system/timezone_detection_test.rb",
       "line": 17,
       "test": "the browser reports its detected zone once",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0406",
       "file": "test/system/unread_divider_test.rb",
       "line": 8,
       "test": "few unread render the divider above the first new message and keep the bottom scroll",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0407",
       "file": "test/system/unread_divider_test.rb",
       "line": 23,
       "test": "many unread scroll the room to the divider",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0408",
       "file": "test/system/unread_divider_test.rb",
       "line": 48,
       "test": "the jump pill shows while the divider is off-screen and returns to it",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0409",
       "file": "test/system/unread_divider_test.rb",
       "line": 73,
       "test": "unread older than the last page keeps the last page and the pill links to the first unread",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0410",
       "file": "test/system/unread_divider_test.rb",
       "line": 97,
       "test": "mark unread from the message menu points the divider at that message",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0411",
       "file": "test/system/unread_rooms_test.rb",
       "line": 7,
       "test": "sending messages between two users",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0412",
       "file": "test/system/unread_rooms_test.rb",
       "line": 27,
       "test": "channel and DM rows keep exactly one unread badge next to the huddle stack",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0413",
       "file": "test/system/workspace_icons_test.rb",
       "line": 16,
       "test": "upload post in both themes then delete falls back to the shortcode",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0414",
       "file": "test/system/browser_launch_profile_test.rb",
       "line": 11,
       "test": "the browser launches with a managed profile under the worker TMPDIR",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0415",
       "file": "test/system/content_security_policy_test.rb",
       "line": 54,
       "test": "signing in through the real login form lands on the signed-in page",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0416",
       "file": "test/system/content_security_policy_test.rb",
       "line": 81,
       "test": "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0417",
       "file": "test/system/content_security_policy_test.rb",
       "line": 115,
       "test": "a Turbo visit to the event form fills the time zone with no violations",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0418",
       "file": "test/system/content_security_policy_test.rb",
       "line": 137,
       "test": "a forced inline script without the nonce is blocked and reported",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     },
     {
       "id": "P0419",
       "file": "test/system/content_security_policy_test.rb",
       "line": 153,
       "test": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "status": "acceptance-receipt-pending",
+      "reason": "Retained open at the 120-declaration C checkpoint: this named original needs a current per-assertion browser receipt and producer discrimination. Historical file-level runs and domain/controller coverage are not credited for its interacting browser assertions. Missing acceptance evidence does not establish an absent production API."
     }
   ],
   "ws8br_sidebar_original_receipts": [],
@@ -1111,7 +1319,13 @@
         "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json",
         "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json"
       ],
-      "executed_browser_gate": "Seven ignored registrations explicitly run by rust/parity/system/ws12 on rust/ci-full-gate; ordinary toolchain CI does not claim them."
+      "executed_browser_gate": "Seven ignored registrations explicitly executed locally by rust/parity/system/ws12; future CI handoff: PR #237 must add the seven exact names to its ignored-test registry. Current main toolchain CI skips them."
     }
-  ]
+  ],
+  "ci_browser_handoff": {
+    "owner": "PR #237 (rust/ci-full-gate)",
+    "status": "future-ci-registration-pending",
+    "manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-c-ci-handoff.json",
+    "reason": "Seven wrappers have executed local paired receipts and producer controls. Current main toolchain CI skips them. The future correctness job must register their exact names and build the normal binary first. A four-worker host startup exit was not reproduced after adding retained diagnostics; its cause remains unconfirmed."
+  }
 }

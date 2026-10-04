@@ -63,8 +63,11 @@ Rails assertion sites**, **54 private-helper expansions**, and four setup
 assertions. The controller manifest accounts for 93 declarations/279 sites and
 82 distinct enabled native identities. The browser manifest accounts for 27
 original declarations/141 sites through seven explicitly enabled ignored tests
-in `rust/parity/system/ws12` on the `rust/ci-full-gate` workflow. They are not
-claimed as ordinary toolchain-CI tests. Both targets execute all 27 cases;
+through `rust/parity/system/ws12`. Future CI ownership is PR #237
+(`rust/ci-full-gate`); its exact ignored-test registry must add these seven names.
+Current main toolchain CI skips them, so this report credits the executed paired
+local receipt and does not claim a completed CI browser run. Both targets execute all 27 cases (26 Chromium scenarios and one served-worker
+Node event harness per target);
 stateful DM recipients/canonical destinations, group departure and tour stamps
 are checked on each actual server database after the browser action.
 
@@ -95,7 +98,7 @@ Muted-room noise -> mention delivery and Calendar injected-clock busy -> clear
 remain separate missing sequences. The 81 WS11-API comparisons stay with their
 owner; the three geometry-only exclusions retain their prior dispositions.
 
-Fresh-clone test, clippy, release-input and complete browser gate summaries follow
+Fresh-clone test, clippy, release-input and new browser/Node receipt summaries follow
 below after verification. The only seeds built for that clone are `default`,
 `first_run` and `agents_ui`, matching `.github/workflows/rust.yml`.
 
@@ -119,3 +122,91 @@ cap controls add both new identities. Exact assertions are preserved after
 restoring producer bytes. CSV limit parameterization is a pure extraction; its
 per-request override is compiled only in tests and follows the normal router,
 CSRF, permissions, sudo, selection and rendering path.
+
+The first full fresh-clone run found a real cache-boundary regression in
+`controllers::rooms::row_broadcast_tests::composed_sidebar_broadcast_rows_match_sixteen_complete_rails_renders`:
+the second standalone DM row incorrectly reused the first row's unread/muted
+classes. Rails caches the direct membership **collection** in
+`app/views/users/sidebars/show.html.erb:163`; its standalone broadcast/favorite/
+category partial renders are uncached. The production fix places cache lookup
+only in `Shell::direct_rows`, leaving `Row::render`/`render_fragment` fresh. The
+existing sixteen-complete-response oracle is unchanged. That failing-first run
+was stopped after confirming the defect; the fresh workspace is rerun in full
+after the fix, with the same four workers and unchanged assertions/deadlines.
+
+Future CI handoff is explicit in `ledger-ws8br-ws17-ws11ui-c-ci-handoff.json`: PR #237 must append the seven exact browser-wrapper records to its ignored-test registry and build the normal binary before running them. Current main's Rust toolchain job skips these wrappers. The existing shell entry point builds that binary and executes them; the local paired receipt is credited here. Each wrapper now has an explicit function name recognized by the future ignored-test lexer, rather than a macro placeholder. Mode-specific three-port leases keep separate fixture/server namespaces.
+
+Final checkpoint verification
+
+Merged main `5f5c18635` with merge commit `5aa58cecb`, keeping both test registrations in the only conflict (`controllers.rs`). Production sources were verified in the independent no-hardlink fresh clone with only CI's `default`, `first_run`, and `agents_ui` seeds and the pinned media runner. Subsequent changes are confined to explicit ignored-test functions, driver port leases/diagnostics, and receipt metadata; all seven wrappers were then rerun at four workers and strict clippy rerun. No production asset, Rails application, CodeQL configuration, deadline, or assertion was changed.
+
+Commands run from that clone's `rust/` directory:
+
+```sh
+cargo nextest run --locked --workspace --exclude html5ever -j 4 --no-fail-fast
+cargo test --locked --workspace --exclude html5ever --doc -- --test-threads=4
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+./ci/with-release-inputs.sh cargo build --locked -p campfire --bin campfire
+cargo build --locked -p campfire --bin campfire
+cargo test --locked -p campfire controllers::ws11ui_original_browser_tests -- --ignored --show-output --test-threads=1
+cargo nextest run --locked -p campfire -j 4 --no-fail-fast --run-ignored only --success-output final -E 'test(controllers::ws11ui_original_browser_tests)'
+cargo nextest run --locked -p campfire -j 4 -E 'test(original_mixed_quiet_sidebar_read_counts)' --success-output immediate
+cargo nextest list --locked --workspace --exclude html5ever --message-format json
+for mode in people pickers members group tours stars worker; do
+  python3 reference-tools/users/run_original_browser_assertions.py "$mode" --controls
+done
+```
+
+`CAMPFIRE_REFERENCE` points at that fresh clone; `CARGO_TARGET_DIR` uses the pre-existing shared target; `WS11UI_BROWSER_BINARY` points at the normal binary built above. Rustc retains its configured slot throttle. The browser/Node runs use the pinned Rails image `review236-reference:78b9b1546` and pinned Playwright image.
+
+Raw summaries:
+
+```text
+     Summary [1329.556s] 5074 tests run: 5074 passed (1 slow), 27 skipped
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 11.31s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 16s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 2959 filtered out; finished in 270.47s
+     Summary [  80.249s] 7 tests run: 7 passed (1 slow), 2959 skipped
+Original sidebar reads: Rust 23 -> 23; Rails 22 -> 22; huddle_grants 1
+     Summary [   0.879s] 1 test run: 1 passed, 2965 skipped
+```
+
+The two `Finished` lines correspond to final strict clippy (zero warnings/errors) and the release-input production build. Doctests have 0 passed/0 failed/2 ignored across eleven crate suites; the raw nonzero-ignored crate line is:
+
+```text
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Failing-first and non-passing history is retained:
+
+```text
+     Summary [1430.227s] 2542/5060 tests run: 2537 passed (6 slow), 5 failed, 27 skipped
+     Summary [1609.118s] 5060 tests run: 5060 passed (5 slow), 27 skipped
+     Summary [  86.132s] 7 tests run: 6 passed (1 slow), 1 failed, 2959 skipped
+```
+
+The first workspace line contains one genuine standalone-DM cache regression and four cancellations when that run was stopped to fix it. The corrected pre-main run passed all 5,060; the merged-main run then passed all 5,074. Strict clippy initially rejected a contains-key/insert test setup; the entry API fixes that style issue without moving any assertion anchors, and the affected fifteen original room-audit tests pass. The first four-worker browser probe had one picker host startup exit, before any browser assertion; it is not credited as a mutation rejection or a passing receipt. Its log was lost during cleanup. Startup errors now retain the server log contents. The diagnostic run passed all seven at the unchanged four-worker limit, so the original exit's cause remains unconfirmed and is flagged for the CI handoff. There are no automatic retries or widened waits; the successful serial receipt and the diagnostic run do not erase that failed probe.
+
+Nine pinned Rails corpora were regenerated in the fresh clone and compared byte-for-byte: account originals, audit originals, audit-cap originals, avatar originals, icon originals, profile gaps, sidebar originals, human profile originals, and room audit originals. Each regenerated unchanged.
+
+The current controller and browser validators check all source hashes, declaration assertion sets, exact assertion anchors, enabled/ignored registrations, successful current-run identities, per-target original assertion traces, actual persisted DB observations, and all twenty-seven intended producer rejections. Raw summaries:
+
+```text
+Controller per-assertion receipts: 120 audited declarations (112 closed, 8 reopened); 399 assertion sites; 70 enabled native test identities passed; 11 explicit reopened gaps; 0 unaccounted assertions
+Controller per-assertion receipts: 93 audited declarations (93 closed, 0 reopened); 279 assertion sites; 82 enabled native test identities passed; 0 explicit reopened gaps; 0 unaccounted assertions
+Original browser per-assertion receipts: 27 declarations; 141 direct sites; 39 private-helper expansions; 4 setup assertions; 54 paired executions passed; 27 producer defects rejected; 0 unaccounted assertions
+Cutover current branch: 181 credited test identities passed in the supplied current workspace run
+Cutover ledger receipts: 25 historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; 233 broad WS8 closures; 1 approved queue supersession; 0 inconsistent records
+Cutover ledger remains partial: 104 broad receipts; 0 sidebar receipts; 6 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions
+```
+
+The first controller summary deliberately preserves #244's historical eight reopenings; the C mappings close those eight with new evidence. Browser receipt validation credits current local execution; future CI registration is separately pending as described above. This is the requested 120-declaration checkpoint, not a claim that the remaining ledger is complete.
+
+Exact final validator commands, run from the worktree root:
+
+```sh
+python3 rust/reference-tools/check-controller-assertion-receipts.py --manifest rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json --nextest-list .scratch/ledger-audit/c-merged-final-list.json --native-log .scratch/ledger-audit/c-merged-workspace.log
+python3 rust/reference-tools/check-controller-assertion-receipts.py --manifest rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json --nextest-list .scratch/ledger-audit/c-merged-final-list.json --native-log .scratch/ledger-audit/c-merged-workspace.log
+python3 rust/reference-tools/check-original-browser-receipts.py --nextest-list .scratch/ledger-audit/c-merged-final-list.json --browser-log .scratch/ledger-audit/c-browser-startup-diagnostics.log --controls-dir .scratch/ledger-audit
+python3 rust/reference-tools/check-cutover-ledgers.py --nextest-list .scratch/ledger-audit/c-merged-final-list.json --native-log .scratch/ledger-audit/c-merged-workspace.log
+```
