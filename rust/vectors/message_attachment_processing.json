@@ -1,4 +1,5 @@
 {
+  "same_attachment_jobs": 1,
   "success": {
     "pending": {
       "message_processing_expires_at": "2026-03-02 16:15:00 UTC",

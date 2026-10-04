@@ -91,6 +91,9 @@ travel_to Time.utc(2026, 3, 2, 16) do
     travel seconds
     state.merge("delay" => seconds)
   end
-  puts JSON.pretty_generate(success: success, claim: claim, retries: retries,
+  message, blob = fresh_message
+  message.update!(attachment: blob)
+  same_attachment_jobs = processing_jobs.size
+  puts JSON.pretty_generate(same_attachment_jobs: same_attachment_jobs, success: success, claim: claim, retries: retries,
     terminal: terminal, terminal_jobs: terminal_jobs, terminal_html: terminal_html, enqueue_cooldowns: delays)
 end

@@ -678,3 +678,17 @@ async fn attachment_processing_cached_collection_recovers_a_lost_enqueue_without
     );
     assert_eq!(state(&app, blob).await.2, 1);
 }
+
+#[tokio::test]
+async fn attachment_processing_reassigning_the_same_blob_schedules_the_save_callback() {
+    let (app, _, id, blob) = setup(false).await;
+    app.db()
+        .write(move |tx| Message::find(tx.conn(), id)?.replace_attachment(tx, Some(blob)))
+        .await
+        .unwrap();
+    assert_eq!(
+        state(&app, blob).await.2,
+        1,
+        "Rails after_save also processes an unchanged attachment assignment"
+    );
+}
