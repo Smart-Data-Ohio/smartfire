@@ -113,3 +113,25 @@ Acceptance ledger: 445 records checked; 86 baseline-CI passed; 232 current imple
 Full closure audit: 220 records; 555 Rails assertions/predicates; 487 mapped; 78 strengthened closures; 32 reopened
 Final local run: 5088 distinct PASS entries; 0 FAIL entries; 20 skipped; all 318 retained closures have named PASS receipts
 ```
+
+### Final test-only assertion verification (1fb679f8)
+
+The fresh clone was advanced to `1fb679f89ed930e834dda8c82783c18a0ccbc9cf`. Every B/C mapped native test was rerun after the stronger redirect assertions; no production Rust file differs from the earlier full-run head.
+
+```sh
+cargo nextest run --workspace --exclude html5ever -j 4 -E 'test(cutover_c_) | test(cutover_event_) | test(cutover_entry_) | test(cutover_timeline_) | test(cutover_recurrence_) | test(cutover_reference_) | test(cutover_reminder_) | test(cutover_venue_) | test(tests::cutover::)' --no-fail-fast
+cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings
+cargo test --workspace --exclude html5ever --doc --no-fail-fast -- --test-threads=4
+```
+
+```text
+     Summary [  16.016s] 128 tests run: 128 passed, 4980 skipped
+    Finished `dev` profile [unoptimized] target(s) in 2m 35s
+    Finished `test` profile [unoptimized] target(s) in 0.78s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+All commands exit 0. The active doctest is the recurrence guard compile-fail assertion; the two kit examples remain ignored. Every other crate doctest summary is zero passed/failed/ignored. The scoped nextest skips are tests outside the selection plus the existing ignores; none of the 128 mapped tests is skipped.
+
+Raw execution logs and the nineteen mutation logs are archived under `rust/target/ledger-ws14-ws15-c-receipts/` locally. The own 1.3GB scratch clone/Rails output and regenerated reference/seed input directories are removed after publishing. The inherited `.scratch/ws14g` output and shared build target are preserved. Only report and receipt metadata change after this verified code head.

@@ -19840,6 +19840,26 @@
         "command": "cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings",
         "exit_code": 0,
         "raw_log_sha256": "9bc1ff2312668e74fb8037cd9c23e1728503ec6b096473f54cc7af047010f64e"
+      },
+      "final_test_assertions": {
+        "code_sha": "1fb679f89ed930e834dda8c82783c18a0ccbc9cf",
+        "command": "cargo nextest run --workspace --exclude html5ever -j 4 -E 'test(cutover_c_) | test(cutover_event_) | test(cutover_entry_) | test(cutover_timeline_) | test(cutover_recurrence_) | test(cutover_reference_) | test(cutover_reminder_) | test(cutover_venue_) | test(tests::cutover::)' --no-fail-fast",
+        "passed": 128,
+        "failed": 0,
+        "skipped": 4980,
+        "raw_log_sha256": "19de55afd29bf8b4a453d798f4cf8f7c2297847adaedc983948442868a2f0cb6"
+      },
+      "final_clippy": {
+        "exit_code": 0,
+        "raw_log_sha256": "380a67667b05f4d083fcf1ffedf420b74d7a6035ac4056c36fdec454b2dab473"
+      },
+      "doctests": {
+        "command": "cargo test --workspace --exclude html5ever --doc --no-fail-fast -- --test-threads=4",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 2,
+        "exit_code": 0,
+        "raw_log_sha256": "c103e765e236baefe1c9bfca3fc5fbe303119ba1ca3696b115941ff147fd6351"
       }
     }
   }
