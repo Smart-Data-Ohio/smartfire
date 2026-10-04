@@ -213,7 +213,7 @@ Assertion maps: 81 records; 271 original Rails assertion calls; 0 unmapped
     Finished `dev` profile [unoptimized] target(s) in 1m 13s
 ```
 
-Direct Result assertions added after this audit run replace the previous equivalent unwrap-error / error-variant panic guards; they change where the mutation fails, not the tested predicate. They were compiled by the mutation build and strict clippy. The full unmutated workspace run is in progress and its final receipt will be recorded in the continuation report.
+Direct Result assertions added after this audit run replace the previous equivalent unwrap-error / error-variant panic guards; they change where the mutation fails, not the tested predicate. They were compiled by the mutation build and strict clippy. The full unmutated workspace run below executes these exact assertions, including the direct Result guards.
 
 Nineteen distinct newly added tests have retained mutation failures, each at an assertion mapped to its Rails declaration. See `ledger-ws14-ws15-b-mutations.md` for every raw nextest summary and panic citation, and the JSON receipt for production source hashes. No compile/setup failure counts. The equality-end exploratory mutation also failed, but is not counted in the retained sample. Temporary production guards are absent from the committed tree.
 
@@ -234,3 +234,17 @@ python3 rust/reference-tools/cutover/check-ws14-ws15.py
 ```text
 Acceptance ledger: 445 records checked; 181 baseline-CI passed; 119 new assertions; 1 test-only outside gate; 144 explicitly open
 ```
+
+Final PR #243 audit validation (compiled audit code ec172c88a; no temporary mutations):
+
+```sh
+cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast
+python3 rust/reference-tools/cutover/assertion-maps.py rust/plans/ledger-ws14-ws15-b-assertions.json --pass-log WORKSPACE_PASS_LOG
+```
+
+```text
+     Summary [2036.636s] 5034 tests run: 5034 passed (8 slow), 20 skipped
+Assertion maps: 81 records; 271 original Rails assertion calls; 0 unmapped
+```
+
+All 78 named native tests used by the 81 closures ran and passed. The canonical `avatar_bot_logo_uploads_match_pinned_rails` comparison passes. No inherited timing flake appeared. The earlier fresh-clone receipt is historical; this audit validation runs in the working checkout against the newly compiled, restored audit code. The new stacked continuation has separate receipts.
