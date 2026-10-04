@@ -1219,15 +1219,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 130,
-              "end_line": 135,
+              "line": 145,
+              "end_line": 150,
               "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
               "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"DELETE\", ORPHAN), (\"POST\", \"/revoke\")]\n    )"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 136,
-              "end_line": 139,
+              "line": 151,
+              "end_line": 154,
               "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
               "text": "assert!(\n        url::form_urlencoded::parse(c[0][\"body\"].as_str().unwrap().as_bytes())\n            .any(|(key, value)| key == \"grant_type\" && value == \"refresh_token\")\n    )"
             }
@@ -1243,15 +1243,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 130,
-              "end_line": 135,
+              "line": 145,
+              "end_line": 150,
               "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
               "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"DELETE\", ORPHAN), (\"POST\", \"/revoke\")]\n    )"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 140,
-              "end_line": 140,
+              "line": 155,
+              "end_line": 155,
               "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
               "text": "assert_eq!(c[1][\"access_token\"], \"second-access-token\")"
             }
@@ -1267,15 +1267,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 130,
-              "end_line": 135,
+              "line": 145,
+              "end_line": 150,
               "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
               "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"DELETE\", ORPHAN), (\"POST\", \"/revoke\")]\n    )"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 141,
-              "end_line": 141,
+              "line": 156,
+              "end_line": 156,
               "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
               "text": "assert_eq!(c[2][\"method\"], \"POST\")"
             }
@@ -1298,8 +1298,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 158,
-              "end_line": 158,
+              "line": 173,
+              "end_line": 173,
               "function": "cutover_c_cleanup_invalid_grant_skips_deletes_but_revokes_snapshot_refresh_token",
               "text": "assert!(!c.iter().any(|v| v[\"method\"] == \"DELETE\"))"
             }
@@ -1315,8 +1315,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 159,
-              "end_line": 164,
+              "line": 174,
+              "end_line": 179,
               "function": "cutover_c_cleanup_invalid_grant_skips_deletes_but_revokes_snapshot_refresh_token",
               "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"POST\", \"/revoke\")]\n    )"
             }
@@ -1339,22 +1339,22 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 176,
-              "end_line": 176,
+              "line": 191,
+              "end_line": 191,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert!(attempt(&a, CLEANUP, 1).await.is_some())"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 178,
-              "end_line": 178,
+              "line": 193,
+              "end_line": 193,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert_eq!(retry.len(), 1)"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 179,
-              "end_line": 179,
+              "line": 194,
+              "end_line": 194,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert_eq!(retry[0].arguments, args)"
             }
@@ -1370,8 +1370,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 180,
-              "end_line": 186,
+              "line": 195,
+              "end_line": 201,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert_eq!(\n        calls(&r)\n            .iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\")]\n    )"
             }
@@ -1387,8 +1387,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 180,
-              "end_line": 186,
+              "line": 195,
+              "end_line": 201,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert_eq!(\n        calls(&r)\n            .iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\")]\n    )"
             }
@@ -1404,15 +1404,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 206,
-              "end_line": 209,
+              "line": 221,
+              "end_line": 224,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert_eq!(\n        (c[1][\"method\"].as_str(), c[1][\"path\"].as_str()),\n        (Some(\"DELETE\"), Some(ORPHAN))\n    )"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 210,
-              "end_line": 210,
+              "line": 225,
+              "end_line": 225,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert_eq!(c[1][\"access_token\"], \"recovered-access-token\")"
             }
@@ -1428,8 +1428,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 211,
-              "end_line": 214,
+              "line": 226,
+              "end_line": 229,
               "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
               "text": "assert_eq!(\n        (c[2][\"method\"].as_str(), c[2][\"path\"].as_str()),\n        (Some(\"POST\"), Some(\"/revoke\"))\n    )"
             }
@@ -1452,22 +1452,22 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 227,
-              "end_line": 227,
+              "line": 242,
+              "end_line": 242,
               "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
               "text": "assert!(attempt(&a, CLEANUP, 1).await.is_some())"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 229,
-              "end_line": 229,
+              "line": 244,
+              "end_line": 244,
               "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
               "text": "assert_eq!(rows.len(), 1)"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 230,
-              "end_line": 230,
+              "line": 245,
+              "end_line": 245,
               "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
               "text": "assert_eq!(rows[0].arguments, args)"
             }
@@ -1483,8 +1483,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 232,
-              "end_line": 235,
+              "line": 247,
+              "end_line": 250,
               "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
               "text": "assert_eq!(\n        (c[0][\"method\"].as_str(), c[0][\"path\"].as_str()),\n        (Some(\"DELETE\"), Some(ORPHAN))\n    )"
             }
@@ -1500,8 +1500,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 236,
-              "end_line": 239,
+              "line": 251,
+              "end_line": 254,
               "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
               "text": "assert_eq!(\n        (c[1][\"method\"].as_str(), c[1][\"path\"].as_str()),\n        (Some(\"POST\"), Some(\"/revoke\"))\n    )"
             }
@@ -1524,15 +1524,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 306,
-              "end_line": 306,
+              "line": 321,
+              "end_line": 321,
               "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
               "text": "assert_eq!(attempt(&a, CLEANUP, 9).await, None)"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 307,
-              "end_line": 307,
+              "line": 322,
+              "end_line": 322,
               "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
               "text": "assert!(pending(&a, CLEANUP).await.is_empty())"
             }
@@ -1548,8 +1548,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 308,
-              "end_line": 309,
+              "line": 323,
+              "end_line": 324,
               "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
               "text": "assert!(logs.text().lines().any(|line| line.contains(\"ERROR\")\n        && line.contains(\"Calendar::DisconnectCleanupJob failed after retries\")))"
             }
@@ -1565,8 +1565,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 310,
-              "end_line": 310,
+              "line": 325,
+              "end_line": 325,
               "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
               "text": "assert!(!calls(&r).iter().any(|c| c[\"path\"] == \"/revoke\"))"
             }
@@ -1589,8 +1589,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 333,
-              "end_line": 336,
+              "line": 348,
+              "end_line": 351,
               "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
               "text": "assert!(\n        log.lines()\n            .any(|line| line.contains(\"WARN\") && line.contains(&format!(\"account {account_id}\")))\n    )"
             }
@@ -1606,8 +1606,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 337,
-              "end_line": 337,
+              "line": 352,
+              "end_line": 352,
               "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
               "text": "assert!(!log.contains(\"access-token\"))"
             }
@@ -1623,8 +1623,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 338,
-              "end_line": 338,
+              "line": 353,
+              "end_line": 353,
               "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
               "text": "assert!(!log.contains(\"refresh-token\"))"
             }
@@ -1640,8 +1640,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 339,
-              "end_line": 339,
+              "line": 354,
+              "end_line": 354,
               "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
               "text": "assert!(calls(&r).is_empty())"
             }
@@ -1657,8 +1657,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 339,
-              "end_line": 339,
+              "line": 354,
+              "end_line": 354,
               "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
               "text": "assert!(calls(&r).is_empty())"
             }
@@ -1681,8 +1681,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 347,
-              "end_line": 347,
+              "line": 362,
+              "end_line": 362,
               "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
               "text": "assert!(!blob.contains(\"access-token\"))"
             }
@@ -1698,8 +1698,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 348,
-              "end_line": 348,
+              "line": 363,
+              "end_line": 363,
               "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
               "text": "assert!(!blob.contains(\"refresh-token\"))"
             }
@@ -1715,8 +1715,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 359,
-              "end_line": 359,
+              "line": 374,
+              "end_line": 374,
               "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
               "text": "assert!(!logs.text().contains(&blob))"
             }
@@ -1732,8 +1732,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 360,
-              "end_line": 360,
+              "line": 375,
+              "end_line": 375,
               "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
               "text": "assert!(!logs.text().contains(\"access-token\"))"
             }
@@ -1749,8 +1749,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 361,
-              "end_line": 361,
+              "line": 376,
+              "end_line": 376,
               "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
               "text": "assert!(!logs.text().contains(\"refresh-token\"))"
             }
@@ -1773,22 +1773,22 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 373,
-              "end_line": 373,
+              "line": 388,
+              "end_line": 388,
               "function": "cutover_c_remote_delete_uses_current_account_access_credentials",
               "text": "assert_eq!(calls(&r).len(), 1)"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 374,
-              "end_line": 380,
+              "line": 389,
+              "end_line": 395,
               "function": "cutover_c_remote_delete_uses_current_account_access_credentials",
               "text": "assert_eq!(\n        (\n            calls(&r)[0][\"method\"].as_str(),\n            calls(&r)[0][\"path\"].as_str()\n        ),\n        (Some(\"DELETE\"), Some(ORPHAN))\n    )"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 381,
-              "end_line": 381,
+              "line": 396,
+              "end_line": 396,
               "function": "cutover_c_remote_delete_uses_current_account_access_credentials",
               "text": "assert_eq!(calls(&r)[0][\"access_token\"], \"access-token\")"
             }
@@ -1811,8 +1811,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 387,
-              "end_line": 387,
+              "line": 402,
+              "end_line": 402,
               "function": "cutover_c_remote_delete_without_account_makes_no_request",
               "text": "assert!(calls(&r).is_empty())"
             }
@@ -1835,8 +1835,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 402,
-              "end_line": 402,
+              "line": 417,
+              "end_line": 417,
               "function": "cutover_c_remote_delete_disconnected_account_makes_no_request",
               "text": "assert!(calls(&r).is_empty())"
             }
@@ -1859,8 +1859,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 419,
-              "end_line": 419,
+              "line": 434,
+              "end_line": 434,
               "function": "cutover_c_remote_delete_without_calendar_scope_makes_no_request",
               "text": "assert!(calls(&r).is_empty())"
             }
@@ -1883,8 +1883,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 432,
-              "end_line": 438,
+              "line": 447,
+              "end_line": 453,
               "function": "cutover_c_remote_delete_not_found_and_gone_complete_without_retry",
               "text": "assert_eq!(\n        (c[0][\"method\"].as_str(), c[0][\"path\"].as_str()),\n        (\n            Some(\"DELETE\"),\n            Some(\"/calendar/v3/calendars/primary/events/missing-id\")\n        )\n    )"
             }
@@ -1900,8 +1900,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 439,
-              "end_line": 445,
+              "line": 454,
+              "end_line": 460,
               "function": "cutover_c_remote_delete_not_found_and_gone_complete_without_retry",
               "text": "assert_eq!(\n        (c[1][\"method\"].as_str(), c[1][\"path\"].as_str()),\n        (\n            Some(\"DELETE\"),\n            Some(\"/calendar/v3/calendars/primary/events/gone-id\")\n        )\n    )"
             }
@@ -1924,8 +1924,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 453,
-              "end_line": 462,
+              "line": 468,
+              "end_line": 477,
               "function": "cutover_c_remote_delete_invalid_grant_disconnects_without_delete_or_retry",
               "text": "assert_eq!(\n        a.db()\n            .read(|c| GoogleAccount::for_user(c, DAVID))\n            .await\n            .unwrap()\n            .unwrap()\n            .disconnected_reason\n            .as_deref(),\n        Some(\"Google rejected the connection\")\n    )"
             }
@@ -1941,8 +1941,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 463,
-              "end_line": 463,
+              "line": 478,
+              "end_line": 478,
               "function": "cutover_c_remote_delete_invalid_grant_disconnects_without_delete_or_retry",
               "text": "assert!(!calls(&r).iter().any(|c| c[\"method\"] == \"DELETE\"))"
             }
@@ -1965,22 +1965,22 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 470,
-              "end_line": 470,
+              "line": 485,
+              "end_line": 485,
               "function": "cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
               "text": "assert!(remote(&a).await.is_some())"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 472,
-              "end_line": 472,
+              "line": 487,
+              "end_line": 487,
               "function": "cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
               "text": "assert_eq!(rows.len(), 1)"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 473,
-              "end_line": 473,
+              "line": 488,
+              "end_line": 488,
               "function": "cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
               "text": "assert_eq!(rows[0].arguments, json!([DAVID, \"orphan-id\"]))"
             }
@@ -2003,22 +2003,22 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 482,
-              "end_line": 482,
+              "line": 497,
+              "end_line": 497,
               "function": "cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
               "text": "assert_eq!(remote(&a).await, None)"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 483,
-              "end_line": 483,
+              "line": 498,
+              "end_line": 498,
               "function": "cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
               "text": "assert!(pending(&a, REMOTE).await.is_empty())"
             },
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 484,
-              "end_line": 484,
+              "line": 499,
+              "end_line": 499,
               "function": "cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
               "text": "assert_eq!(emitted(&a, REMOTE).await.len(), 1)"
             }
@@ -2030,7 +2030,7 @@
     {
       "id": "WS14g-074",
       "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
-      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately. PR #247 review correction: persisted readback uses only the original occurrence IDs and Jason; an additional exact event-ID set assertion rejects associations to any unrelated event. The old user-only count survived the wrong-event fault; the corrected count kills it.",
       "assertions": [
         {
           "rails": {
@@ -2041,8 +2041,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 557,
-              "end_line": 557,
+              "line": 571,
+              "end_line": 571,
               "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
               "text": "assert_eq!(occurrences.len(), 3)"
             }
@@ -2058,8 +2058,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 585,
-              "end_line": 585,
+              "line": 599,
+              "end_line": 599,
               "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
               "text": "assert_eq!(emitted(&a, SYNC).await.len(), 3)"
             }
@@ -2075,8 +2075,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 598,
-              "end_line": 606,
+              "line": 612,
+              "end_line": 620,
               "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
               "text": "assert_eq!(\n        calls(&r)\n            .iter()\n            .filter(\n                |c| c[\"method\"] == \"POST\" && c[\"path\"] == \"/calendar/v3/calendars/primary/events\"\n            )\n            .count(),\n        3\n    )"
             }
@@ -2092,10 +2092,17 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 608,
-              "end_line": 608,
+              "line": 623,
+              "end_line": 623,
               "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
               "text": "assert_eq!(rows.len(), 3)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 624,
+              "end_line": 631,
+              "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+              "text": "assert_eq!(\n        rows.iter()\n            .map(|e| e.event_id)\n            .collect::<std::collections::BTreeSet<_>>(),\n        occurrence_ids\n            .into_iter()\n            .collect::<std::collections::BTreeSet<_>>()\n    )"
             }
           ],
           "disposition": "covered"
@@ -2109,8 +2116,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 613,
-              "end_line": 613,
+              "line": 636,
+              "end_line": 636,
               "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
               "text": "assert_eq!(ids.len(), 3)"
             }
@@ -2133,8 +2140,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 653,
-              "end_line": 653,
+              "line": 676,
+              "end_line": 676,
               "function": "cutover_c_time_update_enqueues_only_connected_notifying_attendees",
               "text": "assert_eq!(jobs.len(), 1)"
             }
@@ -2150,8 +2157,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 654,
-              "end_line": 654,
+              "line": 677,
+              "end_line": 677,
               "function": "cutover_c_time_update_enqueues_only_connected_notifying_attendees",
               "text": "assert_eq!(jobs[0], json!({\"event_id\":event_id(),\"user_id\":DAVID}))"
             }
@@ -2174,8 +2181,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 680,
-              "end_line": 680,
+              "line": 703,
+              "end_line": 703,
               "function": "cutover_c_event_sync_is_invisible_to_queue_readers_until_source_transaction_commits",
               "text": "assert_eq!(visible, 0)"
             }
@@ -2191,8 +2198,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 685,
-              "end_line": 688,
+              "line": 708,
+              "end_line": 711,
               "function": "cutover_c_event_sync_is_invisible_to_queue_readers_until_source_transaction_commits",
               "text": "assert_eq!(\n        emitted(&a, SYNC).await,\n        vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n    )"
             }
@@ -2215,8 +2222,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 717,
-              "end_line": 720,
+              "line": 740,
+              "end_line": 743,
               "function": "cutover_c_setting_and_clearing_venue_each_enqueue_connected_attendee_sync",
               "text": "assert_eq!(\n            emitted(&a, SYNC).await,\n            vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n        )"
             }
@@ -2232,8 +2239,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 717,
-              "end_line": 720,
+              "line": 740,
+              "end_line": 743,
               "function": "cutover_c_setting_and_clearing_venue_each_enqueue_connected_attendee_sync",
               "text": "assert_eq!(\n            emitted(&a, SYNC).await,\n            vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n        )"
             }
@@ -2245,7 +2252,7 @@
     {
       "id": "WS14g-080",
       "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
-      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately. PR #247 review correction: the unchanged save asserts the complete post-clear enqueue set, without a job-class filter, matching Rails assert_no_enqueued_jobs. The old SyncEntry-only check survived an extra MeetLinkJob; the complete-set assertion kills it.",
       "assertions": [
         {
           "rails": {
@@ -2256,8 +2263,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 743,
-              "end_line": 746,
+              "line": 766,
+              "end_line": 769,
               "function": "cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
               "text": "assert_eq!(\n        emitted(&a, SYNC).await,\n        vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n    )"
             }
@@ -2273,10 +2280,10 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 764,
-              "end_line": 764,
+              "line": 788,
+              "end_line": 788,
               "function": "cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
-              "text": "assert!(emitted(&a, SYNC).await.is_empty())"
+              "text": "assert_eq!(emitted_all(&a).await, vec![])"
             }
           ],
           "disposition": "covered"
@@ -2297,8 +2304,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 791,
-              "end_line": 794,
+              "line": 815,
+              "end_line": 818,
               "function": "cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request",
               "text": "assert_eq!(\n        emitted(&a, REMOTE).await,\n        vec![json!([DAVID, \"room-destroy-id\"])]\n    )"
             }
@@ -2314,8 +2321,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 796,
-              "end_line": 797,
+              "line": 820,
+              "end_line": 821,
               "function": "cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request",
               "text": "assert!(calls(&r).iter().any(|c| c[\"method\"] == \"DELETE\"\n        && c[\"path\"] == \"/calendar/v3/calendars/primary/events/room-destroy-id\"))"
             }
@@ -2338,8 +2345,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 882,
-              "end_line": 885,
+              "line": 906,
+              "end_line": 909,
               "function": "cutover_c_series_shrink_commits_doomed_remote_identity_and_deletes_google_copy",
               "text": "assert_eq!(\n        emitted(&a, REMOTE).await,\n        vec![json!([DAVID, \"doomed-entry\"])]\n    )"
             }
@@ -2355,8 +2362,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-              "line": 897,
-              "end_line": 898,
+              "line": 921,
+              "end_line": 922,
               "function": "cutover_c_series_shrink_commits_doomed_remote_identity_and_deletes_google_copy",
               "text": "assert!(calls(&r).iter().any(|c| c[\"method\"] == \"DELETE\"\n        && c[\"path\"] == \"/calendar/v3/calendars/primary/events/doomed-entry\"))"
             }

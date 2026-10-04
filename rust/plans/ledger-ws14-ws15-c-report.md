@@ -135,3 +135,62 @@ test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; fini
 All commands exit 0. The active doctest is the recurrence guard compile-fail assertion; the two kit examples remain ignored. Every other crate doctest summary is zero passed/failed/ignored. The scoped nextest skips are tests outside the selection plus the existing ignores; none of the 128 mapped tests is skipped.
 
 Raw execution logs and the nineteen mutation logs are archived under `rust/target/ledger-ws14-ws15-c-receipts/` locally. The own 1.3GB scratch clone/Rails output and regenerated reference/seed input directories are removed after publishing. The inherited `.scratch/ws14g` output and shared build target are preserved. Only report and receipt metadata change after this verified code head.
+
+## PR #247 scope corrections
+
+Reviewed head `af543814eea99a1e2210a80420045dbc3ece565c`; parent #243 is unchanged. No merge or rebase is performed in this review run. The two reviewed production faults are reproduced through the existing model/registered-job path, first with the old test body and then with the corrected assertions. The [committed substitutions](../reference-tools/cutover/review247-mutations.json) and [before/after receipt](ledger-ws14-ws15-c-review247-mutations.json) retain activation messages, exact summaries, assertion locations and SHA-256 hashes. Google traffic uses the injected recorded client throughout.
+
+- **WS14g-074:** readback now looks up only Jason's entries for the three occurrence event IDs, matching Rails `EventCalendarEntry.where(user: @jason, event: occurrences)`. It asserts the count, exact occurrence-ID set and distinct remote IDs. Moving the entry from series event `439674038` to unrelated event `390339825` passed the old user-only count; the corrected count fails with actual **2**, expected **3** at `calendar_jobs.rs:623`. The explicit event-ID assertion is mapped alongside that count.
+- **WS14g-080:** after clearing the enqueue observer and saving the unchanged title, the test compares the entire observed `(job_class, arguments)` set to `[]`, matching Rails' unfiltered `assert_no_enqueued_jobs`. Adding a real `Calendar::MeetLinkJob` passed the old SyncEntry-only check; the corrected assertion fails at `calendar_jobs.rs:788` with `[("Calendar::MeetLinkJob", {"event_id":390339825})]` versus `[]`.
+
+The two original pinned Rails assertions are unchanged; Astra's equivalent Rails production faults rejected them at `sync_entry_job_test.rb:462` (2 versus 3) and `:528` (1 job versus 0). This run independently rechecks that all ten mapped Rails test files match pin `78b9b1546` byte-for-byte and reruns the original 50 cases, with the network disabled:
+
+```sh
+python3 rust/reference-tools/cutover/rails-cases.py rust/plans/ledger-ws14-ws15-c-assertions.json --image review236-reference:78b9b1546 --storage rust/target/review247-fixes/rails-storage
+```
+
+```text
+50 runs, 204 assertions, 0 failures, 0 errors, 0 skips
+```
+
+The [scope scan](ledger-ws14-ws15-c-scope-review.md) lists all 50 closures. **No additional instances were found among the other 48.** In particular, WS14g-059/073/078 retain Rails' explicit class-filtered negative checks, WS14g-074/077 retain explicit class-filtered enqueue counts, and WS14g-056/058/072/079/083/084 use positive named-job/argument expectations. DOM counts retain the original document/nested-menu/form scopes; WS14g-125 reads attachments for each specific message; WS14g-007 counts the original audit action; WS14g-127 intentionally retains Rails' global table-count difference. Reminder suppression checks the complete push receiver list. All assertion/inventory line anchors are relocated in place; historical receipts and the **126** remaining unsupported records are retained.
+
+Mutation command (run first against the reviewed assertions into `before`, then after correction into `after`; the prefix runs Rust 1.98.1 with two build jobs, the existing compiler throttle, `CI=true` and four nextest workers):
+
+```sh
+python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/review247-mutations.json rust/target/review247-fixes/before -- rust/target/review247-fixes/mutation-cargo.sh
+python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/review247-mutations.json rust/target/review247-fixes/after -- rust/target/review247-fixes/mutation-cargo.sh
+```
+
+The underlying test invocation is `cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast -E 'test(<test>)' --success-output immediate`, once per mutation. Before is expected to exit 1 at the aggregate runner because neither fault is killed; both actual test processes exit 0 and their stdout/stderr confirm activation. After exits 0 at the aggregate runner because both actual test processes fail at the intended native assertions. Compilation/setup failures earn no credit.
+
+```text
+BEFORE WS14g-074-scope:
+     Summary [   0.573s] 1 test run: 1 passed, 5107 skipped
+BEFORE WS14g-080-scope:
+     Summary [   0.588s] 1 test run: 1 passed, 5107 skipped
+Mutation summary: 2 run; 0 killed; 2 not accepted; production restored=True
+AFTER WS14g-074-scope:
+     Summary [   0.721s] 1 test run: 0 passed, 1 failed, 5107 skipped
+AFTER WS14g-080-scope:
+     Summary [   0.454s] 1 test run: 0 passed, 1 failed, 5107 skipped
+Mutation summary: 2 run; 2 killed; 0 not accepted; production restored=True
+```
+
+Both production files are restored byte-for-byte, and their SHA-256 hashes also match `git show af543814:<file>`. The committed patch JSON is only input for temporary mutation tooling; no production instrumentation remains.
+
+### Restored checkout validation for PR #247
+
+The three seeds were rebuilt and validated against `review236-reference:78b9b1546`: default 29/29, first_run 4/4, agents_ui 40/40 (73 passed, zero failed). This checkout runs with Rust 1.98.1, `CI=true`, two build jobs, the existing shared compiler throttle and four nextest workers. No timeout, timing tolerance or test concurrency changes are made.
+
+```sh
+cargo nextest run --locked --workspace --exclude html5ever -j 4 --no-fail-fast
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+```
+
+```text
+     Summary [1367.574s] 5088 tests run: 5088 passed (1 slow), 20 skipped
+    Finished `dev` profile [unoptimized] target(s) in 45.16s
+```
+
+Both commands exit 0. All 50 C tests and all 78 B tests have named PASS receipts after the assertion corrections. The 20 skips are the existing ignored cases. The current validation is recorded separately from the preserved historical receipt; every retained ledger closure has a current named PASS receipt. Compact execution logs, runtime wrappers and mutation logs remain under `rust/target/review247-fixes/`. Generated reference/seed directories are removed after verification; no file outside `rust/` is edited.

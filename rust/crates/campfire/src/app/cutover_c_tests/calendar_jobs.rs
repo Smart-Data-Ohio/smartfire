@@ -90,6 +90,21 @@ async fn emitted(a: &TestApp, class: &'static str) -> Vec<Value> {
         .await
         .unwrap()
 }
+async fn emitted_all(a: &TestApp) -> Vec<(String, Value)> {
+    a.db()
+        .read(|c| {
+            Ok(
+                c.prepare("SELECT job_class,arguments FROM ws14g_emitted_jobs ORDER BY id")?
+                    .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?
+                    .into_iter()
+                    .map(|(class, args)| (class, serde_json::from_str(&args).unwrap()))
+                    .collect(),
+            )
+        })
+        .await
+        .unwrap()
+}
 async fn pending(a: &TestApp, class: &'static str) -> Vec<campfire_jobs::inspect::JobRow> {
     a.db()
         .read(move |c| {
@@ -496,16 +511,15 @@ async fn clear_observed(a: &TestApp) {
         .await
         .unwrap();
 }
-async fn entries(a: &TestApp, user: i64) -> Vec<google_entry::Entry> {
+async fn entries(a: &TestApp, user: i64, event_ids: Vec<i64>) -> Vec<google_entry::Entry> {
     a.db()
         .read(move |c| {
-            let ids = c
-                .prepare("SELECT event_id FROM event_calendar_entries WHERE user_id=? ORDER BY id")?
-                .query_map([user], |r| r.get::<_, i64>(0))?
-                .collect::<rusqlite::Result<Vec<_>>>()?;
-            ids.into_iter()
-                .map(|eid| google_entry::find(c, eid, user).map(Option::unwrap))
+            // Rails: EventCalendarEntry.where(user: @jason, event: occurrences).
+            event_ids
+                .into_iter()
+                .map(|eid| google_entry::find(c, eid, user))
                 .collect::<campfire_db::Result<Vec<_>>>()
+                .map(|rows| rows.into_iter().flatten().collect())
         })
         .await
         .unwrap()
@@ -604,8 +618,17 @@ async fn cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_g
             .count(),
         3
     );
-    let rows = entries(&a, jason).await;
+    let occurrence_ids = occurrences.iter().map(|e| e.id).collect::<Vec<_>>();
+    let rows = entries(&a, jason, occurrence_ids.clone()).await;
     assert_eq!(rows.len(), 3);
+    assert_eq!(
+        rows.iter()
+            .map(|e| e.event_id)
+            .collect::<std::collections::BTreeSet<_>>(),
+        occurrence_ids
+            .into_iter()
+            .collect::<std::collections::BTreeSet<_>>()
+    );
     let ids = rows
         .iter()
         .map(|e| e.google_event_id.clone())
@@ -761,7 +784,8 @@ async fn cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not() {
         })
         .await
         .unwrap();
-    assert!(emitted(&a, SYNC).await.is_empty());
+    // Rails' unchanged-save assertion has no `only:` job-class filter.
+    assert_eq!(emitted_all(&a).await, vec![]);
 }
 #[tokio::test]
 async fn cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request() {

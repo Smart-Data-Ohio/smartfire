@@ -8054,7 +8054,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 112
+          "line": 127
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8093,7 +8093,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_invalid_grant_skips_deletes_but_revokes_snapshot_refresh_token",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 144
+          "line": 159
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8188,7 +8188,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 167
+          "line": 182
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8286,7 +8286,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 217
+          "line": 232
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8325,7 +8325,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 274
+          "line": 289
         },
         "detail": "Initial serialized exception group count is 8, matching the original Rails setup. The registered handler commits terminal deletion and logs ERROR; no revoke occurs.",
         "assertion_map": {
@@ -8457,7 +8457,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 313
+          "line": 328
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8496,7 +8496,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 342
+          "line": 357
         },
         "detail": "Rust has no Ruby log_arguments class predicate. The original property is tested at enqueue/execution: even the encrypted argument blob is absent from actual job logs, as are both plaintext tokens.",
         "assertion_map": {
@@ -8627,7 +8627,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_uses_current_account_access_credentials",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 368
+          "line": 383
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8666,7 +8666,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_without_account_makes_no_request",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 384
+          "line": 399
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8705,7 +8705,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_disconnected_account_makes_no_request",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 390
+          "line": 405
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8744,7 +8744,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_without_calendar_scope_makes_no_request",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 405
+          "line": 420
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8783,7 +8783,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_not_found_and_gone_complete_without_retry",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 422
+          "line": 437
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8822,7 +8822,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_invalid_grant_disconnects_without_delete_or_retry",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 448
+          "line": 463
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8861,7 +8861,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 466
+          "line": 481
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8900,7 +8900,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 476
+          "line": 491
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8939,7 +8939,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 515
+          "line": 529
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -8952,6 +8952,12 @@
             "file": "test/jobs/calendar/sync_entry_job_test.rb",
             "line": 444
           }
+        },
+        "review247_scope_correction": {
+          "reviewed_head": "af543814eea99a1e2210a80420045dbc3ece565c",
+          "mutation": "WS14g-074-scope",
+          "manifest": "rust/reference-tools/cutover/review247-mutations.json",
+          "scope_review": "rust/plans/ledger-ws14-ws15-c-scope-review.md"
         }
       },
       "historical_line": 411,
@@ -9070,7 +9076,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_time_update_enqueues_only_connected_notifying_attendees",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 616
+          "line": 639
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -9109,7 +9115,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_event_sync_is_invisible_to_queue_readers_until_source_transaction_commits",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 657
+          "line": 680
         },
         "detail": "WS17 persists jobs within the source write for atomicity. An independent queue reader sees no uncommitted job; after commit the observed durable payload is exact. This is the observable after-commit contract, not a claim that the writer cannot see its own inserted row.",
         "assertion_map": {
@@ -9148,7 +9154,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_setting_and_clearing_venue_each_enqueue_connected_attendee_sync",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 691
+          "line": 714
         },
         "detail": "The payload assertion executes once for setting the real voice venue and once for clearing it.",
         "assertion_map": {
@@ -9187,7 +9193,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 724
+          "line": 747
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -9200,6 +9206,12 @@
             "file": "test/jobs/calendar/sync_entry_job_test.rb",
             "line": 521
           }
+        },
+        "review247_scope_correction": {
+          "reviewed_head": "af543814eea99a1e2210a80420045dbc3ece565c",
+          "mutation": "WS14g-080-scope",
+          "manifest": "rust/reference-tools/cutover/review247-mutations.json",
+          "scope_review": "rust/plans/ledger-ws14-ws15-c-scope-review.md"
         }
       },
       "historical_line": 417,
@@ -9312,7 +9324,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 767
+          "line": 791
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -9351,7 +9363,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_series_shrink_commits_doomed_remote_identity_and_deletes_google_copy",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
-          "line": 800
+          "line": 824
         },
         "detail": "Nonselected jobs are parked for the frozen-clock runner, matching Rails perform_enqueued_jobs only: RemoteDeleteJob. Their payloads remain intact. The tested remote job uses the captured identity and the real recorded Google client.",
         "assertion_map": {
@@ -19826,41 +19838,82 @@
     "closed_records": 131,
     "open_total": 126,
     "verification": {
-      "scope": "fresh clone; production code 056c56b0b6870e327ee62aba5297ae49127b525f; only redirect assertions and tool/receipt changes follow",
+      "scope": "PR #247 assertion-only scope corrections; this checkout; reviewed production af543814eea99a1e2210a80420045dbc3ece565c restored byte-for-byte",
       "reference_sha": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+      "test_source": {
+        "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+        "sha256": "e56e576cfc4c5d863613b432fe46260498099cedf2f29ebbed3a55e453435ccf"
+      },
       "nextest": {
-        "command": "cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast",
+        "command": "cargo nextest run --locked --workspace --exclude html5ever -j 4 --no-fail-fast",
         "passed": 5088,
         "failed": 0,
         "skipped": 20,
         "exit_code": 0,
-        "raw_log_sha256": "be30cf14160f75197e8e00968bacf775419f673f1cc2bff34980c7f061184a16"
+        "raw_log_sha256": "958a585ae48ab12364e95faa29987b28d4f9f5cf9793c9cb3dc0176139a37492",
+        "summary": "     Summary [1367.574s] 5088 tests run: 5088 passed (1 slow), 20 skipped"
       },
       "clippy": {
-        "command": "cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings",
+        "command": "cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings",
         "exit_code": 0,
-        "raw_log_sha256": "9bc1ff2312668e74fb8037cd9c23e1728503ec6b096473f54cc7af047010f64e"
+        "raw_log_sha256": "94c3631dd4e7652899b5c6b778d6cbd936d2d139d6e85fee6c68041d222beef8",
+        "summary": "    Finished `dev` profile [unoptimized] target(s) in 45.16s"
       },
-      "final_test_assertions": {
-        "code_sha": "1fb679f89ed930e834dda8c82783c18a0ccbc9cf",
-        "command": "cargo nextest run --workspace --exclude html5ever -j 4 -E 'test(cutover_c_) | test(cutover_event_) | test(cutover_entry_) | test(cutover_timeline_) | test(cutover_recurrence_) | test(cutover_reference_) | test(cutover_reminder_) | test(cutover_venue_) | test(tests::cutover::)' --no-fail-fast",
-        "passed": 128,
-        "failed": 0,
-        "skipped": 4980,
-        "raw_log_sha256": "19de55afd29bf8b4a453d798f4cf8f7c2297847adaedc983948442868a2f0cb6"
-      },
-      "final_clippy": {
-        "exit_code": 0,
-        "raw_log_sha256": "380a67667b05f4d083fcf1ffedf420b74d7a6035ac4056c36fdec454b2dab473"
-      },
-      "doctests": {
-        "command": "cargo test --workspace --exclude html5ever --doc --no-fail-fast -- --test-threads=4",
-        "passed": 1,
-        "failed": 0,
-        "ignored": 2,
-        "exit_code": 0,
-        "raw_log_sha256": "c103e765e236baefe1c9bfca3fc5fbe303119ba1ca3696b115941ff147fd6351"
+      "review247": {
+        "mutations": "rust/plans/ledger-ws14-ws15-c-review247-mutations.json",
+        "before_survived": 2,
+        "after_killed": 2,
+        "production_restored": true,
+        "closures_scanned": 50,
+        "additional_scope_findings": [],
+        "rails": {
+          "runs": 50,
+          "assertions": 204,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0,
+          "raw_log_sha256": "1a08c1f5b1e9b0d28771e847a2f58c444d64770c13e9a7e992b04bfa60e00372"
+        }
       }
-    }
+    },
+    "verification_history": [
+      {
+        "scope": "fresh clone; production code 056c56b0b6870e327ee62aba5297ae49127b525f; only redirect assertions and tool/receipt changes follow",
+        "reference_sha": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "nextest": {
+          "command": "cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast",
+          "passed": 5088,
+          "failed": 0,
+          "skipped": 20,
+          "exit_code": 0,
+          "raw_log_sha256": "be30cf14160f75197e8e00968bacf775419f673f1cc2bff34980c7f061184a16"
+        },
+        "clippy": {
+          "command": "cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings",
+          "exit_code": 0,
+          "raw_log_sha256": "9bc1ff2312668e74fb8037cd9c23e1728503ec6b096473f54cc7af047010f64e"
+        },
+        "final_test_assertions": {
+          "code_sha": "1fb679f89ed930e834dda8c82783c18a0ccbc9cf",
+          "command": "cargo nextest run --workspace --exclude html5ever -j 4 -E 'test(cutover_c_) | test(cutover_event_) | test(cutover_entry_) | test(cutover_timeline_) | test(cutover_recurrence_) | test(cutover_reference_) | test(cutover_reminder_) | test(cutover_venue_) | test(tests::cutover::)' --no-fail-fast",
+          "passed": 128,
+          "failed": 0,
+          "skipped": 4980,
+          "raw_log_sha256": "19de55afd29bf8b4a453d798f4cf8f7c2297847adaedc983948442868a2f0cb6"
+        },
+        "final_clippy": {
+          "exit_code": 0,
+          "raw_log_sha256": "380a67667b05f4d083fcf1ffedf420b74d7a6035ac4056c36fdec454b2dab473"
+        },
+        "doctests": {
+          "command": "cargo test --workspace --exclude html5ever --doc --no-fail-fast -- --test-threads=4",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 2,
+          "exit_code": 0,
+          "raw_log_sha256": "c103e765e236baefe1c9bfca3fc5fbe303119ba1ca3696b115941ff147fd6351"
+        }
+      }
+    ]
   }
 }
