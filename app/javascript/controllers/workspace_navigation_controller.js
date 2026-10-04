@@ -131,7 +131,10 @@ export default class extends Controller {
 
     if (!roomLink) return
 
-    const isUnread = event.type === "rooms-list:unread"
+    // rooms-list:unread reports activity in a room (it also re-sorts
+    // direct rooms), and fires for the current room too, which
+    // rooms-list leaves read. The pill mirrors the row's unread class.
+    const isUnread = roomLink.classList.contains("unread")
     const currentStatus = roomLink.querySelector(":scope > .sidebar-item__status")
 
     if (isUnread && !currentStatus) {

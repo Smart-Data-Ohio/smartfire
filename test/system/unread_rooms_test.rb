@@ -25,6 +25,30 @@ class UnreadRoomsTest < ApplicationSystemTestCase
     assert_room_read designers_room
   end
 
+  test "a live message in the current room leaves its row without a New badge" do
+    designers_room = rooms(:designers)
+    hq_room = rooms(:hq)
+
+    join_room designers_room
+
+    using_session("Kevin") do
+      sign_in "kevin@37signals.com"
+      join_room designers_room
+      send_message("Here while you're here")
+      join_room hq_room
+      send_message("Over in HQ")
+    end
+
+    # Both unread broadcasts share one stream, in order, so HQ going
+    # unread means the Designers broadcast has already been handled.
+    assert_message_text "Here while you're here", wait: 10
+    assert_room_unread hq_room
+    assert_single_badge hq_room
+
+    assert_room_read designers_room
+    assert_no_badge designers_room
+  end
+
   test "channel and DM rows keep exactly one unread badge next to the huddle stack" do
     with_huddle_configured do
       channel = rooms(:designers)

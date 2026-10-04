@@ -11,10 +11,10 @@
       <p class="txt-small txt-subtle margin-none">New codes, disabling, and revoking ask for your authenticator code or password first.</p>
 
       <div class="flex flex-column gap">
-{% let form = h::form_with("/two_factor_backup_codes").data("turbo", false).html(h::attrs().id("new_backup_codes").class("flex align-center gap")) %}        {% filter form_with(form) %}
+{% let form = h::form_with("/two_factor_backup_codes").data("turbo", false).html(h::attrs().id("new_backup_codes").class("flex flex-wrap align-center gap")) %}        {% filter form_with(form) %}
           {% include "two_factor/_reauth_field.html" %}
           {{ submit("New backup codes", "btn txt-small") }}
-{% endfilter %}{% let form = h::form_with("/two_factor_setup").method("delete").html(h::attrs().id("disable_two_factor").class("flex align-center gap")) %}        {% filter form_with(form) %}
+{% endfilter %}{% let form = h::form_with("/two_factor_setup").method("delete").html(h::attrs().id("disable_two_factor").class("flex flex-wrap align-center gap")) %}        {% filter form_with(form) %}
           {% include "two_factor/_reauth_field.html" %}
           {{ submit("Disable", "btn btn--negative txt-small") }}
 {% endfilter %}{% if data.google %}          {{ h::button_to_form("/two_factor_reauthentication",h::attrs().method("post").class("btn txt-small"),h::attrs().data("turbo",false),"Confirm with Google") }}
@@ -33,7 +33,7 @@
                 {{ submit("Revoke", "btn btn--negative txt-small flex-item-no-shrink") }}
 {% endfilter %}            </li>
 {% endfor %}        </menu>
-{% let form = h::form_with("/two_factor_remembered_devices").method("delete").html(h::attrs().id("revoke_all_devices").class("flex align-center gap")) %}        {% filter form_with(form) %}
+{% let form = h::form_with("/two_factor_remembered_devices").method("delete").html(h::attrs().id("revoke_all_devices").class("flex flex-wrap align-center gap")) %}        {% filter form_with(form) %}
           {% include "two_factor/_reauth_field.html" %}
           {{ submit("Revoke all", "btn btn--negative txt-small") }}
 {% endfilter %}{% else %}        <p class="txt-small margin-none">No remembered devices. Tick "Remember this device" when signing in to skip the code on this browser for 30 days.</p>

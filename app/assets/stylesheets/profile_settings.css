@@ -7,8 +7,10 @@
 }
 
 /* Controls shrink to the row instead of holding their intrinsic width
-   (a time or datetime input, a long select, a size="6" text field). */
-.profile-settings :is(input, select, textarea) {
+   (a time or datetime input, a long select, a size="6" text field).
+   Submit inputs styled as buttons keep their label's width: an input
+   clips its overflow, so a shrunk one cuts its label off mid-word. */
+.profile-settings :is(input:not(.btn), select, textarea) {
   max-inline-size: 100%;
   min-inline-size: 0;
 }
@@ -33,7 +35,7 @@
 /* Rows that wrap ("Custom end [datetime] in your time zone", button
    pairs): a control keeps a usable width and moves what follows it to
    the next line instead of shrinking to a sliver. */
-.profile-settings .flex-wrap > :is(input, select, textarea) {
+.profile-settings .flex-wrap > :is(input:not(.btn), select, textarea) {
   flex: 1 1 10rem;
 }
 
