@@ -20,7 +20,7 @@ class HuddleStaleStreamOracle
       "bad_quality"=>{quality:"4k60"}, "missing_membership"=>{missing_member:true},
       "missing_user"=>{missing_user:true}, "missing_room"=>{missing_room:true}
     }.map {|name,options|scenario(name,options)}
-    puts JSON.pretty_generate({reference_pin:"d7c7de92",now:Time.current.to_i,cases:cases})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,cases:cases})
   ensure
     travel_back
   end

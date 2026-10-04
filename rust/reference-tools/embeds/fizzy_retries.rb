@@ -35,5 +35,5 @@ results=%w[GET DELETE POST].map do |method|
     server.close; thread.kill; thread.join
   end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',max_retries:Net::HTTP.new('app.fizzy.do').max_retries,cases:results})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),max_retries:Net::HTTP.new('app.fizzy.do').max_retries,cases:results})+"\n")
 puts "WS15e Fizzy real Rails transport: GET/DELETE retry once after EOF; POST makes one attempt"

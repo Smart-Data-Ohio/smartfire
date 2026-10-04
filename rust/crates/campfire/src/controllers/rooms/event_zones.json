@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "sources": {
     "app/controllers/concerns/set_time_zone.rb": "ead23252d99edde4a941cb415c610905c736480f670c2ff1ea1e5cc13252b05a",
     "app/views/rooms/events/_card.html.erb": "54992dd118e9cb4bd258a86a5deb4bdfb4bfa6c2efb70633651b3aa1aea5fa12",

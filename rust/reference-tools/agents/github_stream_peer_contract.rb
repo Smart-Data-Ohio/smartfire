@@ -17,5 +17,5 @@ travel_to Time.utc(2026,3,2,16) do
   result[:repeat]=snapshot.call(message,message.finalize_stream!)
   quiet=room.root_messages.create!(creator:agent.user,streaming:true,markdown_source:"https://github.com/ws11-fixture/public/pull/3",client_message_id:"ws11-github-quiet")
   result[:quiet]=snapshot.call(quiet,quiet.finalize_stream_quietly!)
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",results:result)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:result)
 end

@@ -16,7 +16,7 @@ http.define_singleton_method(:method_missing) do |method, path, *args|
   response
 end
 Net::HTTP.define_singleton_method(:start) { |*args, **kwargs, &block| block.call(http) }
-result = {reference: 'd7c7de92', now: now.to_i}
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: now.to_i}
 result[:access] = [-1,0,1].map do |microseconds|
   expiry = now + Rational(microseconds,1_000_000)
   account = GoogleAccount.new(access_token: 'access-token',access_token_expires_at: expiry)

@@ -52,6 +52,6 @@ meta=[ 'Pacific Time (US & Canada)','Tokyo' ].map do |zone|
  raise "missing real message meta for #{zone}" unless html
  {zone:zone,status:browser.response.status,html:html}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',inputs:inputs,message_ids:messages.map(&:id),rows:rows,
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],inputs:inputs,message_ids:messages.map(&:id),rows:rows,
  reaction_edited:reaction_edited,fetch_edited:fetch_edited,reply_edited:reply_edited,meta:meta)+"\n")
 puts 'WS8bm root declarations: 5 actual advancing-clock saves with exact response/row fields; reaction/fetch/tombstone no-edit facts; real HTTP meta in two viewer zones'

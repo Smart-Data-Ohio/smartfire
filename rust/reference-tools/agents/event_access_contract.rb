@@ -81,5 +81,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   caps[:deleted_room] = Agent.find(agent.id).can?(:read_messages, water.reload)
   # Return the SQL selection as well as ack results; this is deliberately
   # before EventPolling's presenter-dependent payload/cursor assembly.
-  puts JSON.pretty_generate(reference_pin: "d7c7de92", pages: pages, acks: acks, capabilities: caps)
+  puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], pages: pages, acks: acks, capabilities: caps)
 end

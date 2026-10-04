@@ -42,5 +42,5 @@ rows=[]
     rows << {kind:,path:,responses:}
   end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:)+"\n")
 puts 'WS8bm JPEG boundary oracle: 6 actual Rails requests; initial/reply/root; new/reused variants; rows/files/lifecycle after commit'

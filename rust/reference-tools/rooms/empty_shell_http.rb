@@ -33,5 +33,5 @@ rows = []
   end
 end
 paths = %w[app/controllers/rooms_controller.rb app/views/rooms/show.html.erb app/views/rooms/show/_thread_panel.html.erb app/views/polls/_builder.html.erb app/views/rooms/pins/_panel.html.erb app/views/messages/_template.html.erb app/views/rooms/show/_composer.html.erb app/views/layouts/application.html.erb]
-puts JSON.pretty_generate(reference: "d7c7de92", layout_reference: "2e20b24c", sources: paths.to_h { |p| [p, Digest::SHA256.file(Rails.root.join(p)).hexdigest] }, rows:)
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), sources: paths.to_h { |p| [p, Digest::SHA256.file(Rails.root.join(p)).hexdigest] }, rows:)
 warn "Rails empty-shell HTTP oracle: 4 full responses; channel/pair/group/open; no injected child HTML"

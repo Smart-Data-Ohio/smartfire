@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "sources": {
     "app/services/agents/board_posts.rb": "ea6d9456983318654f873d23b82431dd23a6a780224bff792ff3016533f9414c",
     "app/services/agents/work_threads.rb": "ad11e9fbfba2db894015346b8f8bba7c034f918941077056ce831b9701b5e91f",

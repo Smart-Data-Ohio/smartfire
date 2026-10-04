@@ -66,5 +66,5 @@ forms=[]
  end
 end
 Current.reset
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',fragments:fragments,poll_message_id:poll_message.id,poll_id:poll.id,poll_options:poll.poll_options.pluck(:id,:label,:position),card_id:card.id,boosted_id:boosted.id,legacy_boost_id:legacy.id,thread_id:thread.id,reply_id:reply.id,rows:rows,forms:forms)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],fragments:fragments,poll_message_id:poll_message.id,poll_id:poll.id,poll_options:poll.poll_options.pluck(:id,:label,:position),card_id:card.id,boosted_id:boosted.id,legacy_boost_id:legacy.id,thread_id:thread.id,reply_id:reply.id,rows:rows,forms:forms)+"\n")
 puts "WS8bm cached CSRF: 6 actual two-viewer pages; #{forms.size} successful reaction/legacy/GitHub forms with the page header; polls and room-shell header separately owned"

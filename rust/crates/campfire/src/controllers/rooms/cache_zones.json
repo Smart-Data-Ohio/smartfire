@@ -1,8 +1,8 @@
 {
-  "reference": "d7c7de92",
+  "reference": "parity",
   "sources": {
     "app/controllers/concerns/set_time_zone.rb": "ead23252d99edde4a941cb415c610905c736480f670c2ff1ea1e5cc13252b05a",
-    "app/helpers/github/pull_requests_helper.rb": "9c9c2375c5c995bd0d65da29095bed3c9337265f3622ebcb21ca891f2c8b5cd1",
+    "app/helpers/github/pull_requests_helper.rb": "e523f2efcf70b2c3a273e66619f0bfe4c795f666233da9da52af4e8b5d105162",
     "app/views/messages/index.html.erb": "59c42d3921920a9fd8fc9545dfd81643168d7e8bd4262ec025dfb126559c0bd4",
     "app/controllers/rooms_controller.rb": "53c7fd8b0619e478425d492f1be3abbc11affafa1b992dea09f8cd0b413c94eb"
   },

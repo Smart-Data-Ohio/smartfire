@@ -105,5 +105,5 @@ forms.each do |name,user_id,method,path,pairs|
   ActiveSupport::IsolatedExecutionState.clear
 end
 files = %w[app/models/channel_thread.rb app/models/thread_tag.rb app/views/rooms/boards/_index.html.erb app/views/rooms/boards/_row.html.erb app/views/rooms/boards/_nav.html.erb app/views/layouts/application.html.erb]
-puts JSON.pretty_generate(reference: "d7c7de92", board_reference: "origin/main b908ebc2 approved drift", layout_reference: "2e20b24c", sources: files.to_h { |f| [f, Digest::SHA256.file(Rails.root.join(f)).hexdigest] }, fragments:, rows:)
-warn "Rails board read oracle: #{fragments.size} row fragments and #{rows.size} complete HTTP responses; approved board drift; no masks"
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), board_reference: ENV.fetch("PARITY_REFERENCE_SHA"), layout_reference: ENV.fetch("PARITY_REFERENCE_SHA"), sources: files.to_h { |f| [f, Digest::SHA256.file(Rails.root.join(f)).hexdigest] }, fragments:, rows:)
+warn "Rails board read oracle: #{fragments.size} row fragments and #{rows.size} complete HTTP responses; plain pinned image; no masks"

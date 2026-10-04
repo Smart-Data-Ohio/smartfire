@@ -48,4 +48,4 @@ cases = []
  cases << {kind:kind,count:count,suppressed:suppressed,base_id:base,model_id:model.id,rows:rows,frames:frames,sha256:digest.hexdigest,first:first,last:last,fetch_jobs:jobs.count { |j| j[:job] == LinkEmbed::FetchJob }}
  puts "WS8bm2 bounded Rails #{kind}: #{count} references; title=#{model.reload.title}; #{frames} ordered frames; #{cases.last[:fetch_jobs]} fetch jobs; sha256=#{digest.hexdigest}"
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',cases:cases)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases)+"\n")

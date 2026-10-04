@@ -25,5 +25,5 @@ item.update!(remind_at:Time.utc(2026,3,2,18))
 stale.update!(status:'done')
 after_reschedule=item.reload.attributes.slice('status','remind_at','reminded_at')
 after_reschedule_response=JSON.parse(ActiveSupport::JSON.encode(controller.send(:saved_item_payload,stale)))
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',after_status_response:,after_reschedule_response:,claimed:claimed.utc.iso8601(6),after_status:after_status.transform_values{|v|v.is_a?(Time) ? v.utc.iso8601(6) : v},after_reschedule:after_reschedule.transform_values{|v|v.is_a?(Time) ? v.utc.iso8601(6) : v})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],after_status_response:,after_reschedule_response:,claimed:claimed.utc.iso8601(6),after_status:after_status.transform_values{|v|v.is_a?(Time) ? v.utc.iso8601(6) : v},after_reschedule:after_reschedule.transform_values{|v|v.is_a?(Time) ? v.utc.iso8601(6) : v})+"\n")
 puts "WS8bm2 Rails saved race: claim preserved=#{after_status['reminded_at']==claimed}; reschedule preserved=#{after_reschedule['remind_at']==Time.utc(2026,3,2,18)}"

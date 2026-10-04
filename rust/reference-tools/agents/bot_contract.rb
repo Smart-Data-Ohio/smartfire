@@ -1,4 +1,4 @@
-# Rails oracle at d7c7de92, run over a private copy of the default parity seed.
+# Rails oracle at the current reference pin, run over a private copy of the default parity seed.
 require "active_support/testing/time_helpers"
 extend ActiveSupport::Testing::TimeHelpers
 travel_to Time.utc(2026, 3, 2, 16) do
@@ -70,5 +70,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   grant.revoke!
   client.get key_path
   grants << { name: "revoked next request", status: client.response.status }
-  puts JSON.pretty_generate(reference_pin: "d7c7de92", reply_denials: denied, missing_reply_messages: missing_reply_messages, system_note_denials: system_note, root_page: page, credential_digest: digest, credential_auth: auth, grants: grants)
+  puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], reply_denials: denied, missing_reply_messages: missing_reply_messages, system_note_denials: system_note, root_page: page, credential_digest: digest, credential_auth: auth, grants: grants)
 end

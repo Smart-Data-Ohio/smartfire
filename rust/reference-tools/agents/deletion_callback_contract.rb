@@ -1,4 +1,4 @@
-# PR #176 callback registration and failure probe on Rails d7c7de92.
+# PR #176 callback registration and failure probe on the current Rails reference pin.
 require 'active_support/testing/time_helpers'
 extend ActiveSupport::Testing::TimeHelpers
 ApplicationJob.queue_adapter = :test
@@ -64,4 +64,4 @@ ensure
   ActiveRecord::Base.connection.execute('DROP TRIGGER ws11_reject_first')
 end
 results[:first_ledger_failure]=observe.call
-puts JSON.pretty_generate({reference:'d7c7de92',results:results}.as_json)
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results}.as_json)

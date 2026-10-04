@@ -87,5 +87,5 @@ icons = %w[create destroy].to_h do |name|
     ActiveRecord::Base.connection.execute("DROP TRIGGER ws8br2_reject_icon_audit")
   end
 end
-puts JSON.pretty_generate(reference: "d7c7de92", rows: rows, icons: icons)
-warn "Rails account audit failure oracle: #{rows.size} account and #{icons.size} icon production HTTP responses and committed account/blob snapshots; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), rows: rows, icons: icons)
+warn "Rails account audit failure oracle: #{rows.size} account and #{icons.size} icon production HTTP responses and committed account/blob snapshots; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

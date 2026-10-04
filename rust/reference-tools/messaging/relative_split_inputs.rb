@@ -19,5 +19,5 @@ cases = %w[UTC America/New_York Australia/Lord_Howe Pacific/Apia].flat_map do |z
      trailing: observation { SlashCommands::TimeParser.split_trailing_time(text, zone:, now:) }}
   end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', cases:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases:) + "\n")
 puts "WS8bm2 relative/split Rails: #{cases.length} inputs; #{cases.length * 3} actual parser/split outcomes and exceptions"

@@ -40,4 +40,4 @@ vectors=cases.map do |c|
   files:ApplicationController.render(partial:"github/pull_requests/files_summary",locals:{pull_request:pr})}
 end
 File.write("/work/vectors/github_cards.json",JSON.pretty_generate(vectors)+"\n")
-puts "GitHub cards Rails oracle: #{vectors.size} cases x card/cards/header/files; reference d7c7de92"
+puts "GitHub cards Rails oracle: #{vectors.size} cases x card/cards/header/files; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

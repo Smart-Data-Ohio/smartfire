@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Record every WS11 contract afresh from the pin and compare committed vectors."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 from pathlib import Path
 import os
 import subprocess
@@ -9,7 +11,7 @@ root = Path(__file__).resolve().parents[3]
 scratch = root / '.scratch'
 scratch.mkdir(exist_ok=True)
 env = dict(os.environ, PARITY_NAMESPACE='ws11', PARITY_OWNER='ws11',
-           PARITY_IMAGE='triage-reference-d7c7de92')
+           PARITY_IMAGE=PIN_IMAGE)
 contracts = [
     ('bot_contract', 'bot-contract-followup-final', False),
     ('posting_budget_contract', 'posting-budget-contract-final', True),

@@ -59,5 +59,5 @@ selects={
  'link_embeds'=>"id IN (SELECT link_embed_id FROM link_embed_references WHERE message_id IN (#{ids}))",'link_embed_references'=>"message_id IN (#{ids})"
 }
 rows=selects.to_h{|table,where|[table,ActiveRecord::Base.connection.select_all("SELECT * FROM #{table} WHERE #{where} ORDER BY id").to_a]}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:,cases:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:,cases:)+"\n")
 puts "WS8bm2 provider Rails oracle: #{pr_cases.size} GitHub containers; 7 embed/LinkedIn containers; #{rows.size} fixture tables"

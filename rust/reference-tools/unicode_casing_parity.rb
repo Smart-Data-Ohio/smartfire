@@ -36,7 +36,7 @@ strings = ["ΟΣ", "ΟΣ@example.com", "ΟΣ@local", "Éxample.com", "ß", "ς",
 pairs = [["ß", "SS"], ["ς", "σ"], ["ΟΣ", "οσ"], ["É", "é"], ["é", "e\u0301"], ["a\0z", "A\0Z"]]
 names = ["ΟΣ", "οςa", "É", "é", "ß", "SS"]
 puts JSON.pretty_generate(
-  reference: "d7c7de92", ruby: RUBY_DESCRIPTION,
+  reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], ruby: RUBY_DESCRIPTION,
   unicode: RbConfig::CONFIG.fetch("UNICODE_VERSION"), sqlite: SQLite3::SQLITE_VERSION,
   casing: strings.map { |input| {input:, downcase: input.downcase, fold: input.downcase(:fold)} },
   comparisons: pairs.map { |left, right| {left:, right:, equal: left.casecmp?(right)} },

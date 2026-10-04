@@ -22,5 +22,5 @@ travel_to Time.utc(2026,3,2,16) do
   AgentGrant.create!(agent:agent,room:board,granted_by:human,capability:"post_messages")
   post=ChannelThread.create_board_post!(room:board,creator:bot,name:"Board payload",work_status:"in_progress",owner_id:bot.id,tags:"api, launch",run_url:"https://example.com/runs/1",first_message:"Brief.")
   results[:board]=Agents::WorkPayload.for(post.reload)
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:results}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results}.as_json)
 end

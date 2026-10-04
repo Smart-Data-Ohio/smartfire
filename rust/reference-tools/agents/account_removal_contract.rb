@@ -15,5 +15,5 @@ travel_to Time.utc(2026,3,2,16) do
     cases[reject ? :failure : :success]={error:error,user:User.exists?(user.id),github:GithubConnectedAccount.exists?(user_id:user.id),fizzy:FizzyConnectedAccount.exists?(user_id:user.id)}
     User.connection.execute("DROP TRIGGER ws11_reject_fizzy_removal") if reject
   end
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",cases:cases)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases)
 end

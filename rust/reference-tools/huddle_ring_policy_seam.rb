@@ -18,7 +18,7 @@ class HuddleRingPolicySeam
   end
   def run
     ActiveRecord::Schema.verbose=false
-    titles=File.read(Rails.root.join("test/models/huddle/ring_policy_test.rb")).scan(/^  test "(.*)" do$/).flatten
+    titles=File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/huddle_pinned/huddle_ring_policy_test.rb")).scan(/^  test "(.*)" do$/).flatten
     cases=%w[default dnd allowed_dnd quiet_override meeting allowed_meeting ooo allowed_ooo].each_with_index.map do |name,index|
       travel_to Time.utc(2026,9,23,12)
       load Rails.root.join("db/schema.rb")
@@ -56,7 +56,7 @@ class HuddleRingPolicySeam
       end
       {name:name,title:titles[index],outcomes:outcomes}
     end
-    puts JSON.pretty_generate(reference_pin:"d7c7de92",cases:cases)
+    puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases)
   ensure
     Huddle::RingPolicy.quiet_check=nil
     travel_back

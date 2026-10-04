@@ -52,4 +52,4 @@ scenarios.each do |name,until_at,note,presence,zone,calendar,intervals|
   add.call("ooo_#{name}_#{viewer.id}",'ooo',input,renderer.render(partial:'rooms/show/ooo_notices',locals:{room:room,ooo_members:others}))
  end
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases})

@@ -101,4 +101,4 @@ opening = [10, 200].map do |size|
   end
   result
 end
-puts JSON.pretty_generate(reference: 'd7c7de92 plus approved board drift', json: json_rows, opening:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), json: json_rows, opening:)

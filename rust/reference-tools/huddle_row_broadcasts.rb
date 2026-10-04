@@ -43,4 +43,4 @@ renderer=WS13RowBroadcastsController.renderer.new(http_host:'campfire.test',http
  end
  room.memberships.delete_all;room.delete
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases,headers:headers})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases,headers:headers})

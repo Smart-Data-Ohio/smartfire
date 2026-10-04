@@ -7,9 +7,9 @@ keep an upstream Campfire template because it compiles.
 ## Reference and ownership
 
 Read the matching `app/views/**/*.erb` and `app/helpers/**/*.rb` first. The pin is recorded in
-`.claude/delegation/rust-port/decisions.md`. The current pin is `d7c7de92`, including Rails PR #148,
-`PRESENTATION_CACHE_VERSION = 3` and the Edge icon correction in #151. WS6's image is
-`ws6-reference-d7c7de92`: the existing reference
+`parity/reference.sha`. The current pin is `78b9b1546`, including Rails PR #148,
+`PRESENTATION_CACHE_VERSION = 3` and the Edge icon correction in #151. The default image is
+`campfire-reference`: the pinned reference
 runtime with the pin's actual `app`, `config`, `lib`, `db`, `test`, `vendor` and `public` trees.
 The generator refuses an older presentation version.
 
@@ -102,8 +102,8 @@ Run from `rust/`, with the worker's own target and named image:
 
 ```sh
 bash reference-tools/views/core/build_reference.sh
-PARITY_IMAGE=ws6-reference-d7c7de92 PARITY_OWNER=ws6 STORE=/home/riels/.cache/rust-port/ws6/core-reference bash reference-tools/views/core/run.sh
-PARITY_IMAGE=ws6-reference-d7c7de92 STORE=/home/riels/.cache/rust-port/ws6/image-reference bash reference-tools/views/core/images.sh
+PARITY_IMAGE=campfire-reference PARITY_OWNER=ws6 STORE=/home/riels/.cache/rust-port/ws6/core-reference bash reference-tools/views/core/run.sh
+PARITY_IMAGE=campfire-reference STORE=/home/riels/.cache/rust-port/ws6/image-reference bash reference-tools/views/core/images.sh
 TMPDIR=/home/riels/.cache/rust-port/ws6/tmp WS6_VIEW_DIFF_DIR=/home/riels/.cache/rust-port/ws6/view-diffs mise exec rust@1.98.1 -- cargo test -j 4 -p campfire_views --test core
 ```
 

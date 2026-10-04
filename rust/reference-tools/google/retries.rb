@@ -14,7 +14,7 @@ Calendar::InboundSync.define_singleton_method(:sync) { |id| raise errors.fetch(s
 Calendar::MeetLink.define_singleton_method(:provision!) { |event| raise errors.fetch(sequence).call }
 event=Event.new(id:123)
 Event.define_singleton_method(:find_by) { |**args| event }
-out={reference:'d7c7de92',cases:[]}
+out={reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:[]}
 [Calendar::InboundSyncJob,Calendar::MeetLinkJob].each do |klass|
   {
     'mixed_google_exhaustion'=>%w[inherited inherited inherited inherited google google google google google google google google],

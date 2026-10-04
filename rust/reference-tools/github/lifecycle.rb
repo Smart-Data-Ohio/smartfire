@@ -16,4 +16,4 @@ vectors=cases.each_with_index.map do |c,i|
  a=account.reload
  {**c,error:,status:user.reload.status,reason:a.disconnected_reason,last_error:a.last_error,updated_at:a.updated_at.iso8601,access:a.access_token,refresh:a.refresh_token}
 end
-File.write("/work/vectors/github_lifecycle.json",JSON.pretty_generate(vectors)+"\n");puts "GitHub lifecycle Rails oracle: #{vectors.size} deactivation/validation/rollback cases; reference d7c7de92"
+File.write("/work/vectors/github_lifecycle.json",JSON.pretty_generate(vectors)+"\n");puts "GitHub lifecycle Rails oracle: #{vectors.size} deactivation/validation/rollback cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

@@ -99,4 +99,4 @@ zones.each do |zone|
   end
 end
 sources = %w[app/controllers/concerns/set_time_zone.rb app/controllers/messages_controller.rb app/controllers/rooms/events_controller.rb app/models/event/channel_timeline.rb app/views/rooms/events/_card.html.erb app/views/rooms/events/_cards.html.erb app/views/github/pull_requests/_card.html.erb app/helpers/github/pull_requests_helper.rb].to_h { |path| [path, Digest::SHA256.file(Rails.root.join(path)).hexdigest] }
-puts JSON.generate({ reference: "d7c7de92", sources:, cases:, background: background.first })
+puts JSON.generate({ reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], sources:, cases:, background: background.first })

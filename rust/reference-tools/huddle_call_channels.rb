@@ -56,4 +56,4 @@ end
   deletions << {stage:room.stage?,status:request.response.status,body:JSON.parse(request.response.body),deleted:!!room.deleted_at,claimed:!!room.destroy_enqueued_at,members:room.memberships.count,revoked:!!grant.revoked_at,stream_ended:stream ? !!stream.ended_at : nil,audits:AuditLog.where(target_type:'Room',target_id:room.id).order(:id).map {|a|a.attributes.slice('action','details')}}
   Stream.where(id:40).delete_all;HuddleGrant.where(id:17).delete_all;room.memberships.delete_all;room.delete;AuditLog.where(target_type:'Room',target_id:9001).delete_all
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases,deletions:deletions})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases,deletions:deletions})

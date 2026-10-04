@@ -36,5 +36,5 @@ rows=[]
   end
 end
 Current.reset
-puts JSON.pretty_generate({reference:'d7c7de92',forms:rows})
-warn "Rails channel forms: #{rows.size} complete partial goldens (new, invalid, admin, member, search); reference d7c7de92"
+puts JSON.pretty_generate({reference: ENV.fetch('PARITY_REFERENCE_SHA'),forms:rows})
+warn "Rails channel forms: #{rows.size} complete partial goldens (new, invalid, admin, member, search); reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

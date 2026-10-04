@@ -5,5 +5,5 @@ vectors=cases.map do |input|
  action=Fizzy::AgentCardAction.new(**input)
  {input:input,valid:action.valid?,errors:action.errors.to_hash,action:action.action_name,summary:action.summary,payload:action.payload_hash,payload_json:action.payload_json}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',actions:vectors})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),actions:vectors})+"\n")
 puts "WS15e Fizzy agent action Rails oracle: #{vectors.size} action cases"

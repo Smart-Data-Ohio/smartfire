@@ -21,5 +21,5 @@ tokens=input['tokens'].each_with_index.map do |raw,index|
   {input_index:index,error:error.class.name}
  end
 end
-puts JSON.pretty_generate(reference:'d7c7de92',expiry:rows,tokens:tokens)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),expiry:rows,tokens:tokens)
 warn "Fresh Rails adversarial oracle: #{rows.length} date casts; #{tokens.length} token casts; #{rows.count{|r|r[:error]}} date errors; #{tokens.count{|r|r[:error]}} token errors"

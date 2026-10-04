@@ -48,5 +48,5 @@ policy = policy_inputs.map do |value|
   keys.each { |key| value.nil? ? ENV.delete(key) : ENV[key] = value }
   { input: value, operator_name: PublicPolicy.operator_name, contact_email: PublicPolicy.contact_email, effective_date: PublicPolicy.effective_date }
 end
-puts JSON.pretty_generate(reference: "d7c7de92", pages: pages, policy: policy, qr: qr)
-warn "Rails public oracle: #{pages.length * 3} page bodies, #{policy.length} policy inputs, #{qr.length} QR cases; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), pages: pages, policy: policy, qr: qr)
+warn "Rails public oracle: #{pages.length * 3} page bodies, #{policy.length} policy inputs, #{qr.length} QR cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

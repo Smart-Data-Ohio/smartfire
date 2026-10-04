@@ -18,6 +18,22 @@ travel_to Time.utc(2026, 3, 2, 16) do
   thread = ChannelThread.create!(id: 901840004, room: Room.find(identify.call("designers")), creator: users[1], name: "Caller-authorized opener")
   ThreadMembership.join!(thread, users[1])
   opener = thread.post_message!(creator: users[1], attributes: {id: 901840005, body: "Opening", client_message_id: "ws12-generic-opener"})
+  # Replay only persisted fixture inputs before the Recorder observes them.
+  # Bulk membership timestamps use the database clock, and seed encryption uses
+  # random IVs; neither is a behavior change between reference pins.
+  inputs = JSON.parse(File.read(File.join(__dir__, 'generic_recorder_inputs.json')))
+  inputs.fetch('memberships').each do |row|
+    membership = room.memberships.find(row.fetch('id'))
+    conn = ActiveRecord::Base.connection
+    conn.execute("UPDATE memberships SET created_at=#{conn.quote(row.fetch('created_at'))}, updated_at=#{conn.quote(row.fetch('updated_at'))} WHERE id=#{membership.id}")
+  end
+  inputs.fetch('two_factor_credentials').each do |row|
+    credential = TwoFactorCredential.find(row.fetch('id'))
+    original = credential.secret
+    raise 'secret fixture plaintext drift' unless ActiveRecord::Encryption.encryptor.decrypt(row.fetch('secret')) == original
+    ActiveRecord::Base.connection.execute("UPDATE two_factor_credentials SET secret=#{ActiveRecord::Base.connection.quote(row.fetch('secret'))} WHERE id=#{credential.id}")
+    raise 'secret fixture readback drift' unless credential.reload.secret == original
+  end
   sources = [opener, SavedItem.first, Event.first, grant, AgentApproval.first, notice, ScheduledMessage.first, Session.first, TwoFactorCredential.first, room]
   raise "missing seed source" if sources.any?(&:nil?)
   # Transfer persisted source rows, not Ruby mocks, into the Rust fixture database.
@@ -107,7 +123,7 @@ travel_to Time.utc(2026, 3, 2, 16) do
   item.mark_handled!
   travel_to Time.utc(2026, 3, 2, 16, 0, 1)
   idempotent = call.call(sources[1], users[0], "mention", true)
-  puts JSON.pretty_generate(reference: "d7c7de92 plus approved board drift", setup: setup, rows: rows, caller_authorized: caller_authorized,
+  puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), setup: setup, rows: rows, caller_authorized: caller_authorized,
     idempotent: { source_id: sources[1].id, recipient: users[0].id, expected: idempotent })
 end
 warn "Rails generic recorder oracle: #{rows.size} source/recipient/authorization cases; preserved handled-source idempotency; 0 masks"

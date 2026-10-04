@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "cases": [
     {
       "spec": {
@@ -313,7 +313,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:status",
-          "payload": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">\ud83d\ude80 Shipping Rust</span>\n</span>\n</template></turbo-stream>"
+          "payload": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">🚀 Shipping Rust</span>\n</span>\n</template></turbo-stream>"
         },
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:ooo_notice",
@@ -372,7 +372,7 @@
       "frames": [
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:status",
-          "payload": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">\ud83c\udf34 Out of office until March 03, 2026 \u2014 Own note</span>\n</span>\n</template></turbo-stream>"
+          "payload": "<turbo-stream action=\"update\" target=\"status_badge_user_127326141\"><template><span class=\"user-status-badge\">\n  <span role=\"img\" aria-label=\"Offline\" class=\"avatar__presence\" data-presence=\"offline\"></span>\n  <span class=\"user-status-badge__label\">Offline</span>\n    <span class=\"user-status-badge__custom\">🌴 Out of office until March 03, 2026 — Own note</span>\n</span>\n</template></turbo-stream>"
         },
         {
           "stream": "Z2lkOi8vY2FtcGZpcmUvVXNlci8xMjczMjYxNDE:ooo_notice",

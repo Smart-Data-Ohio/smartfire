@@ -1,5 +1,5 @@
 {
-  "reference_pin": "d7c7de92",
+  "reference_pin": "78b9b154",
   "notes": [
     "config.ru Rack::Deflater, HTTP/1.1, no Accept-Encoding. Fixed key, mtime and nonce entropy are fixture inputs. Every header and body byte retained. Six exact Rust security additions and only Date/X-Request-Id/X-Runtime values are approved differences."
   ],

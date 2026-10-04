@@ -1,9 +1,10 @@
 # Pinned Smartfire oracle. This script never contacts GitHub.
 require "json"
 require "digest"
+require File.join(ENV.fetch("PARITY_WORK", "/work"), "reference-tools/replay_encryption_entropy")
 require "active_support/testing/time_helpers"
 include ActiveSupport::Testing::TimeHelpers
-PIN = "d7c7de92"
+PIN = ENV.fetch("PARITY_REFERENCE_SHA")
 expected = JSON.parse(File.read(ENV.fetch("GITHUB_REFERENCE_HASHES")))
 expected.each do |path, hash|
   raise "Reference drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest == hash
@@ -16,7 +17,9 @@ now = Time.utc(2026, 1, 1, 12)
 travel_to(now)
 Account.create!(name: "GitHub oracle")
 user = User.create!(name: "Oracle", email_address: "oracle@example.test", password: "fixture-password", role: :administrator)
-account = GithubConnectedAccount.create!(user:, github_login: "OctoCat", access_token: "fixture-github-access", refresh_token: "fixture-github-refresh", token_source: "app", token_expires_at: now + 3600)
+account = ReplayEncryptionEntropy.with("github") do
+  GithubConnectedAccount.create!(user:, github_login: "OctoCat", access_token: "fixture-github-access", refresh_token: "fixture-github-refresh", token_source: "app", token_expires_at: now + 3600)
+end
 row = ActiveRecord::Base.connection.select_one("SELECT * FROM github_connected_accounts WHERE id = #{account.id}")
 verifier = Rails.application.message_verifier("github_app_oauth_state")
 state = "0" * 32

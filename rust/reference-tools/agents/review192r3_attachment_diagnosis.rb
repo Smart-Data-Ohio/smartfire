@@ -20,7 +20,7 @@ travel_to Time.utc(2026,3,2,16) do
   before = tables.to_h{|t| [t,ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM #{t}").to_i]}
   session.post('/rooms/486777696/agents/messages',params:body,headers:headers)
   rails = {status:session.response.status,response:session.response.body,headers:session.response.headers.slice('content-type','retry-after')}
-  rollback = {row_deltas:tables.to_h{|t| [t,ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM #{t}").to_i-before[t]]},thread_closed_at:ChannelThread.find(1900700030).closed_at,source_file_exists:source.service.exist?(source.key),jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|j[:job].name}}
+  committed = {open_transactions:ActiveRecord::Base.connection.open_transactions,row_deltas:tables.to_h{|t| [t,ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM #{t}").to_i-before[t]]},thread_closed_at:ChannelThread.find(1900700030).closed_at,source_file_exists:source.service.exist?(source.key),jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|j[:job].name}}
   queued = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j[:job] == Message::AttachmentProcessingJob }
   raise 'processing job missing after commit' unless queued
   ActiveJob::Base.queue_adapter.enqueued_jobs.delete(queued)
@@ -39,5 +39,5 @@ travel_to Time.utc(2026,3,2,16) do
       when 'ChannelThread::PushMessageJob' then {thread_id:j[:args][0]['_aj_globalid'].split('/').last.to_i,message_id:j[:args][1]['_aj_globalid'].split('/').last.to_i}
       when 'ActiveStorage::AnalyzeJob' then {blob_id:j[:args][0]['_aj_globalid'].split('/').last.to_i}
       else j[:args] end}}}
-  puts JSON.pretty_generate(notes:['Fresh #226 on the pinned harness: HTTP commits before the real processing job generates and uploads JPEG and WebP. Every row and logical remaining job is captured.'],cases:[{name:'fresh_video_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:rails,rails_state:rollback,approved:approved,state:state}])
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],notes:['Fresh #226 on the pinned harness: HTTP commits before the real processing job generates and uploads JPEG and WebP. Every row and logical remaining job is captured.'],cases:[{name:'fresh_video_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:rails,rails_state:committed,approved:approved,state:state}])
 end

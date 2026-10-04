@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92 plus approved board drift",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "sources": {
     "app/controllers/channel_threads_controller.rb": "3be99780463dc3033c01ac82f8df206a27e1912b8234ef172383d2a229758f2c",
     "app/controllers/threads/work/handoffs_controller.rb": "e6c6c97fb2291f8e8083aab1d40faa14758de5c1ece408c119693f5325c934f1",

@@ -33,5 +33,5 @@ SavedItem::ReminderPushJob.perform_now(item)
 long_title_payload=pool.calls.last
 room.update_columns(name:'All Talk')
 rows={'messages'=>ActiveRecord::Base.connection.select_all("SELECT * FROM messages WHERE id=#{message.id}").to_a,'action_text_rich_texts'=>ActiveRecord::Base.connection.select_all("SELECT * FROM action_text_rich_texts WHERE record_type='Message' AND record_id=#{message.id}").to_a,'saved_items'=>ActiveRecord::Base.connection.select_all("SELECT * FROM saved_items WHERE id=#{item.id}").to_a}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',vectors:,payload:,long_title_payload:,rows:,saved_item_id:item.id)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],vectors:,payload:,long_title_payload:,rows:,saved_item_id:item.id)+"\n")
 puts "WS8bm2 reminder push Rails oracle: #{vectors.size} policy cases; 2 captured real job payload/subscription handoffs; 3 fixture tables"

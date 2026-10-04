@@ -38,5 +38,5 @@ vectors=cases.map do |name,operation,fields,status|
  result=Agents::FizzyReads.public_send(operation,agent:agent,**fields)
  {name:name,operation:operation,fields:fields,status:Rack::Utils.status_code(result.status),payload:result.payload,error:result.error,body:result.ok? ? result.payload : result.failure_body,reason:account.reason,calls:Thread.current[:calls]}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',reads:vectors})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),reads:vectors})+"\n")
 puts "WS15e Fizzy agent reads Rails oracle: #{vectors.size} service cases"

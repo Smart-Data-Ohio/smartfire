@@ -126,33 +126,6 @@ impl SettingsFormData {
             html
         }
     }
-    fn presence_select(&self) -> h::Html {
-        self.select(
-            "presence_setting",
-            &self.presence_setting,
-            &[
-                ("Automatic", "auto"),
-                ("Do not disturb", "dnd"),
-                ("Invisible (appear offline)", "invisible"),
-            ],
-            true,
-        )
-    }
-    fn expiry_select(&self) -> h::Html {
-        self.select(
-            "custom_status_expires_in",
-            "never",
-            &[
-                ("30 minutes", "minutes_30"),
-                ("1 hour", "hour_1"),
-                ("4 hours", "hours_4"),
-                ("Today", "today"),
-                ("This week", "week"),
-                ("Never", "never"),
-            ],
-            true,
-        )
-    }
     fn ooo_select(&self) -> h::Html {
         self.select(
             "ooo_preset",
@@ -247,6 +220,20 @@ impl SettingsFormData {
 pub struct StatusForm<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub data: &'a SettingsFormData,
+}
+impl StatusForm<'_> {
+    fn status_fields(&self) -> h::Html {
+        let mut fields = super::StatusFields {
+            presence: self.data.presence_setting.clone(),
+            emoji: self.data.custom_status_emoji.clone(),
+            text: self.data.custom_status_text.clone(),
+            ..Default::default()
+        };
+        for (key, message) in &self.data.errors {
+            fields.errors.entry(key.clone()).or_default().push(message.clone());
+        }
+        super::StatusFieldsView { fields, id_prefix: "user".into() }.html()
+    }
 }
 #[derive(Template)]
 #[template(path = "users/settings/notifications.html")]
