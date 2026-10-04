@@ -28,7 +28,7 @@ def pinned_args(test_arguments):
     temporary.mkdir(parents=True, exist_ok=True)
     image = os.environ.get('PARITY_IMAGE', 'ws11ui-reference:d7c7de92')
     owner = os.environ.get('PARITY_OWNER', 'ws11ui')
-    print(f'WS11 media runner: byte-exact media tests execute in {image}', flush=True)
+    print(f'WS11 media runner: byte-exact media tests execute in {image}', file=sys.stderr, flush=True)
     args = ['docker', 'run', '--rm', '--network', 'none', '--name',
             owner + '-fresh-pinned-media-' + str(os.getpid()), '--cpus', '2',
             '--user', f'{os.getuid()}:{os.getgid()}', '--entrypoint', str(binary),
