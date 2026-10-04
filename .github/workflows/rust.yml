@@ -185,6 +185,14 @@ jobs:
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
 
+      - name: Permit native browser namespaces
+        if: ${{ matrix.suite == 'messaging' }}
+        run: |
+          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
+            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
+          fi
+
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}

@@ -15,7 +15,7 @@ fi
 # Native Selenium isolates its driver with unprivileged user/network/PID
 # namespaces. Docker's default syscall/profile restrictions forbid that setup.
 docker run --rm --init --network host --user "$(id -u):$(id -g)" \
-  --security-opt seccomp=unconfined --security-opt apparmor=unconfined \
+  --security-opt seccomp=unconfined --security-opt "apparmor=${RUST_CI_APPARMOR_PROFILE:-unconfined}" \
   --group-add "$(stat -c %g /var/run/docker.sock)" \
   --volume /var/run/docker.sock:/var/run/docker.sock \
   "${git_mount[@]}" \

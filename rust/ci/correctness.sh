@@ -87,6 +87,7 @@ run_suite() {
       # The scripted paired-browser runner owns its fixture/paused-job seeds and checks rows.
       # These listeners stay outside Linux's ephemeral outbound-client range.
       export WS8BM_BROWSER_PORT_BASE=22020 WS8BM_CHROMEDRIVER_PORT=22023
+      node rust/ci/native-network-smoke.mjs
       python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
       npm ci --prefix rust/parity
       node --test --test-concurrency=4 rust/reference-tools/messaging/*.test.mjs

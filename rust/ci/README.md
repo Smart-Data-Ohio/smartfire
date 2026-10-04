@@ -79,6 +79,10 @@ Native Selenium isolates Chromium/ChromeDriver with unprivileged user, network a
 namespaces. The CI container permits these syscalls, and the pinned `iproute2`
 prerequisite brings up its private loopback device. Generated browser-host test
 executables use their own cache under `target/ws8bm-browser-host/`.
+On Ubuntu runners, the messaging container uses a named AppArmor profile with an
+explicit `userns` permission. The host's namespace restriction remains enabled.
+`native-network-smoke.mjs` checks a real isolated driver endpoint and prints its
+startup log on failure before the full 145-case paired suite starts.
 
 Each correctness job uploads its full log, selected-test JUnit (where applicable),
 and a JSON head/duration/exit receipt under `target/ci-receipts`. A red external
