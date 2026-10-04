@@ -61,5 +61,5 @@ rows = %w[unrelated_post unused_icon_upload].map do |name|
   Icons.expire_custom_cache!
   result
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:) + "\n")
 puts "WS8bm cache stability: #{rows.size} unrelated HTTP writes preserve Rails helper keys and HTML"

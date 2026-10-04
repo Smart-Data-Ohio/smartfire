@@ -22,5 +22,5 @@ cases=[]
   end
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:"d7c7de92",cases:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:)+"\n")
 puts "WS8bm2 user coercions: #{cases.size} real Rails requests"

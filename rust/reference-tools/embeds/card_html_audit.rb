@@ -20,5 +20,5 @@ fizzy=cases.map do |name,payload,error,zone|
  {name:name,payload:payload,error:error,zone:Time.zone.name,html:ApplicationController.renderer.render(template:'rooms/fizzy/cards/show',layout:false,assigns:{card:card,cache:cache,connect_required:false,frame_id:%q{card"<&'frame}})}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',generic:generic,linkedin:linkedin,fizzy:fizzy})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),generic:generic,linkedin:linkedin,fizzy:fizzy})+"\n")
 puts "WS15e card HTML Rails audit: #{generic.size} generic, #{linkedin.size} LinkedIn, #{fizzy.size} Fizzy"

@@ -4,6 +4,8 @@
 All other tests run natively. The application logo, video corpora and storage
 vectors keep every byte assertion; only their media runtime matches the oracle.
 """
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 from pathlib import Path
 import os
 import subprocess
@@ -27,7 +29,7 @@ def pinned_args(test_arguments):
     scratch = root / '.scratch'
     temporary = scratch / 'pinned-media'
     temporary.mkdir(parents=True, exist_ok=True)
-    image = os.environ.get('PARITY_IMAGE', 'ws11ui-reference:d7c7de92')
+    image = os.environ.get('PARITY_IMAGE', PIN_IMAGE)
     owner = os.environ.get('PARITY_OWNER', 'ws11ui')
     print(f'WS11 media runner: byte-exact media tests execute in {image}', file=sys.stderr, flush=True)
     args = ['docker', 'run', '--rm', '--network', 'none', '--name',

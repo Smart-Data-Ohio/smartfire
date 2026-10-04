@@ -35,5 +35,5 @@ rows=[{'If-None-Match'=>old_etag},{'If-Modified-Since'=>last_modified}].map do |
  browser.get("/rooms/#{room.id}/messages",headers:headers.merge(validator))
  {headers:validator,status:browser.response.status,etag:browser.response.headers['ETag']}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',payload:payload,message_id:message.id,old_html:old_html,html:html,rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],payload:payload,message_id:message.id,old_html:old_html,html:html,rows:rows)+"\n")
 puts 'WS8bm legacy cache: vulnerable v2 fragment and validator; safe v3 fragment; both real conditional Rails requests return 200'

@@ -10,4 +10,4 @@ rows=specs.map do |values|
   configured=Google::Picker.configured?
   {values:,configured:,public:configured ? {client_id:Google::Picker.client_id,api_key:Google::Picker.api_key,project_number:Google::Picker.project_number} : nil}
 end
-puts JSON.pretty_generate({reference:'d7c7de92',rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:})

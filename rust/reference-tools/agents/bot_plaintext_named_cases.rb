@@ -18,4 +18,4 @@ bot.update_columns(bot_token:"LeakedKey123",bot_token_digest:nil)
 bot.reload.reset_bot_key;new_key=bot.plain_bot_key
 results[:race]={healed:Bots::ClearPlaintextTokens.heal(bot.id,"LeakedKey123"),new_auth:User.authenticate_bot(new_key)==bot,old_auth:User.authenticate_bot("#{bot.id}-LeakedKey123")==bot}
 results[:repeat]=Bots::ClearPlaintextTokens.run!
-puts JSON.pretty_generate(reference_pin:"d7c7de92",results:results)
+puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results)

@@ -45,7 +45,7 @@ cases.each do |entry|
   result = Slack::MarkdownConverter.convert(message, users: users)
   entry['expected'] = { 'markdown' => result.markdown, 'truncated' => result.truncated, 'files_linked' => result.files_linked }
 end
-output = { 'reference' => 'd7c7de9264c63015be398001d7a1094e7695a6db',
+output = { 'reference' => ENV.fetch("PARITY_REFERENCE_SHA"),
   'source_sha256' => Digest::SHA256.file(Rails.root.join('app/models/slack/markdown_converter.rb')).hexdigest,
   'users' => users, 'cases' => cases }
 File.write(File.join(ENV.fetch('PARITY_WORK'), 'vectors/slack/markdown.json'), JSON.pretty_generate(output) + "\n")

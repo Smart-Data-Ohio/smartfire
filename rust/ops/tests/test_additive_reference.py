@@ -8,7 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 BINARY = os.environ.get("WS18_BINARY")
-REFERENCE = os.environ.get("WS18_REFERENCE_IMAGE", "ws6-reference-d7c7de92:latest")
+REFERENCE = os.environ.get("WS18_REFERENCE_IMAGE", os.environ.get("PARITY_IMAGE", "campfire-reference"))
 
 
 @unittest.skipUnless(BINARY, "set WS18_BINARY to the built campfire binary")

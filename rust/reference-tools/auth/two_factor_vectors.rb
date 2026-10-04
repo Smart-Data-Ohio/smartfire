@@ -1,4 +1,5 @@
 require_relative "../support"
+require_relative "../replay_encryption_entropy"
 
 class TwoFactorVectors
   include ReferenceTools
@@ -10,7 +11,8 @@ class TwoFactorVectors
     reset_database!
     credential = TwoFactorCredential.create!(user: @david, secret: SECRET)
     setup_secret = TwoFactorSetupSecret.issue_for!(@david.sessions.start!(user_agent: "ws9", ip_address: "127.0.0.1"))
-    setup_secret.update!(secret: SECRET)
+    entropy = ReplayEncryptionEntropy::INPUTS.fetch('two_factor')
+    ReplayEncryptionEntropy.with(ivs: [entropy.fetch('setup')]) { setup_secret.update!(secret: SECRET) }
     totp = credential.totp
     now = NOW.to_i
     codes = [-90, -60, -31, -30, -1, 0, 29, 30, 59, 60, 90].map do |offset|
@@ -42,8 +44,10 @@ class TwoFactorVectors
         { secret: secret, error: error.class.name }
       end
     end
-    encoded_secrets = ["ſ", "ſ".b, "ß", "ß".b].map do |secret|
-      credential.update!(secret: secret, last_totp_at: nil)
+    encoded_secrets = ["ſ", "ſ".b, "ß", "ß".b].each_with_index.map do |secret, index|
+      ReplayEncryptionEntropy.with(ivs: [entropy.fetch('encoded').fetch(index)]) do
+        credential.update!(secret: secret, last_totp_at: nil)
+      end
       ciphertext = credential.read_attribute_before_type_cast(:secret)
       begin
         code = credential.totp.now
@@ -53,7 +57,7 @@ class TwoFactorVectors
         { encoding: secret.encoding.name, ciphertext: ciphertext, code: "000000", error: error.class.name }
       end
     end
-    credential.update!(secret: SECRET, last_totp_at: nil)
+    ReplayEncryptionEntropy.with(ivs: [entropy.fetch('credential')]) { credential.update!(secret: SECRET, last_totp_at: nil) }
     backup_inputs = [nil, "", "  --\t", "ABCD-Ef1234", "a\tb\nc\vd\fe\rf", "\u00a0ABC\u2003", "İÅΣ"]
     backups = backup_inputs.map { |input| { input: input, normalized: TwoFactorBackupCode.normalize(input), digest: TwoFactorBackupCode.digest(input) } }
     cookie, header = write_cookie(env: { "HTTPS" => "on" }) do |jar|
@@ -61,7 +65,7 @@ class TwoFactorVectors
         httponly: true, secure: true, same_site: :lax }
     end
     output = {
-      reference: "d7c7de92", secret_key_base: ENV.fetch("SECRET_KEY_BASE"), now: now, secret: SECRET,
+      reference: ENV.fetch('PARITY_REFERENCE_SHA'), secret_key_base: ENV.fetch("SECRET_KEY_BASE"), now: now, secret: SECRET,
       codes: codes, checks: checks, base32: decoded, backups: backups, encoded_secrets: encoded_secrets,
       collision: { at: collision_at, code: collision_code,
         matched_at: totp.verify(collision_code, drift_ahead: 30, drift_behind: 30, at: collision_at) },

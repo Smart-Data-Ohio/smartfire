@@ -31,4 +31,4 @@ subscriber = ActiveSupport::Notifications.subscribe('sql.active_record') { |*arg
 request.get('/users/me/sidebar')
 ActiveSupport::Notifications.unsubscribe(subscriber)
 sidebar = {status: request.response.status, participant_queries: queries.count { |q| q.match?(/\bFROM "huddle_grants"/) }, stream_queries: queries.count { |q| q.match?(/\bFROM "streams"/) }}
-puts JSON.pretty_generate(reference_pin: 'd7c7de92', audit_failure: deletion, unconfigured_stage: stage, identities: identities, quiet_sidebar: sidebar)
+puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], audit_failure: deletion, unconfigured_stage: stage, identities: identities, quiet_sidebar: sidebar)

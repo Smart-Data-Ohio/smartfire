@@ -27,7 +27,7 @@ labels = json.loads((seed / 'labels.json').read_text())
 store = root / '.scratch/system-behavior'
 store.mkdir(parents=True, exist_ok=True)
 work = pathlib.Path(tempfile.mkdtemp(dir=store))
-env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11ui-system'), 'PARITY_OWNER':os.environ.get('PARITY_OWNER','ws11ui'), 'PARITY_SEED_DIR':str(work/'seeds'), 'WS11UI_INBOX_CASE':args.scenario, 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','ws11ui-reference:d7c7de92')}
+env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11ui-system'), 'PARITY_OWNER':os.environ.get('PARITY_OWNER','ws11ui'), 'PARITY_SEED_DIR':str(work/'seeds'), 'WS11UI_INBOX_CASE':args.scenario, 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','campfire-reference')}
 reference = root / 'rust/parity/bin/reference'
 child = None
 # Keep simultaneous worktrees' servers and teardown isolated.
@@ -49,9 +49,6 @@ try:
     labels_file = work/'labels.json'
     candidate = work/'candidate'; (candidate/'db').mkdir(parents=True);shutil.copytree(private/'storage',candidate/'files')
     subprocess.run([str(reference),'up','--seed','agents_ui','--port',str(reference_port),'--time',frozen_time,'--freeze'],cwd=root,env=env,check=True)
-    # Shared rules approve exactly this post-pin status-popup layout delta.
-    layout = work/'application.html.erb';layout.write_bytes(subprocess.check_output(['git','show','2e20b24c3f2be9db8a646a1352c159b4afacad0e:app/views/layouts/application.html.erb'],cwd=root))
-    subprocess.run(['docker','cp',str(layout),f'{env["PARITY_NAMESPACE"]}-reference-{reference_port}:/rails/app/views/layouts/application.html.erb'],check=True)
     fixture = subprocess.check_output([str(reference),'runner','--port',str(reference_port),'--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/({'budget':'budget_fixture.rb','work':'work_fixture.rb','inbox':'inbox_browser_fixture.rb','inbox-filter':'inbox_browser_fixture.rb'}.get(args.scenario,'system_fixture.rb'))),args.scenario],cwd=root,env=env,text=True)
     labels.update(json.loads(fixture)); labels_file.write_text(json.dumps(labels))
     source_db = work/f'seeds/.instances/{reference_port}/db/production.sqlite3'

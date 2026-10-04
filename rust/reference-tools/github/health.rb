@@ -33,4 +33,4 @@ vectors=configs.map do |config|
  {config:config.transform_values { |v| v.start_with?("fixture") ? "configured-fixture" : v },snapshot:,html:section}
 end
 File.write("/work/vectors/github_health.json",JSON.pretty_generate(vectors)+"\n")
-puts "GitHub health Rails oracle: #{vectors.size} configuration/count/list/HTML cases; reference d7c7de92"
+puts "GitHub health Rails oracle: #{vectors.size} configuration/count/list/HTML cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

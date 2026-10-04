@@ -1,6 +1,8 @@
 require 'json'
 require 'digest'
 Rails.logger=ActiveSupport::Logger.new($stderr)
+reference=File.read(File.join(ENV.fetch('PARITY_WORK'),'parity/reference.sha')).strip
+raise 'profile oracle requires the pinned reference image' unless ENV['PARITY_REFERENCE_SHA']==reference
 JSON.parse(File.read(File.join(ENV.fetch('PARITY_WORK'),'reference-tools/users/profile-page-source-hashes.json'))).each {|path,hash|raise "source drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest==hash}
 class ProfilePageGoldenController < Users::ProfilesController
   def form_authenticity_token(form_options: {})
@@ -8,8 +10,6 @@ class ProfilePageGoldenController < Users::ProfilesController
     action && method ? "#{method.to_s.downcase}:#{action}" : 'GLOBAL'
   end
 end
-# Approved #163 templates, including the application action, are post-pin inputs.
-load File.join(ENV.fetch('PARITY_WORK'),'reference-tools/users/post_pin.rb')
 user=User.find(127326141)
 Current.reset;Current.user=user
 renderer=ProfilePageGoldenController.renderer.new(http_host:'campfire.test',https:false,'HTTP_USER_AGENT'=>'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36','rack.session'=>{},'action_dispatch.content_security_policy'=>Rails.application.config.content_security_policy,'action_dispatch.content_security_policy_nonce_generator'=>->(_){'NONCE'})
@@ -26,5 +26,5 @@ Current.reset;Current.user=user.reload
 markup_direct,markup_shared=user.memberships.with_ordered_room.partition {|m|m.room.direct?}
 markup_html=renderer.render(template:'users/profiles/show',layout:'application',assigns:assigns.merge(user:user,direct_memberships:markup_direct,shared_memberships:markup_shared))
 markup={setup:setup,html:markup_html}
-puts JSON.pretty_generate(reference:'d7c7de92',status_reference:'2e20b24c',user_id:user.id,html:html,body:body,facts:facts,brand_icon_names:Icons.client_icon_names,markup:markup)
-warn 'Rails full profile oracle: 2 complete application pages (seed and markup) and body; real seed memberships and WS9 security; reference d7c7de92, status/layout templates 2e20b24c'
+puts JSON.pretty_generate(reference:reference,user_id:user.id,html:html,body:body,facts:facts,brand_icon_names:Icons.client_icon_names,markup:markup)
+warn "Rails full profile oracle: 2 complete application pages (seed and markup) and body; real seed memberships and WS9 security; plain pinned reference #{reference}"

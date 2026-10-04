@@ -41,8 +41,10 @@ test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 2820 filtered ou
 ```
 
 `reference-tools/messaging/attachment_processing.sh` verifies the pinned Rails
-image (`d7c7de9264c63015be398001d7a1094e7695a6db`) and overlays only the four approved
-#226 Ruby files read from the reference checkout. It runs the existing isolated
+image (`78b9b1546bdab4c6c1c9b8ddb94512f661289112`) and runs it without source overlays.
+The original #233 capture used the previous pin plus the four approved #226 Ruby
+files; the pin refresh reproduced all three attachment corpora byte for byte on
+the plain image and removed that temporary overlay. It runs the existing isolated
 seed harness, frozen clock and canonical media tools. The vector records full
 message/blob rows including lease columns, queued jobs, retry/cooldown times,
 presentation HTML before/after processing, broadcast bytes, and source/JPEG/WebP
@@ -52,7 +54,7 @@ sizes and SHA256s. Regenerate with:
 bash reference-tools/messaging/attachment_processing.sh > vectors/message_attachment_processing.json
 ```
 
-The same overlay regenerated the agent attachment and thread/JPEG boundary vectors;
+The plain pinned image also regenerates the agent attachment and thread/JPEG boundary vectors;
 the old diagnostics now execute the actual deferred Rails job instead of describing
 the superseded transactional crash. Rust assertions compare the rows, file checksums,
 HTML and broadcast payloads without masking their contents. Additional regressions
@@ -99,7 +101,7 @@ assertions failed:
 test result: FAILED. 19 passed; 2 failed; 0 ignored; 0 measured; 2820 filtered out; finished in 16.71s
 ```
 
-Regenerate the new failure vector through the same pinned overlay harness:
+Regenerate the new failure vector through the same plain pinned harness:
 
 ```sh
 bash reference-tools/messaging/attachment_processing.sh \
@@ -173,7 +175,7 @@ frames already matched Rails:
 test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 2844 filtered out; finished in 2.00s
 ```
 
-Regenerate the event vector through the same pinned overlay and isolated seed:
+Regenerate the event vector through the same plain pinned image and isolated seed:
 
 ```sh
 bash reference-tools/messaging/attachment_processing.sh \

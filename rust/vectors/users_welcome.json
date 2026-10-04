@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "page": {
     "html": "\n\n<div id=\"message-area\" class=\"message-area\">\n  <div class=\"message-area--empty min-width center\">\n    <figure class=\"center pad\">\n      <img aria-hidden=\"true\" class=\"colorize--black translucent\" src=\"/assets/messages-empty-84c8fd41.svg\" />\n      <span class=\"for-screen-reader\">David</span>\n    </figure>\n  </div>\n</div>\n",
     "sidebar": "<turbo-frame data-turbo-permanent=\"true\" data-controller=\"rooms-list read-rooms turbo-frame\" data-rooms-list-unread-class=\"unread\" data-action=\"presence:present@window->rooms-list#read room:mark-unread@window->rooms-list#markUnread read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload\" id=\"user_sidebar\" src=\"/users/me/sidebar\" target=\"_top\"></turbo-frame>"

@@ -1,5 +1,5 @@
 {
-  "reference_pin": "d7c7de92",
+  "reference_pin": "78b9b154",
   "status": "complete",
   "meaning": "Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.",
   "boundary_deferred": {

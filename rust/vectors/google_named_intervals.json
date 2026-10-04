@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "rows": [
     {
       "file": "test/models/calendar/meeting_intervals_test.rb",
@@ -600,7 +600,7 @@
   ],
   "cache_uniqueness": {
     "file": "test/models/calendar/meeting_cache_test.rb",
-    "source_sha256": "24bc611682e8a47dbd29f239fbcded12c08b04a73c785700ef71b63b68eb3488",
+    "source_sha256": "44da244725ba2cd6139999dd6b89af57892d38625a2b97820a7ef52ec8e89244",
     "test": "one cache per user",
     "assertions": 1,
     "rows": 1

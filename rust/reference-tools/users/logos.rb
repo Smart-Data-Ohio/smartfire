@@ -23,5 +23,5 @@ cases=[nil,"moon.jpg","pixel.bmp"].flat_map do |file|
     {file:file,size:size,status:session.response.status,body:Base64.strict_encode64(session.response.body),content_type:session.response.headers["Content-Type"],cache_control:session.response.headers["Cache-Control"],etag:session.response.headers["ETag"]}
   end
 end
-puts JSON.pretty_generate(reference:"d7c7de92",vips:Vips.version_string,cases:cases)
-warn "Rails logos oracle: #{cases.size} complete PNG bodies with response/cache headers; libvips #{Vips.version_string}; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),vips:Vips.version_string,cases:cases)
+warn "Rails logos oracle: #{cases.size} complete PNG bodies with response/cache headers; libvips #{Vips.version_string}; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

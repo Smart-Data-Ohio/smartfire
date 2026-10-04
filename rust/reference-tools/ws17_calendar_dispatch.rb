@@ -58,4 +58,4 @@ travel_to(Time.utc(2026,3,2,16)) do
  end
 end
 tasks=Periodic::Runner.new.instance_variable_get(:@tasks).map { |task| {name:task.name,seconds:task.interval.to_i} }
-puts JSON.generate(tasks:,reference:"d7c7de92",now:"2026-03-02T16:00:00Z",rows:)
+puts JSON.generate(tasks:,reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:"2026-03-02T16:00:00Z",rows:)

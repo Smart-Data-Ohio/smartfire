@@ -17,6 +17,6 @@ rows = run.records.where(slack_kind: 'user').order(:slack_key).map do |record|
     'email'=>user.email_address, 'status'=>user.status, 'bio'=>user.bio,
     'zone'=>user.time_zone, 'claimable'=>user.google_email_link_allowed}
 end
-result = {'reference'=>'d7c7de9264c63015be398001d7a1094e7695a6db','preview'=>preview,'stats'=>delta,'users'=>rows,'repeat'=>mapper.map_page(members)}
+result = {'reference'=>ENV.fetch("PARITY_REFERENCE_SHA"),'preview'=>preview,'stats'=>delta,'users'=>rows,'repeat'=>mapper.map_page(members)}
 File.write(File.join(ENV.fetch('PARITY_WORK'),'vectors/slack/users.json'),JSON.pretty_generate(result)+"\n")
 puts "Slack mapper vectors: #{rows.size} fixture users; preview, import and repeat recorded"

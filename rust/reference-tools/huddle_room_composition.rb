@@ -31,4 +31,4 @@ cases=[]
   cases << {name:"#{kind}_poll_builder",partial:'poll_builder',input:{room:{id:room.id,kind:kind,name:room.name,display_name:(room.direct? ? room.direct_display_name(for_user:actor) : room.name)},drive:'none'},html:renderer.render(partial:'polls/builder',locals:{room:room})}
   room.destroy!
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases})

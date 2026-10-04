@@ -10,5 +10,5 @@ rows=raws.map do |raw|
  params=ActionController::Parameters.new(ActionDispatch::Request::Utils.normalize_encode_params(ActiveSupport::JSON.decode('{"access_token":'+raw+'}')))
  {raw:,string:params[:access_token].to_s.strip}
 end
-puts JSON.pretty_generate(reference:'d7c7de92',tokens:rows)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),tokens:rows)
 warn "Rails exponent boundaries: #{rows.length} raw tokens"

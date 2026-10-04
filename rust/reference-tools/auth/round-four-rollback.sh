@@ -12,4 +12,4 @@ docker run --rm --name ws9-zone-rollback --network none --entrypoint '' \
   --user "$(id -u):$(id -g)" --env-file "$ROOT/parity/.env.reference" \
   -e RAILS_LOG_LEVEL=fatal -e DATABASE_URL=sqlite3:/work/review/zone.sqlite3 \
   -v "$DIR:/work/review" -v "$ROOT/reference-tools/auth/round_four_rollback.rb:/work/round_four_rollback.rb:ro" \
-  "${WS9_REFERENCE_IMAGE:-ws9-reference:d7c7de92}" bin/rails runner /work/round_four_rollback.rb
+  "${WS9_REFERENCE_IMAGE:-${PARITY_IMAGE:-campfire-reference}}" bin/rails runner /work/round_four_rollback.rb

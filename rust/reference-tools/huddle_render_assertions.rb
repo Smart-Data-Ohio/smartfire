@@ -103,7 +103,7 @@ class HuddleRenderAssertions
       @grant = @stream = nil
       {name: name, configured: name != "unconfigured", input: input, destinations: destinations, steps: steps}
     end
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", now: NOW.to_i, cases: cases)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: NOW.to_i, cases: cases)
   ensure
     travel_back
   end

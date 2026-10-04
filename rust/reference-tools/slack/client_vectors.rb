@@ -22,5 +22,5 @@ cases = []
   end
   cases << entry
 end
-File.write(File.join(ENV.fetch('PARITY_WORK'), 'vectors/slack/client.json'), JSON.pretty_generate({ 'reference' => 'd7c7de9264c63015be398001d7a1094e7695a6db', 'cases' => cases }) + "\n")
+File.write(File.join(ENV.fetch('PARITY_WORK'), 'vectors/slack/client.json'), JSON.pretty_generate({ 'reference' => ENV.fetch("PARITY_REFERENCE_SHA"), 'cases' => cases }) + "\n")
 puts "Slack client vectors: #{cases.size} Rails error and success mappings generated"

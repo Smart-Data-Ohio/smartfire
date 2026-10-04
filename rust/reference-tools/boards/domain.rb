@@ -43,5 +43,5 @@ thread=nil
   operation.call
   steps << {name:,thread_id:thread.id,callbacks:CAPTURE.dup,tags:ThreadTag.where(channel_thread_id:thread.id).order(:name).pluck(:name)}
 end
-puts JSON.pretty_generate(reference:"d7c7de92",queries:,tag_counts:ChannelThread.board_tag_counts(board),steps:)
-warn "Rails board domain oracle: #{queries.size} filters and #{steps.size} committed/rolled-back callback sequences; reference d7c7de92"
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),queries:,tag_counts:ChannelThread.board_tag_counts(board),steps:)
+warn "Rails board domain oracle: #{queries.size} filters and #{steps.size} committed/rolled-back callback sequences; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

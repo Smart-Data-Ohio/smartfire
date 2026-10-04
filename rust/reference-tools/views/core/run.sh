@@ -9,6 +9,7 @@
 # parity/bin/reference.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
+source "$ROOT/reference-tools/reference_image_env.sh"
 cd "$ROOT"
 FROZEN_AT=${FROZEN_AT:-2026-02-10T12:00:00Z}
 STORE=${STORE:-target/views-core-reference}
@@ -17,7 +18,7 @@ OUT=${OUT:-crates/views/tests/golden/core}
 rm -rf "$STORE"; mkdir -p "$STORE/db" "$STORE/storage"
 # Give the throwaway container an explicit worker-owned name. The shared parity runner's
 # anonymous exec containers otherwise get random names, outside the worker's namespace.
-docker run --rm --name "${PARITY_OWNER:-ws6}-views-goldens-$$" --cpus 2 \
+docker run --rm -e PARITY_REFERENCE_SHA --name "${PARITY_OWNER:-ws6}-views-goldens-$$" --cpus 2 \
   --user "$(id -u):$(id -g)" --env-file parity/.env.reference \
   -e RAILS_LOG_LEVEL=warn -e PARITY_REDIS=1 -e "FAKETIME=$(date -u -d "$FROZEN_AT" '+%Y-%m-%d %H:%M:%S')" \
   -v "$(realpath "$STORE/db"):/rails/storage/db" -v "$(realpath "$STORE/storage"):/rails/storage/files" \

@@ -142,5 +142,5 @@ ActiveRecord::Base.transaction do
   raise ActiveRecord::Rollback
 end
 rows.select { |r| r[:spec][:name].start_with?('preload_') }.each { |r| warn "Pinned Rails #{r[:spec][:name]}: #{r[:user_reads]} User SELECTs; #{r[:account_reads]} GoogleAccount SELECTs" }
-puts JSON.pretty_generate(reference:'d7c7de92', now:BASE.iso8601, rows:, tokens:, claims:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now:BASE.iso8601, rows:, tokens:, claims:)
 warn "Pinned Rails PushChannel: #{rows.size} watch/renew scenarios; #{tokens.size} token cases; #{claims.size} notification claims; recorded HTTP only"

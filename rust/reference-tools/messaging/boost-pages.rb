@@ -37,5 +37,5 @@ capture.call('actions_jason', jason, 'actions')
 jason.update_columns(name: '<a href="/unsafe">Jason & "quoted"</a>')
 capture.call('index_hostile_name', david, 'index', 'name')
 capture.call('new_jason', jason, 'new')
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', message_id: message.id, boosts:, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], message_id: message.id, boosts:, rows:) + "\n")
 puts "WS8bm boost-pages oracle: #{rows.size} actual index/new/actions requests; complete fixed-token forms, distinct reactors and hostile tooltip names"

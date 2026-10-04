@@ -12,9 +12,9 @@ browser use `2026-03-02T16:00:00Z`; the browser uses UTC and a 1400×1400 viewpo
 the seed independently with the pinned reference image:
 
 ```bash
-PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 \
+PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=campfire-reference \
   rust/parity/bin/seed build default first_run
-PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 \
+PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=campfire-reference \
   rust/parity/bin/reference up --seed default --port 52500 --time 2026-03-02T16:00:00Z --freeze
 ```
 
@@ -51,10 +51,10 @@ It freezes its own Ruby clock explicitly, including when run with `--port` (`doc
 does not inherit Puma's libfaketime environment):
 
 ```bash
-PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 \
+PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=campfire-reference \
   rust/parity/bin/reference runner --storage .scratch/behavior-rust --time 2026-03-02T16:00:00Z --freeze \
   rust/parity/behavior/fixtures.rb /work/parity/.seed/default/labels.json
-PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92 \
+PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=campfire-reference \
   rust/parity/bin/reference runner --port 52500 \
   rust/parity/behavior/fixtures.rb /work/parity/.seed/default/labels.json
 ```
@@ -64,7 +64,7 @@ forwarder, fixture process and socket directory. Run each suite once on each fre
 prepared app. Use a short owned cache path for the Unix fixture socket. For Rust:
 
 ```bash
-export PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=ws8bm2-reference:d7c7de92
+export PARITY_NAMESPACE=ws8bm2 PARITY_OWNER=ws8bm2 PARITY_IMAGE=campfire-reference
 export PARITY_SCRATCH=/home/riels/.cache/rust-port/ws8bm2/browser
 for ws8bm2_suite in scheduled slash search-files polls pins; do
   ws8bm2_args=()

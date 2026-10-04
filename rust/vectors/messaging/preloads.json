@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "rows": {
     "messages": [
       {
@@ -320,6 +320,8 @@
         "created_at": "2026-03-02 16:00:00",
         "filename": "report & data.txt",
         "key": "preload-file-blob",
+        "message_processing_expires_at": null,
+        "message_processing_token": null,
         "metadata": "{\"analyzed\":true}",
         "service_name": "local"
       }

@@ -38,5 +38,5 @@ rows=cases.map do |name,input,duplicate|
  end
  row
 end
-puts JSON.pretty_generate(reference:'d7c7de92',setup:,rows:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),setup:,rows:)
 warn "Rails work link model oracle: #{rows.size} validation/persistence cases; 0 masks"

@@ -1,6 +1,6 @@
 {
-  "reference": "d7c7de92",
-  "template_digest": "4bc70e94df311f86c11d03b24ea441ae",
+  "reference": "78b9b154",
+  "template_digest": "f5a8cbcca9f506d36dc7ba6c4b3aab08",
   "template_dependencies": [
     "agent_steps/steps",
     "as/a",
@@ -745,6 +745,8 @@
         "created_at": "2026-03-02 16:00:00",
         "filename": "before.txt",
         "key": "review-attachment-file",
+        "message_processing_expires_at": "2026-03-02 16:15:00",
+        "message_processing_token": "00000000-0000-4000-8000-000000000031:0",
         "metadata": "{\"identified\":true,\"analyzed\":true}",
         "service_name": "local"
       },
@@ -756,6 +758,8 @@
         "created_at": "2026-03-02 16:00:00",
         "filename": "before.txt",
         "key": "review-reply_attachment-file",
+        "message_processing_expires_at": "2026-03-02 16:15:00",
+        "message_processing_token": "00000000-0000-4000-8000-000000000039:0",
         "metadata": "{\"identified\":true,\"analyzed\":true}",
         "service_name": "local"
       },
@@ -767,6 +771,8 @@
         "created_at": "2026-03-02 16:00:00",
         "filename": "review.svg",
         "key": "review-icon-file",
+        "message_processing_expires_at": null,
+        "message_processing_token": null,
         "metadata": "{\"identified\":true}",
         "service_name": "local"
       }

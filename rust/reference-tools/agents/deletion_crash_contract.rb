@@ -20,5 +20,5 @@ else
   page=Agents::EventPolling.poll(agent:agent,since:0,limit:50,presenter:->(m) {{id:m.id}})
   result={thread_exists:ChannelThread.where(name:'Restart gap').exists?,deletion_events:agent.agent_events.where(event_type:'work_unassigned').count,
     polled_deletions:page[:events].count {|e|e[:event_type]=='work_unassigned'}}
-  puts JSON.pretty_generate({reference:'d7c7de92',results:result}.as_json)
+  puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:result}.as_json)
 end

@@ -80,5 +80,5 @@ end
   steps << {method:'POST',path:,params:,status:browser.response.status,content_type:browser.response.headers['Content-Type'],body:browser.response.body,state:,zone:}
  end
 end;end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',cases:,rows:,steps:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:,rows:,steps:)+"\n")
 puts "WS8bm2 exceptional inputs Rails: #{cases.size} exact calendar/slash result pairs; #{steps.size} structured HTTP status/type/body comparisons"

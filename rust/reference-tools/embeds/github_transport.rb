@@ -46,5 +46,5 @@ errors = [Net::WriteTimeout, EOFError].flat_map do |failure|
     end
   end
 end
-File.write(ENV.fetch("GITHUB_TRANSPORT_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: "d7c7de92", timeouts:, errors: }) + "\n")
-puts "WS15e GitHub transport Rails oracle: #{timeouts.size} write timeout defaults, #{errors.size} mapped errors; reference d7c7de92"
+File.write(ENV.fetch("GITHUB_TRANSPORT_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA"), timeouts:, errors: }) + "\n")
+puts "WS15e GitHub transport Rails oracle: #{timeouts.size} write timeout defaults, #{errors.size} mapped errors; reference #{ENV.fetch("PARITY_REFERENCE_SHA")}"

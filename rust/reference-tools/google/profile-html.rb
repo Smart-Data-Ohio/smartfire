@@ -37,4 +37,4 @@ drive=[[],["1AbcDefGhIjKlMnOpQrSt","2BcDefGhIjKlMnOpQrStU"]].map do |ids|
  message.reload
  {id:message.id,client_message_id:message.client_message_id,urls:message.drive_attachments.map(&:url),html:renderer.render(partial:"messages/drive_attachments",locals:{message:})}
 end
-puts JSON.pretty_generate({reference:"d7c7de9264c63015be398001d7a1094e7695a6db",calendar:,signin:,drive:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),calendar:,signin:,drive:})

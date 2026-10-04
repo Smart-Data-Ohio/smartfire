@@ -29,5 +29,5 @@ second=capture.call('source_edit',{'If-None-Match'=>first})
 travel_to Time.utc(2026,3,2,16,0,20)
 card.github_pull_requests.sole.update!(private:false,title:'Fetched card',fetched_at:Time.current)
 capture.call('card_fetch',{'If-None-Match'=>second})
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',source_id:source.id,reply_id:reply.id,card_id:card.id,rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],source_id:source.id,reply_id:reply.id,card_id:card.id,rows:rows)+"\n")
 puts 'WS8bm validator declarations: actual page 304, then byte-exact changed ETags after off-page source edit and card fetch without a message touch'

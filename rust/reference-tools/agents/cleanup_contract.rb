@@ -50,5 +50,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   rescue ActiveRecord::RecordNotUnique
     results[:backfill_again] = "RecordNotUnique"
   end
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:results}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results}.as_json)
 end

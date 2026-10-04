@@ -1,7 +1,7 @@
 # Pinning Google::Client's requests, responses and errors from our Rails app.
 require "json"
 require "net/http"
-load Rails.root.join("test/test_helpers/google_calendar_test_helper.rb")
+load File.join(ENV.fetch("PARITY_WORK"), "reference-tools/google/google_calendar_test_helper.rb")
 helper = Object.new.extend(GoogleCalendarTestHelper)
 ENV["GOOGLE_CLIENT_ID"] = "test-client-id"
 ENV["GOOGLE_CLIENT_SECRET"] = "FAKE-google-client-secret"
@@ -25,7 +25,7 @@ refresh = {access_token: "refreshed-access-token", expires_in: 3600, token_type:
 invalid = {error: "invalid_grant", error_description: "Token has been expired or revoked."}
 file = helper.send(:drive_file_payload)
 list = helper.send(:drive_list_payload)
-result = { reference: "d7c7de9264c63015be398001d7a1094e7695a6db", now: now.to_i,
+result = { reference: ENV.fetch("PARITY_REFERENCE_SHA"), now: now.to_i,
   authorize: [false,true].map { |drive| Google::Client.authorize_url(redirect_uri: "http://test.host/google/callback",state:"signed-state",drive:) },
   refresh:, invalid_grant: invalid, drive_file: file, drive_list: list, scenarios: [] }
 [

@@ -57,4 +57,4 @@ picker_cases=(0...8).map do |bits|
   config.keys.each_with_index {|key,index| bits[index]==1 ? ENV[key]=config[key] : ENV.delete(key)}
   {input:config.select{|key,_|ENV.key?(key)},configured:Google::Picker.configured?}
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',now:now.to_i,cases:cases,picker_cases:picker_cases})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:now.to_i,cases:cases,picker_cases:picker_cases})

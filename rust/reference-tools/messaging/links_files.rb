@@ -57,5 +57,5 @@ source_room.update_columns(deleted_at:nil)
 ids=(messages+[source,quote]).map(&:id).join(',')
 selects={'rooms'=>"id=#{room.id}",'memberships'=>"room_id=#{room.id}",'channel_threads'=>"id=#{thread.id}",'messages'=>"id IN (#{ids})",'action_text_rich_texts'=>"record_type='Message' AND record_id IN (#{ids})",'message_references'=>"message_id=#{quote.id}",'active_storage_blobs'=>"id IN (#{blobs.map(&:id).join(',')})",'active_storage_attachments'=>"id IN (#{uploads.map(&:id).join(',')})",'drive_attachments'=>"id IN (#{drives.map(&:id).join(',')})"}
 rows=selects.to_h{|table,where|[table,ActiveRecord::Base.connection.select_all("SELECT * FROM #{table} WHERE #{where} ORDER BY id").to_a]}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:,room_id:room.id,source_id:source.id,quote_id:quote.id,reference_id:ref.id,files:,quotes:,card:,private_html:,sizes:) + "\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:,room_id:room.id,source_id:source.id,quote_id:quote.id,reference_id:ref.id,files:,quotes:,card:,private_html:,sizes:) + "\n")
 puts "WS8bm2 links/files Rails oracle: #{files.size} Files sections; #{quotes.size} quote HTTP responses; 2 quote partials; #{sizes.size} size values; #{rows.size} fixture tables"

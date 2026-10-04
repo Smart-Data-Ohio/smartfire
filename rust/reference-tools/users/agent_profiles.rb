@@ -57,5 +57,5 @@ rows = inputs.map do |input|
   html = view.render(template:"users/show",layout:false)
   input.merge(room_id:room.id,viewer_id:Current.user.id, html:html, nav:view.content_for(:nav).to_s)
 end
-puts JSON.pretty_generate(reference:"d7c7de92", now:Time.current.iso8601, agent_id:agent.id, rows:rows)
-warn "Rails agent profile oracle: #{rows.size} complete HTML/nav states; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), now:Time.current.iso8601, agent_id:agent.id, rows:rows)
+warn "Rails agent profile oracle: #{rows.size} complete HTML/nav states; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

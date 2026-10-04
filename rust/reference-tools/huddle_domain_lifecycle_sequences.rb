@@ -41,7 +41,7 @@ class HuddleDomainLifecycleSequences
     ActionCable.server.define_singleton_method(:broadcast) { |*_| }
     Huddle::PushInvitationJob.define_singleton_method(:perform_later) { |*_| }
     rows = definitions.map { |name, options, operations| scenario(name, options, operations) }
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", now: Time.utc(2026, 1, 1, 12).to_i, cases: rows)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.utc(2026, 1, 1, 12).to_i, cases: rows)
   ensure
     travel_back
   end

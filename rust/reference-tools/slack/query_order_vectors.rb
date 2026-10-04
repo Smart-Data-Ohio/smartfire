@@ -31,7 +31,7 @@ inputs = {
   'bound_escaping' => [keys.first, *escaping],
   'literal_escaping' => [*keys.reverse.take(1200), *escaping]
 }
-result = {reference: 'd7c7de9264c63015be398001d7a1094e7695a6db', sqlite: conn.select_value('SELECT sqlite_version()'),
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA"), sqlite: conn.select_value('SELECT sqlite_version()'),
   prepared_statements: conn.prepared_statements?, bind_limit: conn.send(:bind_params_length),
   records: keys.each_with_index.map { |key, i| {key:, user_id: 10000 + i, record_id: 20000 + i, name: users[i][:name]} }, cases: []}
 ['fresh', 'analyzed'].each do |state|

@@ -58,5 +58,5 @@ groups = []
   end
  end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference:'d7c7de92',groups:)+"\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:)+"\n")
 puts "WS8bm2 visible-list Rails: #{groups.sum { |g| g[:cases].size*2 }} complete HTTP captures; 4/16 actual visible upload, Drive and mention rows; no masks"

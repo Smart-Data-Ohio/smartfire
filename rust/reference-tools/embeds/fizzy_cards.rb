@@ -1,4 +1,4 @@
-# Run in ws6-reference-d7c7de92. These are rendered by OUR Rails views, never handwritten HTML.
+# Run in the plain pinned reference image. These are rendered by OUR Rails views, never handwritten HTML.
 require 'json'
 card=Fizzy::Card.new(id:3,account_id:'897362094',number:579)
 base={ 'title'=>'Fix <billing> & "quotes"', 'board'=>{'name'=>'Engineering'}, 'column'=>{'name'=>'In Progress'}, 'url'=>'https://app.fizzy.do/897362094/cards/579', 'assignees'=>[{'name'=>'David', 'avatar_url'=>'https://cdn.example.test/avatar.png'},{'name'=>'<Bad>', 'avatar_url'=>'http://bad.example/avatar.png'}], 'has_more_assignees'=>true, 'tags'=>['billing','<urgent>'], 'steps'=>[{'completed'=>true},{'completed'=>false}], 'last_active_at'=>'2026-03-02T15:00:00Z' }
@@ -9,5 +9,5 @@ result=cases.map do |name,connect,payload,error|
   {name:name,connect:connect,payload:payload,error:error,html:html}
 end
 serialized=[nil,false,{},["one","two"]].map { |payload| {payload:payload,stored:Fizzy::CardCache.new(payload:payload).attributes_for_database['payload']} }
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',card:card.attributes.slice('id','account_id','number'),frames:result,serialized_payloads:serialized})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),card:card.attributes.slice('id','account_id','number'),frames:result,serialized_payloads:serialized})+"\n")
 puts "WS15e Fizzy card Rails oracle: #{result.size} frame branches, #{serialized.size} cache serialization cases"

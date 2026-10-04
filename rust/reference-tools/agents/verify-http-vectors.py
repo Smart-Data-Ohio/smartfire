@@ -9,52 +9,58 @@ def compare_vectors(actual, expected, filename):
     assert actual == expected, filename
 
 
-def check_approved_difference(vector):
+def check_committed_attachment(case):
+    assert case['rails']['status'] == 201
+    assert case['approved']['status'] == 201
+    assert 'exception' not in case
+    message = case['state']['message']
+    assert json.loads(case['rails']['response'])['id'] == message['id']
+    assert json.loads(case['approved']['response'])['id'] == message['id']
+    assert case['state']['thread']['closed_at'] is None
+    committed = case['rails_state']
+    assert committed['open_transactions'] == 0
+    assert committed['row_deltas'] == dict(messages=1, channel_threads=0, active_storage_blobs=0, active_storage_attachments=1, active_storage_variant_records=0)
+    assert committed['thread_closed_at'] is None
+    assert committed['source_file_exists'] is True
+    assert committed['jobs'].count('Message::AttachmentProcessingJob') == 1
+    assert committed['jobs'].count('ChannelThread::PushMessageJob') == 1
+    assert all(job['class'] != 'Message::AttachmentProcessingJob' for job in case['state']['jobs'])
+
+
+def check_attachment_success(vector):
     assert len(vector['cases']) == 1
     case = vector['cases'][0]
     assert case['name'] == 'fresh_jpeg_closed_thread'
-    assert case['rails']['status'] == 500
-    assert case['approved']['status'] == 201
-    assert case['exception']['class'] == 'IOError'
-    assert case['exception']['message'] == 'closed stream'
-    assert 'disk_service.rb:23' in case['exception']['backtrace'][0]
-    assert case['state']['variant_file_exists'] is False
-    assert case['state']['variant_file_size'] is None
-    assert case['state']['thread']['closed_at'] is None
-    assert [job['class'] for job in case['state']['jobs']] == ['ChannelThread::PushMessageJob']
-    assert json.loads(case['approved']['response'])['id'] == case['state']['message']['id']
+    check_committed_attachment(case)
+    assert case['state']['variant_file_exists'] is True
+    assert case['state']['variant_file_size'] == case['state']['image']['byte_size'] > 0
+    assert case['state']['attachment_count'] == 2
+    assert [job['class'] for job in case['state']['jobs']] == ['ChannelThread::PushMessageJob', 'ActiveStorage::AnalyzeJob']
+    assert case['state']['jobs'][1]['args']['blob_id'] == case['state']['image']['id']
 
 
-def check_approved_video_difference(vector):
+def check_video_attachment_success(vector):
     assert len(vector['cases']) == 1
     case = vector['cases'][0]
     assert case['name'] == 'fresh_video_closed_thread'
-    assert case['rails']['status'] == 500
-    assert case['approved']['status'] == 201
-    assert case['exception']['class'] == 'ActiveStorage::FileNotFoundError'
-    assert 'disk_service.rb:152' in case['exception']['backtrace'][0]
-    assert case['exception']['open_transactions'] == 1
-    assert all(delta == 0 for delta in case['rails_state']['row_deltas'].values())
-    assert case['rails_state']['thread_closed_at'] == '2026-03-01 16:00:00 UTC'
-    assert case['rails_state']['source_file_exists'] is True
-    assert case['rails_state']['jobs'] == []
-    assert case['state']['thread']['closed_at'] is None
+    check_committed_attachment(case)
     assert case['state']['variant_count'] == 1
-    assert len(case['state']['blobs']) == 3
-    for blob in case['state']['blobs']:
+    blobs = case['state']['blobs']
+    assert len(blobs) == 3
+    for blob in blobs:
         assert blob['file_exists'] is True
         assert blob['file_size'] == blob['attributes']['byte_size'] > 0
-    assert [job['class'] for job in case['state']['jobs']] == ['ActiveStorage::AnalyzeJob', 'ChannelThread::PushMessageJob']
-    assert case['state']['jobs'][0]['args']['blob_id'] == case['state']['blobs'][2]['attributes']['id']
-    assert json.loads(case['approved']['response'])['id'] == case['state']['message']['id']
+    assert [job['class'] for job in case['state']['jobs']] == ['ChannelThread::PushMessageJob', *['ActiveStorage::AnalyzeJob'] * 3]
+    assert [job['args']['blob_id'] for job in case['state']['jobs'][1:]] == [blob['attributes']['id'] for blob in blobs]
     attachments = case['state']['attachments']
     assert len(attachments) == 3
-    source, preview, image = [blob['attributes']['id'] for blob in case['state']['blobs']]
-    assert [(a['record_type'], a['record_id'], a['name'], a['blob_id']) for a in attachments] == [
-        ('ActiveStorage::Blob', source, 'preview_image', preview),
-        ('ActiveStorage::VariantRecord', 7, 'image', image),
-        ('Message', case['state']['message']['id'], 'attachment', source),
+    source, preview, image = [blob['attributes']['id'] for blob in blobs]
+    assert [(a['record_type'], a['name'], a['blob_id']) for a in attachments] == [
+        ('Message', 'attachment', source), ('ActiveStorage::Blob', 'preview_image', preview), ('ActiveStorage::VariantRecord', 'image', image),
     ]
+    assert attachments[0]['record_id'] == case['state']['message']['id']
+    assert attachments[1]['record_id'] == source
+    assert attachments[2]['record_id'] > 0
 
 
 def check_dispatch(names, source):
@@ -66,14 +72,14 @@ def check_dispatch(names, source):
 def main():
     root = Path(__file__).resolve().parents[2]
     scratch = Path(sys.argv[1]).resolve()
-    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json'), ('legacy bot/fanout/replacement', 'agent_legacy_bot_http.json'), ('conversation', 'agent_conversation_http.json'), ('Fizzy reads', 'agent_fizzy_http.json'), ('Fizzy approvals', 'agent_fizzy_action_http.json'), ('readers', 'agent_reads_http.json'), ('pins', 'agent_pins_http.json'), ('polls', 'agent_polls_http.json'), ('polling', 'agent_polling_http.json'), ('reactions', 'agent_reactions_http.json'), ('bot reactions', 'agent_bot_reactions_http.json'), ('work validation', 'agent_work_validation_http.json'), ('work writes', 'agent_work_writes_http.json'), ('attachments', 'agent_attachments_http.json'), ('permissions', 'agent_permissions_http.json'), ('PR192 zones and ID shapes', 'agent_review192_http.json'), ('PR192 approved JPEG difference', 'agent_review192r2_attachment.json'), ('PR192 approved video difference', 'agent_review192r3_attachment.json'), ('PR192 handled missing representations', 'agent_review192r5_representations.json'), ('array lookups', 'agent_array_reads_http.json'), ('blob proxy all headers', 'agent_blob_proxy_headers.json')]:
+    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json'), ('legacy bot/fanout/replacement', 'agent_legacy_bot_http.json'), ('conversation', 'agent_conversation_http.json'), ('Fizzy reads', 'agent_fizzy_http.json'), ('Fizzy approvals', 'agent_fizzy_action_http.json'), ('readers', 'agent_reads_http.json'), ('pins', 'agent_pins_http.json'), ('polls', 'agent_polls_http.json'), ('polling', 'agent_polling_http.json'), ('reactions', 'agent_reactions_http.json'), ('bot reactions', 'agent_bot_reactions_http.json'), ('work validation', 'agent_work_validation_http.json'), ('work writes', 'agent_work_writes_http.json'), ('attachments', 'agent_attachments_http.json'), ('permissions', 'agent_permissions_http.json'), ('PR192 zones and ID shapes', 'agent_review192_http.json'), ('JPEG commit and processing success', 'agent_review192r2_attachment.json'), ('video commit and processing success', 'agent_review192r3_attachment.json'), ('PR192 handled missing representations', 'agent_review192r5_representations.json'), ('array lookups', 'agent_array_reads_http.json'), ('blob proxy all headers', 'agent_blob_proxy_headers.json')]:
         expected = (root / 'vectors' / filename).read_bytes()
         actual = (scratch / filename).read_bytes()
         compare_vectors(actual, expected, filename)
         if filename == 'agent_review192r2_attachment.json':
-            check_approved_difference(json.loads(actual))
+            check_attachment_success(json.loads(actual))
         if filename == 'agent_review192r3_attachment.json':
-            check_approved_video_difference(json.loads(actual))
+            check_video_attachment_success(json.loads(actual))
         print(f'WS11-api fresh {kind} oracle: {len(json.loads(actual)["cases"])} request/response pairs; byte-identical committed vectors')
     for filename, key in [('agent_id_casting.json', 'cases'), ('agent_budget_notice_reader.json', 'results'), ('agent_array_shapes.json', 'cases'), ('pr214_id_corpus.json', 'cases'), ('next4_numeric_ids.json', 'cases'), ('pr214_event_clock.json', 'rows')]:
         actual = (scratch / filename).read_bytes()

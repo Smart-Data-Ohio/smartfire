@@ -36,5 +36,5 @@ rows = []
   end
 end
 paths = %w[app/controllers/channel_threads_controller.rb app/views/channel_threads/show.html.erb app/helpers/github/pull_requests_helper.rb app/views/github/pull_requests/_thread_header.html.erb]
-puts JSON.pretty_generate(reference: "d7c7de92", sources: paths.to_h { |p| [p, Digest::SHA256.file(Rails.root.join(p)).hexdigest] }, thread_id: thread.id, room_id: thread.room_id, pull_request_id: pr.id, rows:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], sources: paths.to_h { |p| [p, Digest::SHA256.file(Rails.root.join(p)).hexdigest] }, thread_id: thread.id, room_id: thread.room_id, pull_request_id: pr.id, rows:)
 warn "Rails PR-thread HTTP oracle: 4 responses; public/private/unknown/unmapped; no injected child HTML"

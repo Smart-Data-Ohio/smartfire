@@ -27,7 +27,7 @@ browser.host! 'campfire.test'
  end
 end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',vapid_public_key:ENV['VAPID_PUBLIC_KEY'],cases:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],vapid_public_key:ENV['VAPID_PUBLIC_KEY'],cases:rows)+"\n")
 source=File.join(Gem.loaded_specs.fetch('turbo-rails').full_gem_path,'app/controllers/turbo/frames/frame_request.rb')
 puts "WS8bm2 Rails search header probe: #{rows.size} bare/wrapped full/frame requests; #{rows.map{|r|r[:headers]['Vary']}.uniq.inspect}"
 File.write(File.join(File.dirname(ARGV.fetch(0)),'turbo_frame_gem.rb'),File.read(source))
