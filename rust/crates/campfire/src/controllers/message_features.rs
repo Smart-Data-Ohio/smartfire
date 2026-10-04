@@ -4,6 +4,10 @@ mod search_header_tests;
 #[cfg(test)]
 mod review_229_tests;
 #[cfg(test)]
+mod list_scaling_tests;
+#[cfg(test)]
+mod extreme_range_tests;
+#[cfg(test)]
 mod private_provider_tests;
 #[cfg(test)]
 mod provider_batch_tests;
