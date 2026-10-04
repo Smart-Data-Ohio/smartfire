@@ -70,6 +70,7 @@ async fn google_cleanup_reports_the_rails_account_context_only_after_eight_commi
             json!({"access_token":"access-token","refresh_token":"refresh-token","access_token_expires_at":"2026-03-12T16:00:00Z"}),
             account_id,
         ));
+        let arguments = serde_json::to_value(&job).unwrap();
         a.db()
             .write(move |tx| {
                 tx.emit_after_commit(campfire_db::Event::job(&job));
@@ -89,6 +90,9 @@ async fn google_cleanup_reports_the_rails_account_context_only_after_eight_commi
                     "attempt {attempt} must not report before exhaustion"
                 );
                 assert!(next > Timestamp::from_jiff(clock.now()));
+                let saved = a.db().read(|c| campfire_jobs::inspect::with_status(c, campfire_jobs::READY)).await.unwrap();
+                let retry = saved.iter().find(|j| j.class == "Calendar::DisconnectCleanupJob").expect("committed retry missing");
+                assert_eq!(retry.arguments, arguments);
                 clock.set(next.jiff());
                 a.booted.app.jobs.queue.wake("Calendar::DisconnectCleanupJob");
                 vec!["Calendar::DisconnectCleanupJob"]

@@ -123,7 +123,8 @@
       "campfire::bin/campfire controllers::github::room_card_tests::github_room_cards_real_pages_match_pinned_rails_card_containers": 3676,
       "campfire::bin/campfire integrations::github::notifier::tests::github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails": 5294,
       "campfire::bin/campfire integrations::github::pull_requests::tests::github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements": 5304,
-      "campfire::bin/campfire controllers::message_features::provider_tests::preloaded_provider_cards_render_with_zero_queries_for_one_or_many_messages": 3828
+      "campfire::bin/campfire controllers::message_features::provider_tests::preloaded_provider_cards_render_with_zero_queries_for_one_or_many_messages": 3828,
+      "campfire::bin/campfire app::google_reporting_tests::google_cleanup_reports_the_rails_account_context_only_after_eight_committed_attempts": 3004
     },
     "raw_log_sha256": "784116b96f5fb88f1952a029bee8c7e0c5f6adbead144cb80abe569d2c604629"
   },
@@ -1424,15 +1425,13 @@
       "rails_line": 32,
       "title": "the push body names the venue",
       "id": "WS14e-051",
-      "disposition": "passed",
+      "disposition": "unsupported_assertion",
       "evidence": {
-        "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
+        "detail": "Reopened after PR #239 review: execute the real Event::ReminderPushJob with a persisted voice venue named Lounge and assert the queued push body includes the suffix in Lounge. The cited pusher corpus never sets venue_room_id; source-only payload comparisons do not prove production job/transport assembly.",
         "source": {
-          "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1045
-        },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
-        "ci_log_line": 1988
+          "file": "test/models/event/reminder_pusher_test.rb",
+          "line": 32
+        }
       },
       "historical_line": 163,
       "historical_receipt": "Deferred: WS17 production policy/transport; WS14e source facts and restarted durable consumer are covered by `reminder_push_payload_and_staleness_match_rails_vectors`, `reminder_push_source_rechecks_membership_and_ignores_inbox_preferences`, `ws14e_reminder_survives_restart_and_rereads_recipients_at_delivery`; main now includes the WS17 handler; named production-policy/transport parity remains owned by WS17/end-to-end"
@@ -1452,7 +1451,7 @@
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
           "line": 1045
         },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
+        "detail": "Pinned direct-room payload vectors compare the organizer title David; no venue or ends_at inputs are claimed.",
         "ci_log_line": 1988
       },
       "historical_line": 164,
@@ -1473,7 +1472,7 @@
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
           "line": 1045
         },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
+        "detail": "Pinned payload vectors compare countdowns at 90 and 900 seconds (2 and 15 minutes).",
         "ci_log_line": 1988
       },
       "historical_line": 165,
@@ -1494,7 +1493,7 @@
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
           "line": 1045
         },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
+        "detail": "Pinned payload vectors compare the singular minute at 30 and 89 seconds.",
         "ci_log_line": 1988
       },
       "historical_line": 166,
@@ -1515,7 +1514,7 @@
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
           "line": 1045
         },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
+        "detail": "Pinned payload vector at offset zero compares Starting now; the literal Rails 29-second rounding edge is not an input.",
         "ci_log_line": 1988
       },
       "historical_line": 167,
@@ -1536,7 +1535,7 @@
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
           "line": 1045
         },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
+        "detail": "Pinned recently-started vector at minus 300 seconds compares Starting now; it has no ends_at input.",
         "ci_log_line": 1988
       },
       "historical_line": 168,
@@ -1550,15 +1549,13 @@
       "rails_line": 115,
       "title": "an event that already ended is skipped",
       "id": "WS14e-057",
-      "disposition": "passed",
+      "disposition": "unsupported_assertion",
       "evidence": {
-        "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
+        "detail": "Reopened after PR #239 review: execute the real Event::ReminderPushJob for an event started within five minutes but ended one minute ago and assert no push is queued, with a still-running control. The cited corpus has no ends_at input; start-age staleness cannot establish end-time suppression.",
         "source": {
-          "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1045
-        },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
-        "ci_log_line": 1988
+          "file": "test/models/event/reminder_pusher_test.rb",
+          "line": 115
+        }
       },
       "historical_line": 169,
       "historical_receipt": "Deferred: WS17 production policy/transport; WS14e source facts and restarted durable consumer are covered by `reminder_push_payload_and_staleness_match_rails_vectors`, `reminder_push_source_rechecks_membership_and_ignores_inbox_preferences`, `ws14e_reminder_survives_restart_and_rereads_recipients_at_delivery`; main now includes the WS17 handler; named production-policy/transport parity remains owned by WS17/end-to-end"
@@ -1578,7 +1575,7 @@
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
           "line": 1045
         },
-        "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
+        "detail": "Pinned start-age vector at minus 301 seconds compares null; end-time staleness is not claimed.",
         "ci_log_line": 1988
       },
       "historical_line": 170,
@@ -2320,15 +2317,14 @@
       "rails_line": 401,
       "title": "bots are denied",
       "id": "WS14e-085",
-      "disposition": "passed",
+      "disposition": "implemented",
       "evidence": {
-        "test": "campfire::bin/campfire controllers::rooms::events::tests::event_pages_scope_members_bots_and_the_series_index",
+        "test": "campfire::bin/campfire controllers::rooms::events::tests::event_http_denies_bot_key_create_and_bot_session_index",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests.rs",
-          "line": 390
+          "line": 844
         },
-        "detail": "Bot requests denied by actual scoped page handler.",
-        "ci_log_line": 4488
+        "detail": "Anonymous bot-key POST create returns 403 without adding events; session-authenticated bot GET index also returns 403."
       },
       "historical_line": 213,
       "historical_receipt": "Deferred: WS14e continuation"
@@ -2374,7 +2370,7 @@
         "test": "campfire::bin/campfire controllers::rooms::events::tests::event_write_controller_security_and_validation",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests.rs",
-          "line": 410
+          "line": 421
         },
         "detail": "Actual edit/update/delete HTTP for organizer, admin and unauthorized member.",
         "ci_log_line": 4489
@@ -2992,15 +2988,14 @@
       "title": "rendered message carries the generic chip with the open link and no file name",
       "id": "WS14g-003",
       "rails_line": 208,
-      "disposition": "passed",
+      "disposition": "implemented",
       "evidence": {
-        "test": "campfire_views::google google_drive_chips_match_pinned_rails",
+        "test": "campfire::bin/campfire controllers::messages::drive_tests::persisted_drive_attachments_reach_the_message_http_response",
         "source": {
-          "file": "rust/crates/views/tests/google.rs",
-          "line": 71
+          "file": "rust/crates/campfire/src/controllers/messages/drive_tests.rs",
+          "line": 106
         },
-        "detail": "Identical complete generic chip fragment bytes for attachment rows; renderer has no consent input, metadata/name absent.",
-        "ci_log_line": 6352
+        "detail": "Creates persisted message/Drive rows, GETs the authorized message show with status 200, and compares the complete pinned generic attachment block, including open links and no file metadata."
       },
       "historical_line": 136,
       "historical_receipt": "WS14g association + WS8b-m/m2 message producer."
@@ -3989,15 +3984,14 @@
       "title": "deletes every remote copy then revokes the grant",
       "id": "WS14g-052",
       "rails_line": 10,
-      "disposition": "passed",
+      "disposition": "implemented",
       "evidence": {
-        "test": "campfire::bin/campfire app::google_calendar_job_tests::google_calendar_cleanup_deletes_before_revoke_and_does_not_revoke_after_transient_failure",
+        "test": "campfire::bin/campfire app::google_calendar_job_tests::google_cleanup_job_deletes_with_snapshot_then_revokes_without_retry_on_500",
         "source": {
           "file": "rust/crates/campfire/src/app/google_calendar_job_tests.rs",
-          "line": 65
+          "line": 504
         },
-        "detail": "Ordered DELETEs then revoke; 404 best effort; transient 429 raises without revoking.",
-        "ci_log_line": 2944
+        "detail": "Registered durable cleanup job compares both DELETE requests, snapshot bearer tokens, ordered refresh-token revoke form, committed drain and exactly one queue INSERT."
       },
       "historical_line": 328,
       "historical_receipt": "WS14g continuation."
@@ -4048,15 +4042,14 @@
       "title": "permanent delete failures are best effort and still revoke",
       "id": "WS14g-055",
       "rails_line": 58,
-      "disposition": "passed",
+      "disposition": "implemented",
       "evidence": {
-        "test": "campfire::bin/campfire app::google_calendar_job_tests::google_calendar_cleanup_deletes_before_revoke_and_does_not_revoke_after_transient_failure",
+        "test": "campfire::bin/campfire app::google_calendar_job_tests::google_cleanup_job_deletes_with_snapshot_then_revokes_without_retry_on_500",
         "source": {
           "file": "rust/crates/campfire/src/app/google_calendar_job_tests.rs",
-          "line": 65
+          "line": 504
         },
-        "detail": "Ordered DELETEs then revoke; 404 best effort; transient 429 raises without revoking.",
-        "ci_log_line": 2944
+        "detail": "Registered durable cleanup job receives actual DELETE 500, continues to the next DELETE and revokes; committed empty queue and exactly one INSERT prove no retry."
       },
       "historical_line": 331,
       "historical_receipt": "WS14g continuation."
@@ -4090,13 +4083,13 @@
       "rails_line": 98,
       "disposition": "passed",
       "evidence": {
-        "test": "campfire::bin/campfire app::google_calendar_job_tests::google_calendar_cleanup_deletes_before_revoke_and_does_not_revoke_after_transient_failure",
+        "test": "campfire::bin/campfire app::google_reporting_tests::google_cleanup_reports_the_rails_account_context_only_after_eight_committed_attempts",
         "source": {
-          "file": "rust/crates/campfire/src/app/google_calendar_job_tests.rs",
-          "line": 65
+          "file": "rust/crates/campfire/src/app/google_reporting_tests.rs",
+          "line": 39
         },
-        "detail": "Ordered DELETEs then revoke; 404 best effort; transient 429 raises without revoking.",
-        "ci_log_line": 2944
+        "detail": "Real durable runner retries 429 with committed future schedules and DELETE-only calls; supplemental retry-row assertions compare the unchanged ids/snapshot/account arguments before each of seven retries. Baseline CI proves runner execution; the argument assertions are verified locally on this head.",
+        "ci_log_line": 3004
       },
       "historical_line": 333,
       "historical_receipt": "WS14g continuation."
@@ -8831,7 +8824,7 @@
           "file": "rust/crates/campfire/src/controllers/channel_threads/github_tests.rs",
           "line": 7
         },
-        "detail": "Complete thread body and write-actions frame; public/private/unknown PR states and nonmember 404.",
+        "detail": "Authorized public/private/unknown thread GET compares the complete write-actions frame and its src; populated files are covered by the separate review regression.",
         "ci_log_line": 3615
       },
       "historical_line": 202,
@@ -9355,15 +9348,14 @@
       "title": "a PR thread shows the card and files summary above its messages",
       "id": "WS15g-046",
       "rails_line": 35,
-      "disposition": "passed",
+      "disposition": "implemented",
       "evidence": {
-        "test": "campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies",
+        "test": "campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_http_renders_populated_files_and_hides_private_filenames",
         "source": {
           "file": "rust/crates/campfire/src/controllers/channel_threads/github_tests.rs",
-          "line": 7
+          "line": 38
         },
-        "detail": "Complete thread body and write-actions frame; public/private/unknown PR states and nonmember 404.",
-        "ci_log_line": 3615
+        "detail": "Authorized thread GET reads two persisted fetched files; asserts header/card before a persisted reply, both paths/statuses/addition/deletion counts and and 3 more on GitHub."
       },
       "historical_line": 324,
       "historical_receipt": "Deferred; WS15g continuation"
@@ -9452,15 +9444,14 @@
       "title": "a PR thread for a private PR shows only the lazy frame in its header",
       "id": "WS15g-051",
       "rails_line": 122,
-      "disposition": "passed",
+      "disposition": "implemented",
       "evidence": {
-        "test": "campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies",
+        "test": "campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_http_renders_populated_files_and_hides_private_filenames",
         "source": {
           "file": "rust/crates/campfire/src/controllers/channel_threads/github_tests.rs",
-          "line": 7
+          "line": 38
         },
-        "detail": "Complete thread body and write-actions frame; public/private/unknown PR states and nonmember 404.",
-        "ci_log_line": 3615
+        "detail": "Private thread GET with populated secret file asserts status 200, exact lazy-frame URL, absent card/files markup, title and secret filename."
       },
       "historical_line": 329,
       "historical_receipt": "Deferred; WS15g continuation"
@@ -9480,7 +9471,7 @@
           "file": "rust/crates/campfire/src/controllers/channel_threads/github_tests.rs",
           "line": 7
         },
-        "detail": "Complete thread body and write-actions frame; public/private/unknown PR states and nonmember 404.",
+        "detail": "Real thread GET by a nonmember returns 404 with no PR title after removing membership.",
         "ci_log_line": 3615
       },
       "historical_line": 330,
@@ -9557,15 +9548,13 @@
       "title": "card updates broadcast the thread header to mapped thread streams",
       "id": "WS15g-056",
       "rails_line": 305,
-      "disposition": "passed",
+      "disposition": "unsupported_assertion",
       "evidence": {
-        "test": "campfire::bin/campfire integrations::github::pull_requests::tests::github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements",
+        "detail": "Reopened after shared-receipt audit: execute the registered Github::FetchPullRequestJob through recorded API responses for a mapped PR and assert its thread stream receives the card/header replacement with the fetched title and file path. Direct PullRequest updates prove the downstream callback but omit the fetch-job producer.",
         "source": {
-          "file": "rust/crates/campfire/src/integrations/github/pull_requests/tests.rs",
-          "line": 732
-        },
-        "detail": "Registered updates resolve references and mappings after commit; exact real socket target/header frames including absent routes.",
-        "ci_log_line": 5304
+          "file": "test/jobs/github/fetch_pull_request_job_test.rb",
+          "line": 305
+        }
       },
       "historical_line": 409,
       "historical_receipt": "Deferred; WS15g continuation"
@@ -9578,15 +9567,13 @@
       "title": "card updates broadcast nothing without referencing messages or mappings",
       "id": "WS15g-057",
       "rails_line": 328,
-      "disposition": "passed",
+      "disposition": "unsupported_assertion",
       "evidence": {
-        "test": "campfire::bin/campfire integrations::github::pull_requests::tests::github_pr_registered_card_callbacks_publish_public_and_private_room_and_thread_replacements",
+        "detail": "Reopened after PR #239 review: execute the registered Github::FetchPullRequestJob for a PR with neither referencing messages nor thread mappings and observe zero card/header publications, while proving the fetch committed. The cited callback test always creates both routes and expects positive frames.",
         "source": {
-          "file": "rust/crates/campfire/src/integrations/github/pull_requests/tests.rs",
-          "line": 732
-        },
-        "detail": "Registered updates resolve references and mappings after commit; exact real socket target/header frames including absent routes.",
-        "ci_log_line": 5304
+          "file": "test/jobs/github/fetch_pull_request_job_test.rb",
+          "line": 328
+        }
       },
       "historical_line": 410,
       "historical_receipt": "Deferred; WS15g continuation"

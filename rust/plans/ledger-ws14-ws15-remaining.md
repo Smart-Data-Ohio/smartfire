@@ -1,11 +1,13 @@
 # WS14 / WS15 cutover assertions still open
 
-**Partial slice: 140 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
+**Partial slice: 144 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
 
 The three inventories retain historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`. Continuation batches and Rails/native execution receipts are recorded in `ledger-ws14-ws15-b-report.md`.
 
 | Record | Current ledger row | Rails declaration | Assertion still required |
 |---|---|---|---|
+| WS14e-051 | `rust/plans/ws14e-test-inventory.md:174` | `test/models/event/reminder_pusher_test.rb:32` | Reopened after PR #239 review: execute the real Event::ReminderPushJob with a persisted voice venue named Lounge and assert the queued push body includes the suffix in Lounge. The cited pusher corpus never sets venue_room_id; source-only payload comparisons do not prove production job/transport assembly. |
+| WS14e-057 | `rust/plans/ws14e-test-inventory.md:180` | `test/models/event/reminder_pusher_test.rb:115` | Reopened after PR #239 review: execute the real Event::ReminderPushJob for an event started within five minutes but ended one minute ago and assert no push is queued, with a still-running control. The cited corpus has no ends_at input; start-age staleness cannot establish end-time suppression. |
 | WS14g-004 | `rust/plans/ws14g-rails-test-map.md:148` | `test/controllers/messages_drive_attachments_test.rb:221` | viewers with and without Drive consent receive identical attachment markup |
 | WS14g-005 | `rust/plans/ws14g-rails-test-map.md:149` | `test/controllers/messages_drive_attachments_test.rb:239` | edit form lists attachments as removable chips with the blank sentinel |
 | WS14g-007 | `rust/plans/ws14g-rails-test-map.md:265` | `test/controllers/sudos_controller_test.rb:29` | confirming with the password verifies and audit-logs |
@@ -140,6 +142,8 @@ The three inventories retain historical receipts and current per-record disposit
 | WS15g-048 | `rust/plans/ws15g-rails-tests.md:337` | `test/integration/github_pr_threads_test.rb:78` | a PR thread without fetched files shows a loading summary |
 | WS15g-049 | `rust/plans/ws15g-rails-tests.md:338` | `test/integration/github_pr_threads_test.rb:92` | an ordinary thread shows no PR header |
 | WS15g-050 | `rust/plans/ws15g-rails-tests.md:339` | `test/integration/github_pr_threads_test.rb:105` | file paths from the API render as text |
+| WS15g-056 | `rust/plans/ws15g-rails-tests.md:420` | `test/jobs/github/fetch_pull_request_job_test.rb:305` | Reopened after shared-receipt audit: execute the registered Github::FetchPullRequestJob through recorded API responses for a mapped PR and assert its thread stream receives the card/header replacement with the fetched title and file path. Direct PullRequest updates prove the downstream callback but omit the fetch-job producer. |
+| WS15g-057 | `rust/plans/ws15g-rails-tests.md:421` | `test/jobs/github/fetch_pull_request_job_test.rb:328` | Reopened after PR #239 review: execute the registered Github::FetchPullRequestJob for a PR with neither referencing messages nor thread mappings and observe zero card/header publications, while proving the fetch committed. The cited callback test always creates both routes and expects positive frames. |
 | WS15g-058 | `rust/plans/ws15g-rails-tests.md:427` | `test/jobs/github/perform_agent_action_job_test.rb:34` | approving a github action enqueues the job, denying does not |
 | WS15g-059 | `rust/plans/ws15g-rails-tests.md:431` | `test/jobs/github/perform_agent_action_job_test.rb:78` | approving a non-github action enqueues nothing |
 | WS15g-061 | `rust/plans/ws15g-rails-tests.md:594` | `test/models/github/write_client_test.rb:102` | network errors raise Error without logging the token |

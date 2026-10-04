@@ -1,6 +1,6 @@
 # WS14 / WS15 acceptance continuation
 
-Stacked on PR #239 head `ca92288e839e9dd8e97f83dc236ae8f889ddd3c4`; branch `rust/ledger-ws14-ws15-b`. Parent branch is unchanged. Batches follow the remaining ledger's Rails file/declaration order. Each new named test reproduces the original setup and discriminating assertions through the real Rust model/HTTP/job path. Duplicate declarations in the two inventories share the same named test and are counted explicitly as ledger records.
+Stacked on PR #239 head `ca92288e839e9dd8e97f83dc236ae8f889ddd3c4`; branch `rust/ledger-ws14-ws15-b`. No commits from this continuation are pushed to the parent branch. Batches follow the remaining ledger's Rails file/declaration order. Each new named test reproduces the original setup and discriminating assertions through the real Rust model/HTTP/job path. Duplicate declarations in the two inventories share the same named test and are counted explicitly as ledger records.
 
 ## Batch 1: test/models/event_test.rb
 
@@ -84,4 +84,4 @@ cargo nextest run -p campfire -j 4 -E 'test(tests::cutover::) | test(pr174_) | t
 Summary [  28.141s] 36 tests run: 36 passed, 2850 skipped
 ```
 
-Total continuation: **81 ledger records closed by 78 named native tests; 140 remain**. All WS14e records now have passing assertions or the previously documented test-only disposition. The 140 remaining exact WS14g/WS15g declarations are listed in `ledger-ws14-ws15-remaining.md`; they remain in the gate.
+Total continuation: **81 ledger records closed by 78 named native tests; 140 remain**. At the original starting head, all 108 WS14e records had passing receipts; the later parent review reopens two reminder-pusher assertions, retained below. The 140 remaining exact WS14g/WS15g declarations are listed in `ledger-ws14-ws15-remaining.md`; they remain in the gate.
