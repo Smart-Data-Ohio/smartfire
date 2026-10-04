@@ -4918,9 +4918,9 @@
         "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_schedule_invitation_inbox_open_and_response",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-          "line": 118
+          "line": 107
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+        "detail": "Option (a): follows rendered room Events, New event and All events hrefs, submits the rendered Schedule/Open/Going forms with their actual action, method, hidden fields, selected values and target, follows returned redirect destinations, and checks the original heading/content plus persisted RSVP through the real router. Original fabricated-request receipt is retained in review243.previous_evidence.",
         "assertion_map_prior_receipt": {
           "source": {
             "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
@@ -4949,7 +4949,36 @@
           "line": 4
         }
       },
-      "continuation": "rust/ledger-ws14-ws15-b"
+      "continuation": "rust/ledger-ws14-ws15-b",
+      "review243": {
+        "previous_evidence": {
+          "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_schedule_invitation_inbox_open_and_response",
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+            "line": 118
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+          "assertion_map_prior_receipt": {
+            "source": {
+              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+              "line": 121
+            },
+            "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+          },
+          "assertion_map": {
+            "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+            "record": "WS14e-099"
+          },
+          "baseline_receipt": {
+            "detail": "Browser interaction still required for: scheduling an event invites members, who respond and see it in the inbox. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
+            "source": {
+              "file": "test/system/events_test.rb",
+              "line": 4
+            }
+          }
+        },
+        "choice": "a"
+      }
     },
     {
       "owner": "WS14e",
@@ -4964,9 +4993,9 @@
         "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_repeating_schedule_invites_once_and_copies_response",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-          "line": 132
+          "line": 121
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+        "detail": "Option (a): follows rendered room Events, New event and All events hrefs, submits the rendered Schedule/Open/Going forms with their actual action, method, hidden fields, selected values and target, follows returned redirect destinations, and checks the original heading/content plus persisted RSVP through the real router. Original fabricated-request receipt is retained in review243.previous_evidence.",
         "assertion_map_prior_receipt": {
           "source": {
             "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
@@ -4995,7 +5024,36 @@
           "line": 48
         }
       },
-      "continuation": "rust/ledger-ws14-ws15-b"
+      "continuation": "rust/ledger-ws14-ws15-b",
+      "review243": {
+        "previous_evidence": {
+          "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_repeating_schedule_invites_once_and_copies_response",
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+            "line": 132
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+          "assertion_map_prior_receipt": {
+            "source": {
+              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+              "line": 135
+            },
+            "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+          },
+          "assertion_map": {
+            "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+            "record": "WS14e-100"
+          },
+          "baseline_receipt": {
+            "detail": "Browser interaction still required for: scheduling a repeating event invites once per member and copies the first response. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
+            "source": {
+              "file": "test/system/events_test.rb",
+              "line": 48
+            }
+          }
+        },
+        "choice": "a"
+      }
     },
     {
       "owner": "WS14e",
@@ -5005,14 +5063,14 @@
       "rails_line": 102,
       "title": "scheduling an event announces it in the room with a card members respond from",
       "id": "WS14e-101",
-      "disposition": "implemented",
+      "disposition": "unsupported_assertion",
       "evidence": {
         "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_announcement_card_response_stays_in_requested_frame",
         "source": {
-          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-          "line": 151
+          "file": "test/system/events_test.rb",
+          "line": 102
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+        "detail": "test/system/events_test.rb:136: After the rendered Going click, prove the browser current path remains room_path(room); test/system/events_test.rb:137: Prove the scheduled announcement remains in that same browser DOM. The rendered-frame HTTP test covers actual form/target wiring and persisted RSVP but does not execute Turbo/JS or certify these two browser assertions.",
         "assertion_map_prior_receipt": {
           "source": {
             "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
@@ -5030,6 +5088,10 @@
             "file": "test/system/events_test.rb",
             "line": 102
           }
+        },
+        "partial_source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+          "line": 140
         }
       },
       "historical_line": 276,
@@ -5041,7 +5103,36 @@
           "line": 102
         }
       },
-      "continuation": "rust/ledger-ws14-ws15-b"
+      "continuation": "rust/ledger-ws14-ws15-b",
+      "review243": {
+        "previous_evidence": {
+          "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_announcement_card_response_stays_in_requested_frame",
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+            "line": 151
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+          "assertion_map_prior_receipt": {
+            "source": {
+              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+              "line": 154
+            },
+            "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+          },
+          "assertion_map": {
+            "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+            "record": "WS14e-101"
+          },
+          "baseline_receipt": {
+            "detail": "Browser interaction still required for: scheduling an event announces it in the room with a card members respond from. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
+            "source": {
+              "file": "test/system/events_test.rb",
+              "line": 102
+            }
+          }
+        },
+        "choice": "b"
+      }
     },
     {
       "owner": "WS14e",
@@ -18822,7 +18913,10 @@
     "maps": [
       "rust/plans/ledger-ws14-ws15-b-assertions.json"
     ],
-    "closed_records": 81,
-    "open_total": 176
+    "closed_records": 80,
+    "open_total": 177,
+    "reopened_records": [
+      "WS14e-101"
+    ]
   }
 }

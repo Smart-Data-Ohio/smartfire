@@ -1,19 +1,17 @@
 //! test/system/events_test.rb: server interaction assertions via real HTTP and Turbo frames.
 //! The shared Rails assets are unchanged; no browser pixels are used as a receipt.
 use super::super::*;
+use super::rendered;
 use super::support::*;
-use serde_json::json;
 async fn schedule(app: &TestApp, title: &str, description: Option<&str>, repeating: bool) -> i64 {
     let mut david = app.sign_in(DAVID).await;
     let room = david.get(&format!("/rooms/{}", id("designers"))).await;
     assert_eq!(room.status, StatusCode::OK);
-    assert!(room.text().contains(&index_path()));
-    let index = david.get(&index_path()).await;
+    let index = david.send(rendered::link(&room.text(), "Show events")).await;
     assert_eq!(index.status, StatusCode::OK);
     assert!(headings(&index.text()).iter().any(|h| h == "Events"));
     assert!(index.text().contains("New event"));
-    assert!(index.text().contains(&format!("{}/new", index_path())));
-    let form = david.get(&format!("{}/new", index_path())).await;
+    let form = david.send(rendered::link(&index.text(), "New event")).await;
     assert_eq!(form.status, StatusCode::OK);
     for field in [
         "event[title]",
@@ -25,17 +23,21 @@ async fn schedule(app: &TestApp, title: &str, description: Option<&str>, repeati
         assert!(form.text().contains(&format!("name=\"{field}\"")));
     }
     assert!(form.text().contains("Schedule event"));
-    let mut input = json!({"title":title,"starts_at":"2026-09-30T15:30","time_zone":"UTC"});
+    let mut input = vec![
+        ("event[title]", title),
+        ("event[starts_at]", "2026-09-30T15:30"),
+    ];
     if let Some(description) = description {
-        input["description"] = json!(description);
+        input.push(("event[description]", description));
     }
     if repeating {
-        input["recurrence_rule"] = json!("weekly");
-        input["recurrence_until"] = json!("2026-10-14");
+        input.push(("event[recurrence_rule]", "Weekly"));
+        input.push(("event[recurrence_until]", "2026-10-14"));
     }
     let reply = david
-        .write(json(Method::POST, &index_path(), json!({"event":input})))
+        .send(rendered::submit(&form.text(), "Schedule event", &input))
         .await;
+    let shown = rendered::follow(&mut david, &reply).await;
     let title = title.to_owned();
     let eid = app
         .db()
@@ -49,7 +51,6 @@ async fn schedule(app: &TestApp, title: &str, description: Option<&str>, repeati
         .await
         .unwrap();
     redirected(&reply, eid);
-    let shown = david.get(&path(eid)).await;
     assert_eq!(shown.status, StatusCode::OK);
     assert!(headings(&shown.text()).contains(&find(app, eid).await.title));
     if let Some(description) = description {
@@ -61,7 +62,9 @@ async fn schedule(app: &TestApp, title: &str, description: Option<&str>, repeati
         assert!(shown.text().contains("Part of a series"));
         assert!(shown.text().contains("Next occurrence"));
     }
-    let index = david.get(&index_path()).await;
+    let index = david
+        .send(rendered::link(&shown.text(), "All events"))
+        .await;
     assert_eq!(index.status, StatusCode::OK);
     assert!(index.text().contains(&find(app, eid).await.title));
     if repeating {
@@ -77,41 +80,27 @@ async fn inbox_response(app: &TestApp, eid: i64, repeating: bool) {
     let inbox = jason.get("/activity").await;
     assert_eq!(inbox.status, StatusCode::OK);
     let html = inbox.text();
-    let itemhtml = html
-        .split_once(&format!("id=\"activity_item_{}\"", invite.id))
-        .unwrap()
-        .1
-        .split_once("</article>")
-        .unwrap()
-        .0;
+    let itemhtml = rendered::article(&html, &format!("activity_item_{}", invite.id));
     assert!(itemhtml.contains("Event invitation"));
     assert!(itemhtml.contains(&find(app, eid).await.title));
     if repeating {
         assert!(itemhtml.contains("repeats weekly until"));
     }
-    let opened = jason
-        .write(Req::new(
-            Method::POST,
-            &format!("/activity/{}/open", invite.id),
-        ))
-        .await;
+    let opened = jason.send(rendered::submit(&itemhtml, "Open", &[])).await;
     assert_eq!(opened.status, StatusCode::SEE_OTHER);
     assert_eq!(
         opened.location(),
         Some(format!("http://campfire.test{}", path(eid)).as_str())
     );
-    let show = jason.get(&path(eid)).await;
+    let show = rendered::follow(&mut jason, &opened).await;
     assert_eq!(show.status, StatusCode::OK);
     assert!(show.text().contains(&find(app, eid).await.title));
     let reply = jason
-        .write(json(
-            Method::PATCH,
-            &format!("{}/attendance", path(eid)),
-            json!({"response":"going"}),
-        ))
+        .send(rendered::submit(&show.text(), "Going", &[]))
         .await;
     redirected(&reply, eid);
-    let show = jason.get(&path(eid)).await;
+    let show = rendered::follow(&mut jason, &reply).await;
+    assert_eq!(show.status, StatusCode::OK);
     assert!(visible_text(&show.text()).contains("Currently: Going"));
 }
 #[tokio::test]
@@ -151,7 +140,6 @@ async fn cutover_interaction_repeating_schedule_invites_once_and_copies_response
 async fn cutover_interaction_announcement_card_response_stays_in_requested_frame() {
     let app = app().await;
     let eid = schedule(&app, "Card session", None, false).await;
-    let mid=app.db().read(move |c|Ok(c.query_row("SELECT message_id FROM event_references WHERE event_id=? ORDER BY message_id LIMIT 1",[eid],|r|r.get::<_,i64>(0))?)).await.unwrap();
     let mut jason = app.sign_in(JASON).await;
     let room_url = format!("/rooms/{}", id("designers"));
     let room = jason.get(&room_url).await;
@@ -163,32 +151,21 @@ async fn cutover_interaction_announcement_card_response_stays_in_requested_frame
         .collect();
     assert_eq!(matching_cards.len(), 1);
     assert!(visible_text(&matching_cards[0]).contains("Organized by David"));
-    let frame = format!("response_for_message_{mid}_event_{eid}");
-    let url = format!("{}/attendance?message_id={mid}", path(eid));
-    assert!(room.text().contains(&url));
-    let loaded = jason
-        .send(Req::new(Method::GET, &url).header("turbo-frame", &frame))
-        .await;
+    let (load, frame) = rendered::lazy_frame(&matching_cards[0]);
+    let loaded = jason.send(load).await;
     assert_eq!(loaded.status, StatusCode::OK);
     assert!(loaded.text().contains("No response yet"));
     assert!(loaded.text().contains("value=\"going\""));
     let saved = jason
-        .write(
-            json(
-                Method::PATCH,
-                &format!("{}/attendance", path(eid)),
-                json!({"response":"going","message_id":mid.to_string()}),
-            )
-            .header("turbo-frame", &frame),
-        )
+        .send(rendered::submit(&loaded.text(), "Going", &[]))
         .await;
     assert_eq!(saved.status, StatusCode::OK);
     assert_eq!(saved.location(), None);
     assert!(saved.headers.get("turbo-location").is_none());
     assert!(saved.text().contains(&format!("id=\"{frame}\"")));
     assert!(saved.text().contains("Currently: <strong>Going</strong>"));
-    let room = jason.get(&room_url).await;
-    assert!(room.text().contains("Scheduled an event: Card session"));
+    // HTTP verifies rendered frame wiring and its response, but cannot prove
+    // test/system/events_test.rb:136's actual browser current path (WS14e-101).
     assert_eq!(
         app.db()
             .read(move |c| CalendarEvent::find(c, eid)?.response_for(c, Some(JASON)))

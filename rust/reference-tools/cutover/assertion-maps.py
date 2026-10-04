@@ -44,7 +44,7 @@ for path in args.maps:
         start = original['rails_line'] - 1
         end = next(i for i in range(start + 1, len(lines)) if lines[i] == '  end')
         required = {i + 1 for i in range(start, end)
-                    if re.search(r'\bassert(?:_\w+)?\b', lines[i]) and not lines[i].lstrip().startswith('#')}
+                    if re.search(r'\bassert(?:_\w+)?\b|\.expects\(', lines[i]) and not lines[i].lstrip().startswith('#')}
         actual = {a['rails']['line'] for a in record['assertions']}
         assert actual == required, (rid, 'omitted or extra assertion calls', required ^ actual)
         assert len(actual) == len(record['assertions']), rid
@@ -66,6 +66,9 @@ for path in args.maps:
                 assert original['disposition'] == 'unsupported_assertion', rid
                 missing += 1
             citations = []
+            if not native:
+                assert entry.get('reason'), (rid, ruby)
+                citations.append('**Open:** ' + entry['reason'])
             for rust in native:
                 source = (root / rust['file']).read_text().splitlines()
                 quoted = '\n'.join(source[rust['line'] - 1:rust['end_line']])
@@ -81,5 +84,5 @@ for path in args.maps:
         total_records += 1
         total_assertions += len(record['assertions'])
     if args.render:
-        path.with_suffix('.md').write_text('\n'.join(markdown) + '\n')
+        path.with_suffix('.md').write_text('\n'.join(markdown).rstrip() + '\n')
 print(f'Assertion maps: {total_records} records; {total_assertions} original Rails assertion calls; {missing} unmapped')

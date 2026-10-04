@@ -4490,7 +4490,7 @@
     {
       "id": "WS14e-099",
       "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_schedule_invitation_inbox_open_and_response",
-      "note": "Shared schedule/inbox helpers execute in this test. Assertions compare the server DOM/state reached by the original interaction; no pixel receipt is claimed.",
+      "note": "Option (a): actual rendered link hrefs, form action/method and successful controls (including CSRF and method override) drive the real router; redirects supply the next URL. No separately synthesized endpoint, JSON body, CSRF header or frame header. Frozen Rails fixture setup is retained.",
       "assertions": [
         {
           "rails": {
@@ -4501,8 +4501,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 13,
-              "end_line": 13,
+              "line": 12,
+              "end_line": 12,
               "function": "schedule",
               "text": "assert!(headings(&index.text()).iter().any(|h| h == \"Events\"))"
             }
@@ -4517,9 +4517,16 @@
           },
           "rust": [
             {
+              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/rendered.rs",
+              "line": 204,
+              "end_line": 209,
+              "function": "follow",
+              "text": "assert!(\n        matches!(reply.status, StatusCode::FOUND | StatusCode::SEE_OTHER),\n        \"submitted form redirects: {} {}\",\n        reply.status,\n        reply.text()\n    )"
+            },
+            {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 54,
-              "end_line": 54,
+              "line": 55,
+              "end_line": 55,
               "function": "schedule",
               "text": "assert!(headings(&shown.text()).contains(&find(app, eid).await.title))"
             }
@@ -4535,8 +4542,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 56,
-              "end_line": 56,
+              "line": 57,
+              "end_line": 57,
               "function": "schedule",
               "text": "assert!(shown.text().contains(description))"
             }
@@ -4552,8 +4559,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 58,
-              "end_line": 58,
+              "line": 59,
+              "end_line": 59,
               "function": "schedule",
               "text": "assert!(visible_text(&shown.text()).contains(\"Currently: Going\"))"
             }
@@ -4569,8 +4576,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 66,
-              "end_line": 66,
+              "line": 69,
+              "end_line": 69,
               "function": "schedule",
               "text": "assert!(index.text().contains(&find(app, eid).await.title))"
             }
@@ -4586,8 +4593,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 87,
-              "end_line": 87,
+              "line": 84,
+              "end_line": 84,
               "function": "inbox_response",
               "text": "assert!(itemhtml.contains(\"Event invitation\"))"
             }
@@ -4603,8 +4610,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 88,
-              "end_line": 88,
+              "line": 85,
+              "end_line": 85,
               "function": "inbox_response",
               "text": "assert!(itemhtml.contains(&find(app, eid).await.title))"
             }
@@ -4620,8 +4627,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 115,
-              "end_line": 115,
+              "line": 104,
+              "end_line": 104,
               "function": "inbox_response",
               "text": "assert!(visible_text(&show.text()).contains(\"Currently: Going\"))"
             }
@@ -4637,20 +4644,178 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 122,
-              "end_line": 129,
+              "line": 111,
+              "end_line": 118,
               "function": "cutover_interaction_schedule_invitation_inbox_open_and_response",
               "text": "assert_eq!(\n        app.db()\n            .read(move |c| CalendarEvent::find(c, eid)?.response_for(c, Some(JASON)))\n            .await\n            .unwrap()\n            .as_deref(),\n        Some(\"going\")\n    )"
             }
           ],
           "disposition": "covered"
         }
-      ]
+      ],
+      "prior_review243_receipt": {
+        "note": "Shared schedule/inbox helpers execute in this test. Assertions compare the server DOM/state reached by the original interaction; no pixel receipt is claimed.",
+        "assertions": [
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 12,
+              "text": "assert_selector \"h1\", text: \"Events\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 13,
+                "end_line": 13,
+                "function": "schedule",
+                "text": "assert!(headings(&index.text()).iter().any(|h| h == \"Events\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 20,
+              "text": "assert_selector \"h1\", text: \"Launch retro\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 54,
+                "end_line": 54,
+                "function": "schedule",
+                "text": "assert!(headings(&shown.text()).contains(&find(app, eid).await.title))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 21,
+              "text": "assert_text \"Bring your notes.\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 56,
+                "end_line": 56,
+                "function": "schedule",
+                "text": "assert!(shown.text().contains(description))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 22,
+              "text": "assert_text \"Currently: Going\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 58,
+                "end_line": 58,
+                "function": "schedule",
+                "text": "assert!(visible_text(&shown.text()).contains(\"Currently: Going\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 25,
+              "text": "assert_text \"Launch retro\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 66,
+                "end_line": 66,
+                "function": "schedule",
+                "text": "assert!(index.text().contains(&find(app, eid).await.title))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 36,
+              "text": "assert_text \"Event invitation\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 87,
+                "end_line": 87,
+                "function": "inbox_response",
+                "text": "assert!(itemhtml.contains(\"Event invitation\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 37,
+              "text": "assert_text \"Launch retro\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 88,
+                "end_line": 88,
+                "function": "inbox_response",
+                "text": "assert!(itemhtml.contains(&find(app, eid).await.title))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 42,
+              "text": "assert_text \"Currently: Going\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 115,
+                "end_line": 115,
+                "function": "inbox_response",
+                "text": "assert!(visible_text(&show.text()).contains(\"Currently: Going\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 45,
+              "text": "assert_equal \"going\", event.reload.response_for(users(:jason))"
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 122,
+                "end_line": 129,
+                "function": "cutover_interaction_schedule_invitation_inbox_open_and_response",
+                "text": "assert_eq!(\n        app.db()\n            .read(move |c| CalendarEvent::find(c, eid)?.response_for(c, Some(JASON)))\n            .await\n            .unwrap()\n            .as_deref(),\n        Some(\"going\")\n    )"
+              }
+            ],
+            "disposition": "covered"
+          }
+        ]
+      }
     },
     {
       "id": "WS14e-100",
       "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_repeating_schedule_invites_once_and_copies_response",
-      "note": "Shared schedule/inbox helpers execute with repeating=true. Assertions compare the server DOM/state reached by the original interaction; no pixel receipt is claimed.",
+      "note": "Option (a): actual rendered link hrefs, form action/method and successful controls (including CSRF and method override) drive the real router; redirects supply the next URL. No separately synthesized endpoint, JSON body, CSRF header or frame header. Frozen Rails fixture setup is retained.",
       "assertions": [
         {
           "rails": {
@@ -4660,9 +4825,16 @@
           },
           "rust": [
             {
+              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/rendered.rs",
+              "line": 204,
+              "end_line": 209,
+              "function": "follow",
+              "text": "assert!(\n        matches!(reply.status, StatusCode::FOUND | StatusCode::SEE_OTHER),\n        \"submitted form redirects: {} {}\",\n        reply.status,\n        reply.text()\n    )"
+            },
+            {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 54,
-              "end_line": 54,
+              "line": 55,
+              "end_line": 55,
               "function": "schedule",
               "text": "assert!(headings(&shown.text()).contains(&find(app, eid).await.title))"
             }
@@ -4678,8 +4850,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 61,
-              "end_line": 61,
+              "line": 62,
+              "end_line": 62,
               "function": "schedule",
               "text": "assert!(shown.text().contains(\"Part of a series\"))"
             }
@@ -4695,8 +4867,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 62,
-              "end_line": 62,
+              "line": 63,
+              "end_line": 63,
               "function": "schedule",
               "text": "assert!(shown.text().contains(\"Next occurrence\"))"
             }
@@ -4712,8 +4884,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 68,
-              "end_line": 68,
+              "line": 71,
+              "end_line": 71,
               "function": "schedule",
               "text": "assert!(index.text().contains(\"Repeats weekly\"))"
             }
@@ -4729,8 +4901,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 69,
-              "end_line": 69,
+              "line": 72,
+              "end_line": 72,
               "function": "schedule",
               "text": "assert!(index.text().contains(\"3 occurrences remaining\"))"
             }
@@ -4746,8 +4918,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 135,
-              "end_line": 135,
+              "line": 124,
+              "end_line": 124,
               "function": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
               "text": "assert_eq!(rows(&app, eid).await.len(), 3)"
             }
@@ -4763,8 +4935,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 136,
-              "end_line": 136,
+              "line": 125,
+              "end_line": 125,
               "function": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
               "text": "assert_eq!(item_rows(&app, eid, JASON, None).await.len(), 1)"
             }
@@ -4780,8 +4952,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 87,
-              "end_line": 87,
+              "line": 84,
+              "end_line": 84,
               "function": "inbox_response",
               "text": "assert!(itemhtml.contains(\"Event invitation\"))"
             }
@@ -4797,8 +4969,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 90,
-              "end_line": 90,
+              "line": 87,
+              "end_line": 87,
               "function": "inbox_response",
               "text": "assert!(itemhtml.contains(\"repeats weekly until\"))"
             }
@@ -4814,8 +4986,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 115,
-              "end_line": 115,
+              "line": 104,
+              "end_line": 104,
               "function": "inbox_response",
               "text": "assert!(visible_text(&show.text()).contains(\"Currently: Going\"))"
             }
@@ -4831,20 +5003,212 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 138,
-              "end_line": 148,
+              "line": 127,
+              "end_line": 137,
               "function": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
               "text": "assert_eq!(\n        app.db()\n            .read(move |c| CalendarEvent::find(c, eid)?\n                .series_events(c)?\n                .iter()\n                .map(|e| e.response_for(c, Some(JASON)))\n                .collect::<campfire_db::Result<Vec<_>>>())\n            .await\n            .unwrap(),\n        vec![Some(\"going\".into()); 3]\n    )"
             }
           ],
           "disposition": "covered"
         }
-      ]
+      ],
+      "prior_review243_receipt": {
+        "note": "Shared schedule/inbox helpers execute with repeating=true. Assertions compare the server DOM/state reached by the original interaction; no pixel receipt is claimed.",
+        "assertions": [
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 68,
+              "text": "assert_selector \"h1\", text: \"Weekly planning\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 54,
+                "end_line": 54,
+                "function": "schedule",
+                "text": "assert!(headings(&shown.text()).contains(&find(app, eid).await.title))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 69,
+              "text": "assert_text \"Part of a series\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 61,
+                "end_line": 61,
+                "function": "schedule",
+                "text": "assert!(shown.text().contains(\"Part of a series\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 70,
+              "text": "assert_text \"Next occurrence\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 62,
+                "end_line": 62,
+                "function": "schedule",
+                "text": "assert!(shown.text().contains(\"Next occurrence\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 73,
+              "text": "assert_text \"Repeats weekly\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 68,
+                "end_line": 68,
+                "function": "schedule",
+                "text": "assert!(index.text().contains(\"Repeats weekly\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 74,
+              "text": "assert_text \"3 occurrences remaining\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 69,
+                "end_line": 69,
+                "function": "schedule",
+                "text": "assert!(index.text().contains(\"3 occurrences remaining\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 79,
+              "text": "assert_equal 3, occurrences.size"
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 135,
+                "end_line": 135,
+                "function": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
+                "text": "assert_eq!(rows(&app, eid).await.len(), 3)"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 80,
+              "text": "assert_equal 1, ActivityItem.where(user: users(:jason), source: occurrences).count"
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 136,
+                "end_line": 136,
+                "function": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
+                "text": "assert_eq!(item_rows(&app, eid, JASON, None).await.len(), 1)"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 88,
+              "text": "assert_text \"Event invitation\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 87,
+                "end_line": 87,
+                "function": "inbox_response",
+                "text": "assert!(itemhtml.contains(\"Event invitation\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 89,
+              "text": "assert_text \"repeats weekly until\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 90,
+                "end_line": 90,
+                "function": "inbox_response",
+                "text": "assert!(itemhtml.contains(\"repeats weekly until\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 94,
+              "text": "assert_text \"Currently: Going\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 115,
+                "end_line": 115,
+                "function": "inbox_response",
+                "text": "assert!(visible_text(&show.text()).contains(\"Currently: Going\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 98,
+              "text": "assert_equal \"going\", occurrence.response_for(users(:jason))"
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 138,
+                "end_line": 148,
+                "function": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
+                "text": "assert_eq!(\n        app.db()\n            .read(move |c| CalendarEvent::find(c, eid)?\n                .series_events(c)?\n                .iter()\n                .map(|e| e.response_for(c, Some(JASON)))\n                .collect::<campfire_db::Result<Vec<_>>>())\n            .await\n            .unwrap(),\n        vec![Some(\"going\".into()); 3]\n    )"
+              }
+            ],
+            "disposition": "covered"
+          }
+        ]
+      }
     },
     {
       "id": "WS14e-101",
       "test": "campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_announcement_card_response_stays_in_requested_frame",
-      "note": "Card text is scoped to the unique Card session card. The room path invariant is checked through the real Turbo response: OK, no Location/Turbo-Location redirect, exact requested frame. Shared Rails assets consume that frame; no browser pixel receipt is claimed.",
+      "note": "Option (b): reopened for the browser current path and retained room DOM after Turbo submission. Partial server evidence consumes the actual lazy frame src/id, attendance form action/method/hidden controls and rendered target. It catches top-level navigation wiring without claiming JavaScript execution.",
       "assertions": [
         {
           "rails": {
@@ -4854,9 +5218,16 @@
           },
           "rust": [
             {
+              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/rendered.rs",
+              "line": 204,
+              "end_line": 209,
+              "function": "follow",
+              "text": "assert!(\n        matches!(reply.status, StatusCode::FOUND | StatusCode::SEE_OTHER),\n        \"submitted form redirects: {} {}\",\n        reply.status,\n        reply.text()\n    )"
+            },
+            {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 54,
-              "end_line": 54,
+              "line": 55,
+              "end_line": 55,
               "function": "schedule",
               "text": "assert!(headings(&shown.text()).contains(&find(app, eid).await.title))"
             }
@@ -4872,8 +5243,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 159,
-              "end_line": 159,
+              "line": 147,
+              "end_line": 147,
               "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
               "text": "assert!(room.text().contains(\"Scheduled an event: Card session\"))"
             }
@@ -4889,8 +5260,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 165,
-              "end_line": 165,
+              "line": 153,
+              "end_line": 153,
               "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
               "text": "assert!(visible_text(&matching_cards[0]).contains(\"Organized by David\"))"
             }
@@ -4906,8 +5277,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 173,
-              "end_line": 173,
+              "line": 157,
+              "end_line": 157,
               "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
               "text": "assert!(loaded.text().contains(\"No response yet\"))"
             }
@@ -4923,8 +5294,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 189,
-              "end_line": 189,
+              "line": 162,
+              "end_line": 162,
+              "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+              "text": "assert_eq!(saved.status, StatusCode::OK)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+              "line": 166,
+              "end_line": 166,
               "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
               "text": "assert!(saved.text().contains(\"Currently: <strong>Going</strong>\"))"
             }
@@ -4937,37 +5315,9 @@
             "line": 136,
             "text": "assert_current_path room_path(room)"
           },
-          "rust": [
-            {
-              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 185,
-              "end_line": 185,
-              "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
-              "text": "assert_eq!(saved.status, StatusCode::OK)"
-            },
-            {
-              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 186,
-              "end_line": 186,
-              "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
-              "text": "assert_eq!(saved.location(), None)"
-            },
-            {
-              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 187,
-              "end_line": 187,
-              "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
-              "text": "assert!(saved.headers.get(\"turbo-location\").is_none())"
-            },
-            {
-              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 188,
-              "end_line": 188,
-              "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
-              "text": "assert!(saved.text().contains(&format!(\"id=\\\"{frame}\\\"\")))"
-            }
-          ],
-          "disposition": "covered"
+          "rust": [],
+          "disposition": "unsupported_assertion",
+          "reason": "Requires the actual browser current path after clicking Going; HTTP response headers do not prove it."
         },
         {
           "rails": {
@@ -4975,16 +5325,9 @@
             "line": 137,
             "text": "assert_text \"Scheduled an event: Card session\""
           },
-          "rust": [
-            {
-              "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 191,
-              "end_line": 191,
-              "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
-              "text": "assert!(room.text().contains(\"Scheduled an event: Card session\"))"
-            }
-          ],
-          "disposition": "covered"
+          "rust": [],
+          "disposition": "unsupported_assertion",
+          "reason": "Requires the actual browser room DOM after clicking Going; a fresh GET or the frame response does not prove retention."
         },
         {
           "rails": {
@@ -4995,15 +5338,178 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-              "line": 192,
-              "end_line": 199,
-              "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+              "line": 111,
+              "end_line": 118,
+              "function": "cutover_interaction_schedule_invitation_inbox_open_and_response",
               "text": "assert_eq!(\n        app.db()\n            .read(move |c| CalendarEvent::find(c, eid)?.response_for(c, Some(JASON)))\n            .await\n            .unwrap()\n            .as_deref(),\n        Some(\"going\")\n    )"
             }
           ],
           "disposition": "covered"
         }
-      ]
+      ],
+      "prior_review243_receipt": {
+        "note": "Card text is scoped to the unique Card session card. The room path invariant is checked through the real Turbo response: OK, no Location/Turbo-Location redirect, exact requested frame. Shared Rails assets consume that frame; no browser pixel receipt is claimed.",
+        "assertions": [
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 115,
+              "text": "assert_selector \"h1\", text: \"Card session\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 54,
+                "end_line": 54,
+                "function": "schedule",
+                "text": "assert!(headings(&shown.text()).contains(&find(app, eid).await.title))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 124,
+              "text": "assert_text \"Scheduled an event: Card session\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 159,
+                "end_line": 159,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert!(room.text().contains(\"Scheduled an event: Card session\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 127,
+              "text": "assert_text \"Organized by David\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 165,
+                "end_line": 165,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert!(visible_text(&matching_cards[0]).contains(\"Organized by David\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 128,
+              "text": "assert_text \"No response yet\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 173,
+                "end_line": 173,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert!(loaded.text().contains(\"No response yet\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 132,
+              "text": "assert_text \"Currently: Going\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 189,
+                "end_line": 189,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert!(saved.text().contains(\"Currently: <strong>Going</strong>\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 136,
+              "text": "assert_current_path room_path(room)"
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 185,
+                "end_line": 185,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert_eq!(saved.status, StatusCode::OK)"
+              },
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 186,
+                "end_line": 186,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert_eq!(saved.location(), None)"
+              },
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 187,
+                "end_line": 187,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert!(saved.headers.get(\"turbo-location\").is_none())"
+              },
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 188,
+                "end_line": 188,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert!(saved.text().contains(&format!(\"id=\\\"{frame}\\\"\")))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 137,
+              "text": "assert_text \"Scheduled an event: Card session\""
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 191,
+                "end_line": 191,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert!(room.text().contains(\"Scheduled an event: Card session\"))"
+              }
+            ],
+            "disposition": "covered"
+          },
+          {
+            "rails": {
+              "file": "test/system/events_test.rb",
+              "line": 140,
+              "text": "assert_equal \"going\", event.reload.response_for(users(:jason))"
+            },
+            "rust": [
+              {
+                "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+                "line": 192,
+                "end_line": 199,
+                "function": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+                "text": "assert_eq!(\n        app.db()\n            .read(move |c| CalendarEvent::find(c, eid)?.response_for(c, Some(JASON)))\n            .await\n            .unwrap()\n            .as_deref(),\n        Some(\"going\")\n    )"
+              }
+            ],
+            "disposition": "covered"
+          }
+        ]
+      },
+      "review_disposition": "reopened"
     },
     {
       "id": "WS14e-106",

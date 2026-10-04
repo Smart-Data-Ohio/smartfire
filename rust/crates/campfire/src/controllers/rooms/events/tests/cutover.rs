@@ -47,3 +47,4 @@ mod attendances;
 
 mod cards;
 mod interactions;
+mod rendered;

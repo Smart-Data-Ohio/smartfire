@@ -48,6 +48,8 @@ assert len(remaining_ids) == len(set(remaining_ids)), 'Duplicate remaining recor
 assert set(remaining_ids) == open_ids, 'Remaining list differs from ledger'
 continuation = data.get('continuation_audit')
 continuation_ids = set()
+continuation_closed = set()
+continuation_reopened = set()
 if continuation:
     for file in continuation['maps']:
         mapping = json.loads((root / file).read_text())
@@ -55,14 +57,25 @@ if continuation:
             assert entry['id'] not in continuation_ids
             continuation_ids.add(entry['id'])
             record = next(r for r in records if r['id'] == entry['id'])
-            assert record['disposition'] == 'implemented', entry['id']
+            if record['disposition'] == 'implemented':
+                assert all(a['disposition'] == 'covered' and a['rust'] for a in entry['assertions']), entry['id']
+                continuation_closed.add(entry['id'])
+            else:
+                assert record['disposition'] == 'unsupported_assertion', entry['id']
+                assert entry['review_disposition'] == 'reopened', entry['id']
+                assert any(a['disposition'] == 'unsupported_assertion' and not a['rust']
+                           and a.get('reason') for a in entry['assertions']), entry['id']
+                assert record['review243']['previous_evidence'], entry['id']
+                continuation_reopened.add(entry['id'])
             assert record['evidence']['test'] == entry['test'], entry['id']
             assert record['evidence']['assertion_map']['file'] == file, entry['id']
     # The separate continuation schema checks every Rails call, exact native
     # assertion bytes and physical source locations; it is not an audit waiver.
     subprocess.run(['python3', str(root / 'rust/reference-tools/cutover/assertion-maps.py'),
                     *(str(root / f) for f in continuation['maps'])], check=True)
-    assert len(continuation_ids) == continuation['closed_records']
+    assert len(continuation_closed) == continuation['closed_records']
+    assert continuation_reopened == set(continuation.get('reopened_records', []))
+    assert continuation['parent_open_total'] - len(continuation_closed) == len(open_ids)
     assert continuation['parent_open_total'] == data['closure_audit']['open_total']
     assert len(open_ids) == continuation['open_total']
 audited = []
