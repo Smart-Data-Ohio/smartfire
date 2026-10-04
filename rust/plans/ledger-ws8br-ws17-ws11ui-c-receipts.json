@@ -6123,6 +6123,224 @@
         "controllers::users::sidebar_original_tests::original_mixed_quiet_sidebar_read_counts_stay_flat_with_one_grants_query"
       ],
       "record_status": "closed"
+    },
+    {
+      "id": "P0251",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "line": 155,
+      "test": "past the export cap the page warns and the CSV filename says truncated",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
+      "record_status": "closed",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv"
+      ],
+      "assertions": [
+        {
+          "line": 163,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_response :success",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "past"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:64",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:64",
+          "assertion_anchor": "assert_eq!(html.status, StatusCode::OK, \"original cap HTML status\");",
+          "assertion_scope": "run",
+          "additional_assertion_sources": []
+        },
+        {
+          "line": 164,
+          "ruby": "assert_match \"newest 2\", response.body",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_match \"newest 2\", response.body",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "past"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "assertion_anchor": "actual, case[\"response\"],",
+          "assertion_scope": "run",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:77",
+              "anchor": "let actual = json!({\"notice\":html.text().contains(&format!(\"newest {limit}\")),\"truncated\":csv.header(\"content-disposition\").unwrap().contains(\"truncated\"),\"filename_cap\":csv.header(\"content-disposition\").unwrap().contains(&format!(\"truncated-to-{limit}\")),\"rows\":rows,\"matches_table\":rows as i64==count});"
+            }
+          ]
+        },
+        {
+          "line": 167,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_response :success",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "past"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:66",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:66",
+          "assertion_anchor": "assert_eq!(csv.status, StatusCode::OK, \"original cap CSV status\");",
+          "assertion_scope": "run",
+          "additional_assertion_sources": []
+        },
+        {
+          "line": 168,
+          "ruby": "assert_match \"truncated-to-2\", response.headers[\"Content-Disposition\"]",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_match \"truncated-to-2\", response.headers[\"Content-Disposition\"]",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "past"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "assertion_anchor": "actual, case[\"response\"],",
+          "assertion_scope": "run",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:77",
+              "anchor": "let actual = json!({\"notice\":html.text().contains(&format!(\"newest {limit}\")),\"truncated\":csv.header(\"content-disposition\").unwrap().contains(\"truncated\"),\"filename_cap\":csv.header(\"content-disposition\").unwrap().contains(&format!(\"truncated-to-{limit}\")),\"rows\":rows,\"matches_table\":rows as i64==count});"
+            }
+          ]
+        },
+        {
+          "line": 169,
+          "ruby": "assert_equal 2, CSV.parse(response.body, headers: true).length",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_equal 2, CSV.parse(response.body, headers: true).length",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "past"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "assertion_anchor": "actual, case[\"response\"],",
+          "assertion_scope": "run",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:77",
+              "anchor": "let actual = json!({\"notice\":html.text().contains(&format!(\"newest {limit}\")),\"truncated\":csv.header(\"content-disposition\").unwrap().contains(\"truncated\"),\"filename_cap\":csv.header(\"content-disposition\").unwrap().contains(&format!(\"truncated-to-{limit}\")),\"rows\":rows,\"matches_table\":rows as i64==count});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "P0252",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "line": 172,
+      "test": "within the export cap there is no truncation notice",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
+      "record_status": "closed",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning"
+      ],
+      "assertions": [
+        {
+          "line": 178,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_response :success",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "within"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:64",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:64",
+          "assertion_anchor": "assert_eq!(html.status, StatusCode::OK, \"original cap HTML status\");",
+          "assertion_scope": "run",
+          "additional_assertion_sources": []
+        },
+        {
+          "line": 179,
+          "ruby": "assert_no_match \"newest 5\", response.body",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_no_match \"newest 5\", response.body",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "within"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "assertion_anchor": "actual, case[\"response\"],",
+          "assertion_scope": "run",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:77",
+              "anchor": "let actual = json!({\"notice\":html.text().contains(&format!(\"newest {limit}\")),\"truncated\":csv.header(\"content-disposition\").unwrap().contains(\"truncated\"),\"filename_cap\":csv.header(\"content-disposition\").unwrap().contains(&format!(\"truncated-to-{limit}\")),\"rows\":rows,\"matches_table\":rows as i64==count});"
+            }
+          ]
+        },
+        {
+          "line": 182,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_response :success",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "within"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:66",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:66",
+          "assertion_anchor": "assert_eq!(csv.status, StatusCode::OK, \"original cap CSV status\");",
+          "assertion_scope": "run",
+          "additional_assertion_sources": []
+        },
+        {
+          "line": 183,
+          "ruby": "assert_no_match \"truncated\", response.headers[\"Content-Disposition\"]",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_no_match \"truncated\", response.headers[\"Content-Disposition\"]",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "within"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "assertion_anchor": "actual, case[\"response\"],",
+          "assertion_scope": "run",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:77",
+              "anchor": "let actual = json!({\"notice\":html.text().contains(&format!(\"newest {limit}\")),\"truncated\":csv.header(\"content-disposition\").unwrap().contains(\"truncated\"),\"filename_cap\":csv.header(\"content-disposition\").unwrap().contains(&format!(\"truncated-to-{limit}\")),\"rows\":rows,\"matches_table\":rows as i64==count});"
+            }
+          ]
+        },
+        {
+          "line": 187,
+          "ruby": "assert_equal AuditLog.count, CSV.parse(response.body, headers: true).length",
+          "rust_test": "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning",
+          "checks": "Real HTTP router and normal action; only the same per-request limit override as Rails' temporary constant replacement differs. HTML success and CSV success are separate checks. Exact newest-limit warning, filename truncation predicate, parsed CSV row count and live table count compare against the pinned Rails reduced-cap oracle.",
+          "observation": "assert_equal AuditLog.count, CSV.parse(response.body, headers: true).length",
+          "oracle": "rust/vectors/audit_caps_originals.json",
+          "oracle_cases": [
+            "within"
+          ],
+          "assertion_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:79",
+          "assertion_anchor": "actual, case[\"response\"],",
+          "assertion_scope": "run",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_caps_tests.rs:77",
+              "anchor": "let actual = json!({\"notice\":html.text().contains(&format!(\"newest {limit}\")),\"truncated\":csv.header(\"content-disposition\").unwrap().contains(\"truncated\"),\"filename_cap\":csv.header(\"content-disposition\").unwrap().contains(&format!(\"truncated-to-{limit}\")),\"rows\":rows,\"matches_table\":rows as i64==count});"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

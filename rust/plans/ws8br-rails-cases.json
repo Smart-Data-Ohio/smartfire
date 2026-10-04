@@ -6315,13 +6315,51 @@
           "name": "past the export cap the page warns and the CSV filename says truncated",
           "line": 155,
           "cutover_id": "P0251",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "past the export cap the page warns and the CSV filename says truncated",
+                "line": 155,
+                "cutover_id": "P0251",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0251",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0,
+          "execution": "Current enabled nextest"
         },
         {
           "name": "within the export cap there is no truncation notice",
           "line": 172,
           "cutover_id": "P0252",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "within the export cap there is no truncation notice",
+                "line": 172,
+                "cutover_id": "P0252",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0252",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0,
+          "execution": "Current enabled nextest"
         },
         {
           "name": "CSV export neutralizes formula injection in request columns",
@@ -7025,7 +7063,7 @@
           "name": "service worker fetch and notification logic",
           "line": 50,
           "cutover_id": "P0276",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -7052,14 +7090,32 @@
                 "assertion_count": 2
               },
               "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "service worker fetch and notification logic",
+                "line": 50,
+                "cutover_id": "P0276",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "rust_tests": [
+                  "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
+                "assertion_count": 2,
+                "cutover_reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
+              }
             }
           ],
           "rust_tests": [
-            "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
+            "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0276",
           "assertion_count": 2,
-          "cutover_reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
+          "cutover_reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output.",
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         }
       ],
       "declared_count": 5,
@@ -7588,28 +7644,108 @@
           "line": 7,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0300",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "a new member is walked through the tour by keyboard and finishing persists",
+                "line": 7,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0300",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0300",
+          "assertion_count": 17,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "escape skips the tour and it never auto-starts again",
           "line": 44,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0301",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "escape skips the tour and it never auto-starts again",
+                "line": 44,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0301",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0301",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the tour restarts from the help menu",
           "line": 58,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0302",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the tour restarts from the help menu",
+                "line": 58,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0302",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0302",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "members who completed the tour never see it auto-start",
           "line": 72,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0303",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "members who completed the tour never see it auto-start",
+                "line": 72,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0303",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0303",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         }
       ],
       "declared_count": 4,
@@ -8155,98 +8291,378 @@
           "line": 7,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0354",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "clicking a message author opens their profile card and Message lands in the DM",
+                "line": 7,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0354",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0354",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the profile card opens by keyboard, traps focus, and returns it on Esc",
           "line": 26,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0355",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the profile card opens by keyboard, traps focus, and returns it on Esc",
+                "line": 26,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0355",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0355",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "Esc with a closed profile card stays unhandled for later listeners",
           "line": 42,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0356",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "Esc with a closed profile card stays unhandled for later listeners",
+                "line": 42,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0356",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0356",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the sidebar avatar trigger opens the profile card by keyboard",
           "line": 61,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0357",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the sidebar avatar trigger opens the profile card by keyboard",
+                "line": 61,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0357",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0357",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "multi-selecting three people in the directory lands in their group DM",
           "line": 71,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0358",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "multi-selecting three people in the directory lands in their group DM",
+                "line": 71,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0358",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0358",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the member panel multi-select starts a huddle with exactly that set",
           "line": 89,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0359",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the member panel multi-select starts a huddle with exactly that set",
+                "line": 89,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0359",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0359",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "shift-click extends the checkbox range",
           "line": 111,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0360",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "shift-click extends the checkbox range",
+                "line": 111,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0360",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0360",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "long-press selects a row on touch",
           "line": 125,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0361",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "long-press selects a row on touch",
+                "line": 125,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0361",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0361",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "agents are selectable for messages but excluded from huddles",
           "line": 153,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0362",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "agents are selectable for messages but excluded from huddles",
+                "line": 153,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0362",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0362",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "start huddle keeps agents in the DM but out of the call",
           "line": 166,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0363",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "start huddle keeps agents in the DM but out of the call",
+                "line": 166,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0363",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0363",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the new-DM picker filters as you type with no suggestion bubble or submit button",
           "line": 180,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0364",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the new-DM picker filters as you type with no suggestion bubble or submit button",
+                "line": 180,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0364",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0364",
+          "assertion_count": 10,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "picker selections survive filtering and Message starts the DM",
           "line": 212,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0365",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "picker selections survive filtering and Message starts the DM",
+                "line": 212,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0365",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0365",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "Enter in the picker filter selects the single visible match",
           "line": 242,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0366",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "Enter in the picker filter selects the single visible match",
+                "line": 242,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0366",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0366",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "clicking a picker row toggles it while the name still opens the profile card",
           "line": 273,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0367",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "clicking a picker row toggles it while the name still opens the profile card",
+                "line": 273,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0367",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0367",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the new-DM picker does not overflow at phone width",
@@ -8254,14 +8670,55 @@
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
           "cutover_id": "P0368",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the new-DM picker does not overflow at phone width",
+                "line": 287,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
+                "cutover_id": "P0368",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0368",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "group members rename, add, and leave with system notes in the timeline",
           "line": 309,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0369",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "group members rename, add, and leave with system notes in the timeline",
+                "line": 309,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0369",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0369",
+          "assertion_count": 9,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "starting a group huddle rings every other member",
@@ -8275,14 +8732,54 @@
           "line": 360,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0371",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "Esc closes only the profile card inside the mobile member panel",
+                "line": 360,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0371",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0371",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "Tab cycles within the profile card opened from the member panel",
           "line": 384,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0372",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "Tab cycles within the profile card opened from the member panel",
+                "line": 384,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0372",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0372",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         }
       ],
       "declared_count": 19,
@@ -8705,28 +9202,108 @@
           "line": 18,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0400",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "starring from the profile card floats the person into a Starred group",
+                "line": 18,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0400",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0400",
+          "assertion_count": 7,
+          "private_helper_assertion_count": 16,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the member row menu stars and unstars, by mouse and keyboard",
           "line": 43,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0401",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the member row menu stars and unstars, by mouse and keyboard",
+                "line": 43,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0401",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0401",
+          "assertion_count": 14,
+          "private_helper_assertion_count": 13,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "Escape still dismisses the row menu after the profile card takes focus",
           "line": 87,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0402",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "Escape still dismisses the row menu after the profile card takes focus",
+                "line": 87,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0402",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0402",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         },
         {
           "name": "the Starred group works on a phone",
           "line": 108,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0403",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+              "previous": {
+                "name": "the Starred group works on a phone",
+                "line": 108,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0403",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0403",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 10,
+          "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
         }
       ],
       "declared_count": 4,
@@ -9052,7 +9629,7 @@
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
     "approved_queue_supersessions": 1,
     "sidebar_original_receipts_pending": 0,
-    "broad_original_receipts_pending": 133,
+    "broad_original_receipts_pending": 104,
     "geometry_only_excluded": 3,
     "partial": true,
     "broad_original_receipts_superseded": 9,
@@ -9105,9 +9682,26 @@
           "broad_original_assertion_receipts": 112,
           "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md"
         }
+      },
+      {
+        "date": "2026-10-04",
+        "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+        "previous": {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "approved_queue_supersessions": 1,
+          "sidebar_original_receipts_pending": 0,
+          "broad_original_receipts_pending": 133,
+          "geometry_only_excluded": 3,
+          "partial": true,
+          "broad_original_receipts_superseded": 9,
+          "broad_original_assertion_receipts": 195,
+          "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-c-report.md"
+        }
       }
     ],
-    "broad_original_assertion_receipts": 195,
+    "broad_original_assertion_receipts": 233,
     "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-c-report.md"
   },
   "source_pin_refresh": {

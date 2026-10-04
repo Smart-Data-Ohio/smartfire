@@ -1297,3 +1297,6 @@ mod ws12_work_remaining_tests;
 
 #[cfg(test)]
 mod ws12_browser_remaining_tests;
+
+#[cfg(test)]
+mod ws11ui_original_browser_tests;

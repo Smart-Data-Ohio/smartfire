@@ -55,7 +55,7 @@ remaining = load('ledger-ws8br-ws17-ws11ui-remaining.json')
 assert not ({r['id'] for r in remaining['ws8br_broad_original_receipts']} & {r['id'] for r in receipts['ws8br_broad_closed_records']})
 assert len(remaining['ws8br_broad_original_receipts']) + len(receipts['ws8br_broad_closed_records']) == 337
 assert len(remaining['ws8br_sidebar_original_receipts']) + len(receipts.get('ws8br_sidebar_closed_records',[])) == 8
-assert len(remaining['ws8br2_original_criteria']) == 14
+assert len(remaining['ws8br2_original_criteria']) + len(receipts.get('ws8br2_criterion_closed_records', [])) == 14
 assert len(remaining['ws8br_muted_browser']) == 1
 assert len(remaining['ws17_calendar_browser']) == 1
 assert len(remaining['excluded_geometry']) == 3
@@ -82,4 +82,4 @@ if args.browser_log:
     assert browser_tests <= passed, f'registered browser tests did not pass: {sorted(browser_tests-passed)}'
     print('Cutover current branch: 3 registered ignored tests passed with paired browser sequences and writer controls')
 print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; {len(receipts['ws8br_broad_closed_records'])} broad WS8 closures; 1 approved queue supersession; 0 inconsistent records")
-print(f'Cutover ledger remains partial: {len(remaining["ws8br_broad_original_receipts"])} broad receipts; {len(remaining["ws8br_sidebar_original_receipts"])} sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')
+print(f'Cutover ledger remains partial: {len(remaining["ws8br_broad_original_receipts"])} broad receipts; {len(remaining["ws8br_sidebar_original_receipts"])} sidebar receipts; {len(remaining["ws8br2_original_criteria"])} overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')

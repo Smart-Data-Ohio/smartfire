@@ -2622,6 +2622,325 @@
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0191",
       "assertion_count": 3,
       "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0251",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "past the export cap the page warns and the CSV filename says truncated",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_caps_tests::original_two_row_cap_warns_names_and_limits_csv"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0251",
+      "assertion_count": 5,
+      "execution": "Current enabled nextest; see C report. Historical CI counts are unchanged."
+    },
+    {
+      "id": "P0252",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "within the export cap there is no truncation notice",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_caps_tests::original_five_row_cap_keeps_all_rows_without_warning"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0252",
+      "assertion_count": 5,
+      "execution": "Current enabled nextest; see C report. Historical CI counts are unchanged."
+    },
+    {
+      "id": "P0354",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "clicking a message author opens their profile card and Message lands in the DM",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0354",
+      "assertion_count": 5,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0355",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "the profile card opens by keyboard, traps focus, and returns it on Esc",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0355",
+      "assertion_count": 5,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0356",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "Esc with a closed profile card stays unhandled for later listeners",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0356",
+      "assertion_count": 2,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0357",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "the sidebar avatar trigger opens the profile card by keyboard",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0357",
+      "assertion_count": 2,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0358",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "multi-selecting three people in the directory lands in their group DM",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0358",
+      "assertion_count": 3,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0359",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "the member panel multi-select starts a huddle with exactly that set",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0359",
+      "assertion_count": 4,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0360",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "shift-click extends the checkbox range",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0360",
+      "assertion_count": 2,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0361",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "long-press selects a row on touch",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0361",
+      "assertion_count": 3,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0362",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "agents are selectable for messages but excluded from huddles",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0362",
+      "assertion_count": 3,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0363",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "start huddle keeps agents in the DM but out of the call",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0363",
+      "assertion_count": 3,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0364",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "the new-DM picker filters as you type with no suggestion bubble or submit button",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0364",
+      "assertion_count": 10,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0365",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "picker selections survive filtering and Message starts the DM",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0365",
+      "assertion_count": 5,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0366",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "Enter in the picker filter selects the single visible match",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0366",
+      "assertion_count": 6,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0367",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "clicking a picker row toggles it while the name still opens the profile card",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0367",
+      "assertion_count": 3,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0368",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "the new-DM picker does not overflow at phone width",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0368",
+      "assertion_count": 4,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0369",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "group members rename, add, and leave with system notes in the timeline",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0369",
+      "assertion_count": 9,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0371",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "Esc closes only the profile card inside the mobile member panel",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0371",
+      "assertion_count": 6,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0372",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "Tab cycles within the profile card opened from the member panel",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0372",
+      "assertion_count": 6,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0300",
+      "file": "test/system/first_run_tour_test.rb",
+      "test": "a new member is walked through the tour by keyboard and finishing persists",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0300",
+      "assertion_count": 17,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0301",
+      "file": "test/system/first_run_tour_test.rb",
+      "test": "escape skips the tour and it never auto-starts again",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0301",
+      "assertion_count": 4,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0302",
+      "file": "test/system/first_run_tour_test.rb",
+      "test": "the tour restarts from the help menu",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0302",
+      "assertion_count": 3,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0303",
+      "file": "test/system/first_run_tour_test.rb",
+      "test": "members who completed the tour never see it auto-start",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0303",
+      "assertion_count": 2,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0400",
+      "file": "test/system/starred_people_test.rb",
+      "test": "starring from the profile card floats the person into a Starred group",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0400",
+      "assertion_count": 7,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0401",
+      "file": "test/system/starred_people_test.rb",
+      "test": "the member row menu stars and unstars, by mouse and keyboard",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0401",
+      "assertion_count": 14,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0402",
+      "file": "test/system/starred_people_test.rb",
+      "test": "Escape still dismisses the row menu after the profile card takes focus",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0402",
+      "assertion_count": 5,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0403",
+      "file": "test/system/starred_people_test.rb",
+      "test": "the Starred group works on a phone",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0403",
+      "assertion_count": 6,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+    },
+    {
+      "id": "P0276",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "test": "service worker fetch and notification logic",
+      "rust_tests": [
+        "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0276",
+      "assertion_count": 2,
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
     }
   ],
   "review240_assertion_tests": [
@@ -2854,6 +3173,52 @@
         "S0181",
         "S0193"
       ]
+    },
+    {
+      "date": "2026-10-04",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+      "previous_broad_closed_count": 204,
+      "broad_closures": [
+        "P0251",
+        "P0252",
+        "P0276",
+        "P0300",
+        "P0301",
+        "P0302",
+        "P0303",
+        "P0354",
+        "P0355",
+        "P0356",
+        "P0357",
+        "P0358",
+        "P0359",
+        "P0360",
+        "P0361",
+        "P0362",
+        "P0363",
+        "P0364",
+        "P0365",
+        "P0366",
+        "P0367",
+        "P0368",
+        "P0369",
+        "P0371",
+        "P0372",
+        "P0400",
+        "P0401",
+        "P0402",
+        "P0403"
+      ],
+      "criteria_closures": [
+        "the member panel multi-select starts a huddle with exactly that set",
+        "group members rename, add, and leave with system notes in the timeline",
+        "Esc closes only the profile card inside the mobile member panel",
+        "Tab cycles within the profile card opened from the member panel",
+        "starring from the profile card floats the person into a Starred group",
+        "the member row menu stars and unstars, by mouse and keyboard",
+        "Escape still dismisses the row menu after the profile card takes focus",
+        "the Starred group works on a phone"
+      ]
     }
   ],
   "ws8br_sidebar_closed_records": [
@@ -2936,6 +3301,72 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0193",
       "assertion_count": 4
+    }
+  ],
+  "ws8br2_criterion_closed_records": [
+    {
+      "file": "test/system/people_group_dms_test.rb",
+      "criterion": "the member panel multi-select starts a huddle with exactly that set",
+      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0359"
+    },
+    {
+      "file": "test/system/people_group_dms_test.rb",
+      "criterion": "group members rename, add, and leave with system notes in the timeline",
+      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0369"
+    },
+    {
+      "file": "test/system/people_group_dms_test.rb",
+      "criterion": "Esc closes only the profile card inside the mobile member panel",
+      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0371"
+    },
+    {
+      "file": "test/system/people_group_dms_test.rb",
+      "criterion": "Tab cycles within the profile card opened from the member panel",
+      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0372"
+    },
+    {
+      "file": "test/system/starred_people_test.rb",
+      "criterion": "starring from the profile card floats the person into a Starred group",
+      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0400"
+    },
+    {
+      "file": "test/system/starred_people_test.rb",
+      "criterion": "the member row menu stars and unstars, by mouse and keyboard",
+      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0401"
+    },
+    {
+      "file": "test/system/starred_people_test.rb",
+      "criterion": "Escape still dismisses the row menu after the profile card takes focus",
+      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0402"
+    },
+    {
+      "file": "test/system/starred_people_test.rb",
+      "criterion": "the Starred group works on a phone",
+      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0403"
     }
   ]
 }

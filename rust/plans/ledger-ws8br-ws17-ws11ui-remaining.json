@@ -7,20 +7,6 @@
   "counting": "Lists overlap; do not add broad declarations and narrower criteria/browser entries as unique behaviours. Receipt gaps are not automatically unsupported production code.",
   "ws8br_broad_original_receipts": [
     {
-      "id": "P0251",
-      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 155,
-      "test": "past the export cap the page warns and the CSV filename says truncated",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0252",
-      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 172,
-      "test": "within the export cap there is no truncation notice",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
       "id": "P0287",
       "file": "test/system/audit_log_test.rb",
       "line": 12,
@@ -109,34 +95,6 @@
       "file": "test/system/channel_navigation_test.rb",
       "line": 130,
       "test": "non-room visits still show the progress bar",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0300",
-      "file": "test/system/first_run_tour_test.rb",
-      "line": 7,
-      "test": "a new member is walked through the tour by keyboard and finishing persists",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0301",
-      "file": "test/system/first_run_tour_test.rb",
-      "line": 44,
-      "test": "escape skips the tour and it never auto-starts again",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0302",
-      "file": "test/system/first_run_tour_test.rb",
-      "line": 58,
-      "test": "the tour restarts from the help menu",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0303",
-      "file": "test/system/first_run_tour_test.rb",
-      "line": 72,
-      "test": "members who completed the tour never see it auto-start",
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
@@ -469,136 +427,10 @@
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
-      "id": "P0354",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 7,
-      "test": "clicking a message author opens their profile card and Message lands in the DM",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0355",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 26,
-      "test": "the profile card opens by keyboard, traps focus, and returns it on Esc",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0356",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 42,
-      "test": "Esc with a closed profile card stays unhandled for later listeners",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0357",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 61,
-      "test": "the sidebar avatar trigger opens the profile card by keyboard",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0358",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 71,
-      "test": "multi-selecting three people in the directory lands in their group DM",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0359",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 89,
-      "test": "the member panel multi-select starts a huddle with exactly that set",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0360",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 111,
-      "test": "shift-click extends the checkbox range",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0361",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 125,
-      "test": "long-press selects a row on touch",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0362",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 153,
-      "test": "agents are selectable for messages but excluded from huddles",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0363",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 166,
-      "test": "start huddle keeps agents in the DM but out of the call",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0364",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 180,
-      "test": "the new-DM picker filters as you type with no suggestion bubble or submit button",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0365",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 212,
-      "test": "picker selections survive filtering and Message starts the DM",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0366",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 242,
-      "test": "Enter in the picker filter selects the single visible match",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0367",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 273,
-      "test": "clicking a picker row toggles it while the name still opens the profile card",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0368",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 287,
-      "test": "the new-DM picker does not overflow at phone width",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0369",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 309,
-      "test": "group members rename, add, and leave with system notes in the timeline",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
       "id": "P0370",
       "file": "test/system/people_group_dms_test.rb",
       "line": 340,
       "test": "starting a group huddle rings every other member",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0371",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 360,
-      "test": "Esc closes only the profile card inside the mobile member panel",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0372",
-      "file": "test/system/people_group_dms_test.rb",
-      "line": 384,
-      "test": "Tab cycles within the profile card opened from the member panel",
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
@@ -791,34 +623,6 @@
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
-      "id": "P0400",
-      "file": "test/system/starred_people_test.rb",
-      "line": 18,
-      "test": "starring from the profile card floats the person into a Starred group",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0401",
-      "file": "test/system/starred_people_test.rb",
-      "line": 43,
-      "test": "the member row menu stars and unstars, by mouse and keyboard",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0402",
-      "file": "test/system/starred_people_test.rb",
-      "line": 87,
-      "test": "Escape still dismisses the row menu after the profile card takes focus",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0403",
-      "file": "test/system/starred_people_test.rb",
-      "line": 108,
-      "test": "the Starred group works on a phone",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
       "id": "P0404",
       "file": "test/system/timezone_detection_test.rb",
       "line": 4,
@@ -929,78 +733,14 @@
       "line": 153,
       "test": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
       "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0276",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "line": 50,
-      "test": "service worker fetch and notification logic",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
     }
   ],
   "ws8br_sidebar_original_receipts": [],
   "ws8br2_original_criteria": [
     {
       "file": "test/system/people_group_dms_test.rb",
-      "criterion": "the member panel multi-select starts a huddle with exactly that set",
-      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/people_group_dms_test.rb",
-      "criterion": "group members rename, add, and leave with system notes in the timeline",
-      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/people_group_dms_test.rb",
       "criterion": "starting a group huddle rings every other member",
       "historical_owner": "WS8br2 people/cards; WS8br DM actions",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/people_group_dms_test.rb",
-      "criterion": "Esc closes only the profile card inside the mobile member panel",
-      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/people_group_dms_test.rb",
-      "criterion": "Tab cycles within the profile card opened from the member panel",
-      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/starred_people_test.rb",
-      "criterion": "starring from the profile card floats the person into a Starred group",
-      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/starred_people_test.rb",
-      "criterion": "the member row menu stars and unstars, by mouse and keyboard",
-      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/starred_people_test.rb",
-      "criterion": "Escape still dismisses the row menu after the profile card takes focus",
-      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
-      "ledger": "rust/reference-tools/users/deferred_inventory.py",
-      "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
-    },
-    {
-      "file": "test/system/starred_people_test.rb",
-      "criterion": "the Starred group works on a phone",
-      "historical_owner": "WS12 stars; WS8br2 cards/directory integration",
       "ledger": "rust/reference-tools/users/deferred_inventory.py",
       "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions."
     },
@@ -1331,6 +1071,47 @@
         "sidebar query count does not grow with quiet channels, DMs, boards, and stages"
       ],
       "receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json"
+    },
+    {
+      "date": "2026-10-04",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+      "previous_broad_pending": 133,
+      "closed_broad_ids": [
+        "P0251",
+        "P0252",
+        "P0276",
+        "P0300",
+        "P0301",
+        "P0302",
+        "P0303",
+        "P0354",
+        "P0355",
+        "P0356",
+        "P0357",
+        "P0358",
+        "P0359",
+        "P0360",
+        "P0361",
+        "P0362",
+        "P0363",
+        "P0364",
+        "P0365",
+        "P0366",
+        "P0367",
+        "P0368",
+        "P0369",
+        "P0371",
+        "P0372",
+        "P0400",
+        "P0401",
+        "P0402",
+        "P0403"
+      ],
+      "assertion_receipts": [
+        "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json",
+        "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json"
+      ],
+      "executed_browser_gate": "Seven ignored registrations explicitly run by rust/parity/system/ws12 on rust/ci-full-gate; ordinary toolchain CI does not claim them."
     }
   ]
 }

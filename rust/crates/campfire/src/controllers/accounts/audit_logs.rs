@@ -11,7 +11,20 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Result, SendOptions, StatusCode, format};
 use campfire_views::{accounts::audit_logs as views, time::Zone};
 
+#[cfg(test)]
+#[derive(Clone)]
+struct TestExportLimit(i64);
+
 pub async fn show(c: &mut Ctx) -> Result {
+    #[cfg(test)]
+    if let Some(limit) = c.current::<TestExportLimit>().cloned() {
+        return show_with_limit(c, limit.0, &limit.0.to_string()).await;
+    }
+    show_with_limit(c, browsing::CSV_EXPORT_LIMIT, "5,000").await
+}
+// The original tests temporarily replace the export-limit constant. Keep the
+// same action body and permission/selection path when replaying those overrides.
+async fn show_with_limit(c: &mut Ctx, csv_export_limit: i64, export_limit_label: &str) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     concerns::ensure_can_administer(c)?;
     c.no_store();
@@ -42,21 +55,17 @@ pub async fn show(c: &mut Ctx) -> Result {
             let page = Page::new(page_param.as_deref(), count, &[browsing::PAGE_SIZE]);
             let entries = selection.entries(
                 conn,
-                if csv {
-                    browsing::CSV_EXPORT_LIMIT
-                } else {
-                    page.limit()
-                },
+                if csv { csv_export_limit } else { page.limit() },
                 if csv { 0 } else { page.offset() },
             )?;
             Ok((count, page, entries))
         })
         .await
         .map_err(Error::internal)?;
-    let truncated = count > browsing::CSV_EXPORT_LIMIT;
+    let truncated = count > csv_export_limit;
     if csv {
         let suffix = if truncated {
-            format!("-truncated-to-{}", browsing::CSV_EXPORT_LIMIT)
+            format!("-truncated-to-{csv_export_limit}")
         } else {
             String::new()
         };
@@ -82,7 +91,7 @@ pub async fn show(c: &mut Ctx) -> Result {
         actions: audit_log::actions(),
         target_types: browsing::TARGET_TYPES.iter().map(|s| (*s).into()).collect(),
         export_truncated: truncated,
-        export_limit: "5,000".into(),
+        export_limit: export_limit_label.into(),
         first_page: page.number == 1,
         next_page: next_page.clone()
     })
@@ -213,3 +222,6 @@ mod tests;
 
 #[cfg(test)]
 mod original_tests;
+
+#[cfg(test)]
+mod original_caps_tests;
