@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import socket
 import sqlite3
 import subprocess
@@ -203,7 +204,7 @@ if args.mutant:
 for case in args.exclude_case:
     assert any(case in CASES[file] for file in files), "unknown excluded named case"
 SCRATCH.mkdir(exist_ok=True)
-env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="8", PARITY_CPUS="2",
+env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="4", PARITY_CPUS="2",
            PARITY_NAMESPACE="ws8bm-behavior", PARITY_OWNER="ws8bm", TMPDIR=str(SCRATCH), CAMPFIRE_REFERENCE=str(ROOT))
 image = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
 revision = subprocess.check_output(["docker", "image", "inspect", "--format", "{{range .Config.Env}}{{println .}}{{end}}", image], text=True)
@@ -233,10 +234,12 @@ needs_paused_jobs=not args.slice and any(name in paused_job_cases for name in se
 needs_test_environment=motion_default in selected_names
 needs_drive=any(name in drive_cases for name in selected_names)
 if args.slice or any(name not in paused_job_cases for name in selected_names):
-    subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 test_host=build_host(ROOT,env) if needs_paused_jobs or needs_drive or needs_test_environment else None
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
-subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
+# CI supplies Chromium and the matching ChromeDriver from digest/checksum-pinned inputs.
+if os.environ.get("WS8BM_PINNED_BROWSER") != "1":
+    subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
 visibility_atom = subprocess.check_output([
     "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
     "exec", "ruby", "-rselenium-webdriver", "-e",

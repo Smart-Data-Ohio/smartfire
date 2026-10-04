@@ -58,16 +58,19 @@ for anything that walks directories.
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 
-CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on changes under
-`rust/**` and the Rails inputs the port reads (assets, JavaScript, public files, importmap,
-asset/icon config, fixtures, schema, migrations and the sound catalog), in the `toolchain` stage of
-`Dockerfile`. Pinned Rails seed construction/validation, clippy, the normal binary build,
-`campfire_db` tests/doctests and the seed-dependent `campfire` tests are gates.
-Nextest runs unit/integration tests once each; `cargo test --doc` retains doctest coverage. The
-rest of the tests aren't gates yet: those steps are `continue-on-error` and the run's summary
-combines all JUnit and doctest failure counts. CI uses
-mold through `ci/cargo.sh`; ordinary local builds keep their normal linker. Upstream's image publishing
-workflow isn't carried over: we deploy through our own GCP pipeline.
+CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on
+Rust and Rails comparison inputs. Every ordinary nextest group and runnable doctest is
+required; the app and workspace steps report all failures before explicit outcome gates.
+`ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold; local builds retain
+their normal linker. Shared pinned Rails seed build/restore/validation lives in
+`.github/actions/rust-setup`.
+
+Separate required correctness jobs run Rails differential/rollback, Pebble ACME,
+WS12/WS13 browsers and the gateway Node suite, project-local LiveKit, paired messaging,
+and WS11 agent UI. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
+`ci/ignored_tests.py` rejects any ignored test without a CI owner or a `utility:` reason,
+and verifies that every selected test appears as passed in its JUnit receipt. See
+`ci/README.md` for commands, pins, and job names. All builds/tests use at most four slots.
 
 `crates/db/src/schema.sql` (with `schema_migrations.txt`, `schema_sha1.txt` and
 `schema_sequences.txt`) is generated from the Rails app by `reference-tools/db/regenerate-schema.sh`;

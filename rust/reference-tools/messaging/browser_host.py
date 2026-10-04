@@ -1,5 +1,6 @@
 """Build the existing TestApp boundary from reproducible, tools-only test inputs."""
 import json
+import shlex
 from pathlib import Path
 import subprocess
 
@@ -51,7 +52,7 @@ def build_host(root, env):
     generated = prepare_source(root)
     host_env = dict(env, CAMPFIRE_REFERENCE=str(root),
                     CARGO_TARGET_DIR=str(Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve()))
-    command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2",
+    command = shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["test", "--locked", "-j2",
                "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
                "--no-run", "--message-format=json"]
     result = subprocess.run(command, cwd=root, env=host_env, stdout=subprocess.PIPE, text=True)

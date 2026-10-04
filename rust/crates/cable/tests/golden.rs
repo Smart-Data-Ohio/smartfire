@@ -439,7 +439,7 @@ fn dechunk(body: &str) -> String {
 }
 
 #[tokio::test]
-#[ignore = "needs a running reference app; see the module docs"]
+#[ignore = "utility: needs a running reference app; see the module docs"]
 async fn record_reference() {
     let url = std::env::var("CABLE_REFERENCE_URL").expect("CABLE_REFERENCE_URL");
     let fixtures: Value = serde_json::from_str(

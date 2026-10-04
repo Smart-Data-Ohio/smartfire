@@ -181,7 +181,7 @@ fn fixtures_match_ruby_row_for_row() {
 }
 
 #[test]
-#[ignore = "writes a database to CAMPFIRE_EXPORT_DB for the Rails rollback check"]
+#[ignore = "utility: writes a database to CAMPFIRE_EXPORT_DB for the Rails rollback check"]
 fn export_database_for_rails() {
     let path = std::env::var("CAMPFIRE_EXPORT_DB").expect("CAMPFIRE_EXPORT_DB");
     let _ = std::fs::remove_file(&path);

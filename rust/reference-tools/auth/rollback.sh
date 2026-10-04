@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
-export WS9_ROLLBACK_DIR="$ROOT/../.scratch/auth/rollback"
-export TMPDIR="$ROOT/../.scratch/tmp"
+export WS9_ROLLBACK_DIR="${WS9_ROLLBACK_DIR:-$ROOT/../.scratch/auth/rollback}"
+export TMPDIR="${TMPDIR:-$ROOT/../.scratch/tmp}"
 mkdir -p "$WS9_ROLLBACK_DIR" "$TMPDIR"
 rm -f "$WS9_ROLLBACK_DIR/rollback.sqlite3" "$WS9_ROLLBACK_DIR/rollback.sqlite3-wal" "$WS9_ROLLBACK_DIR/rollback.sqlite3-shm" "$WS9_ROLLBACK_DIR/manifest.json" "$WS9_ROLLBACK_DIR/rails-readback.json"
 cd "$ROOT"
@@ -12,4 +12,6 @@ docker run --rm --name ws9-two-factor-rollback --network none --entrypoint "" \
   -e RAILS_LOG_LEVEL=fatal -e DATABASE_URL=sqlite3:/work/rollback/rollback.sqlite3 -e WS9_ROLLBACK_DIR=/work/rollback \
   -v "$ROOT/reference-tools:/work/reference-tools:ro" -v "$WS9_ROLLBACK_DIR:/work/rollback" \
   "${WS9_REFERENCE_IMAGE:-ws9-reference:d7c7de92}" bin/rails runner /work/reference-tools/auth/rollback.rb
-cargo test --locked -j 4 -p campfire_db read_rails_rollback_changes -- --ignored
+if [[ "${1:-}" != --prepare-only ]]; then
+  cargo test --locked -j 4 -p campfire_db read_rails_rollback_changes -- --ignored --test-threads=4
+fi

@@ -796,7 +796,7 @@ pub fn masked_session_token(
 /// This is compiled only in the test binary. It serves the caller's freshly
 /// generated fixture, keeping the real router, durable enqueue and front server.
 #[tokio::test]
-#[ignore = "external browser host; invoked explicitly by messaging/behavior-check.py"]
+#[ignore = "utility: external browser host; invoked explicitly by messaging/behavior-check.py"]
 async fn ws8bm_browser_host_without_jobs() {
     assert_eq!(std::env::var("WS8BM_BROWSER_HOST").as_deref(), Ok("1"));
     let config = Config::from_env().unwrap();

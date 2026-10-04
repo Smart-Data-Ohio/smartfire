@@ -887,7 +887,7 @@ async fn an_invalid_interval_disables_only_its_loop() {
 /// starting: the enqueue (a row in the write's transaction), the commit, the wake and the claim.
 /// `cargo test -p campfire --release push_latency -- --ignored --nocapture`
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "a measurement, not a test"]
+#[ignore = "utility: a measurement, not a test"]
 async fn push_latency() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
