@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "reference_sha": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "reference_sha": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "templates": {
     "accounts/_help_contact.html": {
       "status": "covered",
@@ -1030,8 +1030,9 @@
       "evidence": [
         "room_native"
       ],
-      "branch": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions",
+      "branch": "full_native_room_pages: room_native::components -> messages/_composer.html; room_native::render mounts the resulting owner HTML in rooms::Show. Four complete populated pages are compared.",
       "render_chain": [
+        "room_native::components",
         "messages/_composer.html"
       ],
       "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
@@ -1041,8 +1042,10 @@
       "evidence": [
         "room_native"
       ],
-      "branch": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions",
+      "branch": "full_native_room_pages: room_native::components -> messages/_composer.html -> messages/_composer_markup.html; room_native::render mounts the resulting owner HTML in rooms::Show. Four complete populated pages are compared.",
       "render_chain": [
+        "room_native::components",
+        "messages/_composer.html",
         "messages/_composer_markup.html"
       ],
       "witness": {
@@ -1102,13 +1105,18 @@
     "messages/_footer_composer.html": {
       "status": "covered",
       "evidence": [
-        "room_native"
+        "thread_content"
       ],
-      "branch": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions",
+      "branch": "The thread-content test explicitly renders FooterComposer and compares the entire output to room_footer, separately from Composer and PendingTemplate.",
       "render_chain": [
-        "messages/_footer_composer.html"
+        "messages/_footer_composer.html",
+        "messages/_composer_markup.html"
       ],
-      "proof": "Complete output is asserted by the recorded test; this declaration is a wrapper/composition/serializer with no static literal surviving interpolation. See render_chain and the named fixture branch."
+      "witness": {
+        "oracle": "rust/vectors/messaging/thread-content.json",
+        "pointer": "/room_footer",
+        "needle": "data-controller=\"composer"
+      }
     },
     "messages/_message.html": {
       "status": "covered",
@@ -1219,16 +1227,16 @@
     "messages/_template.html": {
       "status": "covered",
       "evidence": [
-        "room_native"
+        "room_shell"
       ],
-      "branch": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions",
+      "branch": "Pending cases 0 and 1 explicitly construct rooms::shell::Pending for both seeded viewers; the entire pending template is compared. Native pages supply the different _pending.html renderer.",
       "render_chain": [
         "messages/_template.html"
       ],
       "witness": {
-        "oracle": "rust/crates/campfire/src/controllers/rooms/full_pages.json",
-        "pointer": "/rows/0/html",
-        "needle": "<div class=\"message__day-separator\"><time class=\"message__timestamp\" datetime=\"$messageDatetime$\" data-local-time-target=\"date\"></time></div>"
+        "oracle": "rust/crates/campfire/src/controllers/rooms/room_shell_vectors.json",
+        "pointer": "/cases/0/html",
+        "needle": "$messageDatetime$"
       }
     },
     "messages/_thread_indicator.html": {
@@ -1956,8 +1964,10 @@
       "evidence": [
         "room_native"
       ],
-      "branch": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions",
+      "branch": "full_native_room_pages: room_native::render -> rooms::panels::PollBuilder -> rooms/composition/_poll_builder.html; room_native::render mounts the resulting owner HTML in rooms::Show. Four complete populated pages are compared.",
       "render_chain": [
+        "room_native::render",
+        "rooms::panels::PollBuilder",
         "rooms/composition/_poll_builder.html"
       ],
       "witness": {
@@ -1971,8 +1981,10 @@
       "evidence": [
         "room_native"
       ],
-      "branch": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions",
+      "branch": "full_native_room_pages: room_native::render -> rooms::panels::ThreadPanel -> rooms/composition/_thread_panel.html; room_native::render mounts the resulting owner HTML in rooms::Show. Four complete populated pages are compared.",
       "render_chain": [
+        "room_native::render",
+        "rooms::panels::ThreadPanel",
         "rooms/composition/_thread_panel.html"
       ],
       "witness": {
@@ -3966,8 +3978,9 @@
       "evidence": [
         "sidebar_calls"
       ],
-      "branch": "eight complete sidebar call sections: populated and empty voice/stage rooms, configured/not configured and live stream facts",
+      "branch": "Eight SidebarCalls cases compare the entire section. Populated CallRow lists explicitly select VoiceRow and StageRow; this path does not call SidebarRoom::venue_children.",
       "render_chain": [
+        "users::SidebarCalls",
         "users/sidebars/_call_sections.html"
       ],
       "witness": {
@@ -4183,15 +4196,17 @@
     "users/sidebars/rooms/_empty_venue_children.html": {
       "status": "covered",
       "evidence": [
-        "sidebar_calls"
+        "sidebar_pages"
       ],
-      "branch": "eight complete sidebar call sections: populated and empty voice/stage rooms, configured/not configured and live stream facts",
+      "branch": "seed_admin and seed_member have populated voice/stage memberships built as SidebarRoom with huddle_participants=None. SidebarShow renders _shared.html, which calls venue_children and EmptyVenueChildren.",
       "render_chain": [
+        "users/sidebars/show.html",
+        "users/sidebars/rooms/_shared.html",
         "users/sidebars/rooms/_empty_venue_children.html"
       ],
       "witness": {
-        "oracle": "rust/crates/campfire/src/controllers/rooms/sidebar_view_vectors.json",
-        "pointer": "/cases/0/html",
+        "oracle": "rust/crates/views/tests/golden/sidebar/page.json",
+        "pointer": "/0/html",
         "needle": "<span class=\"voice-stack__count\" data-huddle-participants-target=\"count\" hidden></span>"
       }
     },
@@ -4215,8 +4230,11 @@
       "evidence": [
         "sidebar_calls"
       ],
-      "branch": "eight complete sidebar call sections: populated and empty voice/stage rooms, configured/not configured and live stream facts",
+      "branch": "Eight SidebarCalls cases compare the entire section. Populated CallRow lists explicitly select VoiceRow and StageRow; this path does not call SidebarRoom::venue_children.",
       "render_chain": [
+        "users::SidebarCalls",
+        "users/sidebars/_call_sections.html",
+        "rooms::calls::CallRow::render",
         "users/sidebars/rooms/_stage.html"
       ],
       "witness": {
@@ -4230,8 +4248,11 @@
       "evidence": [
         "sidebar_calls"
       ],
-      "branch": "eight complete sidebar call sections: populated and empty voice/stage rooms, configured/not configured and live stream facts",
+      "branch": "Eight SidebarCalls cases compare the entire section. Populated CallRow lists explicitly select VoiceRow and StageRow; this path does not call SidebarRoom::venue_children.",
       "render_chain": [
+        "users::SidebarCalls",
+        "users/sidebars/_call_sections.html",
+        "rooms::calls::CallRow::render",
         "users/sidebars/rooms/_voice.html"
       ],
       "witness": {
@@ -5757,16 +5778,16 @@
     "messages/_template.html.erb": {
       "status": "covered",
       "evidence": [
-        "room_native"
+        "room_shell"
       ],
-      "branch": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions",
+      "branch": "Pending cases 0 and 1 explicitly construct rooms::shell::Pending for both seeded viewers; the entire pending template is compared. Native pages supply the different _pending.html renderer.",
       "render_chain": [
         "messages/_template.html"
       ],
       "witness": {
-        "oracle": "rust/crates/campfire/src/controllers/rooms/full_pages.json",
-        "pointer": "/rows/0/html",
-        "needle": "<div class=\"message__day-separator\"><time class=\"message__timestamp\" datetime=\"$messageDatetime$\" data-local-time-target=\"date\"></time></div>"
+        "oracle": "rust/crates/campfire/src/controllers/rooms/room_shell_vectors.json",
+        "pointer": "/cases/0/html",
+        "needle": "$messageDatetime$"
       }
     },
     "messages/_thread_indicator.html.erb": {
@@ -6091,7 +6112,7 @@
       "evidence": [
         "room_native"
       ],
-      "branch": "Four full native Rails room pages; Rust composition/show, thread panel and poll-builder shell are byte-compared as children of each populated page.",
+      "branch": "Four complete native Rails room pages include this Rails partial; Rust room_native::render explicitly mounts rooms::panels::PollBuilder and ThreadPanel, using the mapped composition partials.",
       "render_chain": [
         "polls/_builder.html.erb"
       ],
@@ -7055,7 +7076,7 @@
       "evidence": [
         "room_native"
       ],
-      "branch": "Four full native Rails room pages; Rust composition/show, thread panel and poll-builder shell are byte-compared as children of each populated page.",
+      "branch": "Four complete native Rails room pages include this Rails partial; Rust room_native::render explicitly mounts rooms::panels::PollBuilder and ThreadPanel, using the mapped composition partials.",
       "render_chain": [
         "rooms/show/_thread_panel.html.erb"
       ],
@@ -8402,8 +8423,11 @@
       "evidence": [
         "sidebar_calls"
       ],
-      "branch": "eight complete sidebar call sections: populated and empty voice/stage rooms, configured/not configured and live stream facts",
+      "branch": "Eight SidebarCalls cases compare the entire section. Populated CallRow lists explicitly select VoiceRow and StageRow; this path does not call SidebarRoom::venue_children.",
       "render_chain": [
+        "users::SidebarCalls",
+        "users/sidebars/_call_sections.html",
+        "rooms::calls::CallRow::render",
         "users/sidebars/rooms/_stage.html"
       ],
       "witness": {
@@ -8417,8 +8441,11 @@
       "evidence": [
         "sidebar_calls"
       ],
-      "branch": "eight complete sidebar call sections: populated and empty voice/stage rooms, configured/not configured and live stream facts",
+      "branch": "Eight SidebarCalls cases compare the entire section. Populated CallRow lists explicitly select VoiceRow and StageRow; this path does not call SidebarRoom::venue_children.",
       "render_chain": [
+        "users::SidebarCalls",
+        "users/sidebars/_call_sections.html",
+        "rooms::calls::CallRow::render",
         "users/sidebars/rooms/_voice.html"
       ],
       "witness": {

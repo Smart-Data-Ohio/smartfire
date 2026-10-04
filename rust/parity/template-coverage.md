@@ -28,15 +28,16 @@ files are identified explicitly in the Rust map.
 The new producer, `reference-tools/template_coverage/http.rb`, runs 20 actual controller
 requests over the default seed, freezes the clock and fixes rendering CSRF values. It records
 74 ActionView template identifiers and their source hashes. The captured sources were verified
-against the pinned `d7c7de92` tree. It captures whole response bytes for streams and whole
+against the pinned `78b9b1546` tree after merging the parity refresh. It captures whole
+response bytes for streams and whole
 `main-content` bytes for application pages. Shared layouts have independent existing byte
-receipts; excluding their head avoids conflating the old parity pin with post-pin JS fixes.
+receipts; the main-content boundary keeps this corpus focused on its controller branches.
 Comparisons preserve whitespace, fields, URLs and asset references within the captured region.
 
 Regenerate the new fixture with the pinned reference image:
 
 ```sh
-PARITY_IMAGE=ws8bm2-reference:d7c7de92 PARITY_NAMESPACE=template-coverage \
+PARITY_IMAGE=review236-reference:78b9b1546 PARITY_NAMESPACE=template-coverage \
   PARITY_OWNER=template-coverage parity/bin/reference runner --seed default \
   --time 2026-03-02T16:00:00Z --freeze reference-tools/template_coverage/http.rb \
   vectors/template_coverage_http.json
@@ -51,6 +52,39 @@ or absent branch witnesses, and missing original cutover declarations. Fresh con
 also require the named Rails declaration in that response's ActionView trace. Its negative controls
 remove an entry, empty a receipt, invent a test name, remove a branch witness and substitute
 a different controller branch. The empty map failed first with 298 missing Rust files.
+This inventory guard does not infer Rust execution from a shared HTML witness.
+
+`coverage/test-templates.py --verify-rendering` also runs isolated compiled mutations of
+the three plain output partials whose original receipts bypassed them. It copies tracked
+working files to a temporary checkout under the Cargo target directory, verifies the cited
+tests pass unchanged, then appends one unique comment to one partial at a time. Every cited
+test must fail after recompilation; compile errors and empty test selections do not count.
+The originally bypassing test must still pass with that mutation, as a negative control.
+The real worktree is never mutated. This catches reverting to either bypassing test. The
+probe is deliberately scoped: appending bytes cannot reliably instrument inheritance,
+macro-only declarations or serializers, so it makes no execution claim for those files.
+
+The review audit traced all entries citing `room_native` and `sidebar_calls`, plus those
+citing the three replacement receipts. The corrected selections are:
+
+| Rust declaration | Actual byte receipt and selected branch |
+| --- | --- |
+| `messages/_footer_composer.html` | `thread_content` explicitly constructs `FooterComposer`, comparing the entire `room_footer` string. Native pages construct `Composer` instead. |
+| `messages/_template.html` | `room_shell` explicitly constructs `shell::Pending` for pending cases 0/1. Native pages mount `PendingTemplate` from `_pending.html` and bypass this fallback. |
+| `users/sidebars/rooms/_empty_venue_children.html` | `sidebar_pages` constructs `SidebarRoom` with absent huddle participants and populated voice/stage lists in seed_admin/member. `_shared.html` calls `venue_children`. The call-section renderer constructs different VoiceRow/StageRow owners. |
+
+The remaining native receipts select Composer and its markup, PollBuilder, ThreadPanel,
+pins PanelPartial and the production Show/navigation shell. The remaining call-section
+receipts select `_call_sections`, `_voice` and `_stage`. The alternative receipts also
+exercise Conversation/PendingTemplate, populated OOO notices/lines, organized room
+categories, the room menu and direct placeholders. No additional bypass was found.
+
+All three seeds were rebuilt and Rails-validated at the refreshed pin; each contains
+migration `20261003180000` and both processing columns. Regenerating this PR's controller
+corpus changed only pin metadata and the `layouts/application.html.erb` source hash
+(Rails profile-card status change, `8b13a68fd`); all 20 response bodies and traces remain
+identical. The other refreshed
+vectors/goldens come from the merged #236 producers.
 
 The production room shell (`rooms::Show`) and the separate composition renderer each have
 their own full-page receipts. The three composition composers explicitly select Drive `none`,
@@ -69,9 +103,21 @@ The new requests cover the original room both empty and after posting a real mes
 
 Validation commands (from `rust/`, with `CI=1`, all three seeds present and nextest on `PATH`):
 
+The full workspace run uses `reference-tools/agents/pinned-media-runner.py` for its seven
+application media byte cases and eleven storage vector tests, with the `78b9b1546`
+reference image. The runner includes the attachment-processing byte corpus, writes its
+discovery banner to stderr, honours `RUST_TEST_THREADS=4` and accepts
+`PINNED_MEDIA_SCRATCH` to keep scratch under `target/`. Host libvips 8.18 produces
+different bytes from the recorded 8.16.1 runtime; the goldens are kept unchanged.
+
 ```sh
 mise exec rust@1.98.1 -- python3 parity/coverage/test-templates.py
+mise exec rust@1.98.1 -- python3 parity/coverage/verify-rendering.py
 mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire_views --test template_coverage -j 4
+PARITY_IMAGE=review236-reference:78b9b1546 RUST_TEST_THREADS=4 \
+  PINNED_MEDIA_SCRATCH="$PWD/target/template-coverage/pinned-media" \
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$PWD/reference-tools/agents/pinned-media-runner.py" \
+  mise exec rust@1.98.1 -- cargo nextest run --locked --workspace --exclude html5ever -j 4 --profile ci
 mise exec rust@1.98.1 -- cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
 ruby parity/coverage/check-templates
 ```

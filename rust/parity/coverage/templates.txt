@@ -92,7 +92,7 @@ messages/_pin_badge -> BEHAVIORAL: message_states
 messages/_presentation -> BEHAVIORAL: message_states
 messages/_streaming_indicator -> BEHAVIORAL: message_states
 messages/_system_note -> BEHAVIORAL: message_states
-messages/_template -> BEHAVIORAL: room_native
+messages/_template -> BEHAVIORAL: room_shell
 messages/_thread_indicator -> BEHAVIORAL: message_states
 messages/_toolbar -> BEHAVIORAL: message_states
 messages/_unread_divider -> BEHAVIORAL: message_lists
