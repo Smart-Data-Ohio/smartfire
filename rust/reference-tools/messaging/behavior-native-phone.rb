@@ -6,7 +6,7 @@ require "capybara/minitest"
 require "selenium-webdriver"
 require "minitest/autorun"
 location = JSON.parse(File.read("/proof/native-location.json"))
-if location.fetch("label") == "attachment"
+if %w[attachment release].include?(location.fetch("label"))
   require "/rails/config/environment"
   require "active_support/testing/assertions"
   ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ENV.fetch("WS8BM_NATIVE_DATABASE"), flags: SQLite3::Constants::Open::READONLY)
@@ -34,6 +34,10 @@ class Ws8bmNativePhoneTest < Minitest::Test
   include SystemTestHelper
   include ActiveSupport::Testing::Assertions if defined?(ActiveSupport::Testing::Assertions)
   include ActionView::RecordIdentifier if defined?(ActionView::RecordIdentifier)
+  def messages(name)
+    raise "unsupported native fixture" unless name == :third
+    Message.find(607264868)
+  end
   def setup
     if ENV["WS8BM_NATIVE_PROXY"]
       # Match translated served negatives: fetch the real mutated assets,
@@ -78,6 +82,25 @@ class Ws8bmNativePhoneTest < Minitest::Test
         window.__ws8bmPhoneTrace.push({type,key:e.key,target:describe(e.target),active:describe(document.activeElement),menuContainsActive:document.querySelector('#message-actions-menu')?.contains(document.activeElement),panelHidden:document.querySelector('#thread-panel')?.getAttribute('aria-hidden')});
       },true);
     JS
+    if location["label"] == "release"
+      page.execute_script(<<~'JS')
+        window.__ws8bmReleaseClicks=[];
+        document.addEventListener('click',event=>{
+          const menu=event.target.closest?.('#message-actions-menu');
+          if(menu) {
+            const rect=document.querySelector('#message_0003').getBoundingClientRect();
+            window.__ws8bmReleaseClicks.push({releaseClick:true,brokenGuard:window.__ws8bmBrokenReleaseGuard===true,menuVisible:!menu.hidden,
+              trusted:event.isTrusted,atPressPoint:Math.hypot(event.clientX-(rect.left+rect.width/2),event.clientY-(rect.top+rect.height/2))<=20});
+          }
+        },true);
+        const hit=document.elementFromPoint.bind(document);
+        document.elementFromPoint=(x,y)=>{
+          const node=hit(x,y),menu=document.querySelector('#message-actions-menu');
+          window.__ws8bmReleaseGeometry={x,y,hit:node?.tagName,inMenu:!!node?.closest('#message-actions-menu'),top:menu?.getBoundingClientRect().top,inner:[innerWidth,innerHeight],outer:[outerWidth,outerHeight],motion:document.documentElement.dataset.testMotion};
+          return node;
+        };
+      JS
+    end
   end
   def teardown
     if JSON.parse(File.read("/proof/native-location.json"))["label"] == "attachment"
@@ -92,7 +115,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
       attached = parent ? Message.joins(:attachment_blob).where(reply_to_message_id: parent.id).pluck("messages.id", "messages.reply_to_message_id", "messages.reply_notify_author", "active_storage_blobs.filename", "active_storage_blobs.byte_size") : []
       puts "WS8bm native attachment blob readback: #{JSON.generate(attached)}"
       puts "WS8bm native attachment saved readback: #{JSON.generate(Message.where("id > ?", 908005739).order(:id).pluck(:id, :reply_to_message_id, :reply_notify_author))}"
-    elsif JSON.parse(File.read("/proof/native-location.json"))["label"] == "motion"
+    elsif %w[motion release].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
       begin
         begin
           driver=page.driver.browser
@@ -101,7 +124,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
         rescue StandardError => error
           puts "WS8bm native log diagnostic failure: #{error.class}: #{error.message}"
         end
-        state=page.evaluate_script('(() => { const surface=document.querySelector("#sidebar .sidebar__container"); return {room:location.pathname,open:document.querySelector("#sidebar")?.classList.contains("open"),duration:surface?getComputedStyle(surface).transitionDuration:null,transform:surface?getComputedStyle(surface).transform:null}; })()')
+        state=page.evaluate_script('(() => { const surface=document.querySelector("#sidebar .sidebar__container"); return {room:location.pathname,open:document.querySelector("#sidebar")?.classList.contains("open"),duration:surface?getComputedStyle(surface).transitionDuration:null,transform:surface?getComputedStyle(surface).transform:null,releaseClicks:window.__ws8bmReleaseClicks,releaseGeometry:window.__ws8bmReleaseGeometry}; })()')
         puts "WS8bm native mutation state: #{JSON.generate(state)}"
       rescue StandardError => error
         puts "WS8bm native diagnostic failure: #{error.class}: #{error.message}"

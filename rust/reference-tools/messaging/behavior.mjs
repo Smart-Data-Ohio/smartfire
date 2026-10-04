@@ -26,7 +26,9 @@ import {motion,motionCases} from './behavior-motion.mjs';
 import {nativeAttachment,ATTACHMENT_CASE} from './behavior-native-attachment.mjs';
 import {nativePhone,PHONE_CASE,captureUploadReferenceLog} from './behavior-native-phone.mjs';
 import {nativeMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
+import {nativeRelease,RELEASE_CASE} from './behavior-native-release.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
+import {deferredBrowserCases,traceBrowserSetup,reportBrowserSetup} from './behavior-browser-setup.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
@@ -41,6 +43,9 @@ const selectedMutant=process.env.WS8BM_MUTANT;
 async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
+    if(caseName===RELEASE_CASE) {
+      await nativeRelease(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],probe,negative||!!selectedMutant);return;
+    }
     // The positive phone control is the pinned Selenium sequence itself.
     // Served negatives retain their translated initial creation checkpoint.
     if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
@@ -90,6 +95,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         }
       });
       if(negative||selectedMutant) await installMutation(page,caseName,probe,variant);
+      if(deferredBrowserCases.has(caseName)) await traceBrowserSetup(page);
       page.on('pageerror',error=>console.error('WS8bm browser JavaScript:',base,error.stack));
       page.on('requestfailed',request=>{
         const failure=request.failure()?.errorText;
@@ -114,7 +120,10 @@ async function acceptance(base,caseName,probe={},variant='default') {
       return page;
     }
     const profileActors=file==='message_list_a11y'&&caseName==='profile message and ban buttons have accessible names';
-    const author=await viewer('JZ'),recipient=await viewer(profileActors||file==='message_interactions'?'David':'Kevin');
+    const author=await viewer('JZ');
+    // MotionTest has one signed-in browser. A second unused viewer adds an
+    // unrelated startup and is not part of its fixture/action sequence.
+    const recipient=file==='motion'?undefined:await viewer(profileActors||file==='message_interactions'?'David':'Kevin');
     // Startup errors are never accepted as proof of assertion discrimination.
     probe.ready=true;
     const messages=page=>page.locator('.message[data-message-id]');
@@ -582,7 +591,12 @@ async function acceptance(base,caseName,probe={},variant='default') {
       }
     }
     throw error;
-  } finally {for(const context of contexts) await context.close();}
+  } finally {
+    for(const context of contexts) {
+      try {if(deferredBrowserCases.has(caseName)) for(const page of context.pages()) await reportBrowserSetup(page);}
+      finally {await context.close();}
+    }
+  }
 }
 try {
   let failures=0;

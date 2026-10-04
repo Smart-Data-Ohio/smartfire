@@ -1,4 +1,8 @@
-# #230 ledger follow-up
+# Cutover: close the three browser deferrals
+
+Current systems: **135 passed / 0 deferred / 0 blocked**. Release-click now runs the literal pinned Selenium body and helpers; scroll and reopen await the real completed sidebar/current-link before opening. Causal scheduling controls reproduce the old failures on both hosts and pass after the fixes. Each case has ten complete paired positives with persisted-row checks; all three broken implementations reject at their intended assertions. No product assets, goldens, predicates or deadlines changed. [Causal diagnoses, commands, retained setup failures and verification](ws8bm-deferrals.md).
+
+# Historical #230 ledger follow-up
 
 Current systems: **http-3 127 passed / 8 deferred; http-4 132 passed / 3 deferred; no owner-blocked cases**. Release-click is deferred again because its earlier DIV/menu hit failure has no causal resolution. All three disputed entries carry their reason without closure evidence, and the verifier accepts that schema while rejecting unsupported pass claims. [Regression tests and raw verifier output](ws8bm-review230-ledger.md). No browser or Rust suite was rerun; earlier verification receipts below remain historical.
 

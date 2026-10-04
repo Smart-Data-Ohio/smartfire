@@ -28,3 +28,19 @@ test('CONNECT preserves the Cable/browser tunnel and releases its sockets',async
     });assert.match(body,/tunnel preserved/);
   }finally{await proxy.close();await new Promise(resolve=>app.close(resolve));}
 });
+test('native JavaScript fault leaves the real metadata and writes intact',async()=>{
+  const app=http.createServer((request,response)=>{
+    response.setHeader('content-type',request.url.endsWith('.js')?'text/javascript':'application/json');
+    response.end(request.url.endsWith('.js')?'this.#suppressClickUntil = Date.now() + SUPPRESS_CLICK_MS':'{"saved":true}');
+  });
+  await new Promise(resolve=>app.listen(0,'127.0.0.1',resolve));
+  const base=`http://127.0.0.1:${app.address().port}`,probe={applied:0,networkFailures:[]};
+  const proxy=await nativeAssetProxy(base,['controllers/message_list_controller-','this.#suppressClickUntil = Date.now() + SUPPRESS_CLICK_MS','this.#suppressClickUntil = 0'],probe);
+  const send=(path,method='GET')=>new Promise((resolve,reject)=>{const request=http.request(proxy.url,{method,path:base+path},response=>{let body='';response.on('data',chunk=>body+=chunk);response.on('end',()=>resolve(body));});request.on('error',reject);request.end();});
+  try {
+    assert.equal(await send('/assets/controllers/message_list_controller-abc.js'),'this.#suppressClickUntil = 0');
+    assert.equal(await send('/rooms/1/messages/2/actions'),'{"saved":true}');
+    assert.equal(await send('/rooms/1/messages','POST'),'{"saved":true}');
+    assert.equal(probe.applied,1);assert.deepEqual(probe.networkFailures,[]);
+  }finally{await proxy.close();await new Promise(resolve=>app.close(resolve));}
+});

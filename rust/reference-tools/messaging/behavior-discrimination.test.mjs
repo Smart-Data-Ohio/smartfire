@@ -47,12 +47,18 @@ test('method-name stack columns preserve only their own receiver',()=>{
 
 test('release-menu failure requires the broken guard and a click into the mounted menu',()=>{
   const name='a release click landing on the just-opened menu does not activate it';
-  const error=failure('behavior-actions.mjs','await assertMenuOpen(page)');
-  const probe={...valid,requiresReleaseClick:true};
+  const error={code:'ERR_ASSERTION',stack:'AssertionError: native pinned release failed'};
+  const probe={...valid,nativeFailures:[{assertion:true,message:'menu closed',backtrace:['test/system/message_interactions_test.rb:60:in test_phone']}]};
   assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
-  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{releaseClick:true,brokenGuard:true,menuVisible:true}]},error).valid,true);
-  const geometry=failure('behavior-actions.mjs',"assert.equal(hit,'menu')");
-  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{releaseClick:true,brokenGuard:true,menuVisible:true}]},geometry).valid,false);
+  const observed=[{room:'/rooms/654632876',releaseClicks:[{releaseClick:true,brokenGuard:true,menuVisible:true,atPressPoint:true}]}];
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed},error).valid,true);
+  for(const line of [56,59,80]) {
+    assert.equal(rejectionEvidence(name,'default',{...probe,observed,nativeFailures:[{assertion:true,message:'wrong phase',backtrace:[`test/system/message_interactions_test.rb:${line}:in test_phone`]}]},error).valid,false);
+  }
+  for(const property of ['brokenGuard','menuVisible','atPressPoint']) {
+    const wrong=structuredClone(observed);wrong[0].releaseClicks[0][property]=false;
+    assert.equal(rejectionEvidence(name,'default',{...probe,observed:wrong},error).valid,false);
+  }
 });
 
 

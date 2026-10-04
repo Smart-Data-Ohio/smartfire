@@ -74,7 +74,43 @@ class DeferredSystemInventoryTest(unittest.TestCase):
             **self.deferred(), 'status': 'blocked_ws12',
         }))
 
-    def test_disputed_closures_remain_reason_only_deferrals(self):
+    def causal_pass(self):
+        return {
+            'name': 'a release click landing on the just-opened menu does not activate it',
+            'status': 'passed', 'evidence': 'fresh paired controls and intended negatives',
+            'closure_note': 'Native pinned Selenium window geometry replaces the viewport translation.',
+            'closure_proof': {
+                'independent_fixtures': True, 'automatic_retries': 0,
+                'positive_runs': {app: {'passed': 10, 'failed': 0} for app in ('Rails', 'Rust')},
+                'negative': {app: 'intended rejection' for app in ('Rails', 'Rust')},
+            },
+        }
+
+    def test_causal_pass_requires_more_than_an_unchanged_path_receipt(self):
+        case = self.causal_pass()
+        self.assertIn('135 mapped behaviour passes; 0 deferred', self.verify(case))
+        for field in ('closure_note', 'closure_proof'):
+            wrong = copy.deepcopy(case)
+            del wrong[field]
+            with self.subTest(field=field), self.assertRaisesRegex(AssertionError, 'causal'):
+                self.verify(wrong)
+
+    def test_causal_pass_rejects_failed_retried_or_unpaired_proofs(self):
+        for property, value in [('Rust passes', 9), ('Rust failure', 1), ('retry', 1), ('invalid negative', 'invalid')]:
+            wrong = self.causal_pass()
+            proof = wrong['closure_proof']
+            if property == 'Rust passes':
+                proof['positive_runs']['Rust']['passed'] = value
+            elif property == 'Rust failure':
+                proof['positive_runs']['Rust']['failed'] = value
+            elif property == 'retry':
+                proof['automatic_retries'] = value
+            else:
+                proof['negative']['Rails'] = value
+            with self.subTest(property=property), self.assertRaisesRegex(AssertionError, 'causal'):
+                self.verify(wrong)
+
+    def test_disputed_closures_have_causal_notes_and_new_evidence(self):
         root = SCRIPT.resolve().parents[3]
         inventory = json.loads((root / 'rust/plans/ws8bm-system-cases.json').read_text())
         names = {
@@ -86,10 +122,12 @@ class DeferredSystemInventoryTest(unittest.TestCase):
         for name in names:
             with self.subTest(name=name):
                 case = cases[name]
-                self.assertEqual(case['status'], 'deferred')
-                self.assertNotIn('evidence', case)
+                self.assertEqual(case['status'], 'passed')
+                self.assertTrue(case['evidence'])
                 self.assertNotIn('previous_evidence', case)
-                self.assertTrue(case['remaining_reason'].strip())
+                self.assertNotIn('remaining_reason', case)
+                self.assertTrue(case['closure_note'].strip())
+                self.assertGreaterEqual(case['closure_proof']['positive_runs']['Rust']['passed'], 10)
 
 
 if __name__ == '__main__':
