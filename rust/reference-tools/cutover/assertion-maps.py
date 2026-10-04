@@ -44,7 +44,7 @@ for path in args.maps:
         start = original['rails_line'] - 1
         end = next(i for i in range(start + 1, len(lines)) if lines[i] == '  end')
         required = {i + 1 for i in range(start, end)
-                    if re.search(r'\bassert(?:_\w+)?\b', lines[i]) and not lines[i].lstrip().startswith('#')}
+                    if re.search(r'\bassert(?:_\w+)?\b|\.expects\(', lines[i]) and not lines[i].lstrip().startswith('#')}
         actual = {a['rails']['line'] for a in record['assertions']}
         assert actual == required, (rid, 'omitted or extra assertion calls', required ^ actual)
         assert len(actual) == len(record['assertions']), rid

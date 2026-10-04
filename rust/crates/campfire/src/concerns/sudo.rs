@@ -13,12 +13,41 @@ pub trait GoogleSudo: Send + Sync {
     fn start(&self, c: &mut Ctx, user_id: i64) -> Result<Response>;
 }
 
-#[derive(Default)]
 pub struct State {
     google: RwLock<Option<Arc<dyn GoogleSudo>>>,
+    extra_verifiers: RwLock<Vec<String>>,
+}
+impl Default for State {
+    fn default() -> Self {
+        let state = Self {
+            google: RwLock::new(None),
+            extra_verifiers: RwLock::new(Vec::new()),
+        };
+        // config/initializers/sudo_mode_totp.rb registers TOTP at boot.
+        state.register_verifier("totp");
+        state
+    }
 }
 
 impl State {
+    /// SudoMode.register_verifier preserves order and ignores duplicate names.
+    /// Registration alone does not supply a verifier implementation.
+    pub fn register_verifier(&self, name: &str) {
+        let mut names = self
+            .extra_verifiers
+            .write()
+            .unwrap_or_else(|p| p.into_inner());
+        if !names.iter().any(|n| n == name) {
+            names.push(name.into());
+        }
+    }
+    pub fn extra_verifiers(&self) -> Vec<String> {
+        self.extra_verifiers
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone()
+    }
+
     #[allow(dead_code)] // WS14's boot adapter installs this when its verifier lands.
     pub fn install_google(&self, google: Arc<dyn GoogleSudo>) {
         *self

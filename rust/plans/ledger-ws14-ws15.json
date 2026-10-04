@@ -1799,16 +1799,29 @@
       "rails_line": 32,
       "title": "the push body names the venue",
       "id": "WS14e-051",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire integrations::web_push::tests::ws17_delivery::cutover_c_reminder_real_job_delivers_venue_suffix_in_encrypted_push",
+        "source": {
+          "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
+          "line": 300
+        },
+        "detail": "The original Mocha queue expectation includes an exact body predicate. Rust executes the registered durable job, receives its encrypted Web Push on a local fake service, decrypts it and compares the exact body. No real Google or push service is contacted.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14e-051"
+        }
+      },
+      "historical_line": 163,
+      "historical_receipt": "Deferred: WS17 production policy/transport; WS14e source facts and restarted durable consumer are covered by `reminder_push_payload_and_staleness_match_rails_vectors`, `reminder_push_source_rechecks_membership_and_ignores_inbox_preferences`, `ws14e_reminder_survives_restart_and_rereads_recipients_at_delivery`; main now includes the WS17 handler; named production-policy/transport parity remains owned by WS17/end-to-end",
+      "reconciliation_receipt": {
         "detail": "Reopened after PR #239 review: execute the real Event::ReminderPushJob with a persisted voice venue named Lounge and assert the queued push body includes the suffix in Lounge. The cited pusher corpus never sets venue_room_id; source-only payload comparisons do not prove production job/transport assembly.",
         "source": {
           "file": "test/models/event/reminder_pusher_test.rb",
           "line": 32
         }
       },
-      "historical_line": 163,
-      "historical_receipt": "Deferred: WS17 production policy/transport; WS14e source facts and restarted durable consumer are covered by `reminder_push_payload_and_staleness_match_rails_vectors`, `reminder_push_source_rechecks_membership_and_ignores_inbox_preferences`, `ws14e_reminder_survives_restart_and_rereads_recipients_at_delivery`; main now includes the WS17 handler; named production-policy/transport parity remains owned by WS17/end-to-end"
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14e",
@@ -1923,16 +1936,29 @@
       "rails_line": 115,
       "title": "an event that already ended is skipped",
       "id": "WS14e-057",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire integrations::web_push::tests::ws17_delivery::cutover_c_reminder_real_job_suppresses_ended_events_with_recent_running_control",
+        "source": {
+          "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
+          "line": 338
+        },
+        "detail": "The original already-ended event is tested, plus a recently ended event (start -3m/end -1m) and a still-running control. All execute the real ReminderPushJob. reminder-ended-control.rb runs the added control on pinned Rails.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14e-057"
+        }
+      },
+      "historical_line": 169,
+      "historical_receipt": "Deferred: WS17 production policy/transport; WS14e source facts and restarted durable consumer are covered by `reminder_push_payload_and_staleness_match_rails_vectors`, `reminder_push_source_rechecks_membership_and_ignores_inbox_preferences`, `ws14e_reminder_survives_restart_and_rereads_recipients_at_delivery`; main now includes the WS17 handler; named production-policy/transport parity remains owned by WS17/end-to-end",
+      "reconciliation_receipt": {
         "detail": "Reopened after PR #239 review: execute the real Event::ReminderPushJob for an event started within five minutes but ended one minute ago and assert no push is queued, with a still-running control. The cited corpus has no ends_at input; start-age staleness cannot establish end-time suppression.",
         "source": {
           "file": "test/models/event/reminder_pusher_test.rb",
           "line": 115
         }
       },
-      "historical_line": 169,
-      "historical_receipt": "Deferred: WS17 production policy/transport; WS14e source facts and restarted durable consumer are covered by `reminder_push_payload_and_staleness_match_rails_vectors`, `reminder_push_source_rechecks_membership_and_ignores_inbox_preferences`, `ws14e_reminder_survives_restart_and_rereads_recipients_at_delivery`; main now includes the WS17 handler; named production-policy/transport parity remains owned by WS17/end-to-end"
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14e",
@@ -3866,16 +3892,29 @@
       "title": "viewers with and without Drive consent receive identical attachment markup",
       "id": "WS14g-004",
       "rails_line": 221,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_drive_chip_markup_is_identical_with_and_without_viewer_consent",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 94
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-004"
+        }
+      },
+      "historical_line": 137,
+      "historical_receipt": "WS14g association + WS8b-m/m2 message producer.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: viewers with and without Drive consent receive identical attachment markup. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/messages_drive_attachments_test.rb",
           "line": 221
         }
       },
-      "historical_line": 137,
-      "historical_receipt": "WS14g association + WS8b-m/m2 message producer."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -3885,16 +3924,29 @@
       "title": "edit form lists attachments as removable chips with the blank sentinel",
       "id": "WS14g-005",
       "rails_line": 239,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 116
+        },
+        "detail": "The hidden-input assertion executes independently for FILE_A, FILE_B and the blank sentinel. All selectors are applied to the real edit HTTP DOM.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-005"
+        }
+      },
+      "historical_line": 138,
+      "historical_receipt": "WS14g association + WS8b-m/m2 message producer.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: edit form lists attachments as removable chips with the blank sentinel. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/messages_drive_attachments_test.rb",
           "line": 239
         }
       },
-      "historical_line": 138,
-      "historical_receipt": "WS14g association + WS8b-m/m2 message producer."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -3925,16 +3977,29 @@
       "title": "confirming with the password verifies and audit-logs",
       "id": "WS14g-007",
       "rails_line": 29,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_password_confirmation_adds_one_success_audit_and_verifies",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 163
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-007"
+        }
+      },
+      "historical_line": 254,
+      "historical_receipt": "WS9.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: confirming with the password verifies and audit-logs. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/sudos_controller_test.rb",
           "line": 29
         }
       },
-      "historical_line": 254,
-      "historical_receipt": "WS9."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4007,16 +4072,29 @@
       "title": "register_verifier adds a verifier",
       "id": "WS14g-011",
       "rails_line": 67,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_registered_extra_verifier_is_retained_once_and_unsupported_without_an_implementation",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 180
+        },
+        "detail": "The app-owned verifier registry is read by the real sudo prompt. Registration retains passkey once; it supplies no implementation, so a real POST remains unsupported as Rails verify_with does.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-011"
+        }
+      },
+      "historical_line": 258,
+      "historical_receipt": "WS9.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: register_verifier adds a verifier. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/sudos_controller_test.rb",
           "line": 67
         }
       },
-      "historical_line": 258,
-      "historical_receipt": "WS9."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4089,16 +4167,29 @@
       "title": "confirming with the password still works for enrolled users",
       "id": "WS14g-015",
       "rails_line": 109,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_enrolled_user_can_still_confirm_with_password",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 212
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-015"
+        }
+      },
+      "historical_line": 262,
+      "historical_receipt": "WS9.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: confirming with the password still works for enrolled users. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/sudos_controller_test.rb",
           "line": 109
         }
       },
-      "historical_line": 262,
-      "historical_receipt": "WS9."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4234,16 +4325,29 @@
       "title": "browsing the audit log needs no confirmation",
       "id": "WS14g-022",
       "rails_line": 210,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_audit_log_read_requires_no_confirmation",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 235
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-022"
+        }
+      },
+      "historical_line": 269,
+      "historical_receipt": "WS9.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: browsing the audit log needs no confirmation. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/sudos_controller_test.rb",
           "line": 210
         }
       },
-      "historical_line": 269,
-      "historical_receipt": "WS9."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4295,16 +4399,29 @@
       "title": "signing in again starts unverified",
       "id": "WS14g-025",
       "rails_line": 238,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_signing_in_again_drops_previous_confirmation",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 247
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-025"
+        }
+      },
+      "historical_line": 272,
+      "historical_receipt": "WS9.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: signing in again starts unverified. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/sudos_controller_test.rb",
           "line": 238
         }
       },
-      "historical_line": 272,
-      "historical_receipt": "WS9."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4335,16 +4452,29 @@
       "title": "the replay form rebuilds nested params",
       "id": "WS14g-027",
       "rails_line": 264,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_replay_form_rebuilds_nested_user_role",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 280
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-027"
+        }
+      },
+      "historical_line": 274,
+      "historical_receipt": "WS9.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the replay form rebuilds nested params. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/sudos_controller_test.rb",
           "line": 264
         }
       },
-      "historical_line": 274,
-      "historical_receipt": "WS9."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4480,16 +4610,29 @@
       "title": "the confirmation limit lives in the shared rate-limit store, not per-process memory",
       "id": "WS14g-034",
       "rails_line": 449,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_confirmation_limit_is_reset_by_clearing_the_shared_store",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 313
+        },
+        "detail": "Ten real production sudo requests, an eleventh rate-limit control, shared Kit store clear and another real request. Only the store-clear route is a test seam; verification and audit writes use the production controller.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-034"
+        }
+      },
+      "historical_line": 287,
+      "historical_receipt": "WS9.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the confirmation limit lives in the shared rate-limit store, not per-process memory. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/sudos_controller_test.rb",
           "line": 449
         }
       },
-      "historical_line": 287,
-      "historical_receipt": "WS9."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4499,16 +4642,29 @@
       "title": "composer omits the Drive menu item without Drive consent",
       "id": "WS14g-035",
       "rails_line": 11,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 399
+        },
+        "detail": "The same assertions run before any Google grant and after a calendar-only grant.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-035"
+        }
+      },
+      "historical_line": 302,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: composer omits the Drive menu item without Drive consent. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/drive_picker_test.rb",
           "line": 11
         }
       },
-      "historical_line": 302,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4518,16 +4674,29 @@
       "title": "composer carries the Drive menu item with the Drive scope",
       "id": "WS14g-036",
       "rails_line": 30,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 421
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-036"
+        }
+      },
+      "historical_line": 303,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: composer carries the Drive menu item with the Drive scope. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/drive_picker_test.rb",
           "line": 30
         }
       },
-      "historical_line": 303,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4537,16 +4706,29 @@
       "title": "composer carries a single enhanced Drive menu item when sharing is configured",
       "id": "WS14g-037",
       "rails_line": 16,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 462
+        },
+        "detail": "The public-meta assertion runs for all four exact Rails meta elements separately.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-037"
+        }
+      },
+      "historical_line": 307,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: composer carries a single enhanced Drive menu item when sharing is configured. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/drive_share_picker_test.rb",
           "line": 16
         }
       },
-      "historical_line": 307,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4556,16 +4738,29 @@
       "title": "enhanced menu item needs no Drive consent and wins over the legacy picker",
       "id": "WS14g-038",
       "rails_line": 32,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 494
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-038"
+        }
+      },
+      "historical_line": 308,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: enhanced menu item needs no Drive consent and wins over the legacy picker. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/drive_share_picker_test.rb",
           "line": 32
         }
       },
-      "historical_line": 308,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4575,16 +4770,29 @@
       "title": "composer falls back to the legacy picker when sharing is not configured",
       "id": "WS14g-039",
       "rails_line": 44,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 508
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-039"
+        }
+      },
+      "historical_line": 309,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: composer falls back to the legacy picker when sharing is not configured. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/drive_share_picker_test.rb",
           "line": 44
         }
       },
-      "historical_line": 309,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4594,16 +4802,29 @@
       "title": "composer omits every Drive menu item without sharing or Drive consent",
       "id": "WS14g-040",
       "rails_line": 55,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 519
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-040"
+        }
+      },
+      "historical_line": 310,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: composer omits every Drive menu item without sharing or Drive consent. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/drive_share_picker_test.rb",
           "line": 55
         }
       },
-      "historical_line": 310,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4613,16 +4834,29 @@
       "title": "signed-out visitors see no share metas or buttons",
       "id": "WS14g-041",
       "rails_line": 65,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_markup",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 530
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-041"
+        }
+      },
+      "historical_line": 311,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: signed-out visitors see no share metas or buttons. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/drive_share_picker_test.rb",
           "line": 65
         }
       },
-      "historical_line": 311,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4862,16 +5096,29 @@
       "title": "refreshes an expired access token from the snapshot",
       "id": "WS14g-053",
       "rails_line": 27,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 112
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-053"
+        }
+      },
+      "historical_line": 329,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: refreshes an expired access token from the snapshot. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
           "line": 27
         }
       },
-      "historical_line": 329,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4881,16 +5128,29 @@
       "title": "an invalid_grant skips deletes but still revokes",
       "id": "WS14g-054",
       "rails_line": 44,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_invalid_grant_skips_deletes_but_revokes_snapshot_refresh_token",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 144
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-054"
+        }
+      },
+      "historical_line": 330,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an invalid_grant skips deletes but still revokes. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
           "line": 44
         }
       },
-      "historical_line": 330,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4920,16 +5180,29 @@
       "title": "a refresh 503 retries without revoking until the deletes succeed",
       "id": "WS14g-056",
       "rails_line": 73,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 167
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-056"
+        }
+      },
+      "historical_line": 332,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a refresh 503 retries without revoking until the deletes succeed. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
           "line": 73
         }
       },
-      "historical_line": 332,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4960,16 +5233,29 @@
       "title": "a revoke 5xx schedules a retry",
       "id": "WS14g-058",
       "rails_line": 113,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 217
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-058"
+        }
+      },
+      "historical_line": 334,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a revoke 5xx schedules a retry. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
           "line": 113
         }
       },
-      "historical_line": 334,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -4979,16 +5265,29 @@
       "title": "an exhausted retry logs the failure at error level",
       "id": "WS14g-059",
       "rails_line": 128,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 274
+        },
+        "detail": "Initial serialized exception group count is 8, matching the original Rails setup. The registered handler commits terminal deletion and logs ERROR; no revoke occurs.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-059"
+        }
+      },
+      "historical_line": 335,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an exhausted retry logs the failure at error level. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
           "line": 128
         }
       },
-      "historical_line": 335,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5040,16 +5339,29 @@
       "title": "an unreadable credentials blob logs a warning with the account id",
       "id": "WS14g-062",
       "rails_line": 197,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 313
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-062"
+        }
+      },
+      "historical_line": 339,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an unreadable credentials blob logs a warning with the account id. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
           "line": 197
         }
       },
-      "historical_line": 339,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5059,16 +5371,29 @@
       "title": "tokens never reach the job logs",
       "id": "WS14g-063",
       "rails_line": 218,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 342
+        },
+        "detail": "Rust has no Ruby log_arguments class predicate. The original property is tested at enqueue/execution: even the encrypted argument blob is absent from actual job logs, as are both plaintext tokens.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-063"
+        }
+      },
+      "historical_line": 340,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: tokens never reach the job logs. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
           "line": 218
         }
       },
-      "historical_line": 340,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5120,16 +5445,29 @@
       "title": "deletes the remote copy with the user's current credentials",
       "id": "WS14g-066",
       "rails_line": 10,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_uses_current_account_access_credentials",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 368
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-066"
+        }
+      },
+      "historical_line": 368,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: deletes the remote copy with the user's current credentials. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 10
         }
       },
-      "historical_line": 368,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5139,16 +5477,29 @@
       "title": "skips a missing account without a request",
       "id": "WS14g-067",
       "rails_line": 19,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_without_account_makes_no_request",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 384
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-067"
+        }
+      },
+      "historical_line": 369,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: skips a missing account without a request. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 19
         }
       },
-      "historical_line": 369,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5158,16 +5509,29 @@
       "title": "skips a disconnected account without a request",
       "id": "WS14g-068",
       "rails_line": 25,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_disconnected_account_makes_no_request",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 390
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-068"
+        }
+      },
+      "historical_line": 370,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: skips a disconnected account without a request. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 25
         }
       },
-      "historical_line": 370,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5177,16 +5541,29 @@
       "title": "skips a grant without the calendar scope",
       "id": "WS14g-069",
       "rails_line": 33,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_without_calendar_scope_makes_no_request",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 405
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-069"
+        }
+      },
+      "historical_line": 371,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: skips a grant without the calendar scope. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 33
         }
       },
-      "historical_line": 371,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5196,16 +5573,29 @@
       "title": "treats gone and revoked copies as success",
       "id": "WS14g-070",
       "rails_line": 41,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_not_found_and_gone_complete_without_retry",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 422
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-070"
+        }
+      },
+      "historical_line": 372,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: treats gone and revoked copies as success. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 41
         }
       },
-      "historical_line": 372,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5215,16 +5605,29 @@
       "title": "an invalid_grant disconnects and counts as success",
       "id": "WS14g-071",
       "rails_line": 53,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_invalid_grant_disconnects_without_delete_or_retry",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 448
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-071"
+        }
+      },
+      "historical_line": 373,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an invalid_grant disconnects and counts as success. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 53
         }
       },
-      "historical_line": 373,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5234,16 +5637,29 @@
       "title": "a transient failure schedules a retry",
       "id": "WS14g-072",
       "rails_line": 64,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 466
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-072"
+        }
+      },
+      "historical_line": 374,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a transient failure schedules a retry. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 64
         }
       },
-      "historical_line": 374,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5253,16 +5669,29 @@
       "title": "other Google failures are logged without raising or retrying",
       "id": "WS14g-073",
       "rails_line": 73,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 476
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-073"
+        }
+      },
+      "historical_line": 375,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: other Google failures are logged without raising or retrying. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/remote_delete_job_test.rb",
           "line": 73
         }
       },
-      "historical_line": 375,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5272,16 +5701,29 @@
       "title": "responding going on the first event of a series syncs every occurrence",
       "id": "WS14g-074",
       "rails_line": 444,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 515
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-074"
+        }
+      },
+      "historical_line": 411,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: responding going on the first event of a series syncs every occurrence. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/sync_entry_job_test.rb",
           "line": 444
         }
       },
-      "historical_line": 411,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5333,16 +5775,29 @@
       "title": "updating event times enqueues syncs for connected going/maybe attendees",
       "id": "WS14g-077",
       "rails_line": 484,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_time_update_enqueues_only_connected_notifying_attendees",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 616
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-077"
+        }
+      },
+      "historical_line": 414,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: updating event times enqueues syncs for connected going/maybe attendees. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/sync_entry_job_test.rb",
           "line": 484
         }
       },
-      "historical_line": 414,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5352,16 +5807,29 @@
       "title": "an update inside a transaction enqueues only after commit",
       "id": "WS14g-078",
       "rails_line": 497,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_event_sync_is_invisible_to_queue_readers_until_source_transaction_commits",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 657
+        },
+        "detail": "WS17 persists jobs within the source write for atomicity. An independent queue reader sees no uncommitted job; after commit the observed durable payload is exact. This is the observable after-commit contract, not a claim that the writer cannot see its own inserted row.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-078"
+        }
+      },
+      "historical_line": 415,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an update inside a transaction enqueues only after commit. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/sync_entry_job_test.rb",
           "line": 497
         }
       },
-      "historical_line": 415,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5371,16 +5839,29 @@
       "title": "setting or clearing the venue enqueues a sync, like a title change",
       "id": "WS14g-079",
       "rails_line": 508,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_setting_and_clearing_venue_each_enqueue_connected_attendee_sync",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 691
+        },
+        "detail": "The payload assertion executes once for setting the real voice venue and once for clearing it.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-079"
+        }
+      },
+      "historical_line": 416,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: setting or clearing the venue enqueues a sync, like a title change. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/sync_entry_job_test.rb",
           "line": 508
         }
       },
-      "historical_line": 416,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5390,16 +5871,29 @@
       "title": "updating only the title enqueues a sync, an unchanged save does not",
       "id": "WS14g-080",
       "rails_line": 521,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 724
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-080"
+        }
+      },
+      "historical_line": 417,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: updating only the title enqueues a sync, an unchanged save does not. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/sync_entry_job_test.rb",
           "line": 521
         }
       },
-      "historical_line": 417,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5450,16 +5944,29 @@
       "title": "destroying a room enqueues remote deletes for its entries",
       "id": "WS14g-083",
       "rails_line": 552,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 767
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-083"
+        }
+      },
+      "historical_line": 420,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: destroying a room enqueues remote deletes for its entries. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/sync_entry_job_test.rb",
           "line": 552
         }
       },
-      "historical_line": 420,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -5469,16 +5976,29 @@
       "title": "shrinking a series enqueues remote deletes for destroyed occurrences",
       "id": "WS14g-084",
       "rails_line": 566,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_series_shrink_commits_doomed_remote_identity_and_deletes_google_copy",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+          "line": 800
+        },
+        "detail": "Nonselected jobs are parked for the frozen-clock runner, matching Rails perform_enqueued_jobs only: RemoteDeleteJob. Their payloads remain intact. The tested remote job uses the captured identity and the real recorded Google client.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-084"
+        }
+      },
+      "historical_line": 421,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: shrinking a series enqueues remote deletes for destroyed occurrences. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/jobs/calendar/sync_entry_job_test.rb",
           "line": 566
         }
       },
-      "historical_line": 421,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6244,16 +6764,29 @@
       "title": "a message with attachments and no text is valid",
       "id": "WS14g-121",
       "rails_line": 9,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_drive_only_message_is_valid_saved_and_reads_exact_file_ids",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 19
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-121"
+        }
+      },
+      "historical_line": 532,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a message with attachments and no text is valid. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 9
         }
       },
-      "historical_line": 532,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6263,16 +6796,29 @@
       "title": "a textless message without attachments is still invalid",
       "id": "WS14g-122",
       "rails_line": 18,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_textless_message_without_attachments_has_blank_source_error",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 29
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-122"
+        }
+      },
+      "historical_line": 533,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a textless message without attachments is still invalid. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 18
         }
       },
-      "historical_line": 533,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6282,16 +6828,29 @@
       "title": "an invalid file id is rejected",
       "id": "WS14g-123",
       "rails_line": 25,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_each_bad_drive_id_is_rejected_by_the_real_message_association_validation",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 37
+        },
+        "detail": "The same four invalid IDs run through Message.validate, the real production autosaved Drive association validation; the scoped nested file_id error is checked. The parent stays unsaved, as in Rails.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-123"
+        }
+      },
+      "historical_line": 534,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an invalid file id is rejected. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 25
         }
       },
-      "historical_line": 534,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6301,16 +6860,29 @@
       "title": "duplicate file ids on one message collapse to a single row",
       "id": "WS14g-124",
       "rails_line": 37,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_saved_drive_id_duplicate_is_invalid_with_scoped_file_error",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 56
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-124"
+        }
+      },
+      "historical_line": 535,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: duplicate file ids on one message collapse to a single row. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 37
         }
       },
-      "historical_line": 535,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6320,16 +6892,29 @@
       "title": "the same file id may attach to different messages",
       "id": "WS14g-125",
       "rails_line": 47,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_same_drive_id_attaches_once_to_each_distinct_message",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 67
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-125"
+        }
+      },
+      "historical_line": 536,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the same file id may attach to different messages. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 47
         }
       },
-      "historical_line": 536,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6339,16 +6924,29 @@
       "title": "the 11th attachment is rejected",
       "id": "WS14g-126",
       "rails_line": 58,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_eleventh_drive_attachment_makes_message_invalid_with_exact_limit_error",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 84
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-126"
+        }
+      },
+      "historical_line": 537,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the 11th attachment is rejected. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 58
         }
       },
-      "historical_line": 537,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6358,16 +6956,29 @@
       "title": "destroying the message destroys its attachments",
       "id": "WS14g-127",
       "rails_line": 70,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_message_destroy_removes_its_persisted_drive_attachment",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 101
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-127"
+        }
+      },
+      "historical_line": 538,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: destroying the message destroys its attachments. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 70
         }
       },
-      "historical_line": 538,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -6377,16 +6988,29 @@
       "title": "url is the open link for the file id",
       "id": "WS14g-128",
       "rails_line": 79,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_drive_attachment_url_is_the_open_link_for_the_id",
+        "source": {
+          "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+          "line": 123
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-128"
+        }
+      },
+      "historical_line": 539,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: url is the open link for the file id. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/drive_attachment_test.rb",
           "line": 79
         }
       },
-      "historical_line": 539,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -7574,16 +8198,29 @@
       "title": "connected, usable, and expiry predicates",
       "id": "WS14g-184",
       "rails_line": 44,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 540
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-184"
+        }
+      },
+      "historical_line": 647,
+      "historical_receipt": "WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: connected, usable, and expiry predicates. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/google_account_test.rb",
           "line": 44
         }
       },
-      "historical_line": 647,
-      "historical_receipt": "WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",
@@ -7593,16 +8230,29 @@
       "title": "calendar? treats blank scopes as granted and requires calendar.events otherwise",
       "id": "WS14g-185",
       "rails_line": 61,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
+        "source": {
+          "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+          "line": 602
+        },
+        "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-c-assertions.json",
+          "record": "WS14g-185"
+        }
+      },
+      "historical_line": 648,
+      "historical_receipt": "WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: calendar? treats blank scopes as granted and requires calendar.events otherwise. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/google_account_test.rb",
           "line": 61
         }
       },
-      "historical_line": 648,
-      "historical_receipt": "WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped."
+      "continuation": "rust/ledger-ws14-ws15-c"
     },
     {
       "owner": "WS14g",

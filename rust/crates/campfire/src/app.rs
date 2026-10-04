@@ -655,3 +655,6 @@ mod google_reporting_tests;
 
 #[cfg(test)]
 mod google_message_tests;
+
+#[cfg(test)]
+pub(crate) mod cutover_c_tests;

@@ -159,8 +159,10 @@ pub async fn cleanup(
     };
     let Some(snapshot) = snapshot else {
         tracing::warn!(
-            ?account_id,
-            "Calendar::DisconnectCleanupJob skipped cleanup: credentials expired or unreadable"
+            "Calendar::DisconnectCleanupJob skipped cleanup for account {}: credentials expired or unreadable",
+            account_id
+                .map(|id| id.to_string())
+                .unwrap_or_else(|| "unknown".into())
         );
         return Ok(());
     };
