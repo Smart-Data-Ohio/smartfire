@@ -69,7 +69,7 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
 | [test/controllers/sudos_controller_test.rb:32](../../test/controllers/sudos_controller_test.rb#L32)<br>`assert_difference -> { AuditLog.where(action: "sudo.confirm.success").count }, +1 do` | [rust/crates/campfire/src/app/cutover_c_tests.rs:170](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L170)<br>`assert_eq!(audit_success(&a).await - before, 1)` |
-| [test/controllers/sudos_controller_test.rb:36](../../test/controllers/sudos_controller_test.rb#L36)<br>`assert_redirected_to root_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:171](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L171)<br>`assert_eq!(response.location(), Some("http://campfire.test/"))` |
+| [test/controllers/sudos_controller_test.rb:36](../../test/controllers/sudos_controller_test.rb#L36)<br>`assert_redirected_to root_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:171](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L171)<br>`assert_eq!( (response.status.as_u16(), response.location()), (302, Some("http://campfire.test/")) )` |
 
 ## WS14g-011
 
@@ -81,7 +81,7 @@ The app-owned verifier registry is read by the real sudo prompt. Registration re
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/controllers/sudos_controller_test.rb:70](../../test/controllers/sudos_controller_test.rb#L70)<br>`assert_includes SudoMode.extra_verifiers, :passkey` | [rust/crates/campfire/src/app/cutover_c_tests.rs:185](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L185)<br>`assert!( a.booted .app .sudo .extra_verifiers() .contains(&"passkey".into()) )` |
+| [test/controllers/sudos_controller_test.rb:70](../../test/controllers/sudos_controller_test.rb#L70)<br>`assert_includes SudoMode.extra_verifiers, :passkey` | [rust/crates/campfire/src/app/cutover_c_tests.rs:187](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L187)<br>`assert!( a.booted .app .sudo .extra_verifiers() .contains(&"passkey".into()) )` |
 
 ## WS14g-015
 
@@ -93,7 +93,7 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/controllers/sudos_controller_test.rb:115](../../test/controllers/sudos_controller_test.rb#L115)<br>`assert_redirected_to root_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:232](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L232)<br>`assert_eq!(response.location(), Some("http://campfire.test/"))` |
+| [test/controllers/sudos_controller_test.rb:115](../../test/controllers/sudos_controller_test.rb#L115)<br>`assert_redirected_to root_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:234](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L234)<br>`assert_eq!( (response.status.as_u16(), response.location()), (302, Some("http://campfire.test/")) )` |
 
 ## WS14g-022
 
@@ -105,7 +105,7 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/controllers/sudos_controller_test.rb:215](../../test/controllers/sudos_controller_test.rb#L215)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:237](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L237)<br>`assert_eq!( a.sign_in(DAVID) .await .get("/account/audit_log") .await .status, 200 )` |
+| [test/controllers/sudos_controller_test.rb:215](../../test/controllers/sudos_controller_test.rb#L215)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:242](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L242)<br>`assert_eq!( a.sign_in(DAVID) .await .get("/account/audit_log") .await .status, 200 )` |
 
 ## WS14g-025
 
@@ -117,7 +117,7 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/controllers/sudos_controller_test.rb:249](../../test/controllers/sudos_controller_test.rb#L249)<br>`assert_redirected_to new_sudo_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:272](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L272)<br>`assert_eq!( b.write(Req::new(Method::POST, "/account/join_code")) .await .location(), Some("http://campfire.test/sudo/new") )` |
+| [test/controllers/sudos_controller_test.rb:249](../../test/controllers/sudos_controller_test.rb#L249)<br>`assert_redirected_to new_sudo_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:278](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L278)<br>`assert_eq!( (gated.status.as_u16(), gated.location()), (302, Some("http://campfire.test/sudo/new")) )` |
 
 ## WS14g-027
 
@@ -129,10 +129,10 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/controllers/sudos_controller_test.rb:268](../../test/controllers/sudos_controller_test.rb#L268)<br>`assert_redirected_to new_sudo_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:284](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L284)<br>`assert_eq!( b.write(Req::new(Method::PATCH, &path).form(&[("user[role]", "administrator")])) .await .location(), Some("http://campfire.test/sudo/new") )` |
-| [test/controllers/sudos_controller_test.rb:271](../../test/controllers/sudos_controller_test.rb#L271)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:293](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L293)<br>`assert_eq!(r.status, 200)` |
-| [test/controllers/sudos_controller_test.rb:272](../../test/controllers/sudos_controller_test.rb#L272)<br>`assert_select "form[action=?]", account_user_path(users(:kevin)) do` | [rust/crates/campfire/src/app/cutover_c_tests.rs:298](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L298)<br>`assert_eq!(forms.len(), 1)` |
-| [test/controllers/sudos_controller_test.rb:273](../../test/controllers/sudos_controller_test.rb#L273)<br>`assert_select "input[name=?][value=administrator]", "user[role]"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:299](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L299)<br>`assert_eq!( nodes(&d, forms[0], \|d, n\| d.local_name(n) == Some("input") && d.attr(n, "name") == Some("user[role]") && d.attr(n, "value") == Some("administrator")) .len(), 1 )` |
+| [test/controllers/sudos_controller_test.rb:268](../../test/controllers/sudos_controller_test.rb#L268)<br>`assert_redirected_to new_sudo_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:291](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L291)<br>`assert_eq!( (gated.status.as_u16(), gated.location()), (302, Some("http://campfire.test/sudo/new")) )` |
+| [test/controllers/sudos_controller_test.rb:271](../../test/controllers/sudos_controller_test.rb#L271)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:298](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L298)<br>`assert_eq!(r.status, 200)` |
+| [test/controllers/sudos_controller_test.rb:272](../../test/controllers/sudos_controller_test.rb#L272)<br>`assert_select "form[action=?]", account_user_path(users(:kevin)) do` | [rust/crates/campfire/src/app/cutover_c_tests.rs:303](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L303)<br>`assert_eq!(forms.len(), 1)` |
+| [test/controllers/sudos_controller_test.rb:273](../../test/controllers/sudos_controller_test.rb#L273)<br>`assert_select "input[name=?][value=administrator]", "user[role]"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:304](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L304)<br>`assert_eq!( nodes(&d, forms[0], \|d, n\| d.local_name(n) == Some("input") && d.attr(n, "name") == Some("user[role]") && d.attr(n, "value") == Some("administrator")) .len(), 1 )` |
 
 ## WS14g-034
 
@@ -144,7 +144,7 @@ Ten real production sudo requests, an eleventh rate-limit control, shared Kit st
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/controllers/sudos_controller_test.rb:458](../../test/controllers/sudos_controller_test.rb#L458)<br>`assert_response :unauthorized` | [rust/crates/campfire/src/app/cutover_c_tests.rs:382](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L382)<br>`assert_eq!(router.oneshot(send("/sudo")).await.unwrap().status(), 401)` |
+| [test/controllers/sudos_controller_test.rb:458](../../test/controllers/sudos_controller_test.rb#L458)<br>`assert_response :unauthorized` | [rust/crates/campfire/src/app/cutover_c_tests.rs:387](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L387)<br>`assert_eq!(router.oneshot(send("/sudo")).await.unwrap().status(), 401)` |
 
 ## WS14g-035
 
@@ -156,15 +156,15 @@ The same assertions run before any Google grant and after a calendar-only grant.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/integration/drive_picker_test.rb:14](../../test/integration/drive_picker_test.rb#L14)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:406](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L406)<br>`assert_eq!(r.status, 200)` |
-| [test/integration/drive_picker_test.rb:15](../../test/integration/drive_picker_test.rb#L15)<br>`assert_not_includes response.body, "google-drive-previews"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:407](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L407)<br>`assert!(!r.text().contains("google-drive-previews"))` |
-| [test/integration/drive_picker_test.rb:16](../../test/integration/drive_picker_test.rb#L16)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:409](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L409)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
-| [test/integration/drive_picker_test.rb:17](../../test/integration/drive_picker_test.rb#L17)<br>`assert_select ".attach-menu", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:410](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L410)<br>`assert_eq!(nodes(&d, root, \|d, n\| class(d, n, "attach-menu")).len(), 0)` |
-| [test/integration/drive_picker_test.rb:18](../../test/integration/drive_picker_test.rb#L18)<br>`assert_select "button.composer__attachment-btn[aria-haspopup]", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:411](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L411)<br>`assert_eq!( nodes(&d, root, \|d, n\| d.local_name(n) == Some("button") && class(d, n, "composer__attachment-btn") && d.has_attr(n, "aria-haspopup")) .len(), 0 )` |
-| [test/integration/drive_picker_test.rb:24](../../test/integration/drive_picker_test.rb#L24)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:406](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L406)<br>`assert_eq!(r.status, 200)` |
-| [test/integration/drive_picker_test.rb:25](../../test/integration/drive_picker_test.rb#L25)<br>`assert_not_includes response.body, "google-drive-previews"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:407](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L407)<br>`assert!(!r.text().contains("google-drive-previews"))` |
-| [test/integration/drive_picker_test.rb:26](../../test/integration/drive_picker_test.rb#L26)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:409](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L409)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
-| [test/integration/drive_picker_test.rb:27](../../test/integration/drive_picker_test.rb#L27)<br>`assert_select ".attach-menu", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:410](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L410)<br>`assert_eq!(nodes(&d, root, \|d, n\| class(d, n, "attach-menu")).len(), 0)` |
+| [test/integration/drive_picker_test.rb:14](../../test/integration/drive_picker_test.rb#L14)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:411](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L411)<br>`assert_eq!(r.status, 200)` |
+| [test/integration/drive_picker_test.rb:15](../../test/integration/drive_picker_test.rb#L15)<br>`assert_not_includes response.body, "google-drive-previews"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:412](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L412)<br>`assert!(!r.text().contains("google-drive-previews"))` |
+| [test/integration/drive_picker_test.rb:16](../../test/integration/drive_picker_test.rb#L16)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:414](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L414)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
+| [test/integration/drive_picker_test.rb:17](../../test/integration/drive_picker_test.rb#L17)<br>`assert_select ".attach-menu", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:415](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L415)<br>`assert_eq!(nodes(&d, root, \|d, n\| class(d, n, "attach-menu")).len(), 0)` |
+| [test/integration/drive_picker_test.rb:18](../../test/integration/drive_picker_test.rb#L18)<br>`assert_select "button.composer__attachment-btn[aria-haspopup]", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:416](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L416)<br>`assert_eq!( nodes(&d, root, \|d, n\| d.local_name(n) == Some("button") && class(d, n, "composer__attachment-btn") && d.has_attr(n, "aria-haspopup")) .len(), 0 )` |
+| [test/integration/drive_picker_test.rb:24](../../test/integration/drive_picker_test.rb#L24)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:411](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L411)<br>`assert_eq!(r.status, 200)` |
+| [test/integration/drive_picker_test.rb:25](../../test/integration/drive_picker_test.rb#L25)<br>`assert_not_includes response.body, "google-drive-previews"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:412](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L412)<br>`assert!(!r.text().contains("google-drive-previews"))` |
+| [test/integration/drive_picker_test.rb:26](../../test/integration/drive_picker_test.rb#L26)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:414](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L414)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
+| [test/integration/drive_picker_test.rb:27](../../test/integration/drive_picker_test.rb#L27)<br>`assert_select ".attach-menu", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:415](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L415)<br>`assert_eq!(nodes(&d, root, \|d, n\| class(d, n, "attach-menu")).len(), 0)` |
 
 ## WS14g-036
 
@@ -176,14 +176,14 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/integration/drive_picker_test.rb:35](../../test/integration/drive_picker_test.rb#L35)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:425](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L425)<br>`assert_eq!(r.status, 200)` |
-| [test/integration/drive_picker_test.rb:36](../../test/integration/drive_picker_test.rb#L36)<br>`assert_includes response.body, '<meta name="google-drive-previews" content="enabled">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:426](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L426)<br>`assert!( r.text() .contains("<meta name=\"google-drive-previews\" content=\"enabled\">") )` |
-| [test/integration/drive_picker_test.rb:37](../../test/integration/drive_picker_test.rb#L37)<br>`assert_select '[data-controller="drive-picker"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:431](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L431)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 1)` |
-| [test/integration/drive_picker_test.rb:38](../../test/integration/drive_picker_test.rb#L38)<br>`assert_select "button.composer__attachment-btn[aria-haspopup='menu']", count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:432](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L432)<br>`assert_eq!( nodes(&d, root, \|d, n\| d.local_name(n) == Some("button") && class(d, n, "composer__attachment-btn") && d.attr(n, "aria-haspopup") == Some("menu")) .len(), 1 )` |
-| [test/integration/drive_picker_test.rb:39](../../test/integration/drive_picker_test.rb#L39)<br>`assert_select ".attach-menu [role='menuitem']", count: 2` | [rust/crates/campfire/src/app/cutover_c_tests.rs:442](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L442)<br>`assert_eq!(items.len(), 2)` |
-| [test/integration/drive_picker_test.rb:40](../../test/integration/drive_picker_test.rb#L40)<br>`assert_select ".attach-menu [role='menuitem']", text: "From this device"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:443](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L443)<br>`assert!( items .iter() .any(\|&n\| d.text_content(n).trim() == "From this device") )` |
-| [test/integration/drive_picker_test.rb:41](../../test/integration/drive_picker_test.rb#L41)<br>`assert_select ".attach-menu [role='menuitem']", text: "From Google Drive"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:448](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L448)<br>`assert!( items .iter() .any(\|&n\| d.text_content(n).trim() == "From Google Drive") )` |
-| [test/integration/drive_picker_test.rb:42](../../test/integration/drive_picker_test.rb#L42)<br>`assert_select '.drive-picker__panel[role="dialog"][aria-label="Find a Drive file"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:453](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L453)<br>`assert_eq!( nodes(&d, root, \|d, n\| class(d, n, "drive-picker__panel") && d.attr(n, "role") == Some("dialog") && d.attr(n, "aria-label") == Some("Find a Drive file")) .len(), 1 )` |
+| [test/integration/drive_picker_test.rb:35](../../test/integration/drive_picker_test.rb#L35)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:430](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L430)<br>`assert_eq!(r.status, 200)` |
+| [test/integration/drive_picker_test.rb:36](../../test/integration/drive_picker_test.rb#L36)<br>`assert_includes response.body, '<meta name="google-drive-previews" content="enabled">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:431](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L431)<br>`assert!( r.text() .contains("<meta name=\"google-drive-previews\" content=\"enabled\">") )` |
+| [test/integration/drive_picker_test.rb:37](../../test/integration/drive_picker_test.rb#L37)<br>`assert_select '[data-controller="drive-picker"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:436](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L436)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 1)` |
+| [test/integration/drive_picker_test.rb:38](../../test/integration/drive_picker_test.rb#L38)<br>`assert_select "button.composer__attachment-btn[aria-haspopup='menu']", count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:437](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L437)<br>`assert_eq!( nodes(&d, root, \|d, n\| d.local_name(n) == Some("button") && class(d, n, "composer__attachment-btn") && d.attr(n, "aria-haspopup") == Some("menu")) .len(), 1 )` |
+| [test/integration/drive_picker_test.rb:39](../../test/integration/drive_picker_test.rb#L39)<br>`assert_select ".attach-menu [role='menuitem']", count: 2` | [rust/crates/campfire/src/app/cutover_c_tests.rs:447](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L447)<br>`assert_eq!(items.len(), 2)` |
+| [test/integration/drive_picker_test.rb:40](../../test/integration/drive_picker_test.rb#L40)<br>`assert_select ".attach-menu [role='menuitem']", text: "From this device"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:448](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L448)<br>`assert!( items .iter() .any(\|&n\| d.text_content(n).trim() == "From this device") )` |
+| [test/integration/drive_picker_test.rb:41](../../test/integration/drive_picker_test.rb#L41)<br>`assert_select ".attach-menu [role='menuitem']", text: "From Google Drive"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:453](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L453)<br>`assert!( items .iter() .any(\|&n\| d.text_content(n).trim() == "From Google Drive") )` |
+| [test/integration/drive_picker_test.rb:42](../../test/integration/drive_picker_test.rb#L42)<br>`assert_select '.drive-picker__panel[role="dialog"][aria-label="Find a Drive file"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:458](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L458)<br>`assert_eq!( nodes(&d, root, \|d, n\| class(d, n, "drive-picker__panel") && d.attr(n, "role") == Some("dialog") && d.attr(n, "aria-label") == Some("Find a Drive file")) .len(), 1 )` |
 
 ## WS14g-037
 
@@ -195,15 +195,15 @@ The public-meta assertion runs for all four exact Rails meta elements separately
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/integration/drive_share_picker_test.rb:21](../../test/integration/drive_share_picker_test.rb#L21)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:465](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L465)<br>`assert_eq!(r.status, 200)` |
-| [test/integration/drive_share_picker_test.rb:22](../../test/integration/drive_share_picker_test.rb#L22)<br>`assert_includes response.body, '<meta name="google-drive-share" content="enabled">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:472](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L472)<br>`assert!(r.text().contains(meta))` |
-| [test/integration/drive_share_picker_test.rb:23](../../test/integration/drive_share_picker_test.rb#L23)<br>`assert_includes response.body, '<meta name="google-picker-client-id" content="test-client-id">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:472](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L472)<br>`assert!(r.text().contains(meta))` |
-| [test/integration/drive_share_picker_test.rb:24](../../test/integration/drive_share_picker_test.rb#L24)<br>`assert_includes response.body, '<meta name="google-picker-api-key" content="test-picker-key">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:472](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L472)<br>`assert!(r.text().contains(meta))` |
-| [test/integration/drive_share_picker_test.rb:25](../../test/integration/drive_share_picker_test.rb#L25)<br>`assert_includes response.body, '<meta name="google-cloud-project-number" content="123456789012">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:472](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L472)<br>`assert!(r.text().contains(meta))` |
-| [test/integration/drive_share_picker_test.rb:26](../../test/integration/drive_share_picker_test.rb#L26)<br>`assert_select '[data-controller="drive-share"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:475](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L475)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 1)` |
-| [test/integration/drive_share_picker_test.rb:27](../../test/integration/drive_share_picker_test.rb#L27)<br>`assert_select "button.composer__attachment-btn[aria-haspopup='menu']", count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:476](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L476)<br>`assert_eq!( nodes(&d, root, \|d, n\| d.local_name(n) == Some("button") && class(d, n, "composer__attachment-btn") && d.attr(n, "aria-haspopup") == Some("menu")) .len(), 1 )` |
-| [test/integration/drive_share_picker_test.rb:28](../../test/integration/drive_share_picker_test.rb#L28)<br>`assert_select ".attach-menu [role='menuitem']", text: "From Google Drive", count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:485](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L485)<br>`assert_eq!( nodes(&d, menus[0], \|d, n\| d.attr(n, "role") == Some("menuitem") && d.text_content(n).trim() == "From Google Drive") .len(), 1 )` |
-| [test/integration/drive_share_picker_test.rb:29](../../test/integration/drive_share_picker_test.rb#L29)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:491](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L491)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
+| [test/integration/drive_share_picker_test.rb:21](../../test/integration/drive_share_picker_test.rb#L21)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:470](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L470)<br>`assert_eq!(r.status, 200)` |
+| [test/integration/drive_share_picker_test.rb:22](../../test/integration/drive_share_picker_test.rb#L22)<br>`assert_includes response.body, '<meta name="google-drive-share" content="enabled">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:477](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L477)<br>`assert!(r.text().contains(meta))` |
+| [test/integration/drive_share_picker_test.rb:23](../../test/integration/drive_share_picker_test.rb#L23)<br>`assert_includes response.body, '<meta name="google-picker-client-id" content="test-client-id">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:477](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L477)<br>`assert!(r.text().contains(meta))` |
+| [test/integration/drive_share_picker_test.rb:24](../../test/integration/drive_share_picker_test.rb#L24)<br>`assert_includes response.body, '<meta name="google-picker-api-key" content="test-picker-key">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:477](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L477)<br>`assert!(r.text().contains(meta))` |
+| [test/integration/drive_share_picker_test.rb:25](../../test/integration/drive_share_picker_test.rb#L25)<br>`assert_includes response.body, '<meta name="google-cloud-project-number" content="123456789012">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:477](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L477)<br>`assert!(r.text().contains(meta))` |
+| [test/integration/drive_share_picker_test.rb:26](../../test/integration/drive_share_picker_test.rb#L26)<br>`assert_select '[data-controller="drive-share"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:480](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L480)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 1)` |
+| [test/integration/drive_share_picker_test.rb:27](../../test/integration/drive_share_picker_test.rb#L27)<br>`assert_select "button.composer__attachment-btn[aria-haspopup='menu']", count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:481](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L481)<br>`assert_eq!( nodes(&d, root, \|d, n\| d.local_name(n) == Some("button") && class(d, n, "composer__attachment-btn") && d.attr(n, "aria-haspopup") == Some("menu")) .len(), 1 )` |
+| [test/integration/drive_share_picker_test.rb:28](../../test/integration/drive_share_picker_test.rb#L28)<br>`assert_select ".attach-menu [role='menuitem']", text: "From Google Drive", count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:490](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L490)<br>`assert_eq!( nodes(&d, menus[0], \|d, n\| d.attr(n, "role") == Some("menuitem") && d.text_content(n).trim() == "From Google Drive") .len(), 1 )` |
+| [test/integration/drive_share_picker_test.rb:29](../../test/integration/drive_share_picker_test.rb#L29)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:496](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L496)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
 
 ## WS14g-038
 
@@ -215,10 +215,10 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/integration/drive_share_picker_test.rb:38](../../test/integration/drive_share_picker_test.rb#L38)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:498](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L498)<br>`assert_eq!(r.status, 200)` |
-| [test/integration/drive_share_picker_test.rb:39](../../test/integration/drive_share_picker_test.rb#L39)<br>`assert_select '[data-controller="drive-share"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:500](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L500)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 1)` |
-| [test/integration/drive_share_picker_test.rb:40](../../test/integration/drive_share_picker_test.rb#L40)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:501](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L501)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
-| [test/integration/drive_share_picker_test.rb:41](../../test/integration/drive_share_picker_test.rb#L41)<br>`assert_includes response.body, '<meta name="google-drive-previews" content="enabled">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:502](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L502)<br>`assert!( r.text() .contains("<meta name=\"google-drive-previews\" content=\"enabled\">") )` |
+| [test/integration/drive_share_picker_test.rb:38](../../test/integration/drive_share_picker_test.rb#L38)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:503](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L503)<br>`assert_eq!(r.status, 200)` |
+| [test/integration/drive_share_picker_test.rb:39](../../test/integration/drive_share_picker_test.rb#L39)<br>`assert_select '[data-controller="drive-share"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:505](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L505)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 1)` |
+| [test/integration/drive_share_picker_test.rb:40](../../test/integration/drive_share_picker_test.rb#L40)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:506](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L506)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
+| [test/integration/drive_share_picker_test.rb:41](../../test/integration/drive_share_picker_test.rb#L41)<br>`assert_includes response.body, '<meta name="google-drive-previews" content="enabled">'` | [rust/crates/campfire/src/app/cutover_c_tests.rs:507](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L507)<br>`assert!( r.text() .contains("<meta name=\"google-drive-previews\" content=\"enabled\">") )` |
 
 ## WS14g-039
 
@@ -230,10 +230,10 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/integration/drive_share_picker_test.rb:49](../../test/integration/drive_share_picker_test.rb#L49)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:512](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L512)<br>`assert_eq!(r.status, 200)` |
-| [test/integration/drive_share_picker_test.rb:50](../../test/integration/drive_share_picker_test.rb#L50)<br>`assert_not_includes response.body, "google-drive-share"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:513](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L513)<br>`assert!(!r.text().contains("google-drive-share"))` |
-| [test/integration/drive_share_picker_test.rb:51](../../test/integration/drive_share_picker_test.rb#L51)<br>`assert_select '[data-controller="drive-share"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:515](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L515)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 0)` |
-| [test/integration/drive_share_picker_test.rb:52](../../test/integration/drive_share_picker_test.rb#L52)<br>`assert_select '[data-controller="drive-picker"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:516](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L516)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 1)` |
+| [test/integration/drive_share_picker_test.rb:49](../../test/integration/drive_share_picker_test.rb#L49)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:517](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L517)<br>`assert_eq!(r.status, 200)` |
+| [test/integration/drive_share_picker_test.rb:50](../../test/integration/drive_share_picker_test.rb#L50)<br>`assert_not_includes response.body, "google-drive-share"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:518](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L518)<br>`assert!(!r.text().contains("google-drive-share"))` |
+| [test/integration/drive_share_picker_test.rb:51](../../test/integration/drive_share_picker_test.rb#L51)<br>`assert_select '[data-controller="drive-share"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:520](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L520)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 0)` |
+| [test/integration/drive_share_picker_test.rb:52](../../test/integration/drive_share_picker_test.rb#L52)<br>`assert_select '[data-controller="drive-picker"]', count: 1` | [rust/crates/campfire/src/app/cutover_c_tests.rs:521](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L521)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 1)` |
 
 ## WS14g-040
 
@@ -245,11 +245,11 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/integration/drive_share_picker_test.rb:58](../../test/integration/drive_share_picker_test.rb#L58)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:522](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L522)<br>`assert_eq!(r.status, 200)` |
-| [test/integration/drive_share_picker_test.rb:59](../../test/integration/drive_share_picker_test.rb#L59)<br>`assert_not_includes response.body, "google-drive-share"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:523](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L523)<br>`assert!(!r.text().contains("google-drive-share"))` |
-| [test/integration/drive_share_picker_test.rb:60](../../test/integration/drive_share_picker_test.rb#L60)<br>`assert_select '[data-controller="drive-share"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:525](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L525)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 0)` |
-| [test/integration/drive_share_picker_test.rb:61](../../test/integration/drive_share_picker_test.rb#L61)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:526](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L526)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
-| [test/integration/drive_share_picker_test.rb:62](../../test/integration/drive_share_picker_test.rb#L62)<br>`assert_select ".attach-menu", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:527](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L527)<br>`assert_eq!(nodes(&d, root, \|d, n\| class(d, n, "attach-menu")).len(), 0)` |
+| [test/integration/drive_share_picker_test.rb:58](../../test/integration/drive_share_picker_test.rb#L58)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_c_tests.rs:527](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L527)<br>`assert_eq!(r.status, 200)` |
+| [test/integration/drive_share_picker_test.rb:59](../../test/integration/drive_share_picker_test.rb#L59)<br>`assert_not_includes response.body, "google-drive-share"` | [rust/crates/campfire/src/app/cutover_c_tests.rs:528](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L528)<br>`assert!(!r.text().contains("google-drive-share"))` |
+| [test/integration/drive_share_picker_test.rb:60](../../test/integration/drive_share_picker_test.rb#L60)<br>`assert_select '[data-controller="drive-share"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:530](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L530)<br>`assert_eq!(controller_count(&d, root, "drive-share"), 0)` |
+| [test/integration/drive_share_picker_test.rb:61](../../test/integration/drive_share_picker_test.rb#L61)<br>`assert_select '[data-controller="drive-picker"]', count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:531](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L531)<br>`assert_eq!(controller_count(&d, root, "drive-picker"), 0)` |
+| [test/integration/drive_share_picker_test.rb:62](../../test/integration/drive_share_picker_test.rb#L62)<br>`assert_select ".attach-menu", count: 0` | [rust/crates/campfire/src/app/cutover_c_tests.rs:532](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L532)<br>`assert_eq!(nodes(&d, root, \|d, n\| class(d, n, "attach-menu")).len(), 0)` |
 
 ## WS14g-041
 
@@ -261,7 +261,7 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/integration/drive_share_picker_test.rb:71](../../test/integration/drive_share_picker_test.rb#L71)<br>`assert_redirected_to new_session_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:535](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L535)<br>`assert_eq!(r.location(), Some("http://campfire.test/session/new"))` |
+| [test/integration/drive_share_picker_test.rb:71](../../test/integration/drive_share_picker_test.rb#L71)<br>`assert_redirected_to new_session_url` | [rust/crates/campfire/src/app/cutover_c_tests.rs:540](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L540)<br>`assert_eq!( (r.status.as_u16(), r.location()), (302, Some("http://campfire.test/session/new")) )` |
 
 ## WS14g-053
 
@@ -672,12 +672,12 @@ Each cited assertion executes through this named real model/HTTP/registered-job 
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/models/google_account_test.rb:47](../../test/models/google_account_test.rb#L47)<br>`assert_predicate account, :connected?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:557](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L557)<br>`assert!(connected)` |
-| [test/models/google_account_test.rb:48](../../test/models/google_account_test.rb#L48)<br>`assert_predicate account, :usable?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:558](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L558)<br>`assert!(usable)` |
-| [test/models/google_account_test.rb:49](../../test/models/google_account_test.rb#L49)<br>`assert_not account.access_token_expired?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:559](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L559)<br>`assert!(!expired)` |
-| [test/models/google_account_test.rb:53](../../test/models/google_account_test.rb#L53)<br>`assert account.access_token_expired?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:572](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L572)<br>`assert!( a.db() .read(move \|c\| Ok(GoogleAccount::for_user(c, DAVID)? .unwrap() .access_token_expired(&crypto, now) .unwrap())) .await .unwrap() )` |
-| [test/models/google_account_test.rb:57](../../test/models/google_account_test.rb#L57)<br>`assert_not_predicate account, :connected?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:598](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L598)<br>`assert!(!connected)` |
-| [test/models/google_account_test.rb:58](../../test/models/google_account_test.rb#L58)<br>`assert_not_predicate account, :usable?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:599](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L599)<br>`assert!(!usable)` |
+| [test/models/google_account_test.rb:47](../../test/models/google_account_test.rb#L47)<br>`assert_predicate account, :connected?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:565](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L565)<br>`assert!(connected)` |
+| [test/models/google_account_test.rb:48](../../test/models/google_account_test.rb#L48)<br>`assert_predicate account, :usable?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:566](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L566)<br>`assert!(usable)` |
+| [test/models/google_account_test.rb:49](../../test/models/google_account_test.rb#L49)<br>`assert_not account.access_token_expired?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:567](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L567)<br>`assert!(!expired)` |
+| [test/models/google_account_test.rb:53](../../test/models/google_account_test.rb#L53)<br>`assert account.access_token_expired?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:580](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L580)<br>`assert!( a.db() .read(move \|c\| Ok(GoogleAccount::for_user(c, DAVID)? .unwrap() .access_token_expired(&crypto, now) .unwrap())) .await .unwrap() )` |
+| [test/models/google_account_test.rb:57](../../test/models/google_account_test.rb#L57)<br>`assert_not_predicate account, :connected?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:606](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L606)<br>`assert!(!connected)` |
+| [test/models/google_account_test.rb:58](../../test/models/google_account_test.rb#L58)<br>`assert_not_predicate account, :usable?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:607](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L607)<br>`assert!(!usable)` |
 
 ## WS14g-185
 
@@ -685,10 +685,10 @@ Rails declaration: `test/models/google_account_test.rb:61` — calendar? treats 
 
 Executed test: `campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise`.
 
-Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.
+Native setup additionally checks blank scopes. The first and last original calendar.events-grant predicates cite the positive nonblank-scope assertion; the intervening openid-only grant cites the false assertion.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
-| [test/models/google_account_test.rb:64](../../test/models/google_account_test.rb#L64)<br>`assert_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:607](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L607)<br>`assert!( a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
-| [test/models/google_account_test.rb:68](../../test/models/google_account_test.rb#L68)<br>`assert_not_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:623](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L623)<br>`assert!( !a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
-| [test/models/google_account_test.rb:72](../../test/models/google_account_test.rb#L72)<br>`assert_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:630](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L630)<br>`assert!( a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
+| [test/models/google_account_test.rb:64](../../test/models/google_account_test.rb#L64)<br>`assert_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:615](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L615)<br>`assert!( a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )`<br><br>[rust/crates/campfire/src/app/cutover_c_tests.rs:638](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L638)<br>`assert!( a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
+| [test/models/google_account_test.rb:68](../../test/models/google_account_test.rb#L68)<br>`assert_not_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:631](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L631)<br>`assert!( !a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |
+| [test/models/google_account_test.rb:72](../../test/models/google_account_test.rb#L72)<br>`assert_predicate account, :calendar?` | [rust/crates/campfire/src/app/cutover_c_tests.rs:638](../../rust/crates/campfire/src/app/cutover_c_tests.rs#L638)<br>`assert!( a.db() .read(\|c\| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar())) .await .unwrap() )` |

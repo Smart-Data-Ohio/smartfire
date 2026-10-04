@@ -5,14 +5,17 @@ The command prefix after -- must run cargo in the canonical environment and pass
 CAMPFIRE_LEDGER_MUTATION into it. Only a selected native test's assertion failure
 counts; compilation/setup failures are not accepted as killed mutations.
 """
-import argparse, hashlib, json, os, pathlib, re, subprocess, sys
+import argparse, hashlib, json, os, pathlib, re, shutil, subprocess, sys
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('manifest',type=pathlib.Path);p.add_argument('output',type=pathlib.Path)
 p.add_argument('--recheck',action='store_true',help='Reparse existing raw runs; verify restored production hashes')
-p.add_argument('command',nargs=argparse.REMAINDER)
-a=p.parse_args();root=pathlib.Path(__file__).resolve().parents[3];os.chdir(root)
+# Parse the command only after the explicit separator. argparse.REMAINDER
+# previously consumed a trailing --recheck as a command and entered mutation.
+argv = sys.argv[1:]
+separator = argv.index('--') if '--' in argv else len(argv)
+command = argv[separator + 1:]
+a=p.parse_args(argv[:separator]);root=pathlib.Path(__file__).resolve().parents[3];os.chdir(root)
 a.output.mkdir(parents=True,exist_ok=True)
-command=a.command[1:] if a.command and a.command[0]=='--' else a.command
 def assertion_failure(s):
  panic=re.findall(r"panicked at ([^\n]+)",s)
  for cited in panic:
@@ -30,7 +33,8 @@ if a.recheck:
  (a.output/'results.json').write_text(json.dumps(receipt,indent=2)+'\n')
  print(f'Mutation summary: {len(receipt["results"])} run; {sum(r["killed"] for r in receipt["results"])} killed; production restored={receipt["production_restored"]}')
  sys.exit(0 if all(r['killed'] for r in receipt['results']) else 1)
-assert command
+assert command and not command[0].startswith('-'), 'Use -- followed by the executable command prefix'
+assert shutil.which(command[0]), ('Command executable is unavailable', command[0])
 mutations=json.loads(a.manifest.read_text())['mutations'];original={};results=[]
 try:
  for m in mutations:

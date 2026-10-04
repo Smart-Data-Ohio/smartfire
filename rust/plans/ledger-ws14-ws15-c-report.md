@@ -71,3 +71,45 @@ Exit status 0 for both. Final full-workspace/fresh-clone receipts will be append
 ## Full parent audit merge
 
 The parent moved to `6880979acaf433e294d6eb8031e989aa9a394484` during this slice. It is merged into #243 at `31b767757`, then into C with both sides retained. The reviewed reference pin is now `78b9b1546`; the parent audit reopens 32 additional records. All original parent assertion mappings, stronger tests and historical validation hashes remain intact. The continuation verifier additionally validates B/C's exact assertion maps; its own full-run receipt is kept separately. Current C still closes the same 50 declarations, and the remaining count is **126**, not the earlier 94.
+
+## Fresh-clone integration receipts
+
+Production code `056c56b0b6870e327ee62aba5297ae49127b525f` was verified in a clone made with `git clone --no-hardlinks`. Its tracked tree is clean and matches that commit. The three seeds were rebuilt and Rails-validated for `review236-reference:78b9b1546` before copying into the clone: default 29/29, first_run 4/4, agents_ui 40/40 (73 passed, zero failed). The canonical Rust 1.98.1/libvips image, build jobs 2, shared machine-wide compiler slot throttle and `CI=true` are retained. Only the shared target cache is reused; all source inputs come from the fresh clone.
+
+```sh
+PARITY_IMAGE=review236-reference:78b9b1546 rust/parity/bin/ci-seed prepare
+PARITY_IMAGE=review236-reference:78b9b1546 rust/parity/bin/ci-seed check-image
+PARITY_IMAGE=review236-reference:78b9b1546 rust/parity/bin/ci-seed build
+PARITY_IMAGE=review236-reference:78b9b1546 rust/parity/bin/ci-seed validate
+cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast
+cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings
+bash ci/with-release-inputs.sh cargo build --workspace --bins
+```
+
+```text
+     Summary [1711.105s] 5088 tests run: 5088 passed (7 slow), 20 skipped
+    Finished `dev` profile [unoptimized] target(s) in 3m 13s
+    Finished `dev` profile [unoptimized] target(s) in 3m 23s
+```
+
+All three commands exit 0. All 78 B and 50 C mapped native tests run and pass, including the production policy/transport checks. All 318 retained closure records have actual named PASS entries; none of them is skipped. The canonical logo comparison passes (`avatar_bot_logo_uploads_match_pinned_rails`, 10.513s). The inherited `pull_request_thread_without_starter_refreshes_once_and_survives_queue_failure` also passes; no inherited flake or timing-policy change is involved.
+
+The 50 original Rails cases were rerun against the refreshed pin with `rails-cases.py --image review236-reference:78b9b1546`; the extra probe uses that same image. Their raw summaries remain:
+
+```text
+50 runs, 204 assertions, 0 failures, 0 errors, 0 skips
+1 runs, 5 assertions, 0 failures, 0 errors, 0 skips
+```
+
+Post-run review strengthens the five new redirect declarations to compare status **and** Location; the continuing join-code control is strengthened too. Those are test-only changes after the full-run production head. A final fresh-clone scoped run covers every B/C mapped test after those changes, with strict clippy rerun. Its receipts are appended below rather than misattributed to the earlier full-run head.
+
+The mutation utility's argument parser mistakenly consumed a trailing `--recheck` as its executable prefix. The restoration guard kept all production SHA-256 hashes unchanged. One scratch raw log was truncated; its committed historical receipt was preserved, and the organizer-bot sample was rerun through the fixed utility. All nineteen current raw logs now verify at their mapped native assertion lines. Compile/setup errors do not count as mutation kills.
+
+```text
+Mutation CLI parser: 3 cases passed; production source hashes unchanged
+Mutation summary: 19 run; 19 killed; production restored=True
+Assertion maps: 131 records; 412 original Rails assertion calls; 0 unmapped
+Acceptance ledger: 445 records checked; 86 baseline-CI passed; 232 current implementation receipts; 1 test-only outside gate; 126 explicitly open
+Full closure audit: 220 records; 555 Rails assertions/predicates; 487 mapped; 78 strengthened closures; 32 reopened
+Final local run: 5088 distinct PASS entries; 0 FAIL entries; 20 skipped; all 318 retained closures have named PASS receipts
+```

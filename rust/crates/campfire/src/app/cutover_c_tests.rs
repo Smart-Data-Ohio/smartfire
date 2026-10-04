@@ -168,12 +168,14 @@ async fn cutover_c_sudo_password_confirmation_adds_one_success_audit_and_verifie
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
         .await;
     assert_eq!(audit_success(&a).await - before, 1);
-    assert_eq!(response.location(), Some("http://campfire.test/"));
     assert_eq!(
-        b.write(Req::new(Method::POST, "/account/join_code"))
-            .await
-            .location(),
-        Some("http://campfire.test/account/edit")
+        (response.status.as_u16(), response.location()),
+        (302, Some("http://campfire.test/"))
+    );
+    let continued = b.write(Req::new(Method::POST, "/account/join_code")).await;
+    assert_eq!(
+        (continued.status.as_u16(), continued.location()),
+        (302, Some("http://campfire.test/account/edit"))
     );
 }
 #[tokio::test]
@@ -229,7 +231,10 @@ async fn cutover_c_sudo_enrolled_user_can_still_confirm_with_password() {
         .await
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
         .await;
-    assert_eq!(response.location(), Some("http://campfire.test/"));
+    assert_eq!(
+        (response.status.as_u16(), response.location()),
+        (302, Some("http://campfire.test/"))
+    );
 }
 #[tokio::test]
 async fn cutover_c_sudo_audit_log_read_requires_no_confirmation() {
@@ -269,11 +274,10 @@ async fn cutover_c_sudo_signing_in_again_drops_previous_confirmation() {
         })
         .await
         .unwrap();
+    let gated = b.write(Req::new(Method::POST, "/account/join_code")).await;
     assert_eq!(
-        b.write(Req::new(Method::POST, "/account/join_code"))
-            .await
-            .location(),
-        Some("http://campfire.test/sudo/new")
+        (gated.status.as_u16(), gated.location()),
+        (302, Some("http://campfire.test/sudo/new"))
     );
 }
 #[tokio::test]
@@ -281,11 +285,12 @@ async fn cutover_c_sudo_replay_form_rebuilds_nested_user_role() {
     let a = app().await;
     let mut b = a.sign_in(DAVID).await;
     let path = format!("/account/users/{KEVIN}");
+    let gated = b
+        .write(Req::new(Method::PATCH, &path).form(&[("user[role]", "administrator")]))
+        .await;
     assert_eq!(
-        b.write(Req::new(Method::PATCH, &path).form(&[("user[role]", "administrator")]))
-            .await
-            .location(),
-        Some("http://campfire.test/sudo/new")
+        (gated.status.as_u16(), gated.location()),
+        (302, Some("http://campfire.test/sudo/new"))
     );
     let r = b
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
@@ -532,7 +537,10 @@ async fn cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_mark
     let mut b = a.sign_in(DAVID).await;
     b.write(Req::new(Method::DELETE, "/session")).await;
     let r = b.get(&format!("/rooms/{}", id("watercooler"))).await;
-    assert_eq!(r.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(
+        (r.status.as_u16(), r.location()),
+        (302, Some("http://campfire.test/session/new"))
+    );
 }
 mod calendar_jobs;
 

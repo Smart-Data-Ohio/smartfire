@@ -272,9 +272,9 @@
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
               "line": 171,
-              "end_line": 171,
+              "end_line": 174,
               "function": "cutover_c_sudo_password_confirmation_adds_one_success_audit_and_verifies",
-              "text": "assert_eq!(response.location(), Some(\"http://campfire.test/\"))"
+              "text": "assert_eq!(\n        (response.status.as_u16(), response.location()),\n        (302, Some(\"http://campfire.test/\"))\n    )"
             }
           ],
           "disposition": "covered"
@@ -295,8 +295,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 185,
-              "end_line": 191,
+              "line": 187,
+              "end_line": 193,
               "function": "cutover_c_sudo_registered_extra_verifier_is_retained_once_and_unsupported_without_an_implementation",
               "text": "assert!(\n        a.booted\n            .app\n            .sudo\n            .extra_verifiers()\n            .contains(&\"passkey\".into())\n    )"
             }
@@ -319,10 +319,10 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 232,
-              "end_line": 232,
+              "line": 234,
+              "end_line": 237,
               "function": "cutover_c_sudo_enrolled_user_can_still_confirm_with_password",
-              "text": "assert_eq!(response.location(), Some(\"http://campfire.test/\"))"
+              "text": "assert_eq!(\n        (response.status.as_u16(), response.location()),\n        (302, Some(\"http://campfire.test/\"))\n    )"
             }
           ],
           "disposition": "covered"
@@ -343,8 +343,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 237,
-              "end_line": 244,
+              "line": 242,
+              "end_line": 249,
               "function": "cutover_c_sudo_audit_log_read_requires_no_confirmation",
               "text": "assert_eq!(\n        a.sign_in(DAVID)\n            .await\n            .get(\"/account/audit_log\")\n            .await\n            .status,\n        200\n    )"
             }
@@ -367,10 +367,10 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 272,
-              "end_line": 277,
+              "line": 278,
+              "end_line": 281,
               "function": "cutover_c_sudo_signing_in_again_drops_previous_confirmation",
-              "text": "assert_eq!(\n        b.write(Req::new(Method::POST, \"/account/join_code\"))\n            .await\n            .location(),\n        Some(\"http://campfire.test/sudo/new\")\n    )"
+              "text": "assert_eq!(\n        (gated.status.as_u16(), gated.location()),\n        (302, Some(\"http://campfire.test/sudo/new\"))\n    )"
             }
           ],
           "disposition": "covered"
@@ -391,10 +391,10 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 284,
-              "end_line": 289,
+              "line": 291,
+              "end_line": 294,
               "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
-              "text": "assert_eq!(\n        b.write(Req::new(Method::PATCH, &path).form(&[(\"user[role]\", \"administrator\")]))\n            .await\n            .location(),\n        Some(\"http://campfire.test/sudo/new\")\n    )"
+              "text": "assert_eq!(\n        (gated.status.as_u16(), gated.location()),\n        (302, Some(\"http://campfire.test/sudo/new\"))\n    )"
             }
           ],
           "disposition": "covered"
@@ -408,8 +408,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 293,
-              "end_line": 293,
+              "line": 298,
+              "end_line": 298,
               "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -425,8 +425,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 298,
-              "end_line": 298,
+              "line": 303,
+              "end_line": 303,
               "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
               "text": "assert_eq!(forms.len(), 1)"
             }
@@ -442,8 +442,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 299,
-              "end_line": 305,
+              "line": 304,
+              "end_line": 310,
               "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
               "text": "assert_eq!(\n        nodes(&d, forms[0], |d, n| d.local_name(n) == Some(\"input\")\n            && d.attr(n, \"name\") == Some(\"user[role]\")\n            && d.attr(n, \"value\") == Some(\"administrator\"))\n        .len(),\n        1\n    )"
             }
@@ -466,8 +466,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 382,
-              "end_line": 382,
+              "line": 387,
+              "end_line": 387,
               "function": "cutover_c_sudo_confirmation_limit_is_reset_by_clearing_the_shared_store",
               "text": "assert_eq!(router.oneshot(send(\"/sudo\")).await.unwrap().status(), 401)"
             }
@@ -490,8 +490,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 406,
-              "end_line": 406,
+              "line": 411,
+              "end_line": 411,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -507,8 +507,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 407,
-              "end_line": 407,
+              "line": 412,
+              "end_line": 412,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert!(!r.text().contains(\"google-drive-previews\"))"
             }
@@ -524,8 +524,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 409,
-              "end_line": 409,
+              "line": 414,
+              "end_line": 414,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
             }
@@ -541,8 +541,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 410,
-              "end_line": 410,
+              "line": 415,
+              "end_line": 415,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert_eq!(nodes(&d, root, |d, n| class(d, n, \"attach-menu\")).len(), 0)"
             }
@@ -558,8 +558,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 411,
-              "end_line": 417,
+              "line": 416,
+              "end_line": 422,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert_eq!(\n            nodes(&d, root, |d, n| d.local_name(n) == Some(\"button\")\n                && class(d, n, \"composer__attachment-btn\")\n                && d.has_attr(n, \"aria-haspopup\"))\n            .len(),\n            0\n        )"
             }
@@ -575,8 +575,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 406,
-              "end_line": 406,
+              "line": 411,
+              "end_line": 411,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -592,8 +592,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 407,
-              "end_line": 407,
+              "line": 412,
+              "end_line": 412,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert!(!r.text().contains(\"google-drive-previews\"))"
             }
@@ -609,8 +609,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 409,
-              "end_line": 409,
+              "line": 414,
+              "end_line": 414,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
             }
@@ -626,8 +626,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 410,
-              "end_line": 410,
+              "line": 415,
+              "end_line": 415,
               "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
               "text": "assert_eq!(nodes(&d, root, |d, n| class(d, n, \"attach-menu\")).len(), 0)"
             }
@@ -650,8 +650,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 425,
-              "end_line": 425,
+              "line": 430,
+              "end_line": 430,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -667,8 +667,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 426,
-              "end_line": 429,
+              "line": 431,
+              "end_line": 434,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert!(\n        r.text()\n            .contains(\"<meta name=\\\"google-drive-previews\\\" content=\\\"enabled\\\">\")\n    )"
             }
@@ -684,8 +684,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 431,
-              "end_line": 431,
+              "line": 436,
+              "end_line": 436,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 1)"
             }
@@ -701,8 +701,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 432,
-              "end_line": 438,
+              "line": 437,
+              "end_line": 443,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert_eq!(\n        nodes(&d, root, |d, n| d.local_name(n) == Some(\"button\")\n            && class(d, n, \"composer__attachment-btn\")\n            && d.attr(n, \"aria-haspopup\") == Some(\"menu\"))\n        .len(),\n        1\n    )"
             }
@@ -718,8 +718,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 442,
-              "end_line": 442,
+              "line": 447,
+              "end_line": 447,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert_eq!(items.len(), 2)"
             }
@@ -735,8 +735,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 443,
-              "end_line": 447,
+              "line": 448,
+              "end_line": 452,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert!(\n        items\n            .iter()\n            .any(|&n| d.text_content(n).trim() == \"From this device\")\n    )"
             }
@@ -752,8 +752,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 448,
-              "end_line": 452,
+              "line": 453,
+              "end_line": 457,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert!(\n        items\n            .iter()\n            .any(|&n| d.text_content(n).trim() == \"From Google Drive\")\n    )"
             }
@@ -769,8 +769,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 453,
-              "end_line": 459,
+              "line": 458,
+              "end_line": 464,
               "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
               "text": "assert_eq!(\n        nodes(&d, root, |d, n| class(d, n, \"drive-picker__panel\")\n            && d.attr(n, \"role\") == Some(\"dialog\")\n            && d.attr(n, \"aria-label\") == Some(\"Find a Drive file\"))\n        .len(),\n        1\n    )"
             }
@@ -793,8 +793,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 465,
-              "end_line": 465,
+              "line": 470,
+              "end_line": 470,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -810,8 +810,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 472,
-              "end_line": 472,
+              "line": 477,
+              "end_line": 477,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert!(r.text().contains(meta))"
             }
@@ -827,8 +827,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 472,
-              "end_line": 472,
+              "line": 477,
+              "end_line": 477,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert!(r.text().contains(meta))"
             }
@@ -844,8 +844,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 472,
-              "end_line": 472,
+              "line": 477,
+              "end_line": 477,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert!(r.text().contains(meta))"
             }
@@ -861,8 +861,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 472,
-              "end_line": 472,
+              "line": 477,
+              "end_line": 477,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert!(r.text().contains(meta))"
             }
@@ -878,8 +878,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 475,
-              "end_line": 475,
+              "line": 480,
+              "end_line": 480,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 1)"
             }
@@ -895,8 +895,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 476,
-              "end_line": 482,
+              "line": 481,
+              "end_line": 487,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert_eq!(\n        nodes(&d, root, |d, n| d.local_name(n) == Some(\"button\")\n            && class(d, n, \"composer__attachment-btn\")\n            && d.attr(n, \"aria-haspopup\") == Some(\"menu\"))\n        .len(),\n        1\n    )"
             }
@@ -912,8 +912,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 485,
-              "end_line": 490,
+              "line": 490,
+              "end_line": 495,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert_eq!(\n        nodes(&d, menus[0], |d, n| d.attr(n, \"role\") == Some(\"menuitem\")\n            && d.text_content(n).trim() == \"From Google Drive\")\n        .len(),\n        1\n    )"
             }
@@ -929,8 +929,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 491,
-              "end_line": 491,
+              "line": 496,
+              "end_line": 496,
               "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
               "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
             }
@@ -953,8 +953,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 498,
-              "end_line": 498,
+              "line": 503,
+              "end_line": 503,
               "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -970,8 +970,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 500,
-              "end_line": 500,
+              "line": 505,
+              "end_line": 505,
               "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
               "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 1)"
             }
@@ -987,8 +987,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 501,
-              "end_line": 501,
+              "line": 506,
+              "end_line": 506,
               "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
               "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
             }
@@ -1004,8 +1004,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 502,
-              "end_line": 505,
+              "line": 507,
+              "end_line": 510,
               "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
               "text": "assert!(\n        r.text()\n            .contains(\"<meta name=\\\"google-drive-previews\\\" content=\\\"enabled\\\">\")\n    )"
             }
@@ -1028,8 +1028,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 512,
-              "end_line": 512,
+              "line": 517,
+              "end_line": 517,
               "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -1045,8 +1045,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 513,
-              "end_line": 513,
+              "line": 518,
+              "end_line": 518,
               "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
               "text": "assert!(!r.text().contains(\"google-drive-share\"))"
             }
@@ -1062,8 +1062,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 515,
-              "end_line": 515,
+              "line": 520,
+              "end_line": 520,
               "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
               "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 0)"
             }
@@ -1079,8 +1079,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 516,
-              "end_line": 516,
+              "line": 521,
+              "end_line": 521,
               "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
               "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 1)"
             }
@@ -1103,8 +1103,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 522,
-              "end_line": 522,
+              "line": 527,
+              "end_line": 527,
               "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
               "text": "assert_eq!(r.status, 200)"
             }
@@ -1120,8 +1120,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 523,
-              "end_line": 523,
+              "line": 528,
+              "end_line": 528,
               "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
               "text": "assert!(!r.text().contains(\"google-drive-share\"))"
             }
@@ -1137,8 +1137,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 525,
-              "end_line": 525,
+              "line": 530,
+              "end_line": 530,
               "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
               "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 0)"
             }
@@ -1154,8 +1154,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 526,
-              "end_line": 526,
+              "line": 531,
+              "end_line": 531,
               "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
               "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
             }
@@ -1171,8 +1171,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 527,
-              "end_line": 527,
+              "line": 532,
+              "end_line": 532,
               "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
               "text": "assert_eq!(nodes(&d, root, |d, n| class(d, n, \"attach-menu\")).len(), 0)"
             }
@@ -1195,10 +1195,10 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 535,
-              "end_line": 535,
+              "line": 540,
+              "end_line": 543,
               "function": "cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_markup",
-              "text": "assert_eq!(r.location(), Some(\"http://campfire.test/session/new\"))"
+              "text": "assert_eq!(\n        (r.status.as_u16(), r.location()),\n        (302, Some(\"http://campfire.test/session/new\"))\n    )"
             }
           ],
           "disposition": "covered"
@@ -2707,8 +2707,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 557,
-              "end_line": 557,
+              "line": 565,
+              "end_line": 565,
               "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
               "text": "assert!(connected)"
             }
@@ -2724,8 +2724,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 558,
-              "end_line": 558,
+              "line": 566,
+              "end_line": 566,
               "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
               "text": "assert!(usable)"
             }
@@ -2741,8 +2741,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 559,
-              "end_line": 559,
+              "line": 567,
+              "end_line": 567,
               "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
               "text": "assert!(!expired)"
             }
@@ -2758,8 +2758,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 572,
-              "end_line": 580,
+              "line": 580,
+              "end_line": 588,
               "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
               "text": "assert!(\n        a.db()\n            .read(move |c| Ok(GoogleAccount::for_user(c, DAVID)?\n                .unwrap()\n                .access_token_expired(&crypto, now)\n                .unwrap()))\n            .await\n            .unwrap()\n    )"
             }
@@ -2775,8 +2775,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 598,
-              "end_line": 598,
+              "line": 606,
+              "end_line": 606,
               "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
               "text": "assert!(!connected)"
             }
@@ -2792,8 +2792,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 599,
-              "end_line": 599,
+              "line": 607,
+              "end_line": 607,
               "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
               "text": "assert!(!usable)"
             }
@@ -2805,7 +2805,7 @@
     {
       "id": "WS14g-185",
       "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
-      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "note": "Native setup additionally checks blank scopes. The first and last original calendar.events-grant predicates cite the positive nonblank-scope assertion; the intervening openid-only grant cites the false assertion.",
       "assertions": [
         {
           "rails": {
@@ -2816,8 +2816,15 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 607,
-              "end_line": 612,
+              "line": 615,
+              "end_line": 620,
+              "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
+              "text": "assert!(\n        a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 638,
+              "end_line": 643,
               "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
               "text": "assert!(\n        a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
             }
@@ -2833,8 +2840,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 623,
-              "end_line": 628,
+              "line": 631,
+              "end_line": 636,
               "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
               "text": "assert!(\n        !a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
             }
@@ -2850,8 +2857,8 @@
           "rust": [
             {
               "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-              "line": 630,
-              "end_line": 635,
+              "line": 638,
+              "end_line": 643,
               "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
               "text": "assert!(\n        a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
             }

@@ -6048,7 +6048,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_registered_extra_verifier_is_retained_once_and_unsupported_without_an_implementation",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 180
+          "line": 182
         },
         "detail": "The app-owned verifier registry is read by the real sudo prompt. Registration retains passkey once; it supplies no implementation, so a real POST remains unsupported as Rails verify_with does.",
         "assertion_map": {
@@ -6259,7 +6259,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_enrolled_user_can_still_confirm_with_password",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 212
+          "line": 214
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -6632,7 +6632,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_audit_log_read_requires_no_confirmation",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 235
+          "line": 240
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -6757,7 +6757,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_signing_in_again_drops_previous_confirmation",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 247
+          "line": 252
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -6853,7 +6853,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_replay_form_rebuilds_nested_user_role",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 280
+          "line": 284
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -7185,7 +7185,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_confirmation_limit_is_reset_by_clearing_the_shared_store",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 313
+          "line": 318
         },
         "detail": "Ten real production sudo requests, an eleventh rate-limit control, shared Kit store clear and another real request. Only the store-clear route is a test seam; verification and audit writes use the production controller.",
         "assertion_map": {
@@ -7224,7 +7224,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 399
+          "line": 404
         },
         "detail": "The same assertions run before any Google grant and after a calendar-only grant.",
         "assertion_map": {
@@ -7263,7 +7263,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 421
+          "line": 426
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -7302,7 +7302,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 462
+          "line": 467
         },
         "detail": "The public-meta assertion runs for all four exact Rails meta elements separately.",
         "assertion_map": {
@@ -7341,7 +7341,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 494
+          "line": 499
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -7380,7 +7380,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 508
+          "line": 513
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -7419,7 +7419,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 519
+          "line": 524
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -7458,7 +7458,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_markup",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 530
+          "line": 535
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -14341,7 +14341,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 540
+          "line": 548
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -14380,7 +14380,7 @@
         "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
         "source": {
           "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
-          "line": 602
+          "line": 610
         },
         "detail": "Original Rails setup and every discriminating assertion are reproduced through the real Rust model/HTTP/registered-job path; see the per-assertion map.",
         "assertion_map": {
@@ -19824,6 +19824,23 @@
       "rust/plans/ledger-ws14-ws15-c-assertions.json"
     ],
     "closed_records": 131,
-    "open_total": 126
+    "open_total": 126,
+    "verification": {
+      "scope": "fresh clone; production code 056c56b0b6870e327ee62aba5297ae49127b525f; only redirect assertions and tool/receipt changes follow",
+      "reference_sha": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+      "nextest": {
+        "command": "cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast",
+        "passed": 5088,
+        "failed": 0,
+        "skipped": 20,
+        "exit_code": 0,
+        "raw_log_sha256": "be30cf14160f75197e8e00968bacf775419f673f1cc2bff34980c7f061184a16"
+      },
+      "clippy": {
+        "command": "cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings",
+        "exit_code": 0,
+        "raw_log_sha256": "9bc1ff2312668e74fb8037cd9c23e1728503ec6b096473f54cc7af047010f64e"
+      }
+    }
   }
 }
