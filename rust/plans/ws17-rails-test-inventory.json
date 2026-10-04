@@ -453,7 +453,7 @@
       "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
       "status": "ported-equivalent",
       "owner": "WS17 acceptance; merged WS13 source",
-      "evidence": "Pinned Rails vector ws17_huddle_cutover.json, actual grant issuance -> invitation job -> gated durable delivery -> overdue missed-call resolution. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py: both baseline tests pass; removing the actual issuance callback fails both invitation assertions.",
+      "evidence": "Rails enables DND and quiet hours before room creation and grant issuance; regenerated ws17_huddle_cutover.json setup_sql preserves that ordering in Rust. Actual grant issuance -> invitation jobs -> gated delivery -> all three overdue missed calls. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py rejects both missing issuance callbacks and policy-conditional missing invitations.",
       "seam": "Closed: real HuddleGrant::issue and huddle_invitations::after_issued are installed. No source adapter is fabricated.",
       "history": [
         {
@@ -2565,8 +2565,8 @@
       "test": "a member with notifications off gets no work items but a mentions member does",
       "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs:614; tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
-      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::work_room_notifications_off_then_mentions_restores_updates. Real ChannelThread::update_work: tracking and assignment produce no recipient item while room involvement is nothing; changing it to mentions restores one unread work_update sourced by the newest in_progress event. Added for PR #240 review; enabled in the campfire_db nextest CI gate. Historical supporting CI did not execute these newly added assertions; exact-head CI receipt pending.",
+      "seam": "Closed: complete original clauses now execute through real work-event writers and their after-commit Recorder.",
       "history": [
         {
           "date": "2026-10-04",
@@ -2582,8 +2582,8 @@
           }
         }
       ],
-      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
-      "ci": {
+      "rust_test": "tests::work_mutations_test::work_room_notifications_off_then_mentions_restores_updates",
+      "historical_supporting_ci": {
         "run": 37200618245,
         "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
         "crate": "campfire_db",
@@ -2611,8 +2611,8 @@
       "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
       "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs:534; tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
-      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::work_status_update_retains_assignment_for_same_recipient. Real ChannelThread::update_work: the same David recipient retains exactly [work_update, work_assignment]; update identity survives and points to the newest in_progress event, and the complete assignment row is unchanged. Added for PR #240 review; enabled in the campfire_db nextest CI gate. Historical supporting CI did not execute these newly added assertions; exact-head CI receipt pending.",
+      "seam": "Closed: complete original clauses now execute through real work-event writers and their after-commit Recorder.",
       "history": [
         {
           "date": "2026-10-04",
@@ -2628,8 +2628,8 @@
           }
         }
       ],
-      "rust_test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
-      "ci": {
+      "rust_test": "tests::work_mutations_test::work_status_update_retains_assignment_for_same_recipient",
+      "historical_supporting_ci": {
         "run": 37200618245,
         "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
         "crate": "campfire_db",
@@ -2682,8 +2682,8 @@
       "test": "work assigned by an agent honors the recipient's agent_work switch",
       "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs:614; tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
-      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::agent_work_opt_out_allows_agent_updates_and_human_reassignment. Real WorkThreadEvent::create_for_change and after-commit Recorder: agent assignment is suppressed by agent_work=false; agent status update still notifies; after handling it, human reassignment still creates a new unread unhandled assignment for the former owner. Added for PR #240 review; enabled in the campfire_db nextest CI gate. Historical supporting CI did not execute these newly added assertions; exact-head CI receipt pending.",
+      "seam": "Closed: complete original clauses now execute through real work-event writers and their after-commit Recorder.",
       "history": [
         {
           "date": "2026-10-04",
@@ -2699,8 +2699,8 @@
           }
         }
       ],
-      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
-      "ci": {
+      "rust_test": "tests::work_mutations_test::agent_work_opt_out_allows_agent_updates_and_human_reassignment",
+      "historical_supporting_ci": {
         "run": 37200618245,
         "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
         "crate": "campfire_db",

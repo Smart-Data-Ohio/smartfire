@@ -148,7 +148,7 @@
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
       "rust_test": "tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls",
-      "evidence": "Pinned Rails vector ws17_huddle_cutover.json, actual grant issuance -> invitation job -> gated durable delivery -> overdue missed-call resolution. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py: both baseline tests pass; removing the actual issuance callback fails both invitation assertions."
+      "evidence": "Rails enables DND and quiet hours before room creation and grant issuance; setup_sql preserves that ordering in Rust. Actual issuance retains all three invitations, only the reachable recipient pushes, and all three become missed calls. Complete payload/recipient/state vector is regenerated from Rails. check-ws17-huddle-cutover.py also rejects a policy-conditional missing-invitation writer."
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
@@ -231,28 +231,30 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a member with notifications off gets no work items but a mentions member does",
-      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
-      "ci": {
+      "rust_test": "tests::work_mutations_test::work_room_notifications_off_then_mentions_restores_updates",
+      "historical_supporting_ci": {
         "run": 37200618245,
         "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
         "crate": "campfire_db",
         "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
         "log_line": 2782,
         "result": "PASS"
-      }
+      },
+      "evidence": "Real ChannelThread::update_work: tracking and assignment produce no recipient item while room involvement is nothing; changing it to mentions restores one unread work_update sourced by the newest in_progress event. Enabled in the ordinary campfire_db nextest gate; exact-head CI receipt pending."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
-      "rust_test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
-      "ci": {
+      "rust_test": "tests::work_mutations_test::work_status_update_retains_assignment_for_same_recipient",
+      "historical_supporting_ci": {
         "run": 37200618245,
         "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
         "crate": "campfire_db",
         "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
         "log_line": 2771,
         "result": "PASS"
-      }
+      },
+      "evidence": "Real ChannelThread::update_work: the same David recipient retains exactly [work_update, work_assignment]; update identity survives and points to the newest in_progress event, and the complete assignment row is unchanged. Enabled in the ordinary campfire_db nextest gate; exact-head CI receipt pending."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -270,15 +272,16 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work assigned by an agent honors the recipient's agent_work switch",
-      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
-      "ci": {
+      "rust_test": "tests::work_mutations_test::agent_work_opt_out_allows_agent_updates_and_human_reassignment",
+      "historical_supporting_ci": {
         "run": 37200618245,
         "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
         "crate": "campfire_db",
         "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
         "log_line": 2782,
         "result": "PASS"
-      }
+      },
+      "evidence": "Real WorkThreadEvent::create_for_change and after-commit Recorder: agent assignment is suppressed by agent_work=false; agent status update still notifies; after handling it, human reassignment still creates a new unread unhandled assignment for the former owner. Enabled in the ordinary campfire_db nextest gate; exact-head CI receipt pending."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -461,5 +464,86 @@
         "result": "PASS"
       }
     }
-  ]
+  ],
+  "review240_assertion_tests": [
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_room_notifications_off_then_mentions_restores_updates",
+      "assertions": "Real ChannelThread::update_work: tracking and assignment produce no recipient item while room involvement is nothing; changing it to mentions restores one unread work_update sourced by the newest in_progress event.",
+      "ci_entry_point": "ordinary campfire_db nextest gate",
+      "ci_receipt": "pending exact-head execution"
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_status_update_retains_assignment_for_same_recipient",
+      "assertions": "Real ChannelThread::update_work: the same David recipient retains exactly [work_update, work_assignment]; update identity survives and points to the newest in_progress event, and the complete assignment row is unchanged.",
+      "ci_entry_point": "ordinary campfire_db nextest gate",
+      "ci_receipt": "pending exact-head execution"
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::agent_work_opt_out_allows_agent_updates_and_human_reassignment",
+      "assertions": "Real WorkThreadEvent::create_for_change and after-commit Recorder: agent assignment is suppressed by agent_work=false; agent status update still notifies; after handling it, human reassignment still creates a new unread unhandled assignment for the former owner.",
+      "ci_entry_point": "ordinary campfire_db nextest gate",
+      "ci_receipt": "pending exact-head execution"
+    }
+  ],
+  "ws11ui_browser_ci": {
+    "entry_point": "rust/parity/system/ws12",
+    "job_branch": "rust/ci-full-gate",
+    "tests": [
+      "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions",
+      "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions",
+      "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions"
+    ],
+    "ci_receipt": "pending combined-branch CI execution",
+    "registration": "Existing c221/c222/c223 ignored tests each retain their WS12 comparison and additionally run one paired WS11-UI sequence/control. Already selected by the rust/ci-full-gate browser manifest; no new ignored identity is introduced."
+  },
+  "local_review240_verification": {
+    "native_nextest": {
+      "passed": 1398,
+      "failed": 0,
+      "database_passed": 1384,
+      "credited_application_passed": 14,
+      "workers": 4,
+      "scope": "all enabled campfire_db tests and all 14 application identities in ci_passes; not a full workspace execution"
+    },
+    "credited_native_identities_passed": 30,
+    "ignored_browser_nextest": {
+      "passed": 3,
+      "failed": 0,
+      "workers": 4,
+      "paired_sequences_passed": 3,
+      "writer_defects_rejected": 3,
+      "existing_ws12_sequences_retained": true,
+      "invocation": "existing c221/c222/c223 CI selectors, with current-source reused Cargo build metadata"
+    },
+    "huddle_controls": {
+      "baseline_passed": 2,
+      "missing_issuance_failures_rejected": 2,
+      "policy_conditional_missing_invitation_failures_rejected": 1,
+      "invalid_controls": 0
+    },
+    "rails_huddle_vector": {
+      "scenarios": 2,
+      "failures": 0,
+      "change": "only group_quiet setup_sql changes; policies precede issuance"
+    },
+    "seeds": {
+      "names": [
+        "default",
+        "first_run",
+        "agents_ui"
+      ],
+      "source": "private copies of existing seeds; no seeds rebuilt in this worktree",
+      "rails_validation_passed": 73,
+      "rails_validation_failed": 0
+    },
+    "strict_workspace_clippy": "PASS: --locked --workspace --exclude html5ever --all-targets -- -D warnings",
+    "database_doctests": {
+      "passed": 0,
+      "failed": 0
+    },
+    "ci_receipt": "exact-head native CI and combined-branch browser CI are pending"
+  }
 }

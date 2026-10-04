@@ -74,6 +74,22 @@ fn run(name: &str) {
         row["caller"].as_i64().unwrap(),
         row["session"].as_i64().unwrap(),
     );
+    let recipients = row["recipients"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_i64().unwrap())
+        .collect::<Vec<_>>();
+    if name == "group_quiet" {
+        assert!(
+            t.read(|c| crate::UserStatusSettings::find(c, recipients[0]))
+                .dnd_enabled
+        );
+        assert!(
+            t.read(|c| crate::UserStatusSettings::find(c, recipients[1]))
+                .quiet_hours_enabled
+        );
+    }
     let grant = t.write(move |tx| {
         let membership = Membership::find_by_room_and_user(tx.conn(), room, caller)?.unwrap();
         HuddleGrant::issue(
@@ -87,12 +103,6 @@ fn run(name: &str) {
             },
         )
     });
-    let recipients = row["recipients"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|v| v.as_i64().unwrap())
-        .collect::<Vec<_>>();
     let items = recipients
         .iter()
         .map(|&recipient| {
@@ -106,14 +116,14 @@ fn run(name: &str) {
         "{name}: real issuance records every recipient"
     );
     let recipient = recipients[0];
-    t.write(move |tx| {
-        tx.conn()
-            .execute("UPDATE users SET dnd_enabled=1 WHERE id=?", [recipient])?;
-        Ok(())
-    });
-    if name == "group_quiet" {
-        let quiet = recipients[1];
-        t.write(move |tx| { tx.conn().execute("UPDATE users SET quiet_hours_enabled=1,quiet_hours_start_minute=540,quiet_hours_end_minute=1020 WHERE id=?", [quiet])?; Ok(()) });
+    // push_gating_test.rb:145 enables DND after issuance; :165 already has
+    // both quiet policies enabled in setup_sql before the group grant is issued.
+    if name == "dnd_allowed" {
+        t.write(move |tx| {
+            tx.conn()
+                .execute("UPDATE users SET dnd_enabled=1 WHERE id=?", [recipient])?;
+            Ok(())
+        });
     }
     let mut deliveries = push(&t, &items);
     assert_eq!(

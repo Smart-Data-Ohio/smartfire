@@ -27,8 +27,11 @@ executed **4,948 passes, 0 failures**; those are historical counts, not this bra
   declarations and the work-assignment declaration run their original interacting
   sequences on independent seed copies. Each real writer mutation is rejected at
   its intended assertion. No browser retry, deadline change or original assertion
-  weakening is used. These are external Playwright receipts, **not ordinary CI
-  browser executions**. The native inbox/page tests cited alongside them passed
+  weakening is used. These paired sequences and their writer controls are now registered as ignored
+  Rust browser tests in `controllers::ws12_browser_remaining_tests`.
+  `rust/parity/system/ws12` executes them; CI execution comes via the ignored
+  browser-test job supplied on `rust/ci-full-gate`. The combined-branch CI receipt
+  remains pending. The native inbox/page tests cited alongside them passed
   in main CI, and are explicitly labelled supporting evidence.
 - **WS8br: 9 broad original receipts superseded by current CI tests.** The four
   first-run declarations, two welcome redirects, original QR/cache response, and
@@ -57,7 +60,7 @@ inbox reader returns false. The replay now uses Rails' exact false-value set, th
 checks the original effective-false assertion. A producer restoring the default
 preference is still rejected. Neither issue warrants a production timing patch.
 
-New Rust test names:
+New Rust test names (initial reconciliation):
 
 - `tests::huddle_cutover_test::huddle_push_honors_dnd_with_a_starred_caller_exception`
 - `tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls`
@@ -215,7 +218,73 @@ Cutover ledger remains partial: 328 broad receipts; 8 sidebar receipts; 14 overl
 ```
 
 No production JS/CSS, vendored asset, digest golden or CodeQL configuration changed.
-No new target directory was created. The fresh clone, downloaded nextest binary/
+At that historical checkpoint, no new target directory was created. The fresh clone, downloaded nextest binary/
 archive and copied Docker schema context are regenerable large scratch outputs and
 are deleted after recording these results; the pre-existing worktree target is
 retained. Small raw logs remain in the owned cutover scratch directory.
+
+## PR #240 review corrections
+
+Three newly enabled `work_mutations_test` regressions replace incomplete historical
+Recorder credits in both WS17 and WS12:
+
+- `work_room_notifications_off_then_mentions_restores_updates` executes tracking
+  and assignment with notifications off, then proves a mentions recipient gets
+  the newest unread status update.
+- `work_status_update_retains_assignment_for_same_recipient` proves David retains
+  exactly `[work_update, work_assignment]`; only the update source changes and the
+  complete assignment row remains unchanged.
+- `agent_work_opt_out_allows_agent_updates_and_human_reassignment` proves agent
+  assignment suppression, the positive agent status-update exception, handling
+  that update, and the positive human reassignment exception for the former owner.
+
+These execute real work-event writers and their after-commit Recorder. Their new
+assertions were absent from historical main CI 37200618245, which is now retained
+only as supporting evidence for those three closures. Exact-head CI is pending.
+
+The group huddle Rails producer now enables DND and quiet hours before creating
+the room and issuing the grant, matching `push_gating_test.rb:165`. Regenerated
+setup SQL gives Rust the same pre-issuance policies; the existing DND/starred
+caller scenario still enables DND after issuance. A new policy-conditional
+missing-invitation control must fail the group scenario while the later-DND
+scenario still passes.
+
+The existing `ws12_browser_c221/c222/c223_original_named_system_assertions`
+ignored tests retain their WS12 assertions and additionally invoke, respectively,
+the paired inbox, inbox-filter and work Rails/Rust sequence and writer control.
+These exact names are already selected by the CI worker's ignored-test manifest;
+no new ignored identity needs a manifest addition. Separate namespaces and
+scenario-specific port triples support the CI job's four nextest workers. They run via
+the existing `parity/system/ws12` ignored-browser entry point, which also builds
+the current normal application binary; the test executable supplies the inbox
+HTTP host. Direct nextest execution in the CI job builds the current normal
+work host if the shell entry point has not supplied it. The CI job is
+`Rust correctness (browsers)` from `rust/ci-full-gate`, owned by the other worker.
+No workflow is edited here, and no combined-branch CI pass is claimed.
+
+Local review-fix validation (Rust 1.98.1, pinned toolchain/media image, nextest
+`-j 4`, no retries):
+
+- **1,398 native tests passed, 0 failed**: all 1,384 enabled database tests and
+  the 14 application tests credited by the reconciliation. This is a selected
+  database/application run, not a new full-workspace execution. All 30 currently
+  credited native identities have PASS lines.
+- **3 enhanced ignored browser tests passed, 0 failed**, concurrently under four
+  nextest workers. Their existing WS12 two-roster-size assertions remain intact;
+  the three paired Rails/Rust sequences and three real writer defect controls
+  pass inside the same already-registered tests. The work test exercises the
+  direct-nextest normal-host build fallback.
+- Huddle controls: **2 baseline passes**, **2 missing-issuance failures rejected**,
+  **1 policy-conditional missing-invitation failure rejected**, **0 invalid controls**.
+- Strict workspace/all-target Clippy with `-D warnings`: **passed**. Database
+  doctests: **0 runnable, 0 failures**. The ledger checker passes with the current
+  native listing/log and completed ignored-browser log.
+- Private copies of existing `default`, `first_run`, and `agents_ui` seeds were
+  independently checked in Rails: **29 + 4 + 40 = 73 passed, 0 failed**. No seed
+  was rebuilt here. The corrected Rails huddle producer emits **2 scenarios,
+  0 failures**; only group setup SQL differs from the previous vector.
+
+No Rust behavior divergence was revealed. The submitted production Rust, Rails,
+assets, workflow files and remaining manifest are unchanged. The corrected
+closures stay closed with complete assertions, while exact-head/combined-branch
+CI receipts remain explicitly pending.
