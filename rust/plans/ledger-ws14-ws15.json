@@ -365,7 +365,7 @@
         "test": "campfire_db tests::calendar_event_test::series_notifications_replace_read_updates_and_rearm_every_reminder",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 904
+          "line": 906
         },
         "detail": "Explicit prior read update replacement and all occurrence reminded_at fields rearmed on a time shift.",
         "ci_log_line": 1978
@@ -442,7 +442,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 709
+          "line": 711
         },
         "detail": "cancel twice vector compares return values, unchanged cancelled state and activity rows.",
         "ci_log_line": 2013
@@ -556,16 +556,25 @@
       "rails_line": 11,
       "title": "destroying an entry enqueues its remote delete",
       "id": "WS14e-017",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_entry_test::cutover_entry_destroy_enqueues_captured_remote_identity_after_commit",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+          "line": 26
+        },
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+      },
+      "historical_line": 40,
+      "historical_receipt": "Deferred: WS14g",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: destroying an entry enqueues its remote delete. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event_calendar_entry_test.rb",
           "line": 11
         }
       },
-      "historical_line": 40,
-      "historical_receipt": "Deferred: WS14g"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -575,16 +584,25 @@
       "rails_line": 19,
       "title": "delete skips the remote delete for already-reconciled rows",
       "id": "WS14e-018",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_entry_test::cutover_entry_delete_skips_remote_delete",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+          "line": 46
+        },
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+      },
+      "historical_line": 41,
+      "historical_receipt": "Deferred: WS14g",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: delete skips the remote delete for already-reconciled rows. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event_calendar_entry_test.rb",
           "line": 19
         }
       },
-      "historical_line": 41,
-      "historical_receipt": "Deferred: WS14g"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -594,16 +612,25 @@
       "rails_line": 27,
       "title": "delete_all skips remote deletes for disconnect cleanup",
       "id": "WS14e-019",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_entry_test::cutover_entry_delete_all_skips_remote_delete_and_preserves_other_users",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+          "line": 58
+        },
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+      },
+      "historical_line": 42,
+      "historical_receipt": "Deferred: WS14g",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: delete_all skips remote deletes for disconnect cleanup. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event_calendar_entry_test.rb",
           "line": 27
         }
       },
-      "historical_line": 42,
-      "historical_receipt": "Deferred: WS14g"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -613,16 +640,25 @@
       "rails_line": 11,
       "title": "creating an event posts exactly one announcement by the organizer with the title and URL",
       "id": "WS14e-020",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_timeline_test::cutover_timeline_singleton_has_one_organizer_announcement_with_title_url_and_reference",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+          "line": 30
+        },
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+      },
+      "historical_line": 48,
+      "historical_receipt": "Covered: `series_materializes_organizer_attendance_one_invitation_and_one_announcement (series only; singleton exact count deferred)`",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: creating an event posts exactly one announcement by the organizer with the title and URL. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/channel_timeline_test.rb",
           "line": 11
         }
       },
-      "historical_line": 48,
-      "historical_receipt": "Covered: `series_materializes_organizer_attendance_one_invitation_and_one_announcement (series only; singleton exact count deferred)`"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -632,16 +668,25 @@
       "rails_line": 47,
       "title": "edits and cancellations post nothing",
       "id": "WS14e-021",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_timeline_test::cutover_timeline_edits_and_cancels_post_no_messages",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+          "line": 54
+        },
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+      },
+      "historical_line": 50,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: edits and cancellations post nothing. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/channel_timeline_test.rb",
           "line": 47
         }
       },
-      "historical_line": 50,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -651,16 +696,25 @@
       "rails_line": 56,
       "title": "the announcement creates no inbox items",
       "id": "WS14e-022",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_timeline_test::cutover_timeline_announcement_has_no_inbox_items",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+          "line": 76
+        },
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+      },
+      "historical_line": 51,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the announcement creates no inbox items. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/channel_timeline_test.rb",
           "line": 56
         }
       },
-      "historical_line": 51,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -712,16 +766,25 @@
       "rails_line": 110,
       "title": "deleting the event removes its references",
       "id": "WS14e-025",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_timeline_test::cutover_timeline_event_destroy_removes_references_but_preserves_message",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+          "line": 90
+        },
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+      },
+      "historical_line": 54,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: deleting the event removes its references. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/channel_timeline_test.rb",
           "line": 110
         }
       },
-      "historical_line": 54,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -833,7 +896,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 709
+          "line": 711
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -854,7 +917,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 709
+          "line": 711
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -894,7 +957,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 709
+          "line": 711
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -915,7 +978,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 709
+          "line": 711
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -936,7 +999,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 709
+          "line": 711
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -1109,7 +1172,7 @@
         "test": "campfire_db tests::calendar_event_test::room_involvement_and_inbox_preferences_control_reminder_items",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 504
+          "line": 506
         },
         "detail": "Going attendee with inbox reminder preference off keeps invitation while another gets reminder.",
         "ci_log_line": 1973
@@ -1130,7 +1193,7 @@
         "test": "campfire_db tests::calendar_event_test::ended_cancelled_and_soft_deleted_rooms_stay_silent",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 564
+          "line": 566
         },
         "detail": "Cancelled/ended/soft-deleted event reminder scans and direct dispatch send nothing.",
         "ci_log_line": 1956
@@ -1189,7 +1252,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_source_rechecks_membership_and_ignores_inbox_preferences",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 988
+          "line": 990
         },
         "detail": "Going/maybe recipients, removed membership, involvement/inbox reminder preference independence.",
         "ci_log_line": 1970
@@ -1210,7 +1273,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_source_rechecks_membership_and_ignores_inbox_preferences",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 988
+          "line": 990
         },
         "detail": "Going/maybe recipients, removed membership, involvement/inbox reminder preference independence.",
         "ci_log_line": 1970
@@ -1231,7 +1294,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1252,7 +1315,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1273,7 +1336,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1294,7 +1357,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1315,7 +1378,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1336,7 +1399,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1357,7 +1420,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1378,7 +1441,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1042
+          "line": 1044
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -3638,7 +3701,7 @@
         "test": "campfire_db tests::calendar_event_test::series_create_calendar_callbacks_match_pinned_rails_order_and_arguments",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 360
+          "line": 362
         },
         "detail": "Pinned singleton/series create callback vectors include Meet flag per occurrence and provisioning jobs.",
         "ci_log_line": 1976
@@ -3659,7 +3722,7 @@
         "test": "campfire_db tests::calendar_event_test::series_create_calendar_callbacks_match_pinned_rails_order_and_arguments",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 360
+          "line": 362
         },
         "detail": "Pinned singleton/series create callback vectors include Meet flag per occurrence and provisioning jobs.",
         "ci_log_line": 1976
@@ -3969,7 +4032,7 @@
         "test": "campfire_db tests::calendar_event_test::scoped_calendar_sync_and_cancel_preserve_ws14g_argument_contracts",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1068
+          "line": 1070
         },
         "detail": "Connected going/maybe time/title changes and entry cancellation callback IDs. Atomic timing is checked by calendar_api_durable_callbacks_coalesce_and_reject_atomically.",
         "ci_log_line": 1974
@@ -4951,16 +5014,25 @@
       "title": "destroying an entry enqueues its remote delete",
       "id": "WS14g-129",
       "rails_line": 11,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_entry_test::cutover_entry_destroy_enqueues_captured_remote_identity_after_commit",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+          "line": 26
+        },
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+      },
+      "historical_line": 543,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: destroying an entry enqueues its remote delete. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event_calendar_entry_test.rb",
           "line": 11
         }
       },
-      "historical_line": 543,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14g",
@@ -4970,16 +5042,25 @@
       "title": "delete skips the remote delete for already-reconciled rows",
       "id": "WS14g-130",
       "rails_line": 19,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_entry_test::cutover_entry_delete_skips_remote_delete",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+          "line": 46
+        },
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+      },
+      "historical_line": 544,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: delete skips the remote delete for already-reconciled rows. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event_calendar_entry_test.rb",
           "line": 19
         }
       },
-      "historical_line": 544,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14g",
@@ -4989,16 +5070,25 @@
       "title": "delete_all skips remote deletes for disconnect cleanup",
       "id": "WS14g-131",
       "rails_line": 27,
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_entry_test::cutover_entry_delete_all_skips_remote_delete_and_preserves_other_users",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+          "line": 58
+        },
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+      },
+      "historical_line": 545,
+      "historical_receipt": "WS14g continuation.",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: delete_all skips remote deletes for disconnect cleanup. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event_calendar_entry_test.rb",
           "line": 27
         }
       },
-      "historical_line": 545,
-      "historical_receipt": "WS14g continuation."
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14g",

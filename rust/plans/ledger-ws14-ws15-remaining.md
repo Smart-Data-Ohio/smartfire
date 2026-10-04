@@ -1,18 +1,11 @@
 # WS14 / WS15 cutover assertions still open
 
-**Partial slice: 209 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
+**Partial slice: 199 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
 
 The three inventories retain historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`. Continuation batches and Rails/native execution receipts are recorded in `ledger-ws14-ws15-b-report.md`.
 
 | Record | Current ledger row | Rails declaration | Assertion still required |
 |---|---|---|---|
-| WS14e-017 | `rust/plans/ws14e-test-inventory.md:51` | `test/models/event_calendar_entry_test.rb:11` | destroying an entry enqueues its remote delete |
-| WS14e-018 | `rust/plans/ws14e-test-inventory.md:52` | `test/models/event_calendar_entry_test.rb:19` | delete skips the remote delete for already-reconciled rows |
-| WS14e-019 | `rust/plans/ws14e-test-inventory.md:53` | `test/models/event_calendar_entry_test.rb:27` | delete_all skips remote deletes for disconnect cleanup |
-| WS14e-020 | `rust/plans/ws14e-test-inventory.md:59` | `test/models/event/channel_timeline_test.rb:11` | creating an event posts exactly one announcement by the organizer with the title and URL |
-| WS14e-021 | `rust/plans/ws14e-test-inventory.md:61` | `test/models/event/channel_timeline_test.rb:47` | edits and cancellations post nothing |
-| WS14e-022 | `rust/plans/ws14e-test-inventory.md:62` | `test/models/event/channel_timeline_test.rb:56` | the announcement creates no inbox items |
-| WS14e-025 | `rust/plans/ws14e-test-inventory.md:65` | `test/models/event/channel_timeline_test.rb:110` | deleting the event removes its references |
 | WS14e-026 | `rust/plans/ws14e-test-inventory.md:78` | `test/models/event/recurrence_test.rb:101` | a single event has no series |
 | WS14e-027 | `rust/plans/ws14e-test-inventory.md:81` | `test/models/event/recurrence_test.rb:133` | the occurrence cap and one-year range run on head updates too |
 | WS14e-028 | `rust/plans/ws14e-test-inventory.md:87` | `test/models/event/recurrence_test.rb:225` | recurrence fields cannot be changed by injecting the guard flag |
@@ -118,9 +111,6 @@ The three inventories retain historical receipts and current per-record disposit
 | WS14g-126 | `rust/plans/ws14g-rails-test-map.md:548` | `test/models/drive_attachment_test.rb:58` | the 11th attachment is rejected |
 | WS14g-127 | `rust/plans/ws14g-rails-test-map.md:549` | `test/models/drive_attachment_test.rb:70` | destroying the message destroys its attachments |
 | WS14g-128 | `rust/plans/ws14g-rails-test-map.md:550` | `test/models/drive_attachment_test.rb:79` | url is the open link for the file id |
-| WS14g-129 | `rust/plans/ws14g-rails-test-map.md:554` | `test/models/event_calendar_entry_test.rb:11` | destroying an entry enqueues its remote delete |
-| WS14g-130 | `rust/plans/ws14g-rails-test-map.md:555` | `test/models/event_calendar_entry_test.rb:19` | delete skips the remote delete for already-reconciled rows |
-| WS14g-131 | `rust/plans/ws14g-rails-test-map.md:556` | `test/models/event_calendar_entry_test.rb:27` | delete_all skips remote deletes for disconnect cleanup |
 | WS14g-184 | `rust/plans/ws14g-rails-test-map.md:658` | `test/models/google_account_test.rb:44` | connected, usable, and expiry predicates |
 | WS14g-185 | `rust/plans/ws14g-rails-test-map.md:659` | `test/models/google_account_test.rb:61` | calendar? treats blank scopes as granted and requires calendar.events otherwise |
 | WS14g-224 | `rust/plans/ws14g-rails-test-map.md:707` | `test/system/drive_attachments_test.rb:10` | attach Drive files from the picker, send textless, and remove through edit |

@@ -11,6 +11,8 @@ use rusqlite::params;
 mod calendar_api_test;
 mod membership_calendar_test;
 mod cutover_event_test;
+mod cutover_entry_test;
+mod cutover_timeline_test;
 
 fn frozen() -> TestDb {
     TestDb::with_clock(
