@@ -62,15 +62,15 @@ impl Content {
     /// `render_action_text_content(content)`: attachments and galleries rendered, then sanitized
     /// with Action Text's allowlist.
     pub fn render(&self, ctx: &RenderContext) -> Result<String, Error> {
-        self.render_nested(ctx, 0)
+        self.render_nested(ctx, 0, false)
     }
 
     /// `render`, for content `depth` content attachments down.
-    fn render_nested(&self, ctx: &RenderContext, depth: usize) -> Result<String, Error> {
+    fn render_nested(&self, ctx: &RenderContext, depth: usize, default_renderer: bool) -> Result<String, Error> {
         let mut dom = self.dom.clone();
         let root = self.root;
-        render_attachments(&mut dom, root, ctx, depth)?;
-        render_attachment_galleries(&mut dom, root, ctx, depth)?;
+        render_attachments(&mut dom, root, ctx, depth, default_renderer)?;
+        render_attachment_galleries(&mut dom, root, ctx, depth, default_renderer)?;
         sanitizer::sanitize(&dom.to_html(root), &SafeList::action_text()).map_err(Error::Parse)
     }
 
@@ -78,6 +78,18 @@ impl Content {
     /// which our fork overrides with a `trix-content` wrapper.
     pub fn to_rendered_html_with_layout(&self, ctx: &RenderContext) -> Result<String, Error> {
         Ok(format!("<div class=\"trix-content\">\n  {}\n</div>\n", self.render(ctx)?))
+    }
+
+    /// `Content#to_s` outside Action Text's controller around_action (e.g. rake).
+    /// ContentAttachment#to_html renders its nested Content as an object using
+    /// ApplicationController.renderer. ActionView's new view has a nil context
+    /// prefix, so AbstractRenderer#merge_prefix_into_object_path raises. The
+    /// request renderer has a controller prefix and continues to render normally.
+    pub fn to_rendered_html_with_default_renderer(&self, ctx: &RenderContext) -> Result<String, Error> {
+        Ok(format!(
+            "<div class=\"trix-content\">\n  {}\n</div>\n",
+            self.render_nested(ctx, 0, true)?
+        ))
     }
 }
 
@@ -96,7 +108,10 @@ pub fn load_into(dom: &mut Dom, html: &str, ctx: &RenderContext) -> Result<NodeI
 }
 
 pub fn attachment_nodes(dom: &Dom, root: NodeId) -> Vec<NodeId> {
-    dom.descendants(root).into_iter().filter(|&n| dom.local_name(n) == Some(ATTACHMENT_TAG)).collect()
+    dom.descendants(root)
+        .into_iter()
+        .filter(|&n| dom.local_name(n) == Some(ATTACHMENT_TAG))
+        .collect()
 }
 
 // --- Trix attachments --------------------------------------------------------------------------
@@ -121,7 +136,11 @@ const TRIX_ATTRIBUTES: &[(&str, &str)] = &[
 /// carrying the attribute) becomes an `<action-text-attachment>`, or disappears if it has none of
 /// the attachment attributes.
 fn convert_trix_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext) -> Result<(), Error> {
-    let nodes: Vec<NodeId> = dom.descendants(root).into_iter().filter(|&n| dom.has_attr(n, "data-trix-attachment")).collect();
+    let nodes: Vec<NodeId> = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|&n| dom.has_attr(n, "data-trix-attachment"))
+        .collect();
     for node in nodes {
         let mut attributes: Vec<(&str, Value)> = Vec::new();
         for name in ["data-trix-attachment", "data-trix-attributes"] {
@@ -212,26 +231,34 @@ pub const MAX_CONTENT_ATTACHMENT_DEPTH: usize = 8;
 /// `render_action_text_attachment`, with nested content attachments rendered through
 /// `ContentAttachment#to_html` (the content partial, without the layout).
 pub fn render_attachment_html(attachment: &Attachment, ctx: &RenderContext) -> Result<String, Error> {
-    render_attachment_html_at(attachment, ctx, 0)
+    render_attachment_html_at(attachment, ctx, 0, false)
 }
 
-fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth: usize) -> Result<String, Error> {
+fn render_attachment_html_at(attachment: &Attachment, ctx: &RenderContext, depth: usize, default_renderer: bool) -> Result<String, Error> {
     attachables::render_attachment(attachment, ctx, &|content: &str| {
+        if default_renderer {
+            // Ruby evaluates content_instance before entering the object renderer.
+            Content::load(content, ctx)?;
+            return Err(Error::ContentAttachmentRenderer);
+        }
         if depth >= MAX_CONTENT_ATTACHMENT_DEPTH {
             return Ok(String::new());
         }
         let content = Content::load(content, ctx)?;
-        Ok(format!("{}\n", content.render_nested(ctx, depth + 1)?))
+        Ok(format!("{}\n", content.render_nested(ctx, depth + 1, default_renderer)?))
     })
 }
 
-fn render_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: usize) -> Result<(), Error> {
+fn render_attachments(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: usize, default_renderer: bool) -> Result<(), Error> {
     for node in attachment_nodes(dom, root) {
         sanitize_content_attribute(dom, node)?;
         let attachment = attachment_from_node(dom, node, ctx)?;
         let full = node_with_full_attributes(dom, node, &attachment.attachable)?;
-        let attachment = Attachment { attachable: attachment.attachable, caption: presence(dom.attr(full, "caption")).map(str::to_string) };
-        let html = render_attachment_html_at(&attachment, ctx, depth)?;
+        let attachment = Attachment {
+            attachable: attachment.attachable,
+            caption: presence(dom.attr(full, "caption")).map(str::to_string),
+        };
+        let html = render_attachment_html_at(&attachment, ctx, depth, default_renderer)?;
         dom.set_inner_html(full, &html).map_err(Error::Parse)?;
         let replacement = dom.to_html(full);
         dom.replace_with_html(node, &replacement).map_err(Error::Parse)?;
@@ -270,18 +297,32 @@ pub fn attachment_gallery_nodes(dom: &Dom, root: NodeId) -> Vec<NodeId> {
         .collect()
 }
 
-fn render_attachment_galleries(dom: &mut Dom, root: NodeId, ctx: &RenderContext, depth: usize) -> Result<(), Error> {
+fn render_attachment_galleries(
+    dom: &mut Dom,
+    root: NodeId,
+    ctx: &RenderContext,
+    depth: usize,
+    default_renderer: bool,
+) -> Result<(), Error> {
     for gallery in attachment_gallery_nodes(dom, root) {
-        let members: Vec<NodeId> = dom.descendants(gallery).into_iter().filter(|&n| is_gallery_attachment(dom, n)).collect();
+        let members: Vec<NodeId> = dom
+            .descendants(gallery)
+            .into_iter()
+            .filter(|&n| is_gallery_attachment(dom, n))
+            .collect();
         let mut rendered = String::new();
         for member in &members {
             let attachment = attachment_from_node(dom, *member, ctx)?;
             let full = node_with_full_attributes(dom, *member, &attachment.attachable)?;
-            let html = render_attachment_html_at(&attachment, ctx, depth)?;
+            let html = render_attachment_html_at(&attachment, ctx, depth, default_renderer)?;
             dom.set_inner_html(full, &html).map_err(Error::Parse)?;
             rendered.push_str(&dom.to_html(full));
         }
-        let html = format!("<div class=\"attachment-gallery attachment-gallery--{}\">\n  {}\n</div>", members.len(), rendered);
+        let html = format!(
+            "<div class=\"attachment-gallery attachment-gallery--{}\">\n  {}\n</div>",
+            members.len(),
+            rendered
+        );
         dom.replace_with_html(gallery, &html).map_err(Error::Parse)?;
     }
     Ok(())

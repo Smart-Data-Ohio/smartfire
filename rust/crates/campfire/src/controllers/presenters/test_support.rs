@@ -819,6 +819,37 @@ async fn ws8bm_browser_host_without_jobs() {
     }
     .without_job_runner()
     .await;
+    // Tools-only interleaving of ActivityInboxTest's second ActivityItem.create!.
+    // The production binary has no control endpoint or file watcher. The browser
+    // requests this only after handling the first item, through the real writer.
+    if let Ok(path) = std::env::var("WS11UI_ACTIVITY_CONTROL") {
+        let db = app.db().clone();
+        let user: i64 = std::env::var("WS11UI_ACTIVITY_USER")
+            .unwrap()
+            .parse()
+            .unwrap();
+        let source: i64 = std::env::var("WS11UI_ACTIVITY_SOURCE")
+            .unwrap()
+            .parse()
+            .unwrap();
+        tokio::spawn(async move {
+            let request = std::path::PathBuf::from(format!("{path}.request"));
+            while !request.exists() {
+                tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+            }
+            let item = db
+                .write(move |tx| {
+                    campfire_db::ActivityItem::refresh_unread(tx, user, "Message", source, "reply")
+                })
+                .await
+                .unwrap();
+            std::fs::write(
+                format!("{path}.response"),
+                serde_json::json!({"id":item.id}).to_string(),
+            )
+            .unwrap();
+        });
+    }
     let front = campfire_kit::front::FrontConfig::from_env();
     println!("WS8bm browser host: TestApp::without_job_runner; real router and durable enqueue");
     campfire_kit::front::serve(

@@ -523,6 +523,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "rooms/boards#show" => arc(rooms::boards::show),
         "rooms/boards#edit" => arc(rooms::boards::edit),
         "rooms/boards#update" => arc(rooms::boards::update),
+        "rooms/boards#destroy" => arc(rooms::boards::destroy),
+        // The live router also binds this as an unparsed API webhook (app.rs).
+        "google/calendar_notifications#create" => arc(google_calendar::notifications),
         "rooms/boards/automations#show" => arc(rooms::board_automations::show),
         "rooms/boards/automations#create_tag_assignment" => arc(rooms::board_automations::create_tag_assignment),
         "rooms/boards/automations#destroy_tag_assignment" => arc(rooms::board_automations::destroy_tag_assignment),
@@ -873,6 +876,20 @@ mod tests {
     }
 
     #[test]
+    fn every_defined_route_has_a_handler() {
+        let missing: Vec<_> = campfire_routes::TABLE
+            .iter()
+            .filter(|route| matches!(route.action, ActionStatus::Defined | ActionStatus::Implicit))
+            .filter(|route| ported(route.endpoint).is_none())
+            .map(|route| format!("{} {} -> {}", route.verb, route.spec, route.endpoint))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "defined Rails routes reach not_yet_ported: {missing:#?}"
+        );
+    }
+
+    #[test]
     fn every_ported_endpoint_is_a_real_rails_action() {
         let actions: std::collections::HashMap<&str, ActionStatus> = campfire_routes::TABLE
             .iter()
@@ -906,6 +923,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "rooms/boards#destroy", "google/calendar_notifications#create",
         "agents#me", "agents#update",
         "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
         "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
