@@ -57,7 +57,7 @@ async fn check_cases(names: &[&str]) {
         assert_eq!(page.status, axum::http::StatusCode::OK, "{name}");
         let body = page.text();
         // ProfilesControllerTest's light theme also pins the exact color-scheme cardinality.
-        if name == "manual_dnd" {
+        if *name == "manual_dnd" {
             assert_eq!(
                 body.matches("<meta name=\"color-scheme\" content=\"light\">")
                     .count(),
