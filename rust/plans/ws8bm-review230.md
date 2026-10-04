@@ -134,9 +134,9 @@ strict clippy exit: 0
 release inputs exit: 0
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 20s
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 14s
-# tests 60
-# pass 60
-# fail 0
+ℹ tests 60
+ℹ pass 60
+ℹ fail 0
 Ran 29 tests in 6.247s
 
 OK
