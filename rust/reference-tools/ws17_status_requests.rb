@@ -105,4 +105,4 @@ travel_to(Time.utc(2026, 3, 2, 16)) do
     claims << {stored:, until_time:, active:, won:, after: {broadcast: user.ooo_broadcast, until_time: user.ooo_until&.iso8601(6), note: user.ooo_note}}
   end
 end
-puts JSON.generate(reference: "d7c7de92", now: "2026-03-02T16:00:00Z", seeded_failures:, claims:, rows: output)
+puts JSON.generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: "2026-03-02T16:00:00Z", seeded_failures:, claims:, rows: output)

@@ -65,4 +65,4 @@ travel_to(Time.utc(2026,3,2,16)) do
   rows << row.merge(body:,event_type:item&.event_type,candidate_ids:recorder.send(:room_memberships).keys)
  end
 end
-puts JSON.generate(reference:"d7c7de92",rows:)
+puts JSON.generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:)

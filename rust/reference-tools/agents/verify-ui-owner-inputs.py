@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Regenerate the owner contracts from pinned Rails and compare exact bytes."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 from pathlib import Path
 import json,os,subprocess
 root=Path(__file__).resolve().parents[3]
 scratch=root/'.scratch';scratch.mkdir(exist_ok=True)
 output=scratch/'ui-owner-inputs-verified.json'
-env=dict(os.environ,PARITY_NAMESPACE='ws11',PARITY_OWNER='ws11',PARITY_IMAGE='triage-reference-d7c7de92')
+env=dict(os.environ,PARITY_NAMESPACE='ws11',PARITY_OWNER='ws11',PARITY_IMAGE=PIN_IMAGE)
 with output.open('wb') as out,(scratch/'ui-owner-inputs-verified.log').open('wb') as err:
  subprocess.run(['rust/parity/bin/reference','runner','--seed','default','rust/reference-tools/agents/ui_owner_inputs_contract.rb'],cwd=root,env=env,stdout=out,stderr=err,check=True)
 assert output.read_bytes()==(root/'rust/vectors/agents_ui_owner_inputs_contract.json').read_bytes()

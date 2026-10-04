@@ -88,5 +88,5 @@ travel_to(Time.utc(2026, 9, 30, 12)) do
     rows << {name: state[:name], data:, status_data:, html:}
   end
 end
-puts JSON.generate({reference: "d7c7de92", check_asset: ApplicationController.helpers.asset_path("check.svg"), rows:})
+puts JSON.generate({reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], check_asset: ApplicationController.helpers.asset_path("check.svg"), rows:})
 Current.reset

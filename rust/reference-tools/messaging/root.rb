@@ -71,6 +71,6 @@ invalid = [{ markdown_source: "" }, { drive_file_ids: "scalar" }].map do |input|
   raise "invalid update changed message" unless messages.first.reload.attributes == before
   { input:, status: browser.response.status, json: JSON.parse(browser.response.body), json_text: browser.response.body }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", inputs:, message_ids: messages.map(&:id),
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], inputs:, message_ids: messages.map(&:id),
   thread_id: thread.id, saved_id: saved.id, actions:, edits:, actions_menu:, shows:, updates:, invalid_updates: invalid) + "\n")
 puts "WS8bm root oracle: #{actions.size} real Rails actions responses; #{updates.size} updates and saved rows; #{invalid.size} rejected updates; #{edits.size + updates.size} edit forms and 1 actions menu; #{shows.size} standalone messages"

@@ -82,5 +82,5 @@ capture.call("create_html", 0, :post, "#{base}.html", { name: "HTML thread" })
 last = ChannelThread.order(:id).last
 capture.call("update_html", 0, :patch, "#{base}/#{last.id}.html", { name: "HTML renamed" })
 capture.call("delete_html", 0, :delete, "#{base}/#{last.id}.html")
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", parent_id: parent.id, thread_id: thread.id, created_id: created.id, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], parent_id: parent.id, thread_id: thread.id, created_id: created.id, rows:) + "\n")
 puts "WS8bm thread-lifecycle oracle: #{rows.size} actual Rails actions; creation retries, metadata/tags, lifecycle permissions, rollback rows and delete frames"

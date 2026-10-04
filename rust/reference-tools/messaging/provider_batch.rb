@@ -48,5 +48,5 @@ pages = []
  end
  pages << { size: size, reads: queries.size, cards: cards }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', rows: base['rows'], event_id: event.id, pages: pages)+"\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows: base['rows'], event_id: event.id, pages: pages)+"\n")
 puts "WS8bm2 populated provider Rails: #{pages.map { |p| "#{p[:size]} messages=#{p[:reads]} reads" }.join('; ')}; #{pages.sum { |p| p[:cards].size }*2} GitHub/event containers"

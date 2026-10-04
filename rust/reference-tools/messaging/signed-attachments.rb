@@ -58,5 +58,5 @@ end
   capture.call("filename_#{index}_thread", :post, "/rooms/#{room.id}/threads/#{thread.id}/messages.json", {message: {client_message_id: "filename-#{index}-thread", attachment: file}})
   rows.last(2).each { |row| row[:blob_filename] = filename }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', thread_id: thread.id, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], thread_id: thread.id, rows:) + "\n")
 puts "WS8bm signed-attachments oracle: #{rows.size} actual root/thread requests; attach/replace/delete, expiry/purpose/missing-blob rejection, expired retries and failed-edit preservation"

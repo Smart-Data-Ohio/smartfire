@@ -32,5 +32,5 @@ cases = []
   cases << { list_status: browser.response.status, list_body: browser.response.status >= 400 ? browser.response.body : nil, zone:, input:, status: created_status, stored: row && row['expires_at'], storage_type: row && row['storage_type'], read_back: credential&.expires_at, audits: AuditLog.where(action: 'agent.credential.create').count-before }
  end
 end
-puts JSON.pretty_generate(reference: 'd7c7de92', cases:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), cases:)
 warn "Rails raw credential expiry: #{cases.size} HTTP saves and model reads"

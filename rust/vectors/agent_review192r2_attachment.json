@@ -1,4 +1,5 @@
 {
+  "reference_pin": "78b9b154",
   "notes": [
     "Fresh #226 on the pinned harness: the post commits, then its actual processing job generates the thumbnail in committed transactions."
   ],
@@ -14,6 +15,22 @@
         "headers": {
           "content-type": "application/json; charset=utf-8"
         }
+      },
+      "rails_state": {
+        "row_deltas": {
+          "messages": 1,
+          "channel_threads": 0,
+          "active_storage_blobs": 0,
+          "active_storage_attachments": 1,
+          "active_storage_variant_records": 0
+        },
+        "thread_closed_at": null,
+        "source_file_exists": true,
+        "open_transactions": 0,
+        "jobs": [
+          "ChannelThread::PushMessageJob",
+          "Message::AttachmentProcessingJob"
+        ]
       },
       "approved": {
         "status": 201,

@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
+source "$ROOT/reference-tools/reference_image_env.sh"
 cd "$ROOT"
 STORE=${STORE:-../.scratch/member-panel-reference}
 mkdir -p "$STORE"
 WORK=$(mktemp -d -p "$STORE" run.XXXXXX)
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/db" "$WORK/storage"
-docker run --rm --name "${PARITY_OWNER:-ws11ui}-member-panel-goldens" --cpus 2 \
+docker run --rm -e PARITY_REFERENCE_SHA --name "${PARITY_OWNER:-ws11ui}-member-panel-goldens" --cpus 2 \
   --user "$(id -u):$(id -g)" --env-file parity/.env.reference \
   -e RAILS_LOG_LEVEL=warn -e PARITY_REDIS=1 -e 'FAKETIME=2026-02-10 12:00:00' \
   -v "$(realpath "$WORK/db"):/rails/storage/db" -v "$(realpath "$WORK/storage"):/rails/storage/files" \
-  -v "$ROOT:/work:ro" "${PARITY_IMAGE:-ws11ui-reference:d7c7de92}" \
+  -v "$ROOT:/work:ro" "${PARITY_IMAGE:-campfire-reference}" \
   bash -c 'bin/rails db:prepare >/dev/null && bin/rails runner /work/reference-tools/views/member_panel/goldens.rb'
 if [ "${1:-}" = --check ]; then
   cmp "$WORK/db/member-panel.json" crates/views/tests/golden/member_panel/partials.json

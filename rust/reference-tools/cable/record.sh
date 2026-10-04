@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Record both cable goldens from a private, freshly initialized Rails instance.
-# Requires the current pinned parity image (tag it as ws7-reference:d7c7de92 first).
+# Requires the current pinned parity image (PARITY_IMAGE may select its tag).
 set -euo pipefail
 
 RUST_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 SCRATCH=${WS7_SCRATCH:-/home/riels/.cache/rust-port/ws7}
-IMAGE=${WS7_REFERENCE_IMAGE:-ws7-reference:d7c7de92}
+IMAGE=${WS7_REFERENCE_IMAGE:-${PARITY_IMAGE:-campfire-reference}}
 PORT=${WS7_REFERENCE_PORT:-47040}
 NAME=ws7-reference-$PORT
-[[ "$IMAGE" == ws7-* ]] || { echo "image must start with ws7-" >&2; exit 1; }
+export PARITY_IMAGE=$IMAGE
+source "$RUST_ROOT/reference-tools/reference_image_env.sh"
 (( PORT >= 47000 && PORT <= 47049 )) || { echo "port must be in the worker's range" >&2; exit 1; }
 if docker container inspect "$NAME" >/dev/null 2>&1; then
   echo "$NAME already exists; refusing to replace it" >&2

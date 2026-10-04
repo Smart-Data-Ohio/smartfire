@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Replay all seven original browser declarations against frozen, seeded Rails."""
 import pathlib,subprocess,os,hashlib,tempfile,time
-root=pathlib.Path(__file__).resolve().parents[2];env=os.environ.copy();env.update(PARITY_RUNTIME='docker',PARITY_IMAGE='ws12-reference:boards-b908ebc2',PARITY_NAMESPACE='ws12',PARITY_OWNER='ws12',PARITY_CPUS='1');env.pop('LD_LIBRARY_PATH',None)
+root=pathlib.Path(__file__).resolve().parents[2];env=os.environ.copy();env.update(PARITY_RUNTIME='docker',PARITY_IMAGE=os.environ.get('PARITY_IMAGE','campfire-reference'),PARITY_NAMESPACE='ws12',PARITY_OWNER='ws12',PARITY_CPUS='1');env.pop('LD_LIBRARY_PATH',None)
 ref=str(root/'parity/bin/reference');image='ws12-playwright:'+hashlib.sha256(b''.join((root/'parity'/n).read_bytes() for n in ['Dockerfile.playwright','package.json','package-lock.json'])).hexdigest()[:12]
 cache=pathlib.Path(os.environ.get('XDG_CACHE_HOME',str(pathlib.Path.home()/'.cache')))/'rust-port/ws12';cache.mkdir(parents=True,exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='browser-rails-',dir=cache) as temp:

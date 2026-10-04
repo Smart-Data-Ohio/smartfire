@@ -68,5 +68,5 @@ fixtures.each do |name,user_id,path,setup,headers|
  ActiveSupport::IsolatedExecutionState.clear
 end
 sources=%w[app/models/channel_thread.rb app/views/channel_threads/new.html.erb app/views/channel_threads/_board_post.html.erb app/views/channel_threads/_conversation.html.erb app/views/threads/work/links/_box.html.erb app/views/threads/work/links/_link.html.erb app/views/threads/work/links/_status.html.erb]
-puts JSON.pretty_generate(reference:'d7c7de92',board_reference:'origin/main 7442031d approved board drift',sources:sources.to_h { |f| [f,Digest::SHA256.file(Rails.root.join(f)).hexdigest] },rows:)
-warn "Rails board post read oracle: #{rows.size} complete HTTP responses; approved board drift; no masks"
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),board_reference:ENV.fetch("PARITY_REFERENCE_SHA"),sources:sources.to_h { |f| [f,Digest::SHA256.file(Rails.root.join(f)).hexdigest] },rows:)
+warn "Rails board post read oracle: #{rows.size} complete HTTP responses; plain pinned image; no masks"

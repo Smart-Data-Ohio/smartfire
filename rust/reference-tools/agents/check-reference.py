@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Verify the Rails sources used by this slice against its pinned image."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import hashlib
 from pathlib import Path
 import subprocess
@@ -30,11 +32,11 @@ files = [
     'app/services/agents/working_presence.rb', 'app/models/channel_thread.rb', 'app/services/agents/context_builder.rb', 'app/services/agents/direct_messages.rb', 'app/models/message.rb', 'app/models/message/broadcasts.rb', 'app/models/user/bannable.rb', 'app/services/agents/streaming.rb', 'app/jobs/message/stream_trailing_broadcast_job.rb', 'app/services/periodic/runner.rb',
 ]
 command = ['docker', 'run', '--rm', '--name', 'ws11-reference-source-check', '--entrypoint', 'sha256sum',
-           'triage-reference-d7c7de92', *['/rails/' + file for file in files]]
+           PIN_IMAGE, *['/rails/' + file for file in files]]
 lines = subprocess.check_output(command, text=True).splitlines()
 drift=[]
 for file, line in zip(files, lines, strict=True):
-    pinned=subprocess.check_output(['git','show',f'd7c7de92:{file}'],cwd=root)
+    pinned=subprocess.check_output(['git','show',f'{PIN_FULL}:{file}'],cwd=root)
     assert hashlib.sha256(pinned).hexdigest()==line.split()[0], file
     current=(root/file).read_bytes()
     if current!=pinned:
@@ -42,5 +44,5 @@ for file, line in zip(files, lines, strict=True):
         # checking the actual pinned lock used by the oracle; allow exactly that checkout diff.
         assert file=='Gemfile.lock' and current==pinned.replace(b'rubyzip (3.0.2)',b'rubyzip (3.7.0)'), file
         drift.append(file)
-print(f'WS11 reference sources: {len(files)} pinned files matched; 0 image mismatches (d7c7de92)')
+print(f'WS11 reference sources: {len(files)} pinned files matched; 0 image mismatches ({PIN})')
 if drift:print('WS11 checkout drift: Gemfile.lock rubyzip 3.0.2 -> 3.7.0 from merged main; oracle stays pinned')

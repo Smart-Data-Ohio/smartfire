@@ -66,5 +66,5 @@ user=User.find(127326141);room=Room.find(699448326);Current.user=user;groups=[]
  end
  groups << {kind:,size:,embed_id:parent.id,sibling_id:sibling.id,host:,path:,thread_id:thread.id,rows:,cases:}
 end;end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:) + "\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:) + "\n")
 puts "WS8bm2 older-embed failure Rails: #{groups.sum{|g|g[:cases].size}} actual queued jobs; 4 deterministic deletions during GET; 4 discarded missing records; 4 failed writes with unchanged siblings, no frames or child jobs"

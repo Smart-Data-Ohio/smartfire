@@ -27,5 +27,5 @@ inputs.each do |value|
   ActiveSupport::IsolatedExecutionState.clear
   rows << {input:value,status:client.response.status,location:client.response.headers['Location'],next_flash:flash,name:room.reload.name,notes:room.messages.where(system_note:true).map(&:plain_text_body),error_value:body.at_css('.field_with_errors input')&.[]('value'),delta:{messages:Message.count-before[:messages],audits:AuditLog.count-before[:audits]}}
 end
-puts JSON.pretty_generate({reference:'d7c7de92',renames:rows})
-warn "Rails direct rename: #{rows.size} scalar, collection, Unicode and invalid HTTP cases; reference d7c7de92"
+puts JSON.pretty_generate({reference: ENV.fetch('PARITY_REFERENCE_SHA'),renames:rows})
+warn "Rails direct rename: #{rows.size} scalar, collection, Unicode and invalid HTTP cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

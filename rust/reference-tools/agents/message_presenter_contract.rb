@@ -28,5 +28,5 @@ travel_to Time.utc(2026,3,2,16) do
   threaded=thread.messages.create!(room:room,creator:bot,markdown_source:"Thread reply",client_message_id:"ws11-presenter-thread",streaming:true)
   capture.call(:thread_bot,threaded,bot)
   capture.call(:thread_human,threaded,david,"other.test")
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",cases:cases)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases)
 end

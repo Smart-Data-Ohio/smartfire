@@ -9,4 +9,4 @@ snapshot = -> { row.reload.attributes.slice('fetched_at','created_at','updated_a
 initial = snapshot.call
 row.update_column(:updated_at, now - 300)
 Calendar::MeetingCache.upsert(attrs, unique_by: :user_id)
-puts JSON.generate(reference:'d7c7de92', now:now.utc.iso8601(6), **initial, after_repeat:snapshot.call)
+puts JSON.generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now:now.utc.iso8601(6), **initial, after_repeat:snapshot.call)

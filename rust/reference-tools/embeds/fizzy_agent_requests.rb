@@ -66,5 +66,5 @@ vectors=cases.map do |name|
  end
  Thread.current[:ws15e_vector]
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',requests:vectors})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),requests:vectors})+"\n")
 puts "WS15e Fizzy agent requests Rails oracle: #{vectors.size} service cases"

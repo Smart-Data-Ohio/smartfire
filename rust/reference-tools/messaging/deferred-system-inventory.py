@@ -6,7 +6,9 @@ import subprocess
 import json
 import hashlib
 ROOT = Path(__file__).resolve().parents[3]
+PIN = (ROOT / 'rust/parity/reference.sha').read_text().strip()
 inventory = json.loads((ROOT / 'rust/plans/ws8bm-system-cases.json').read_text())
+assert inventory['reference'] == PIN, 'system inventory must match parity/reference.sha'
 causal_deferrals = {
     'a release click landing on the just-opened menu does not activate it',
     'mobile drawer keeps the room list scroll position across close and reopen',
@@ -15,7 +17,7 @@ causal_deferrals = {
 totals = {'passed': 0, 'deferred': 0, 'blocked_ws12': 0}
 for row in inventory['files']:
     path = row['file']
-    source = subprocess.check_output(['git', 'show', f'd7c7de92:{path}'], cwd=ROOT, text=True)
+    source = subprocess.check_output(['git', 'show', f'{PIN}:{path}'], cwd=ROOT, text=True)
     assert hashlib.sha256(source.encode()).hexdigest() == row['source_sha256']
     assert re.findall(r'^\s*test\s+"([^"]+)"', source, re.M) == [case['name'] for case in row['cases']]
     counts = dict.fromkeys(totals, 0)
@@ -42,5 +44,6 @@ for row in inventory['files']:
         counts[case['status']] += 1
         totals[case['status']] += 1
     print(f"{path}: {len(row['cases'])} named declarations; {counts['passed']} mapped behaviour passes; {counts['deferred']} deferred; {counts['blocked_ws12']} WS12 blocked", flush=True)
-assert sum(totals.values()) == 135
-print(f"WS8bm system inventory: 135 named declarations; {totals['passed']} mapped behaviour passes; {totals['deferred']} deferred; {totals['blocked_ws12']} WS12 blocked; no pixel checks", flush=True)
+declarations = sum(len(row['cases']) for row in inventory['files'])
+assert sum(totals.values()) == declarations
+print(f"WS8bm system inventory: {declarations} named declarations; {totals['passed']} mapped behaviour passes; {totals['deferred']} deferred; {totals['blocked_ws12']} WS12 blocked; no pixel checks", flush=True)

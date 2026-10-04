@@ -30,4 +30,4 @@ presence_names = presence.fetch('participants').map { |user| user.fetch('name') 
 request.get("/rooms/#{room.id}/huddle/participants")
 raise "participants status #{request.response.status}" unless request.response.status == 200
 participant_names = JSON.parse(request.response.body).map { |user| user.fetch('name') }
-puts JSON.pretty_generate(reference_pin: 'd7c7de92', input_names: names, downcase: names.map(&:downcase), sidebar_names: sidebar_names, presence_names: presence_names, participant_names: participant_names)
+puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], input_names: names, downcase: names.map(&:downcase), sidebar_names: sidebar_names, presence_names: presence_names, participant_names: participant_names)

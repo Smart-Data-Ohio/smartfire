@@ -5,11 +5,12 @@ import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
+PIN = (ROOT / 'rust/parity/reference.sha').read_text().strip()
 ledger = (ROOT / 'rust/plans/ws8bm-controller-cases.md').read_text()
 total = 0
 for section in re.split(r'^## ', ledger, flags=re.M)[1:]:
     path = section.splitlines()[0]
-    source = subprocess.check_output(['git', 'show', f'd7c7de92:{path}'], cwd=ROOT, text=True)
+    source = subprocess.check_output(['git', 'show', f'{PIN}:{path}'], cwd=ROOT, text=True)
     named = re.findall(r'^\s*test\s+"([^"]+)"', source, re.M)
     labels = [line[2:].split(' — ')[0] for line in section.splitlines() if line.startswith('- ')]
     assert set(named) == set(labels), (path, set(named) - set(labels), set(labels) - set(named))

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Regenerate pinned authority, real GitHub, presence and token observations."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 from pathlib import Path
 import os,subprocess
 root=Path(__file__).resolve().parents[3]
-env=dict(os.environ,PARITY_NAMESPACE='ws11',PARITY_OWNER='ws11',PARITY_IMAGE='triage-reference-d7c7de92')
+env=dict(os.environ,PARITY_NAMESPACE='ws11',PARITY_OWNER='ws11',PARITY_IMAGE=PIN_IMAGE)
 for name in ['security_lifecycle_cases','repository_adapter_contract','github_stream_peer_contract','presence_slash_named_cases','bot_plaintext_named_cases','work_payload_named_cases','github_approval_inbox_http_contract']:
  out=root/'.scratch'/f'{name}-verified.json'
  with out.open('wb') as stdout,(root/'.scratch'/f'{name}-verified.log').open('wb') as stderr:

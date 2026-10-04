@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Re-record read-only budget and event model contracts from pinned Rails."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 from pathlib import Path
 import os,subprocess
 root=Path(__file__).resolve().parents[3];scratch=root/'.scratch'
-env=dict(os.environ,PARITY_NAMESPACE='ws11',PARITY_OWNER='ws11',PARITY_IMAGE='triage-reference-d7c7de92')
+env=dict(os.environ,PARITY_NAMESPACE='ws11',PARITY_OWNER='ws11',PARITY_IMAGE=PIN_IMAGE)
 for name in ['budget_usage_contract','event_model_contract']:
  out=scratch/(name+'-verified.json')
  with out.open('wb') as stdout,(scratch/(name+'-verified.log')).open('wb') as stderr:

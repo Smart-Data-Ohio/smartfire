@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Check the oracle image's real sources against the frozen Rails pin."""
+
+from status_pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import hashlib
 from pathlib import Path
 import subprocess
@@ -15,22 +17,15 @@ paths += ['app/views/users/sidebars/rooms/_shared.html.erb', 'app/views/users/si
 paths += ['app/views/rooms/show.html.erb', 'app/helpers/messages_helper.rb', 'app/views/messages/_template.html.erb', 'app/views/messages/_drive_attachments.html.erb', 'app/views/messages/_thread_indicator.html.erb', 'app/views/messages/_unread_divider.html.erb', 'app/views/rooms/show/_invitation.html.erb', 'app/views/rooms/show/_ooo_notices.html.erb', 'app/views/rooms/show/_ooo_notice_line.html.erb', 'app/helpers/users/avatars_helper.rb', 'app/views/accounts/_invite.html.erb']
 paths += ['app/controllers/rooms/involvements_controller.rb', 'app/models/rooms/direct.rb']
 paths += ['app/views/messages/message_links/_card.html.erb','app/views/messages/message_links/_cards.html.erb','app/helpers/message_links_helper.rb','test/system/stage_test.rb','test/system/voice_channels_test.rb','test/system/huddles_test.rb','test/system/huddle_audio_test.rb','test/system/huddle_roster_test.rb','test/system/huddle_join_notices_test.rb','test/system/huddle_invitations_test.rb','test/system/huddle_presence_test.rb']
-raw=subprocess.check_output(['docker','run','--rm','--name','ws13-source-check-current','--network','none','--entrypoint','sha256sum','ws13-reference:d7c7de92',*[f'/rails/{path}' for path in paths]],text=True,cwd=root)
+raw=subprocess.check_output(['docker','run','--rm','--name','ws13-source-check-current','--network','none','--entrypoint','sha256sum',PIN_IMAGE,*[f'/rails/{path}' for path in paths if not path.startswith('test/')]],text=True,cwd=root)
 for line in raw.splitlines():
  digest,path=line.split();local=path.removeprefix('/rails/')
- expected=hashlib.sha256(subprocess.check_output(['git','show',f'd7c7de92:{local}'],cwd=root)).hexdigest()
+ expected=hashlib.sha256(subprocess.check_output(['git','show',f'{PIN_FULL}:{local}'],cwd=root)).hexdigest()
  assert digest==expected,local
  print(f'{local}: pin SHA256 matches reference image')
-print(f'Reference identity: {len(paths)} files match d7c7de92')
+print(f'Reference identity: {len(paths)} files match {PIN}')
 
-postfix='6fd40c08b6f437ecefac5ab906511093234da3327dcb72c4cad131365ee2f8e8'
-tracked=root/'rust/reference-tools/sidebar_reference/app/views/users/sidebars/show.html.erb'
-assert hashlib.sha256(tracked.read_bytes()).hexdigest()==postfix
-print('Post-#163 sidebar source: tracked SHA256 matches 2e20b24c')
-
-layout_path='app/views/layouts/application.html.erb'
-layout_expected=hashlib.sha256(subprocess.check_output(['git','show',f'2e20b24c:{layout_path}'],cwd=root)).hexdigest()
-assert hashlib.sha256((root/'rust/reference-tools/sidebar_reference'/layout_path).read_bytes()).hexdigest()==layout_expected
-layout_actual=subprocess.check_output(['docker','run','--rm','--name','ws13-layout-source-check','--network','none','--entrypoint','sha256sum','ws13-reference:sidebar-2e20b24c',f'/rails/{layout_path}'],text=True).split()[0]
-assert layout_actual==layout_expected
-print('Post-#163 application layout: tracked source and oracle image SHA256 match 2e20b24c')
+for path in paths:
+ if path.startswith('test/'):
+  assert (root/path).read_bytes() == subprocess.check_output(['git','show',f'{PIN_FULL}:{path}'],cwd=root),path
+print(f'Named declaration sources match current pin {PIN_FULL}; no overlay image')

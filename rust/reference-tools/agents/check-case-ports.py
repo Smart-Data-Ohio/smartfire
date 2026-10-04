@@ -16,10 +16,11 @@ def rust_ports(source):
 
 
 def check():
+    pin = (ROOT / 'rust/parity/reference.sha').read_text().strip()
     mapping = json.loads((Path(__file__).parent / 'case-ports.json').read_text())
     counts = {}
     for group in mapping['files']:
-        source = subprocess.check_output(['git', 'show', mapping['reference_pin'] + ':' + group['rails_file']], cwd=ROOT, text=True)
+        source = subprocess.check_output(['git', 'show', pin + ':' + group['rails_file']], cwd=ROOT, text=True)
         assert (ROOT / group['rails_file']).read_text() == source, group['rails_file']
         names = re.findall(r'^\s*test "(.*?)" do', source, re.M)
         mapped = [case['rails'] for case in group['cases']]

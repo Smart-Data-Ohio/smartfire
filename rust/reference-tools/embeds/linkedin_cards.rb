@@ -13,5 +13,5 @@ containers=[[],[cards[0]],[cards[1],cards[2]],[cards[0]]].each_with_index.map do
  message.define_singleton_method(:link_embed_references) {refs}
  {cards:cards.map { |c| c[:name] },client_id:key,html:ApplicationController.renderer.render(partial:'linkedin/posts/cards',locals:{message:message})}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',cards:cards,containers:containers})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),cards:cards,containers:containers})+"\n")
 puts "WS15e LinkedIn Rails oracle: #{cards.size} cards, #{containers.size} containers"

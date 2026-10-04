@@ -100,6 +100,6 @@ boundary_cases = boundary_faults.each_with_index.map do |(name, existing, fault)
   result
 end
 boundary_sources = %w[app/controllers/two_factor/setups_controller.rb app/models/two_factor_credential.rb app/models/two_factor_backup_code.rb app/models/two_factor_setup_secret.rb app/models/session.rb app/controllers/concerns/authentication.rb]
-boundary_output = { reference: 'd7c7de92', sources: boundary_sources.to_h { |path| [path, Digest::SHA256.file(Rails.root.join(path)).hexdigest] }, cases: boundary_cases }
+boundary_output = { reference: ENV.fetch("PARITY_REFERENCE_SHA"), sources: boundary_sources.to_h { |path| [path, Digest::SHA256.file(Rails.root.join(path)).hexdigest] }, cases: boundary_cases }
 File.write(File.join(WORK,'vectors/slack/google_enrollment_boundaries.json'), JSON.pretty_generate(boundary_output)+"\n")
 puts "Rails enrollment boundary oracle: #{boundary_cases.length} cases; literal HTTP responses, retained rows and write transaction groups"

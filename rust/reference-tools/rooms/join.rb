@@ -50,5 +50,5 @@ room=Room.find(654632876)
 room.update_columns(name:'Join <&>')
 renderer=RoomJoinGoldenController.renderer.new(http_host:'campfire.test',https:false,'rack.session'=>{})
 parts=JSON.parse(renderer.render(inline:'<% body=render template: "rooms/join" %><%= {body:body,nav:content_for(:nav)}.to_json.html_safe %>',layout:false,assigns:{room:room}))
-puts JSON.pretty_generate({reference:'d7c7de92',cases:cases,golden:{id:room.id,name:room.name,parts:parts}})
-warn "Rails join oracle: #{cases.size} HTTP cases, 2 join-page regions; reference d7c7de92"
+puts JSON.pretty_generate({reference: ENV.fetch('PARITY_REFERENCE_SHA'),cases:cases,golden:{id:room.id,name:room.name,parts:parts}})
+warn "Rails join oracle: #{cases.size} HTTP cases, 2 join-page regions; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

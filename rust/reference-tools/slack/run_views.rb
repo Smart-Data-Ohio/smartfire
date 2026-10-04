@@ -67,5 +67,5 @@ SlackImport.create!(id:854,slack_workspace:workspace,user:,kind:'personal',mode:
 rows << {name:'undo-blocked',view:'admin',data:serialize.call(run).merge('issues'=>run.issues.limit(50).map{|i|i.attributes.slice('level','slack_ref','message')},'next_page'=>2),html:renderer.render(template:'accounts/slack_import_runs/show',layout:false,assigns:{run:,queued_behind:false,issues:run.issues.limit(50),page:GearedPagination::Recordset.new(run.issues,per_page:50).page(nil)})}
 run.update!(status:'queued',stats:{})
 rows << {name:'queued-behind',view:'status',data:serialize.call(run),html:renderer.render(template:'accounts/slack_import_runs/status',layout:false,assigns:{run:,queued_behind:true})}
-File.write(File.join(ENV.fetch('PARITY_WORK'),'vectors/slack/run_views.json'),JSON.pretty_generate({reference:'d7c7de92',cases:rows})+"\n")
+File.write(File.join(ENV.fetch('PARITY_WORK'),'vectors/slack/run_views.json'),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),cases:rows})+"\n")
 puts "Slack run views: #{rows.size} complete Rails template bodies generated with shared deterministic CSRF inputs"

@@ -12,5 +12,5 @@ travel_to Time.utc(2026,3,2,16) do
   update=frames.dup;frames.clear
   message.finalize_stream!
   final=frames.dup
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",message_id:message.id,start:start,update:update,final:final)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],message_id:message.id,start:start,update:update,final:final)
 end

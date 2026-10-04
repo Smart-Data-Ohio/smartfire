@@ -177,5 +177,5 @@ output = cases.map do |test|
   end
   result
 end
-File.write(ENV.fetch("GITHUB_ACTION_VECTOR_PATH"), JSON.pretty_generate({reference_pin: "d7c7de92", validation:, cases: output}) + "\n")
-puts "GitHub agent Rails oracle: #{output.size} execution cases, #{validation.size} action validation cases; reference d7c7de92"
+File.write(ENV.fetch("GITHUB_ACTION_VECTOR_PATH"), JSON.pretty_generate({reference_pin: ENV.fetch("PARITY_REFERENCE_SHA"), validation:, cases: output}) + "\n")
+puts "GitHub agent Rails oracle: #{output.size} execution cases, #{validation.size} action validation cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

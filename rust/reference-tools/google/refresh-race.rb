@@ -35,4 +35,4 @@ cases = [
   {name:,original:,responses:[first_response,second_response],final_token:account.reload.access_token,
     final_expiry:account.access_token_expires_at.iso8601,refresh_token:account.refresh_token}
 end
-puts JSON.pretty_generate({reference:'d7c7de92',now:now.to_i,cases:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:now.to_i,cases:})

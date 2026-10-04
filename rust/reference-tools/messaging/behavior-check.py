@@ -29,7 +29,7 @@ from browser_host import build_host
 ROOT = Path(__file__).resolve().parents[3]
 RUST = ROOT / "rust"
 SCRATCH = ROOT / ".scratch"
-PIN = "d7c7de9264c63015be398001d7a1094e7695a6db"
+PIN = (RUST / "parity/reference.sha").read_text().strip()
 CASES = {
     "drive_attachments": ["attach Drive files from the picker, send textless, and remove through edit", "edit a room message in the composer and remove one of two attachments", "attach a Drive file from the thread composer"],
     "motion": ["motion is off by default in the test environment",'mobile drawer animates in, lands in place, and returns focus with motion on', 'member selection mode moves no rows and resizes nothing', 'people directory bar shifts no rows when toggling', 'people directory bar stays stuck while scrolling', 'room menu measures at full scale when clamping to the viewport edge', 'mobile drawer keeps the room list scroll position across close and reopen', 'mobile drawer reveals a current room far down the list on first open', 'mobile drawer reopens on the current room when it is already in view'],
@@ -205,7 +205,7 @@ for case in args.exclude_case:
 SCRATCH.mkdir(exist_ok=True)
 env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="4", PARITY_CPUS="2",
            PARITY_NAMESPACE="ws8bm-behavior", PARITY_OWNER="ws8bm", TMPDIR=str(SCRATCH), CAMPFIRE_REFERENCE=str(ROOT))
-image = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
+image = os.environ.get("PARITY_IMAGE", "campfire-reference")
 revision = subprocess.check_output(["docker", "image", "inspect", "--format", "{{range .Config.Env}}{{println .}}{{end}}", image], text=True)
 assert any(f"GIT_REVISION={value}" in revision.splitlines() for value in [PIN, PIN[:8]]), "browser reference must be the pinned Rails image"
 env["PARITY_IMAGE"] = image
@@ -215,7 +215,7 @@ if args.mutant:
     env["WS8BM_MUTANT"] = args.mutant
 else:
     env.pop("WS8BM_MUTANT", None)
-browser_image = "ws8bm-browser-reference-d7c7de92"
+browser_image = f"ws8bm-browser-reference-{PIN[:9]}"
 subprocess.run(["docker", "build", "--build-context", f"current_schema={ROOT / 'db'}", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/messaging/browser.Dockerfile"), "-t", browser_image, str(RUST)], cwd=ROOT, check=True)
 env["PARITY_IMAGE"] = browser_image
 subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"], cwd=ROOT, env=env, check=True)

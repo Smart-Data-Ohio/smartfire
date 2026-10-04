@@ -1,7 +1,7 @@
 # Pinned Date/JSON casts and real credential/sudo requests for PR196's R4 review.
 require 'action_dispatch/testing/integration'
 input = JSON.parse(File.read(File.join(__dir__, 'casting_followups_inputs.json')))
-result = {reference: 'd7c7de92'}
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA")}
 result[:expiry] = input['zones'].flat_map do |zone|
   Time.use_zone(zone) do
     input['expiry'].each_with_index.map do |text, index|

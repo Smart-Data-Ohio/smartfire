@@ -12,4 +12,4 @@ cases = values.map do |number|
     {input:number, error:error.class.name}
   end
 end
-puts JSON.pretty_generate({reference:"d7c7de9264c63015be398001d7a1094e7695a6db", digest:Calendar::PushChannel.digest("fixture-token"), claims:cases})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"), digest:Calendar::PushChannel.digest("fixture-token"), claims:cases})

@@ -4,8 +4,9 @@ from pathlib import Path
 import subprocess
 
 root = Path(__file__).resolve().parents[2]
+reference = (root / "parity/reference.sha").read_text().strip()
 original = subprocess.check_output([
-    "git", "show", "d7c7de92:test/scripts/service_worker_harness.mjs"
+    "git", "show", f"{reference}:test/scripts/service_worker_harness.mjs"
 ], cwd=root)
 before = b'const source = readFileSync(new URL("../../app/views/pwa/service_worker.js", import.meta.url), "utf8")'
 after = b'// The browser driver supplies the unmodified HTTP response body on stdin.\nconst source = readFileSync(0, "utf8")'

@@ -103,5 +103,5 @@ cases = []
     ActiveSupport::ExecutionContext.clear
   end
 end
-puts JSON.pretty_generate(reference: 'd7c7de92', cases:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), cases:)
 warn "Rails page-read oracle: #{cases.size} cases; administrator HTTP and directory loader"

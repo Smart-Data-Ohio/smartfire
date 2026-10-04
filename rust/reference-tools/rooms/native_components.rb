@@ -21,5 +21,5 @@ rows=[]
  rows << {room_id:room_id,user_id:user_id,root_ids:messages.map(&:id),message_list:parts['body'].match(/<div id="#{Regexp.escape(ActionView::RecordIdentifier.dom_id(room,:messages))}"[^>]*>(.*?)<\/div>\n\s*<turbo-cable-stream-source/m)[1],composer:parts['footer'],pending_template:renderer.render(partial:'messages/template')}
 end
 Current.reset
-puts JSON.pretty_generate(reference:'d7c7de92',rows:rows)
-warn "Rails native room components: #{rows.size} complete list/composer/template goldens; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),rows:rows)
+warn "Rails native room components: #{rows.size} complete list/composer/template goldens; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

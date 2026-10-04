@@ -2,7 +2,7 @@
 require 'zlib'
 require 'action_dispatch/testing/integration'
 input = JSON.parse(Zlib::GzipReader.open(File.join(__dir__, 'render_replay_inputs.json.gz'), &:read))
-result = {reference: 'd7c7de92'}
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA")}
 result[:expiry] = input['zones'].flat_map do |zone|
   Time.use_zone(zone) do
     input['expiry'].each_with_index.map do |text, index|

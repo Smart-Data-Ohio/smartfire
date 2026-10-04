@@ -4,5 +4,5 @@ cases=[['missing',{url:'https://www.example.com'}],['markup',{url:'https://www.e
  valid=metadata.valid?
  {name:name,attributes:attributes,valid:valid,full_messages:metadata.errors.full_messages,json:metadata.to_json}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',cases:cases})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),cases:cases})+"\n")
 puts "WS15e OpenGraph validation Rails oracle: #{cases.size} cases"

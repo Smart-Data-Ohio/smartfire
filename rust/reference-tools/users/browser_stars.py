@@ -36,7 +36,7 @@ shutil.copytree(seed / "storage",run_dir / "files")
 oracle_env = os.environ.copy()
 oracle_env.pop("LD_LIBRARY_PATH",None)
 oracle_env.update(PARITY_NAMESPACE="ws12",PARITY_OWNER="ws12",PARITY_RUNTIME="docker",
-                  PARITY_IMAGE="ws8br2-reference:d7c7de92-status-2e20b24c")
+                  PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"))
 reference = str(root / "parity/bin/reference")
 digest = hashlib.sha256(b"".join((root / "parity" / name).read_bytes() for name in ("Dockerfile.playwright","package.json","package-lock.json"))).hexdigest()[:12]
 image = "ws12-playwright:" + digest

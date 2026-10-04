@@ -2,7 +2,7 @@
 require 'json'
 require 'fileutils'
 require 'action_dispatch/testing/integration'
-load Rails.root.join('test/test_helpers/google_calendar_test_helper.rb')
+load File.join(ENV.fetch("PARITY_WORK"), "reference-tools/google/google_calendar_test_helper.rb")
 helper=Object.new.extend(GoogleCalendarTestHelper)
 Rails.logger=ActiveSupport::Logger.new($stderr);ActiveJob::Base.queue_adapter=:test
 ActionController::Base.allow_forgery_protection=false
@@ -50,4 +50,4 @@ rows=[]
     ActiveRecord::Base.connection_pool.disconnect!;FileUtils.rm_f(["#{database}-wal","#{database}-shm"]);FileUtils.cp(snapshot,database);FileUtils.rm_f(snapshot)
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',now:now.to_i,rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:now.to_i,rows:})

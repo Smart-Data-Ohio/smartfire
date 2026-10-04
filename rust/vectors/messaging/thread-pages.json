@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "parent_id": 935962058,
   "thread_ids": [
     9,
@@ -793,6 +793,5 @@
     "tour_completed": true,
     "voice_mode": "voice_activity",
     "push_to_talk_key": "`"
-  },
-  "layout_reference": "2e20b24c (#163 application layout and assets only; thread/message source remains d7c7de92)"
+  }
 }

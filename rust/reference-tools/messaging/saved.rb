@@ -48,5 +48,5 @@ call.call(:post, "/saved", { message_id: message.id })
 call.call(:delete, "/saved/#{id}", {})
 call.call(:post, "/saved", { message_id: message.id })
 call.call(:delete, "/saved/#{JSON.parse(steps.last[:body]).fetch('id')}", {})
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", message_id: message.id, steps:, html:, empty:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], message_id: message.id, steps:, html:, empty:) + "\n")
 puts "WS8bm2 saved Rails oracle: #{steps.size} HTTP responses; #{html.size} item partials; 1 empty page"

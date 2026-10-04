@@ -35,4 +35,4 @@ ActiveRecord::Base.transaction do
   raise ActiveRecord::Rollback
 end
 puts JSON.pretty_generate(rows)
-warn "Rails room shell: #{rows.size} empty-room region goldens; reference d7c7de92"
+warn "Rails room shell: #{rows.size} empty-room region goldens; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

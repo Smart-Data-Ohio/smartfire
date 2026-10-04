@@ -54,5 +54,5 @@ cases=[
  state=user.reload.attributes.slice(*initial.keys.map(&:to_s)).merge("other_name"=>User.find(149087659).name,"updated_at"=>user.updated_at.iso8601(6))
  {name:name,path:path,params:params,before:before || {},connection:!!connected,reason:reason,duplicate:!!duplicate,status:session.response.status,state:state}
 end
-puts JSON.pretty_generate(reference:"d7c7de92",profiles:cases)
-warn "Rails profile settings oracle: #{cases.size} PATCH cases; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),profiles:cases)
+warn "Rails profile settings oracle: #{cases.size} PATCH cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

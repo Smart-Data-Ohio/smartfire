@@ -40,6 +40,6 @@ limit=(1<<511)-1-(1<<100)
    parse:observation { ActiveSupport::TimeZone[zone].parse(text,Time.current) }}
  end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference:'d7c7de92',now:Time.current.utc.iso8601,cases:)+"\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.utc.iso8601,cases:)+"\n")
 fits=cases.count { |c| c[:fits_shared_timestamp] }
 puts "WS8bm2 extreme-range Rails: #{cases.size} actual parser cases; #{fits} within shared I512; #{cases.size-fits} outside shared I512, not approved differences"

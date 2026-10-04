@@ -11,7 +11,7 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.pop("LD_LIBRARY_PATH", None)
 env.update(PARITY_RUNTIME="docker", PARITY_OWNER="ws8br2", PARITY_NAMESPACE="ws8br2-goldens",
-           PARITY_IMAGE="ws8br2-reference:d7c7de92-status-2e20b24c")
+           PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"))
 reference = str(root / "parity/bin/reference")
 
 def run(arguments):

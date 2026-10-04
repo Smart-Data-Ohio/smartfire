@@ -15,7 +15,7 @@ class HuddleJoinPushSequences
     ENV.delete("LIVEKIT_URL"); ENV.delete("LIVEKIT_INTERNAL_URL")
     ActionCable.server.define_singleton_method(:broadcast) { |*_| }
     Huddle::PushInvitationJob.define_singleton_method(:perform_later) { |*_| }
-    titles = File.read(Rails.root.join("test/models/huddle/join_pusher_test.rb")).scan(/^  test "(.*)" do$/).flatten
+    titles = File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/huddle_pinned/huddle_join_pusher_test.rb")).scan(/^  test "(.*)" do$/).flatten
     cases = definitions.map do |number, ops|
       travel_to Time.utc(2026, 9, 23, 12)
       load Rails.root.join("db/schema.rb")
@@ -54,7 +54,7 @@ class HuddleJoinPushSequences
       end
       {number: number, title: titles.fetch(number - 1), input: input, results: results}
     end
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", now: Time.utc(2026, 9, 23, 12).to_i, cases: cases)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.utc(2026, 9, 23, 12).to_i, cases: cases)
   ensure
     travel_back
   end

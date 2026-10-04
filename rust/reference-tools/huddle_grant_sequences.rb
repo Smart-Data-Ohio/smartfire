@@ -37,7 +37,7 @@ class HuddleGrantSequenceOracle
     ENV.delete("LIVEKIT_URL")
     ActionCable.server.define_singleton_method(:broadcast) { |*_| }
     result = cases.map { |name, operations| scenario(name, operations) }
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", now: Time.utc(2026, 1, 1, 12).to_i, cases: result)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.utc(2026, 1, 1, 12).to_i, cases: result)
   ensure
     travel_back
   end

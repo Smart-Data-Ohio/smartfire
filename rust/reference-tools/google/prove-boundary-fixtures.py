@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Demand pinned Rails rejects rounded timestamps, without rewriting committed fixtures."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import argparse
 import os
 import subprocess
@@ -11,7 +13,7 @@ args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
 scratch = args.scratch.resolve() if args.scratch else root.parent / '.scratch/ws14g/calendar-completion/boundary-mutations'
 scratch.mkdir(parents=True, exist_ok=True)
-env = dict(os.environ, PARITY_NAMESPACE='ws14g', PARITY_OWNER='ws14g', PARITY_IMAGE='ws9-reference:d7c7de92')
+env = dict(os.environ, PARITY_NAMESPACE='ws14g', PARITY_OWNER='ws14g', PARITY_IMAGE=PIN_IMAGE)
 cases = [
     ('fetched-offset', 'meeting-refresh-cases.rb',
      'Rational(attrs.delete(:fetched_offset_us), 1_000_000)',

@@ -3,24 +3,7 @@
     <legend class="txt-large">Status</legend>
     <p class="txt-small margin-none">Automatic shows you online while you're here and idle after 10 quiet minutes. Your custom status shows beside your name.</p>
 
-    <div class="flex align-center gap pad-block-half">
-      {{ data.label(&form, "presence_setting", "Presence", "txt-medium") }}
-      {{ data.presence_select() }}
-    </div>
-{% if data.has_errors("presence_setting") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Presence {{ data.error_sentence("presence_setting") }}.</p>
-{% endif %}
-    <div class="flex align-center gap pad-block-half">
-      {{ data.label(&form, "custom_status_emoji", "Emoji", "txt-medium") }}
-      {{ data.text(&form, "custom_status_emoji", data.custom_status_emoji.as_deref(), h::attrs().class("input").maxlength(8).placeholder("😀").autocomplete("off").size(6).id("user_custom_status_emoji")) }}
-      {{ data.label(&form, "custom_status_text", "Status text", "txt-medium for-screen-reader") }}
-      {{ data.text(&form, "custom_status_text", data.custom_status_text.as_deref(), h::attrs().class("input flex-item-grow").maxlength(100).placeholder("Working from the train…").autocomplete("off").id("user_custom_status_text")) }}
-    </div>
-{% for attribute in ["custom_status_emoji", "custom_status_text"] %}{% if data.has_errors(attribute) %}        <p class="txt-small margin-none" style="color: var(--color-negative)">Custom status {{ data.error_sentence(attribute) }}.</p>
-{% endif %}{% endfor %}
-    <div class="flex align-center gap pad-block-half">
-      {{ data.label(&form, "custom_status_expires_in", "Clear after", "txt-medium") }}
-      {{ data.expiry_select() }}
-    </div>
+    {{ self.status_fields() }}
 
     <div class="flex flex-wrap align-center gap pad-block-half">
       {{ h::profile_form_submit_button(ctx) }}

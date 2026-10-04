@@ -28,5 +28,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   capture.call(:revoked_mismatch, message_id: root.id, thread_id: thread.id)
   room.memberships.find_by!(user: agent.user).destroy!
   capture.call(:nonmember_mismatch, message_id: root.id, thread_id: thread.id)
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", results: results }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], results: results }.as_json)
 end

@@ -39,5 +39,5 @@ user.update_columns(theme: "system", voice_mode: nil, quiet_hours_enabled: false
 session.patch "/users/149087659/tour", headers: { "X-CSRF-Token" => token }
 ActiveSupport::IsolatedExecutionState.clear
 tour = { status: session.response.status, completed_at: user.reload.tour_completed_at.iso8601(6), updated_at: user.updated_at.iso8601(6) }
-puts JSON.pretty_generate(reference: "d7c7de92", time_zones: cases, tour: tour)
-warn "Rails preference oracle: #{cases.length} time-zone cases, 1 tour touch; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), time_zones: cases, tour: tour)
+warn "Rails preference oracle: #{cases.length} time-zone cases, 1 tour touch; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
