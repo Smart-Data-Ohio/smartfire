@@ -171,8 +171,7 @@ pub(super) async fn query_count(app: &TestApp, client: &mut Browser<'_>, url: &s
     let reply = client.get(url).await;
     assert_eq!(reply.status, StatusCode::OK);
     app.db().stop_capturing_queries();
-    let count = capture.lock().unwrap().len();
-    count
+    capture.lock().unwrap().len()
 }
 pub(super) async fn live(app: &TestApp, vid: i64) {
     app.db()

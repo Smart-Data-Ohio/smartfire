@@ -279,8 +279,8 @@ async fn cutover_events_show_cancel_scope_inputs_only_for_series() {
     let mut david = app.sign_in(DAVID).await;
     let reply = david.get(&path(rs[1].id)).await;
     assert_eq!(reply.status, StatusCode::OK);
+    let inputs = regex::Regex::new("<input\\b[^>]*>").unwrap();
     for value in ["this_event", "this_and_following"] {
-        let inputs = regex::Regex::new("<input\\b[^>]*>").unwrap();
         let html = reply.text();
         assert_eq!(
             inputs
