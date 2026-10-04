@@ -527,8 +527,10 @@ async fn scheduled_row_partials_match_rails_and_empty_page_bytes() {
                 let state = case["state"].as_str().unwrap();
                 draft.sent_at = (state == "sent")
                     .then_some(campfire_db::Timestamp::from_jiff(SEED_NOW.parse().unwrap()));
+                let mut presenter = crate::controllers::presenters::Presenter::new(conn, &runtime, None);
+                presenter.render_zone = campfire_views::time::Zone::lookup(case["zone"].as_str().unwrap()).unwrap();
                 let view = crate::controllers::scheduled_messages::view(
-                    &crate::controllers::presenters::Presenter::new(conn, &runtime, None),
+                    &presenter,
                     conn,
                     &campfire_db::User::find(conn, DAVID)?,
                     &draft,

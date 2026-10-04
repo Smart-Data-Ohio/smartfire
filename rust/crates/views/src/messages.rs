@@ -438,9 +438,9 @@ impl MessageView {
         format!("{}{}", ctx.base_url, self.path())
     }
 
-    pub fn timestamp(&self, style: &str, class: bool) -> h::Html {
+    pub fn timestamp(&self, ctx: &ViewContext, style: &str, class: bool) -> h::Html {
         crate::time::local_datetime_tag(
-            &crate::time::Zone::utc(),
+            &ctx.time_zone,
             self.created_at,
             style,
             if class {
@@ -465,8 +465,8 @@ impl MessageView {
         )
     }
 
-    pub fn edited_iso(&self) -> String {
-        self.details.edited_at.map(iso8601).unwrap_or_default()
+    pub fn edited_iso(&self, ctx: &ViewContext) -> String {
+        self.details.edited_at.map(|at| ctx.time_zone.iso8601(at)).unwrap_or_default()
     }
     pub fn edited_label(&self) -> String {
         self.details
@@ -578,7 +578,7 @@ pub struct MessagePartial<'a> {
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
         || {
-            let key = message_fragment_key(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp);
+            let key = message_fragment_key_in_zone(message.id, message.updated_at, &ctx.base_url, &message.components.github_cards_stamp, &ctx.time_zone);
             if message.components.event_views.is_empty() { key } else {
                 use sha2::{Digest, Sha256};
                 let facts = serde_json::to_vec(&message.components.event_views).expect("event facts serialize");
@@ -633,7 +633,17 @@ pub fn cached_message_fragment(
 }
 
 pub fn cached_message_fragment_with_cards(id: i64, updated_at: Timestamp, base_url: &str, stamp: &str) -> Option<fragment_cache::Fragment> {
-    fragment_cache::read(&message_fragment_key(id, updated_at, base_url, stamp))
+    cached_message_fragment_with_cards_in_zone(id, updated_at, base_url, stamp, &crate::time::Zone::utc())
+}
+
+/// The record-version API's cache lookup in the same zone as its renderer.
+/// Existing callers without a zone retain the default UTC renderer contract.
+pub fn cached_message_fragment_with_cards_in_zone(id: i64, updated_at: Timestamp, base_url: &str, stamp: &str, zone: &crate::time::Zone) -> Option<fragment_cache::Fragment> {
+    fragment_cache::read(&message_fragment_key_in_zone(id, updated_at, base_url, stamp, zone))
+}
+
+fn message_fragment_key_in_zone(id: i64, updated_at: Timestamp, base_url: &str, stamp: &str, zone: &crate::time::Zone) -> String {
+    format!("{}/zone/{}", message_fragment_key(id, updated_at, base_url, stamp), zone.name())
 }
 
 fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str, stamp: &str) -> String {

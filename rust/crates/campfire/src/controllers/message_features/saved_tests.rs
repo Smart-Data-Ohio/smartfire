@@ -404,8 +404,10 @@ async fn saved_partials_match_rails_for_reminders_statuses_zones_and_empty_page(
                 item.reminded_at = state["reminded_at"]
                     .as_str()
                     .map(|raw| campfire_db::Timestamp::from_jiff(raw.parse().unwrap()));
+                let mut presenter = crate::controllers::presenters::Presenter::new(conn, &runtime, None);
+                presenter.render_zone = campfire_views::time::Zone::lookup(case["zone"].as_str().unwrap()).unwrap();
                 let view = crate::controllers::saved_items::view(
-                    &crate::controllers::presenters::Presenter::new(conn, &runtime, None),
+                    &presenter,
                     conn,
                     &campfire_db::User::find(conn, DAVID)?,
                     &item,

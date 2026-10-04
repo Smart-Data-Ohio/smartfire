@@ -2,6 +2,7 @@
 require 'json'
 require 'action_dispatch/testing/integration'
 require_relative 'oracle-database'
+require_relative 'oracle-state'
 ActiveJob::Base.queue_adapter = :test
 Random.define_singleton_method(:uuid) { 'fixture-relative-message' }
 ActionController::Base.allow_forgery_protection = false
@@ -69,7 +70,7 @@ source.fetch('groups').each do |group|
         browser.post(path, params: JSON.generate(params), headers:)
       end
       cases << {name: scenario[:name], zone: scenario[:zone], path:, params:, status: browser.response.status, content_type: browser.response.headers['Content-Type'], body: browser.response.body, location: browser.response.headers['Location'], reads: queries.length,
-                state: tables.to_h { |table| [table, conn.select_all("SELECT * FROM #{table} ORDER BY id").to_a] }.reject { |table, rows| rows == baseline[table] },
+                state: MessagingOracleState.changes(baseline, tables.to_h { |table| [table, conn.select_all("SELECT * FROM #{table} ORDER BY id").to_a] }),
                 frames: frames.select { |f| f[:stream] == "#{room.to_gid_param}:messages" }.dup}
       if scenario[:saved_page]
         # app/views/saved_items/_item.html.erb renders each reminder with local_datetime_tag.
@@ -78,7 +79,7 @@ source.fetch('groups').each do |group|
       end
     end
   end
-  groups << group.slice('size', 'rows').merge(baseline:, cases:)
+  groups << group.slice('size', 'rows').merge(state_encoding: 'rows_by_id_v1', baseline:, cases:)
  end
 end
 File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', groups:) + "\n")
