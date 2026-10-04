@@ -1,70 +1,47 @@
-# Approved agent API difference: fresh JPEG in a closed thread
+# Approved agent API differences
 
-The maintainer explicitly ruled on PR #192's second review that Rust must not
-reproduce an accidental Rails crash. This exception applies to the
-`fresh_jpeg_closed_thread` vector in `agent_review192r2_attachment.json`:
-Rails returns 500, while Rust returns 201. Rust's body and selected headers match
-the successful Rails idempotent replay of that already-committed message.
+The current approvals below cover committed-file ownership, proxy security headers
+and authorization races. The JPEG/video crash approvals from PR #192 are history,
+superseded by #226/#233's deferred attachment processing. They no longer authorize
+different posting statuses or missing generated files.
 
-The pinned Rails revision is d7c7de92, with Rails gem 1a02651ac37f. The exact
-exception is `IOError: closed stream`, raised by `IO.copy_stream` in
-`activestorage/lib/active_storage/service/disk_service.rb:23`.
-`ActiveStorage::VariantWithRecord#transform_blob` yields the transformed output
-at `app/models/active_storage/variant_with_record.rb:49-52`. That output closes
-before the enclosing `ChannelThread#post_message!` transaction commits
-(`app/models/channel_thread.rb:489`). The deferred attachment upload then uses
-the closed stream. This is an after-commit defect, not a deliberate validation.
+Both fresh closed-thread cases now return 201 in Rails and Rust. Their real processing
+jobs run after the post commits and retain the JPEG variant and video preview/WebP
+files. Current evidence is
+[`agent_review192r2_attachment.json:13`](../vectors/agent_review192r2_attachment.json#L13),
+its [JPEG file retention:127](../vectors/agent_review192r2_attachment.json#L127),
+and [`agent_review192r3_attachment.json:13`](../vectors/agent_review192r3_attachment.json#L13).
+The Rust consumers execute the queued job and compare complete state/files at
+[`agent_review_r2_tests.rs:310`](../crates/campfire/src/controllers/agent_review_r2_tests.rs#L310)
+and [`agent_review_r3_tests.rs:79`](../crates/campfire/src/controllers/agent_review_r3_tests.rs#L79).
+See [message attachment processing](message-attachment-processing.md#evidence) and
+[the pin refresh](parity-pin-refresh.md#changed-golden-attribution) for the replacement
+of the old crash diagnostics with current Rails captures. Native media sizes/checksums
+still require the pinned runtime; they are not masked.
 
-Both applications commit the same message, reopened thread, source analysis,
-variant and attachment rows. The fresh variant's file is absent. Neither source
-nor variant analysis is queued; the only queued job is
-`ChannelThread::PushMessageJob`, with the same thread/message Global IDs.
-Rust discards the staged variant after commit without raising the Rails defect.
-An error inserting the variant inside the transaction still rolls everything
-back, including the reopened thread and durable jobs.
+## Historical JPEG approval (PR #192 second review; superseded by #226/#233)
 
-The committed vector retains both statuses and bodies, the original exception
-and stack, and the agreed state. Its regression checks all message/thread
-columns, source metadata, all nonrandom variant/blob attributes, attachment
-relationships, file presence and size, and all queued job classes/logical named arguments. Runtime-specific Active Job
-Global ID envelopes are mapped to the Rust queue's named arguments, retaining
-both IDs and their relationship.
-Only random storage keys and attachment/variant surrogate IDs are omitted;
-relationships and exact counts are checked. Native media versions may change
-encoded image size/checksum; the pinned runtime is the canonical state oracle.
-This approval does not permit other status, header, response or state drift.
+At the old Rails pin `d7c7de92`, with Rails gem `1a02651ac37f`, posting a fresh JPEG
+in a closed thread returned Rails 500 versus Rust 201. Rails raised `IOError: closed stream`
+from `IO.copy_stream` in `activestorage/lib/active_storage/service/disk_service.rb:23`:
+`ActiveStorage::VariantWithRecord#transform_blob` had closed its transformed output
+before `ChannelThread#post_message!` committed and the deferred upload used it.
+The message, reopened thread and media rows had committed, but the variant file was
+absent. The maintainer approved Rust's successful response and staged-variant discard
+at that checkpoint instead of reproducing the crash. That discard is retired;
+the current JPEG vector requires the generated file to exist.
 
-## Fresh video in a closed thread (PR #192 third review)
+## Historical video approval (PR #192 third review; superseded by #226/#233)
 
-The maintainer also approved returning Rust 201 for a fresh uploaded copy of
-fixture video 9. Pinned Rails returns 500 with
-`ActiveStorage::FileNotFoundError: ActiveStorage::FileNotFoundError`, raised at
-`activestorage/lib/active_storage/service/disk_service.rb:152`, in
-`DiskService#stream` rescuing `Errno::ENOENT`. The preview image upload is deferred
-until commit, but `VariantWithRecord#transform_blob` opens that image at line 48
-while `ChannelThread#post_message!` still has one transaction open. This is an
-accidental upload-ordering defect, not a validation. Rails rolls back the message,
-thread reopening, preview/variant rows and jobs; the separately uploaded source
-blob/file survives.
-
-The `fresh_video_closed_thread` vector in `agent_review192r3_attachment.json`
-retains that failing request and its rollback state. Its separate approved state
-comes from ordinary Rails preprocessing outside the posting transaction, followed
-by the same HTTP request: the preview is generated and analyzed first, then the
-WebP variant is generated. This produces Rails' successful response and a valid
-media-state oracle without patching the failing request or masking either status.
-Rust returns 201, commits the message and reopening, retains the source, preview
-and WebP files, and queues variant analysis and thread push with the recorded
-logical arguments. Every nonrandom row field and every file size is asserted in
-the pinned runtime. Queue execution/insertion order is not an API contract.
-
-The JPEG discard is scoped to the original JPEG source, before a video source is
-replaced by its JPEG preview. The documented JPEG file-absence exception above
-is retained; it cannot apply to a video's JPEG preview. New/reused video variants
-and reused existing JPEG variants retain their files. Injected in-transaction
-failures remove staged preview/variant files and roll back every domain/media/job
-row. These narrow approvals authorize neither other missing files nor other
-response/state differences.
+At the same old pin, posting a fresh uploaded copy of fixture video 9 returned Rails
+500 with `ActiveStorage::FileNotFoundError` from `DiskService#stream` at
+`activestorage/lib/active_storage/service/disk_service.rb:152`. The variant transform
+opened the preview before its deferred upload committed. Rails rolled back the message,
+thread reopening, preview/variant rows and jobs; the separately uploaded source survived.
+The maintainer approved Rust 201 with retained source/preview/WebP files, using Rails
+preprocessing outside the posting transaction as the successful state oracle.
+The current vector captures an ordinary successful Rails post followed by its actual
+processing job instead; there is no current video crash or rollback exception.
 
 ## Committed file ownership and missing-file serving (PR #192 fourth and fifth reviews)
 
@@ -84,7 +61,8 @@ later callbacks, including the upload, are skipped. Rust retains the staged file
 whenever COMMIT succeeds, independently of those fallible callbacks. Both return
 500 for the callback exception and skip later ordinary callbacks. The maintainer
 approved preserving committed file ownership instead of reproducing Rails'
-missing-file state. The fresh-JPEG discard exception above remains explicit.
+missing-file state. This callback-failure difference is independent of the retired
+JPEG/video posting approvals.
 
 Representation requests preserve Rails' handled missing-file responses. Processed
 records are reused without regenerating files: an existing WebP can be served
@@ -95,11 +73,11 @@ disposition and no-cache header. Rows, files and jobs stay unchanged. These are
 ordinary handled responses, not an approved crash difference. The three scenarios
 and their exact bodies/headers are recorded in
 `agent_review192r5_representations.json`.
-The approved JPEG posting exception remains a metadata exception: Rails permits
-subsequent posting to reuse its committed variant record even without its file.
-Message attachment preparation preserves that behavior; missing-file serving
-uses the handled responses above. The video oracle retains every attachment's record_id and
-record_type, with exact foreign keys and generated row-count checks.
+Rails permits representation requests to reuse a committed variant record even
+without its file; missing-file serving uses the handled responses above. This is
+separate from fresh posting and its deferred processing job, whose current vectors
+require retained generated files. The video oracle retains every attachment's
+record_id and record_type, with exact foreign keys and generated row-count checks.
 
 ## HTTP/1.1 proxy security headers (PR #203 follow-up)
 
@@ -132,7 +110,7 @@ unexpected names, changed unapproved values and duplicate values, including on
 approved names. The previous nine-name projection and HTTP/1.0 default hid
 this difference; the inventory's old claim of exact proxy header parity is
 superseded by this explicit approval. Bodies, statuses, media bytes and stored
-state remain exact under the existing narrowly documented media approvals.
+state remain exact for these proxy requests.
 
 ## Current authorization and owner-transfer races (#205 review)
 
