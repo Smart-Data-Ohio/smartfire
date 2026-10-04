@@ -259,7 +259,7 @@ pub struct AttachmentView {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum AttachmentPreview {
     /// `attachment.video?`: `url_for(attachment.preview(format: :webp, resize_to_limit: ...))`.
-    Video { poster_url: String },
+    Video { poster_url: Option<String> },
     /// Otherwise previewable or variable: `polymorphic_url(attachment.representation(:thumb), only_path: true)`.
     Image { thumb_url: String },
     /// Neither previewable nor variable: a download link.

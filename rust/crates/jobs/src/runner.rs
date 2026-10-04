@@ -299,10 +299,16 @@ async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Clai
 
     // A write that fails is retried, backing off, for up to a lease (the heartbeat keeps the
     // claim meanwhile). Then the job is let go, and recovered once its lease expires.
+    let terminal_retry = matches!((&result, &decision),
+        (Err(JobError::RetryGroup { discard_exhausted: true, .. }), Decision::Delete)
+        | (Err(JobError::RetryGroup { discard_exhausted: false, .. }), Decision::Fail(_)));
+    let exhausted_in = terminal_retry.then(|| shared.registry.get(class).and_then(|kind| kind.exhausted_in.clone())).flatten();
     let deadline = Instant::now() + shared.config.lease;
     let mut backoff = COMPLETION_BACKOFF;
     let written = loop {
         let (runner, decision, arguments) = (shared.id.clone(), decision.clone(), arguments.clone());
+        let exhausted = exhausted_in.clone().map(|cleanup| (cleanup, shared.context.clone(),
+            crate::retry::arguments(serde_json::from_str(&job.arguments).unwrap_or_default()), job.version));
         let written = shared
             .db
             .write(move |tx| {
@@ -310,13 +316,17 @@ async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Clai
                 if let Some(arguments) = arguments {
                     tx.conn().execute("UPDATE background_jobs SET arguments=? WHERE id=? AND status='running' AND claimed_by=?", rusqlite::params![arguments,id,runner])?;
                 }
-                match decision {
+                let owned = match decision {
                     Decision::Delete => store::delete(tx.conn(), id, &runner),
                     Decision::Reschedule { wait, error, reset_attempts } => {
                         store::reschedule(tx.conn(), id, &runner, now.since(signed(wait)), error.as_deref(), reset_attempts, now)
                     }
                     Decision::Fail(error) => store::fail(tx.conn(), id, &runner, &error, now),
+                }?;
+                if owned && let Some((cleanup, context, original_arguments, version)) = exhausted {
+                    cleanup(tx, context, original_arguments, version)?;
                 }
+                Ok(owned)
             })
             .await;
         match written {
@@ -330,7 +340,8 @@ async fn finish<C: Clone + Send + Sync + 'static>(shared: &Shared<C>, job: &Clai
     };
     match written {
         Ok(true) => {
-            if let (Err(JobError::RetryGroup {error,discard_exhausted:true,..}),Decision::Delete)=(&result,&decision)
+            if let Err(JobError::RetryGroup { error, discard_exhausted, .. }) = &result
+                && matches!((&decision, discard_exhausted), (Decision::Delete, true) | (Decision::Fail(_), false))
                 && let Some(callback)=shared.registry.get(class).and_then(|kind|kind.exhausted.as_ref())
             {
                 callback(shared.context.clone(),crate::retry::arguments(serde_json::from_str(&job.arguments).unwrap_or_default()),job.version,error);

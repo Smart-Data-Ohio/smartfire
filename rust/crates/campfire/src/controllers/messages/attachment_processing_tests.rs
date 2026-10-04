@@ -1,12 +1,76 @@
-//! #226 failing-first regressions against 0373dfbd9's production code.
+//! #226: exercise real rendering, durable scheduling and the registered media worker.
 use crate::controllers::presenters::test_support::*;
+use askama::Template;
 use campfire_db::{Message, NewMessage, Timestamp};
 use campfire_jobs::{JobQueue, QueueConfig, RunnerConfig};
 use campfire_kit::FrozenClock;
 use campfire_storage::Blob;
 use serde_json::json;
 use std::{sync::Arc, time::Duration};
+
 const CLASS: &str = "Message::AttachmentProcessingJob";
+
+fn oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/message_attachment_processing.json"
+    ))
+    .unwrap()
+}
+
+async fn render(app: &TestApp, id: i64) -> String {
+    let runtime = app.booted.app.clone();
+    let (html, refreshes) = app
+        .db()
+        .read(move |conn| {
+            let presenter = crate::controllers::presenters::Presenter::new(conn, &runtime, None);
+            let view = presenter.message(&Message::find(conn, id)?)?;
+            let account = campfire_db::Account::first(conn)?;
+            let html = crate::controllers::presenters::page::render_detached_at(
+                &runtime,
+                account.as_ref(),
+                "http://example.org",
+                |ctx| {
+                    campfire_views::messages::PresentationPartial {
+                        ctx,
+                        message: &view,
+                    }
+                    .render()
+                    .unwrap()
+                },
+            );
+            Ok((html, presenter.take_render_refreshes()))
+        })
+        .await
+        .unwrap();
+    crate::controllers::presenters::refresh_after_render(app.db(), refreshes).await;
+    html
+}
+
+pub(crate) async fn perform_queued(app: &TestApp, attempts: u32) -> campfire_jobs::JobResult {
+    let (id, arguments, now) = app.db().read(|c| Ok(c.query_row("SELECT id,arguments,created_at FROM background_jobs WHERE job_class=? AND status='ready' ORDER BY id DESC LIMIT 1", [CLASS], |r| Ok((r.get::<_, i64>(0)?, r.get::<_,String>(1)?, r.get::<_,Timestamp>(2)?)))?)).await.unwrap();
+    let result = crate::jobs::attachment_processing::perform(
+        app.booted.app.clone(),
+        serde_json::from_str(&arguments).unwrap(),
+        campfire_jobs::Execution {
+            id,
+            executions: attempts,
+            enqueued_at: now,
+            scheduled_at: now,
+        },
+    )
+    .await;
+    if result.is_ok() {
+        app.db()
+            .write(move |tx| {
+                tx.conn()
+                    .execute("DELETE FROM background_jobs WHERE id=?", [id])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+    result
+}
 
 async fn setup(corrupt: bool) -> (TestApp, Arc<FrozenClock>, i64, i64) {
     let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
@@ -77,6 +141,47 @@ async fn state(app: &TestApp, blob: i64) -> (Option<String>, Option<Timestamp>, 
     }).await.unwrap()
 }
 
+async fn subscribe(
+    app: &TestApp,
+) -> (
+    crate::channels::tests::support::Client,
+    tokio::task::JoinHandle<()>,
+) {
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    let listener = crate::integrations::test_support::ws15e_listener().await;
+    let address = listener.local_addr().unwrap();
+    let router = app.booted.app.cable.router::<()>("/cable");
+    let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut request = format!("ws://{address}/cable")
+        .into_client_request()
+        .unwrap();
+    request
+        .headers_mut()
+        .insert("origin", format!("http://{address}").parse().unwrap());
+    request.headers_mut().insert(
+        "sec-websocket-protocol",
+        "actioncable-v1-json".parse().unwrap(),
+    );
+    request
+        .headers_mut()
+        .insert("cookie", david_cookie().parse().unwrap());
+    let mut client = crate::channels::tests::support::Client {
+        socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
+    };
+    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
+    let room = app
+        .db()
+        .read(|c| campfire_db::Room::find(c, ALL_TALK))
+        .await
+        .unwrap();
+    let gid = crate::channels::room_gid(&room).to_param();
+    let identifier = crate::channels::tests::support::identifier(
+        json!({"channel":"RoomMessagesChannel","signed_stream_name":rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &[&gid,"messages"])}),
+    );
+    client.confirm(&identifier).await;
+    (client, serving)
+}
+
 #[tokio::test]
 async fn attachment_processing_concurrent_views_claim_only_one_job() {
     let (app, _, id, blob) = setup(false).await;
@@ -95,7 +200,7 @@ async fn attachment_processing_concurrent_views_claim_only_one_job() {
 }
 
 #[tokio::test]
-async fn attachment_processing_expired_lease_recovers_but_active_and_terminal_do_not() {
+async fn attachment_processing_expired_lease_recovers_but_active_does_not() {
     let (app, clock, id, blob) = setup(false).await;
     app.db().write(move |tx| {
         tx.conn().execute("UPDATE active_storage_blobs SET message_processing_token='lost:0',message_processing_expires_at=? WHERE id=?", rusqlite::params![tx.now().since(jiff::SignedDuration::from_secs(900)), blob])?;
@@ -142,7 +247,8 @@ async fn attachment_processing_terminal_failure_never_restarts_from_views() {
     let (app, clock, id, blob) = setup(true).await;
     seed_job(&app, id, blob).await;
     let runner = start(&app);
-    tokio::time::timeout(Duration::from_secs(15), async {
+    let waits = tokio::time::timeout(Duration::from_secs(15), async {
+        let mut waits = Vec::new();
         loop {
             let job = app
                 .db()
@@ -158,14 +264,30 @@ async fn attachment_processing_terminal_failure_never_restarts_from_views() {
             if job.0 == "failed" {
                 break;
             }
+            if job.0 == "ready" && job.1.jiff() > campfire_kit::Clock::now(&*clock) {
+                waits.push(
+                    (job.1.jiff().as_microsecond()
+                        - campfire_kit::Clock::now(&*clock).as_microsecond())
+                        as f64
+                        / 1_000_000.0,
+                );
+            }
             clock.set(job.1.jiff());
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
+        waits
     })
     .await
     .unwrap();
+    assert_eq!(waits.len(), 2);
+    for (wait, base) in waits.into_iter().zip([3.0, 18.0]) {
+        assert!((base..=(base + (base - 2.0) * 0.15)).contains(&wait));
+    }
     runner.shutdown(Duration::from_secs(1)).await;
     assert_eq!(state(&app, blob).await.0.as_deref(), Some("failed"));
+    let html = render(&app, id).await;
+    assert!(html.contains("<video"));
+    assert!(!html.contains("poster=") && !html.contains("spinner"));
     for _ in 0..3 {
         view(&app, id).await;
     }
@@ -188,6 +310,10 @@ async fn attachment_processing_terminal_failure_never_restarts_from_views() {
 async fn attachment_processing_restart_performs_the_persisted_job() {
     let (app, _, id, blob) = setup(false).await;
     seed_job(&app, id, blob).await;
+    app.db().write(|tx| {
+        tx.conn().execute("UPDATE background_jobs SET status='running',attempts=1,claimed_by='stopped-process',lease_expires_at=? WHERE job_class=?", rusqlite::params![tx.now().since(jiff::SignedDuration::from_secs(-1)), CLASS])?;
+        Ok(())
+    }).await.unwrap();
     let runner = start(&app);
     tokio::time::timeout(Duration::from_secs(15), async {
         loop {
@@ -219,3 +345,336 @@ async fn attachment_processing_restart_performs_the_persisted_job() {
     assert_eq!(state(&app, blob).await.0, None);
 }
 
+#[tokio::test]
+async fn attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails() {
+    let (app, _, id, blob_id) = setup(false).await;
+    let (_client, server) = subscribe(&app).await;
+    let expected = oracle()["success"].clone();
+    assert_eq!(render(&app, id).await, expected["before"].as_str().unwrap());
+    let (token, expires, count) = state(&app, blob_id).await;
+    assert_eq!(count, 1);
+    assert_eq!(
+        token.as_deref().unwrap().rsplit_once(':').unwrap().1,
+        expected["pending"]["token_suffix"]
+    );
+    assert_eq!(
+        expires
+            .unwrap()
+            .jiff()
+            .strftime("%Y-%m-%d %H:%M:%S UTC")
+            .to_string(),
+        expected["pending"]["message_processing_expires_at"]
+    );
+    app.publications().take();
+    perform_queued(&app, 1).await.unwrap();
+    let frames = app.publications().take().into_iter().map(|(channel, bytes)| json!({"channel":channel,"payload":serde_json::from_str::<serde_json::Value>(&bytes).unwrap()})).collect::<Vec<_>>();
+    assert_eq!(json!(frames), expected["frames"]);
+    assert_eq!(render(&app, id).await, expected["after"].as_str().unwrap());
+    let storage = app.booted.app.storage.clone();
+    let actual = app.db().read(move |conn| {
+        let row = crate::controllers::agent_review_r2_tests::row_state;
+        let message = row(conn, &format!("SELECT * FROM messages WHERE id={id}"), &expected["message"])?;
+        let blob = row(conn, &format!("SELECT * FROM active_storage_blobs WHERE id={blob_id}"), &expected["blob"])?;
+        let source = Blob::find(conn, blob_id).unwrap().unwrap();
+        let preview = storage.existing_preview_image(conn, &source).unwrap().unwrap();
+        let webp = storage.existing_variant(conn, &preview, &campfire_storage::Variation::format_only("webp")).unwrap().unwrap();
+        let files = [&source, &preview, &webp].map(|b| {
+            use sha2::Digest;
+            let bytes = storage.service.download(&b.key).unwrap();
+            json!({"content_type":b.content_type,"bytes":bytes.len(),"sha256":format!("{:x}", sha2::Sha256::digest(&bytes))})
+        });
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&preview.metadata.encode()).unwrap(), expected["preview_metadata"]);
+        assert_eq!(json!(files), expected["files"]);
+        assert_eq!(message, expected["message"]);
+        assert_eq!(blob, expected["blob"]);
+        let analysis = conn.prepare("SELECT json_extract(arguments,'$.blob_id') FROM background_jobs WHERE job_class='ActiveStorage::AnalyzeJob' ORDER BY id")?.query_map([], |r| r.get::<_,i64>(0))?.collect::<Result<Vec<_>,_>>()?;
+        assert_eq!(json!(analysis), expected["image_analysis_jobs"]);
+        Ok(())
+    }).await;
+    actual.unwrap();
+    server.abort();
+}
+
+#[tokio::test]
+async fn attachment_processing_refused_enqueues_back_off_durably_then_recover() {
+    let (app, clock, id, blob) = setup(false).await;
+    app.db().write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_processing BEFORE INSERT ON background_jobs WHEN NEW.job_class='Message::AttachmentProcessingJob' BEGIN SELECT RAISE(ABORT,'queue refused'); END")?;
+        Ok(())
+    }).await.unwrap();
+    for (index, delay) in oracle()["enqueue_cooldowns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        let before = campfire_kit::Clock::now(&*clock);
+        for _ in 0..3 {
+            view(&app, id).await;
+        }
+        let (token, expires, count) = state(&app, blob).await;
+        assert_eq!(count, 0);
+        assert_eq!(token.as_deref(), delay["message_processing_token"].as_str());
+        assert_eq!(
+            expires.unwrap().jiff().duration_since(before).as_secs(),
+            delay["delay"].as_f64().unwrap() as i64
+        );
+        assert_eq!(
+            token.unwrap(),
+            format!("enqueue_failed:{}", (index + 1).min(5))
+        );
+        clock.set(expires.unwrap().jiff());
+    }
+    app.db()
+        .write(|tx| {
+            tx.conn().execute_batch("DROP TRIGGER reject_processing")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    view(&app, id).await;
+    assert_eq!(state(&app, blob).await.2, 1);
+    perform_queued(&app, 1).await.unwrap();
+    assert_eq!(state(&app, blob).await.0, None);
+}
+
+#[tokio::test]
+async fn attachment_processing_replacements_cover_room_thread_multipart_and_direct() {
+    for thread in [false, true] {
+        for multipart in [false, true] {
+            let (app, _, _, blob) = setup(false).await;
+            let message = app
+                .db()
+                .write(move |tx| {
+                    let attributes = NewMessage {
+                        room_id: ALL_TALK,
+                        creator_id: DAVID,
+                        attachment_blob_id: Some(1),
+                        ..Default::default()
+                    };
+                    if thread {
+                        let mut thread = campfire_db::ChannelThread::create(
+                            tx,
+                            campfire_db::NewChannelThread {
+                                room_id: ALL_TALK,
+                                creator_id: DAVID,
+                                ..Default::default()
+                            },
+                        )?;
+                        thread.post_message(tx, DAVID, attributes)
+                    } else {
+                        Message::create(tx, attributes)
+                    }
+                })
+                .await
+                .unwrap();
+            let path = message.thread_id.map_or_else(
+                || format!("/rooms/{ALL_TALK}/messages/{}", message.id),
+                |t| format!("/rooms/{ALL_TALK}/threads/{t}/messages/{}", message.id),
+            );
+            let mut req =
+                Req::new(axum::http::Method::PATCH, &path).header("accept", "application/json");
+            let bytes = app
+                .db()
+                .read({
+                    let storage = app.booted.app.storage.clone();
+                    move |c| {
+                        Ok(storage
+                            .service
+                            .download(&Blob::find(c, blob).unwrap().unwrap().key)
+                            .unwrap())
+                    }
+                })
+                .await
+                .unwrap();
+            if multipart {
+                req = req.multipart(
+                    &[],
+                    (
+                        "message[attachment]",
+                        "alpha-centuri.mov",
+                        "video/quicktime",
+                        &bytes,
+                    ),
+                );
+            } else {
+                let signed = campfire_storage::paths::signed_blob_id(
+                    &*app.booted.app.storage.verifier,
+                    blob,
+                    None,
+                );
+                req = req
+                    .header("content-type", "application/json")
+                    .body(json!({"message":{"attachment":signed}}).to_string());
+            }
+            let response = app.david().write(req).await;
+            assert_eq!(response.status.as_u16(), 200, "{}", response.text());
+            let replacement = app
+                .db()
+                .read({
+                    let id = message.id;
+                    move |c| Ok(Message::find(c, id)?.attachment(c)?.unwrap().1.id)
+                })
+                .await
+                .unwrap();
+            assert_eq!(state(&app, replacement).await.2, 1);
+            perform_queued(&app, 1).await.unwrap();
+            assert!(render(&app, message.id).await.contains("poster=\""));
+        }
+    }
+}
+
+#[tokio::test]
+async fn attachment_processing_edited_scheduler_refreshes_every_other_current_owner() {
+    let (app, clock, id, blob) = setup(false).await;
+    let (_client, server) = subscribe(&app).await;
+    let other = app
+        .db()
+        .write(move |tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    attachment_blob_id: Some(blob),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    seed_job(&app, id, blob).await;
+    // The scheduling message changes while its durable job still names the old blob.
+    app.db()
+        .write(move |tx| Message::find(tx.conn(), id)?.replace_attachment(tx, Some(1)))
+        .await
+        .unwrap();
+    // Keep just the old-video worker; the replacement image has its own independent job.
+    app.db().write(move |tx| { tx.conn().execute("DELETE FROM background_jobs WHERE job_class=? AND json_extract(arguments,'$.blob_id')!=?", rusqlite::params![CLASS, blob])?; Ok(()) }).await.unwrap();
+    clock.advance(jiff::SignedDuration::from_secs(20));
+    app.publications().take();
+    perform_queued(&app, 1).await.unwrap();
+    let frames = app.publications().take();
+    assert_eq!(frames.len(), 1);
+    let payload = serde_json::from_str::<String>(&frames[0].1).unwrap();
+    assert!(payload.contains(&format!("presentation_message_{}", other.client_message_id)));
+    assert!(!payload.contains("presentation_message_attachment-processing-1"));
+    let touched = app
+        .db()
+        .read(move |c| Message::find(c, other.id))
+        .await
+        .unwrap();
+    assert_eq!(touched.updated_at.jiff(), campfire_kit::Clock::now(&*clock));
+    assert!(render(&app, id).await.contains("<img"));
+    server.abort();
+}
+
+#[tokio::test]
+async fn attachment_processing_claims_renew_and_stale_owners_cannot_clear_new_leases() {
+    let (app, clock, _, blob) = setup(false).await;
+    use campfire_db::models::message_attachment_processing as processing;
+    let claims = app
+        .db()
+        .write(move |tx| {
+            Ok([
+                processing::claim(tx, blob, "first:0")?,
+                processing::claim(tx, blob, "second:0")?,
+                processing::claim(tx, blob, "first:0")?,
+            ])
+        })
+        .await
+        .unwrap();
+    let golden = oracle()["claim"].clone();
+    assert_eq!(
+        claims,
+        [
+            golden["claims"][0].as_bool().unwrap(),
+            golden["claims"][1].as_bool().unwrap(),
+            golden["renewal"].as_bool().unwrap()
+        ]
+    );
+    clock.advance(jiff::SignedDuration::from_secs(900));
+    app.db()
+        .write(move |tx| {
+            assert!(processing::claim(tx, blob, "second:0")?);
+            processing::release(tx, blob, "first:0")?;
+            processing::fail(tx, blob, "first:0")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert_eq!(state(&app, blob).await.0.as_deref(), Some("second:0"));
+    app.db()
+        .write(move |tx| processing::release(tx, blob, "second:0"))
+        .await
+        .unwrap();
+    assert_eq!(state(&app, blob).await, (None, None, 0));
+}
+
+#[tokio::test]
+async fn attachment_processing_inline_failure_recovers_when_a_detached_broadcast_renders() {
+    let (app, _, id, blob) = setup(true).await;
+    let source = app
+        .db()
+        .read(move |c| Ok(Blob::find(c, blob).unwrap().unwrap()))
+        .await
+        .unwrap();
+    super::process_attachment(&app.booted.app, source)
+        .await
+        .unwrap();
+    assert_eq!(state(&app, blob).await.0, None);
+    app.db()
+        .write(move |tx| {
+            let message = Message::find(tx.conn(), id)?;
+            let room = campfire_db::Room::find(tx.conn(), message.room_id)?;
+            tx.emit_after_commit(campfire_db::Event::broadcast(
+                &campfire_db::broadcasts::Broadcast::append(
+                    campfire_db::broadcasts::conversation_messages(tx.conn(), &message)?,
+                    campfire_db::broadcasts::room_dom_id(&room, Some("messages")),
+                    campfire_db::broadcasts::Partial::Message { message_id: id },
+                ),
+            ));
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let (token, _, count) = state(&app, blob).await;
+    assert_eq!(count, 1);
+    assert!(token.unwrap().ends_with(":0"));
+}
+
+#[tokio::test]
+async fn attachment_processing_cached_collection_recovers_a_lost_enqueue_without_rebuilding() {
+    let (app, _, id, blob) = setup(false).await;
+    let path = format!("/rooms/{ALL_TALK}/messages");
+    let mut browser = app.david();
+    assert_eq!(browser.get(&path).await.status.as_u16(), 200);
+    async fn fragment(app: &TestApp, id: i64) -> Arc<String> {
+        let runtime = app.booted.app.clone();
+        app.db()
+            .read(move |c| {
+                let presenter = crate::controllers::presenters::Presenter::new(c, &runtime, None);
+                let message = Message::find(c, id)?;
+                let key = presenter.message_fragment_cache_key(&message, "http://campfire.test")?;
+                Ok(campfire_views::fragment_cache::with(
+                    &runtime.fragment_cache,
+                    || campfire_views::fragment_cache::read(&key).unwrap(),
+                ))
+            })
+            .await
+            .unwrap()
+    }
+    let before = fragment(&app, id).await;
+    app.db().write(move |tx| {
+        tx.conn().execute("DELETE FROM background_jobs WHERE job_class=?", [CLASS])?;
+        tx.conn().execute("UPDATE active_storage_blobs SET message_processing_token=NULL,message_processing_expires_at=NULL WHERE id=?", [blob])?;
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(browser.get(&path).await.status.as_u16(), 200);
+    let after = fragment(&app, id).await;
+    assert!(
+        Arc::ptr_eq(&before, &after),
+        "the HTML must actually come from the warm fragment cache"
+    );
+    assert_eq!(state(&app, blob).await.2, 1);
+}

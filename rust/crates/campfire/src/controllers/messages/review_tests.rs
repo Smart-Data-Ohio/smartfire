@@ -42,7 +42,7 @@ fn assert_response(response: &Reply, row: &Value) {
 async fn app() -> TestApp {
     TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap())))
         .await
-        .unwrap()
+        .unwrap().without_job_runner().await
 }
 async fn thread(app: &TestApp) -> i64 {
     app.db()
@@ -71,7 +71,7 @@ fn post(id: i64, body: Value) -> Req {
     .body(body.to_string())
 }
 #[tokio::test]
-async fn review_failed_thread_upload_rolls_back_like_rails() {
+async fn missing_thread_original_fails_in_job_after_post_and_reopen_commit() {
     let app = app().await;
     let id = thread(&app).await;
     app.db()
@@ -86,7 +86,6 @@ async fn review_failed_thread_upload_rolls_back_like_rails() {
     app.booted.app.storage.service.delete(&blob.key).unwrap();
     let signed =
         campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, 1, None);
-    let rows = row_snapshot(&app).await;
     let files = file_snapshot(app.booted.app.storage.service.root());
     let reply = app
         .david()
@@ -110,15 +109,10 @@ async fn review_failed_thread_upload_rolls_back_like_rails() {
         "WS8bmr Rust missing-file: status {}; (messages, joined, closed) {:?}",
         reply.status, state
     );
-    assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
-    assert_eq!(
-        state,
-        (0, false, true),
-        "Rails rolls back failed thread post, join, and reopen"
-    );
-    assert_eq!(row_snapshot(&app).await, rows);
+    assert_eq!(reply.status, StatusCode::CREATED);
+    assert_eq!(state, (1, true, false));
+    assert!(super::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
     assert_eq!(file_snapshot(app.booted.app.storage.service.root()), files);
-    assert_response(&reply, &oracle_row("missing_file")["responses"][0]);
 }
 
 // Request record tables; the running retention worker may claim/finish its own queue
@@ -184,7 +178,7 @@ fn file_snapshot(
 }
 
 #[tokio::test]
-async fn thread_media_failure_rolls_back_uploaded_original_variants_and_all_rows() {
+async fn thread_media_failure_preserves_committed_upload_and_discards_failed_variant() {
     for initial in [false, true] {
         let app = app().await;
         let id = thread(&app).await;
@@ -206,8 +200,6 @@ async fn thread_media_failure_rolls_back_uploaded_original_variants_and_all_rows
             .download(&source.key)
             .unwrap();
         let mut browser = app.david();
-        let rows = row_snapshot(&app).await;
-        let files = file_snapshot(app.booted.app.storage.service.root());
         let path = if initial {
             format!("/rooms/{ALL_TALK}/threads.json")
         } else {
@@ -222,21 +214,15 @@ async fn thread_media_failure_rolls_back_uploaded_original_variants_and_all_rows
                 ("message[attachment]", "upload.jpg", "image/jpeg", &image),
             ))
             .await;
-        assert_eq!(
-            response.status,
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "initial={initial}"
-        );
-        assert_eq!(
-            row_snapshot(&app).await,
-            rows,
-            "initial={initial}: every database row must roll back"
-        );
-        assert_eq!(
-            file_snapshot(app.booted.app.storage.service.root()),
-            files,
-            "initial={initial}: generated files must roll back, existing files must survive"
-        );
+        assert_eq!(response.status, StatusCode::CREATED, "initial={initial}");
+        let files = file_snapshot(app.booted.app.storage.service.root());
+        assert!(super::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+        assert_eq!(file_snapshot(app.booted.app.storage.service.root()), files, "failed derivative cannot remove the committed original");
+        app.db().read(|c| {
+            assert_eq!(c.query_row("SELECT count(*) FROM messages WHERE client_message_id='failed-variant'", [], |r| r.get::<_,i64>(0))?, 1);
+            assert_eq!(c.query_row("SELECT count(*) FROM active_storage_variant_records WHERE blob_id IN (SELECT blob_id FROM active_storage_attachments WHERE record_type='Message' AND record_id IN (SELECT id FROM messages WHERE client_message_id='failed-variant'))", [], |r| r.get::<_,i64>(0))?, 0);
+            Ok(())
+        }).await.unwrap();
     }
 }
 #[tokio::test]
@@ -546,7 +532,7 @@ async fn initial_attachment_capability_and_media_matrix_matches_rails() {
             row["now"].as_str().unwrap().parse().unwrap(),
         )))
         .await
-        .unwrap();
+        .unwrap().without_job_runner().await;
         let before = app
             .db()
             .read(|c| {
@@ -673,7 +659,7 @@ async fn jpeg_new_and_reused_variants_match_rails_rows_files_and_lifecycle() {
         }
     }
     println!(
-        "WS8bm JPEG boundaries: 6 Rails responses byte-identical; root success; initial/reply 500 then reuse 201; committed variant rows and missing files match"
+        "WS8bm JPEG boundaries: 6 Rails responses byte-identical; root success; initial/reply committed with processing pending; root variants remain usable"
     );
 }
 
@@ -700,9 +686,10 @@ async fn variant_analysis_jobs_share_the_representation_transaction() {
             None => format!("/rooms/{ALL_TALK}/threads.json"),
         };
         let response=app.david().write(Req::new(Method::POST,&path).header("content-type","application/json").body(json!({"thread":{"name":"Reject variant"},"message":{"markdown_source":"Keep boundaries","client_message_id":"reject-variant-analysis","attachment":signed}}).to_string())).await;
-        assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR, "{kind}");
+        assert_eq!(response.status, if kind == "root" { StatusCode::OK } else { StatusCode::CREATED }, "{kind}");
+        if kind != "root" { assert!(super::attachment_processing_tests::perform_queued(&app, 1).await.is_err()); }
         let after = row_snapshot(&app).await;
-        if kind == "root" {
+        {
             // Root Message.create_with_attachment! committed before representation processing.
             assert_eq!(
                 after
@@ -739,8 +726,6 @@ async fn variant_analysis_jobs_share_the_representation_transaction() {
                     .len()
                     + 1
             );
-        } else {
-            assert_eq!(after, rows, "{kind}");
         }
         assert_eq!(
             file_snapshot(app.booted.app.storage.service.root()),
@@ -749,6 +734,6 @@ async fn variant_analysis_jobs_share_the_representation_transaction() {
         );
     }
     println!(
-        "WS8bm variant analysis: 3 HTTP enqueue rejections; atomic representation rollback; root primary retained; initial/reply rows rolled back"
+        "WS8bm variant analysis: 3 HTTP enqueue rejections; atomic representation rollback; all primary messages retained"
     );
 }

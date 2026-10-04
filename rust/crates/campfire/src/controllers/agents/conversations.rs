@@ -205,7 +205,6 @@ async fn start(
             "Could not find or build blob: expected attachable"
         )));
     }
-    let storage = c.app().storage.clone();
     let in_thread = a.thread_id.is_some();
     let (mut outcome, blob) = c
         .app()
@@ -237,7 +236,10 @@ async fn start(
                 blob = None;
             }
             if in_thread && let Some(blob) = blob.take() {
-                crate::active_storage::process_attachment_in(tx, &storage, blob)?;
+                crate::controllers::presenters::attachments::enqueue_analysis(tx, &blob);
+                if let agent_posting::PostResult::Posted(message) = &result {
+                    campfire_db::models::message_attachment_processing::schedule(tx, message.id, blob.id);
+                }
                 if let agent_posting::PostResult::Posted(message) = &mut result {
                     **message = campfire_db::Message::find(tx.conn(), message.id)?;
                 }

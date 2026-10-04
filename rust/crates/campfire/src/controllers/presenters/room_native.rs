@@ -44,7 +44,7 @@ pub(crate) struct NativePage {
     pub composer: Facts,
     pub link_fetches: Vec<i64>,
     pub twitter_fetches: Vec<i64>,
-    pub github_refreshes: Vec<i64>,
+    pub github_refreshes: super::RenderRefreshes,
 }
 
 pub(crate) fn load(conn: &campfire_db::Connection, app: &crate::app::AppState,
@@ -89,5 +89,5 @@ pub(crate) fn load(conn: &campfire_db::Connection, app: &crate::app::AppState,
                 app.db.env().now(),
             )?,
     };
-    Ok(NativePage { show, composer, link_fetches: presenter.pending_link_fetches(), twitter_fetches: presenter.pending_twitter_fetches(), github_refreshes: presenter.take_github_refreshes() })
+    Ok(NativePage { show, composer, link_fetches: presenter.pending_link_fetches(), twitter_fetches: presenter.pending_twitter_fetches(), github_refreshes: presenter.take_render_refreshes() })
 }

@@ -39,13 +39,13 @@ pub async fn show(c: &mut Ctx) -> Result {
                     pins: pins_changed.then(|| super::pins::list(conn,&app,&room)).transpose()?,
                 })
             })?;
-            Ok(Some((refresh, presenter.take_github_refreshes())))
+            Ok(Some((refresh, presenter.take_render_refreshes())))
         })
         .await
         .map_err(db_error)?;
     let Some((refresh, refreshes)) = refresh else { return Ok(c.head(StatusCode::NO_CONTENT)); };
     c.respond_to(&[&format::TURBO_STREAM])?;
-    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     page::bare(c, StatusCode::OK, &format::TURBO_STREAM, |ctx| RefreshShow { ctx, refresh: &refresh }.render()).await
 }
 

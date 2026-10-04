@@ -266,7 +266,7 @@ pub(super) fn stored_files(app: &TestApp) -> Vec<std::path::PathBuf> {
     files
 }
 #[tokio::test]
-async fn pr192_failed_thread_attachment_rolls_back_post_reopen_and_queue() {
+async fn pr192_failed_thread_attachment_preserves_post_reopen_and_retry_job() {
     let app = setup().await.without_job_runner().await;
     app.db().write(|tx| {
         tx.conn().execute_batch("INSERT INTO channel_threads(id,name,room_id,creator_id,work_owner_id,work_status,closed_at,last_activity_at,created_at,updated_at) VALUES(1900700020,'Review',486777696,394959859,394959859,'in_progress','2026-03-01 16:00:00','2026-03-01 16:00:00','2026-03-01 16:00:00','2026-03-01 16:00:00'); CREATE TRIGGER review_reject_variant BEFORE INSERT ON active_storage_variant_records BEGIN SELECT RAISE(ABORT,'review variant failure'); END")?;
@@ -285,58 +285,15 @@ async fn pr192_failed_thread_attachment_rolls_back_post_reopen_and_queue() {
     let mut body: Value = serde_json::from_str(case["body"].as_str().unwrap()).unwrap();
     body["thread_id"] = json!(1900700020);
     body["message"]["client_message_id"] = json!("pr192-media-failure");
-    let before = snapshot(&app).await;
-    let files = stored_files(&app);
-    let reply = app
-        .anonymous()
-        .send(request(
-            Method::POST,
-            "/rooms/486777696/agents/messages",
-            Some(body),
-        ))
-        .await;
-    assert_eq!(
-        reply.status.as_u16(),
-        500,
-        "fault must reach media processing"
-    );
-    let (posts, closed): (i64, Option<String>) = app
-        .db()
-        .read(|conn| {
-            Ok((
-                conn.query_row(
-                    "SELECT count(*) FROM messages WHERE client_message_id='pr192-media-failure'",
-                    [],
-                    |row| row.get(0),
-                )?,
-                conn.query_row(
-                    "SELECT closed_at FROM channel_threads WHERE id=1900700020",
-                    [],
-                    |row| row.get(0),
-                )?,
-            ))
-        })
-        .await
-        .unwrap();
-    println!(
-        "WS11-api review thread attachment: status=500; posted_rows={posts}; closed_at={closed:?}"
-    );
-    assert_eq!(posts, 0, "failed media must roll back the message");
-    assert_eq!(
-        closed.as_deref(),
-        Some("2026-03-01 16:00:00"),
-        "failed media must keep the thread closed"
-    );
-    assert_eq!(
-        snapshot(&app).await,
-        before,
-        "failed media must roll back domain, media and durable queue rows"
-    );
-    assert_eq!(
-        stored_files(&app),
-        files,
-        "failed media must discard staged variant files"
-    );
+    let reply = app.anonymous().send(request(Method::POST, "/rooms/486777696/agents/messages", Some(body))).await;
+    assert_eq!(reply.status.as_u16(), 201);
+    assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+    app.db().read(|c| {
+        assert_eq!(c.query_row("SELECT count(*) FROM messages WHERE client_message_id='pr192-media-failure'", [], |r| r.get::<_,i64>(0))?, 1);
+        assert!(campfire_db::ChannelThread::find(c, 1900700020)?.closed_at.is_none());
+        assert_eq!(c.query_row("SELECT count(*) FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob'", [], |r| r.get::<_,i64>(0))?, 1);
+        Ok(())
+    }).await.unwrap();
 }
 
 async fn differential(approval: bool) {

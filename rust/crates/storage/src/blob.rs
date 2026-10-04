@@ -193,6 +193,14 @@ impl Blob {
         self.is_video() && crate::process::ffmpeg_exists()
     }
 
+    /// `preview_image.attached?` for a preloaded message page, with one bounded read.
+    pub fn previewed_blob_ids(conn: &Connection, ids: &[i64]) -> Result<std::collections::HashSet<i64>> {
+        if ids.is_empty() { return Ok(Default::default()); }
+        let ids = serde_json::to_string(ids).expect("blob IDs serialize");
+        Ok(conn.prepare_cached("SELECT record_id FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND name='preview_image' AND record_id IN (SELECT value FROM json_each(?))")?
+            .query_map([ids], |r| r.get(0))?.collect::<rusqlite::Result<_>>()?)
+    }
+
     /// `representable?`
     pub fn is_representable(&self) -> bool {
         self.is_variable() || self.is_previewable()

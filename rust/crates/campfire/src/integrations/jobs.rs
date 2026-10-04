@@ -148,9 +148,20 @@ pub(super) async fn create_attachment_reply(app: &App, room: &Room, bot: &User, 
     let (room_id, creator_id, blob_id) = (room.id, bot.id, blob.id);
     let message = app
         .db
-        .write(move |tx| create_reply(tx, Some(&trigger), NewMessage { room_id, creator_id, attachment_blob_id: Some(blob_id), ..Default::default() }))
+        .write(move |tx| {
+            let message = create_reply(tx, Some(&trigger), NewMessage { room_id, creator_id, attachment_blob_id: Some(blob_id), ..Default::default() })?;
+            if message.thread_id.is_some() {
+                if let Some(blob) = campfire_storage::Blob::find(tx.conn(), blob_id).map_err(|e| campfire_db::Error::Other(e.to_string()))? {
+                    crate::controllers::presenters::attachments::enqueue_analysis(tx, &blob);
+                }
+                campfire_db::models::message_attachment_processing::schedule(tx, message.id, blob_id);
+            }
+            Ok(message)
+        })
         .await?;
-    process_attachment(app, blob).await.map_err(|e| anyhow!("{e:?}"))?;
+    if message.thread_id.is_none() {
+        process_attachment(app, blob).await.map_err(|e| anyhow!("{e:?}"))?;
+    }
     let id = message.id;
     Ok(app.db.read(move |conn| Message::find(conn, id)).await?)
 }

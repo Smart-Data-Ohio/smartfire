@@ -40,7 +40,8 @@ async fn modern_reaction_replacements_match_rails_bytes_through_ws7() {
 async fn positive_forward_message_and_unread_frames_match_rails_for_every_recipient() {
     use crate::controllers::message_forwards_tests::{install_success_fixture, success_oracle};
     use campfire_kit::Crypto;
-    let hub = boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let mut hub = boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    hub.app = hub.app.without_job_runner().await;
     install_success_fixture(&hub.app).await;
     let mut recipients = Vec::new();
     let mut denied=0;

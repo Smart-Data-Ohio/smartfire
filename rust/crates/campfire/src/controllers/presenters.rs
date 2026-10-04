@@ -206,6 +206,27 @@ pub fn user_json(secrets: &Secrets, base_url: &str, user: &User) -> UserJson {
 
 /// Everything a page of messages needs, with the rows it looks up along the way remembered
 /// (Rails preloads them with `with_creator`, `with_boosts` and friends).
+#[derive(Default)]
+pub struct RenderRefreshes {
+    github: Vec<i64>,
+    attachments: Vec<(i64, i64)>,
+}
+
+/// Persist rendering's recovery requests after releasing the reader, just like PR refreshes.
+pub async fn refresh_after_render(db: &campfire_db::Database, refreshes: RenderRefreshes) {
+    if !refreshes.attachments.is_empty()
+        && let Err(error) = db.write(move |tx| {
+            for (message, blob) in refreshes.attachments {
+                campfire_db::models::message_attachment_processing::recover(tx, message, blob)?;
+            }
+            Ok(())
+        }).await
+    {
+        tracing::warn!(%error, "Skipping attachment preview recovery");
+    }
+    crate::integrations::github::pull_requests::refresh_after_render(db, refreshes.github).await;
+}
+
 pub struct Presenter<'a> {
     app: &'a AppState,
     pub conn: &'a Connection,
@@ -222,6 +243,7 @@ pub struct Presenter<'a> {
     /// The viewer's zone for token-free request partials; detached jobs default to UTC.
     pub render_zone: campfire_views::time::Zone,
     github_refreshes: std::rc::Rc<RefCell<BTreeSet<i64>>>,
+    attachment_recoveries: std::rc::Rc<RefCell<BTreeSet<(i64, i64)>>>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
     render_account: RefCell<Option<Option<campfire_db::Account>>>,
@@ -253,6 +275,7 @@ impl<'a> Presenter<'a> {
             agent_payload: &app.agent_message_payload,
             render_zone: page::renderer_time_zone(),
             github_refreshes: Default::default(),
+            attachment_recoveries: Default::default(),
             users: RefCell::default(),
             room_names: RefCell::default(),
             render_account: RefCell::default(),
@@ -270,10 +293,13 @@ impl<'a> Presenter<'a> {
         Ok(())
     }
 
-    /// Collected only when a card partial actually renders (never on a fragment-cache hit).
+    /// PR refreshes require a rendered card; attachment recovery also runs on cache hits.
     /// Callers enqueue on the writer after releasing this read-only connection.
-    pub fn take_github_refreshes(&self) -> Vec<i64> {
-        self.github_refreshes.take().into_iter().collect()
+    pub fn take_render_refreshes(&self) -> RenderRefreshes {
+        RenderRefreshes {
+            github: self.github_refreshes.take().into_iter().collect(),
+            attachments: self.attachment_recoveries.take().into_iter().collect(),
+        }
     }
 
     pub(crate) fn remember_github_refresh(&self, id: i64) {
@@ -343,6 +369,7 @@ impl<'a> Presenter<'a> {
             twitter_posts: self.twitter_posts.clone(),
             twitter_existence: self.twitter_existence.clone(),
             github_refreshes: self.github_refreshes.clone(),
+            attachment_recoveries: self.attachment_recoveries.clone(),
         }
     }
     pub(crate) fn stored_body(&self, message: &Message) -> Result<Option<String>> {
@@ -1072,6 +1099,7 @@ impl<'a> Presenter<'a> {
         let verifier = &*self.storage.verifier;
         let preview = if blob.is_previewable() || blob.is_variable() {
             if blob.is_video() {
+                self.recover_attachment_preview(message, &blob)?;
                 // `attachment.preview(format: :webp, resize_to_limit: [...])`
                 let poster = Variation::new(vec![
                     (
@@ -1087,9 +1115,9 @@ impl<'a> Presenter<'a> {
                     ),
                 ]);
                 AttachmentPreview::Video {
-                    poster_url: campfire_storage::paths::representation_redirect_path(
+                    poster_url: self.preview_attached(&blob)?.then(|| campfire_storage::paths::representation_redirect_path(
                         verifier, &blob, &poster,
-                    ),
+                    )),
                 }
             } else {
                 AttachmentPreview::Image {
@@ -1112,6 +1140,20 @@ impl<'a> Presenter<'a> {
             width: dimension(&blob, "width"),
             height: dimension(&blob, "height"),
         }))
+    }
+
+    pub(crate) fn preview_attached(&self, blob: &campfire_storage::Blob) -> Result<bool> {
+        if let Some(data) = &self.search_preloads {
+            return Ok(data.previewed_blobs.contains(&blob.id));
+        }
+        Ok(self.conn.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND name='preview_image' AND record_id=?)", [blob.id], |r| r.get(0))?)
+    }
+
+    pub(crate) fn recover_attachment_preview(&self, message: &Message, blob: &campfire_storage::Blob) -> Result<()> {
+        if blob.is_video() && !self.preview_attached(blob)? {
+            self.attachment_recoveries.borrow_mut().insert((message.id, blob.id));
+        }
+        Ok(())
     }
 
     /// `polymorphic_url(attachment.representation(:thumb), only_path: true)`.

@@ -235,7 +235,7 @@ impl<'c> Tx<'c> {
         if self.in_transaction {
             self.after_commit.push(AfterCommit::Event(event));
         } else {
-            self.env.sink.emit(event);
+            self.env.sink.emit_committed(self, event);
         }
     }
 
@@ -602,12 +602,12 @@ pub fn run_write<T>(
         let callback_error = match item {
             AfterCommit::RecordJob { event, .. } => {
                 if let Some(event) = event {
-                    env.sink.emit(event);
+                    env.sink.emit_committed(&mut after, event);
                 }
                 None
             }
             AfterCommit::Event(event) => {
-                env.sink.emit(event);
+                env.sink.emit_committed(&mut after, event);
                 None
             }
             AfterCommit::RecordBroadcast { table, id, event } => {
@@ -617,7 +617,7 @@ pub fn run_write<T>(
                     [id],
                     |r| r.get::<_, bool>(0),
                 ) {
-                    Ok(true) => env.sink.emit(event),
+                    Ok(true) => env.sink.emit_committed(&mut after, event),
                     Ok(false) => (),
                     Err(error) => tracing::warn!(%error, table, id, "broadcast callback failed"),
                 }

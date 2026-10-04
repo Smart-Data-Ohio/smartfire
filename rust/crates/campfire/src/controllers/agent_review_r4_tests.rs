@@ -6,6 +6,8 @@ use campfire_storage::{Blob, Variation};
 use serde_json::{Value, json};
 
 async fn media(app: &TestApp, source: i64) -> (Blob, Blob) {
+    let pending = app.db().read(move |c| Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob' AND json_extract(arguments,'$.blob_id')=?)", [source], |r| r.get::<_,bool>(0))?)).await.unwrap();
+    if pending { super::messages::attachment_processing_tests::perform_queued(app, 1).await.unwrap(); }
     app.db()
         .read(move |conn| {
             let preview = Blob::attached(conn, "ActiveStorage::Blob", source, "preview_image")
@@ -75,14 +77,18 @@ async fn pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and
         !later.load(Ordering::SeqCst),
         "ordinary model callbacks retain Rails' failure ordering"
     );
+    app.db().write(move |tx| {
+        let message = tx.conn().query_row("SELECT id FROM messages WHERE client_message_id='pr192-r4-after-commit'", [], |r| r.get::<_,i64>(0))?;
+        campfire_db::models::message_attachment_processing::recover(tx, message, source)
+    }).await.unwrap();
     let (preview, image) = media(&app, source).await;
-    let image_id = image.id;
+    let (preview_id, image_id) = (preview.id, image.id);
     app.db().read(move |conn| {
         let message = conn.query_row("SELECT id FROM messages WHERE client_message_id='pr192-r4-after-commit'", [], |r| r.get::<_, i64>(0))?;
         let closed: Option<String> = conn.query_row("SELECT closed_at FROM channel_threads WHERE id=1900700030", [], |r| r.get(0))?;
         assert_eq!(closed, None);
         let jobs = conn.prepare("SELECT job_class,arguments FROM background_jobs ORDER BY job_class")?.query_map([], |r| Ok(json!({"class":r.get::<_, String>(0)?, "args":serde_json::from_str::<Value>(&r.get::<_, String>(1)?).unwrap()})))?.collect::<rusqlite::Result<Vec<_>>>()?;
-        assert_eq!(jobs, vec![json!({"class":"ActiveStorage::AnalyzeJob","args":{"blob_id":image_id}}), json!({"class":"ChannelThread::PushMessageJob","args":{"thread_id":1900700030,"message_id":message}})]);
+        assert_eq!(jobs, vec![json!({"class":"ActiveStorage::AnalyzeJob","args":{"blob_id":source}}), json!({"class":"ActiveStorage::AnalyzeJob","args":{"blob_id":preview_id}}), json!({"class":"ActiveStorage::AnalyzeJob","args":{"blob_id":image_id}}), json!({"class":"ChannelThread::PushMessageJob","args":{"thread_id":1900700030,"message_id":message}})]);
         Ok(())
     }).await.unwrap();
     assert_file(&app, &preview);
@@ -102,7 +108,7 @@ async fn pr192_r4_earlier_after_commit_error_preserves_committed_video_files_and
     assert_eq!(reused.id, image.id);
     assert_file(&app, &reused);
     println!(
-        "PR192_R4_AFTER_COMMIT status=500 message/thread/media/two_jobs=committed preview/variant_files=retained later_model_callback=skipped"
+        "PR192_R4_AFTER_COMMIT status=500 message/thread/media/four_jobs=committed preview/variant_files=retained later_model_callback=skipped"
     );
 }
 #[tokio::test]
@@ -261,7 +267,7 @@ async fn pr192_r4_video_oracle_preserves_attachment_targets_and_exact_row_counts
     );
 }
 #[tokio::test]
-async fn pr192_r4_late_media_and_job_failures_roll_back_rows_and_files() {
+async fn pr192_r4_late_media_failures_preserve_posts_but_precommit_job_failure_rolls_back() {
     for trigger in [
         "CREATE TRIGGER pr192_r4_fault BEFORE INSERT ON active_storage_attachments WHEN NEW.name='preview_image' BEGIN SELECT RAISE(ABORT,'preview attachment failure'); END",
         "CREATE TRIGGER pr192_r4_fault AFTER INSERT ON active_storage_attachments WHEN NEW.name='image' AND NEW.record_type='ActiveStorage::VariantRecord' BEGIN SELECT RAISE(ABORT,'variant attachment failure'); END",
@@ -278,19 +284,29 @@ async fn pr192_r4_late_media_and_job_failures_roll_back_rows_and_files() {
             .unwrap();
         let rows = super::agent_review_tests::snapshot(&app).await;
         let files = super::agent_review_tests::stored_files(&app);
-        assert_eq!(
-            app.anonymous()
-                .send(post(&app, source, "pr192-r4-precommit"))
-                .await
-                .status
-                .as_u16(),
-            500
-        );
-        assert_eq!(super::agent_review_tests::snapshot(&app).await, rows);
-        assert_eq!(super::agent_review_tests::stored_files(&app), files);
+        let reply = app.anonymous().send(post(&app, source, "pr192-r4-precommit")).await;
+        if trigger.contains("PushMessageJob") {
+            assert_eq!(reply.status.as_u16(), 500);
+            assert_eq!(super::agent_review_tests::snapshot(&app).await, rows);
+            assert_eq!(super::agent_review_tests::stored_files(&app), files);
+        } else {
+            assert_eq!(reply.status.as_u16(), 201);
+            assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+            let retained = super::agent_review_tests::stored_files(&app);
+            assert_eq!(retained.len(), files.len() + usize::from(trigger.contains("variant attachment")));
+            let storage = app.booted.app.storage.clone();
+            app.db().read(move |c| {
+                assert!(campfire_db::Message::find_duplicate(c, 486777696, 394959859, "pr192-r4-precommit")?.is_some());
+                assert!(campfire_db::ChannelThread::find(c, 1900700030)?.closed_at.is_none());
+                assert_eq!(c.query_row("SELECT count(*) FROM active_storage_variant_records WHERE blob_id=? OR blob_id IN (SELECT blob_id FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND record_id=? AND name='preview_image')", [source, source], |r| r.get::<_,i64>(0))?, 0);
+                let blob = Blob::find(c, source).unwrap().unwrap();
+                assert!(storage.service.exist(&blob.key));
+                Ok(())
+            }).await.unwrap();
+        }
     }
     println!(
-        "PR192_R4_ROLLBACK preview_attachment/variant_attachment/push_job rows/files=unchanged"
+        "PR192_R4_BOUNDARIES deferred_media_errors=committed_posts precommit_push_error=rollback"
     );
 }
 
@@ -316,7 +332,8 @@ async fn pr192_r4_approved_jpeg_metadata_reuse_does_not_serve_missing_files() {
     let result =
         crate::active_storage::processed_representation(&app.booted.app, blob, variation).await;
     let image = result.unwrap();
-    assert!(!app.booted.app.storage.service.exist(&image.key));
+    assert!(app.booted.app.storage.service.exist(&image.key));
+    app.booted.app.storage.service.delete(&image.key).unwrap();
     let response = app.anonymous().send(Req::new(Method::GET, &proxy)).await;
     assert_eq!(response.status.as_u16(), 404);
     assert!(response.body.is_empty());

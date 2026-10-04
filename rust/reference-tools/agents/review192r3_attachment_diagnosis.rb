@@ -1,18 +1,8 @@
-# Preserve the failing request; materialize media outside the posting transaction only
-# afterward to obtain Rails' normal successful payload and valid file-state oracle.
 require 'active_support/testing/time_helpers'
 extend ActiveSupport::Testing::TimeHelpers
 ActiveJob::Base.queue_adapter = :test
 Rails.logger = ActiveSupport::Logger.new($stderr)
-exceptions = []
-ActiveStorage::Service::DiskService.prepend(Module.new do
-  define_method(:download) do |key, &block|
-    super(key, &block)
-  rescue ActiveStorage::FileNotFoundError => e
-    exceptions << {class:e.class.name, message:e.message, open_transactions:ActiveRecord::Base.connection.open_transactions, backtrace:e.backtrace}
-    raise
-  end
-end)
+ActiveJob::Base.logger = Rails.logger
 travel_to Time.utc(2026,3,2,16) do
   agent = Agent.find(773018776)
   agent.agent_grants.delete_all; agent.agent_credentials.delete_all
@@ -31,13 +21,11 @@ travel_to Time.utc(2026,3,2,16) do
   session.post('/rooms/486777696/agents/messages',params:body,headers:headers)
   rails = {status:session.response.status,response:session.response.body,headers:session.response.headers.slice('content-type','retry-after')}
   rollback = {row_deltas:tables.to_h{|t| [t,ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM #{t}").to_i-before[t]]},thread_closed_at:ChannelThread.find(1900700030).closed_at,source_file_exists:source.service.exist?(source.key),jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|j[:job].name}}
-  # Normal Active Storage operations in committed transactions avoid the preview's
-  # deferred-upload ordering bug. No Rails request or failure path is patched.
-  source.reload.analyze
-  preview = source.preview({}).processed.image.blob
-  preview.analyze
-  ActiveJob::Base.queue_adapter.enqueued_jobs.clear
-  source.preview(format: :webp).processed
+  queued = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j[:job] == Message::AttachmentProcessingJob }
+  raise 'processing job missing after commit' unless queued
+  ActiveJob::Base.queue_adapter.enqueued_jobs.delete(queued)
+  ActiveJob::Base.execute(queued)
+  preview = source.reload.preview_image.blob
   image = preview.variant_records.order(:id).last!.image.blob
   session.post('/rooms/486777696/agents/messages',params:body,headers:headers)
   approved = {status:session.response.status,response:session.response.body,headers:session.response.headers.slice('content-type','retry-after')}
@@ -51,9 +39,5 @@ travel_to Time.utc(2026,3,2,16) do
       when 'ChannelThread::PushMessageJob' then {thread_id:j[:args][0]['_aj_globalid'].split('/').last.to_i,message_id:j[:args][1]['_aj_globalid'].split('/').last.to_i}
       when 'ActiveStorage::AnalyzeJob' then {blob_id:j[:args][0]['_aj_globalid'].split('/').last.to_i}
       else j[:args] end}}}
-  puts JSON.pretty_generate(notes:[
-    'Maintainer-approved difference: Rails fresh-video preview opens an unuploaded file before commit (FileNotFoundError); Rust does not reproduce this accidental crash and returns 201 with usable preview and WebP files.',
-    'Rails failure is captured unchanged first, including rollback and transaction depth. The successful body/state oracle uses ordinary Rails preprocessing in committed transactions, analyzes the preview, then posts the same source. This avoids the defect without patching the request or masking its outcome.',
-    'All nonrandom message/thread/blob fields, attachment relationships, file sizes and logical queued-job arguments are checked. Random storage keys and attachment surrogate IDs are omitted.'
-  ],cases:[{name:'fresh_video_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:rails,rails_state:rollback,exception:exceptions.first,approved:approved,state:state}])
+  puts JSON.pretty_generate(notes:['Fresh #226 on the pinned harness: HTTP commits before the real processing job generates and uploads JPEG and WebP. Every row and logical remaining job is captured.'],cases:[{name:'fresh_video_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:rails,rails_state:rollback,approved:approved,state:state}])
 end

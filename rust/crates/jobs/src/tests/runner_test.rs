@@ -2,6 +2,36 @@ use std::sync::atomic::{AtomicBool, AtomicUsize};
 
 use super::*;
 
+#[tokio::test]
+async fn durable_exhaustion_marker_and_failed_queue_row_commit_together() {
+    let mut registry = Registry::new();
+    registry.register(|(), _: Echo, _: Execution| async {
+        Err(JobError::retry_group(anyhow::anyhow!("corrupt video"), "StandardError", 1))
+    });
+    registry.on_exhausted_in::<Echo, _>(|tx, (), job| {
+        tx.conn().execute("INSERT INTO terminal_markers VALUES(?)", [job.n])?;
+        Ok(())
+    });
+    let h = harness(&registry, &config());
+    let rejected = Arc::new(tokio::sync::Notify::new());
+    let signal = rejected.clone();
+    h.db.write(move |tx| {
+        tx.conn().create_scalar_function("terminal_attempt", 0, rusqlite::functions::FunctionFlags::SQLITE_UTF8, move |_| { signal.notify_one(); Ok(0) })?;
+        tx.conn().execute_batch("CREATE TABLE terminal_markers(n INTEGER); CREATE TRIGGER refuse_marker BEFORE INSERT ON terminal_markers BEGIN SELECT terminal_attempt(); SELECT RAISE(ABORT,'marker refused'); END")?;
+        Ok(())
+    }).await.unwrap();
+    let id = h.enqueue(Echo { n: 226 }).await;
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
+    tokio::time::timeout(Duration::from_secs(5), rejected.notified()).await.unwrap();
+    assert_eq!(h.job(id).unwrap().status, RUNNING);
+    h.db.write(|tx| { tx.conn().execute_batch("DROP TRIGGER refuse_marker")?; Ok(()) }).await.unwrap();
+    h.wait_for("atomic terminal outcome", |rows| rows[0].status == FAILED).await;
+    runner.shutdown(Duration::from_secs(5)).await;
+    let marker = h.db.read_blocking(|c| Ok(c.query_row("SELECT n FROM terminal_markers", [], |r| r.get::<_,i64>(0))?)).unwrap();
+    assert_eq!(marker, 226);
+    assert_eq!(h.job(id).unwrap().attempts, 1, "retry the commit, never decode again for its failed commit");
+}
+
 // --- Enqueueing ------------------------------------------------------------------------------------
 
 #[tokio::test]

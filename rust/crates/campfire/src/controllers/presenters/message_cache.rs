@@ -40,6 +40,12 @@ impl Presenter<'_> {
     }
 
     pub fn message_collection_cache_key(&self, message: &Message) -> Result<String> {
+        let blob = if let Some(data) = &self.search_preloads {
+            data.attachments.get(&message.id).cloned()
+        } else {
+            campfire_storage::Blob::attached(self.conn, "Message", message.id, "attachment").map_err(super::storage_error)?
+        };
+        if let Some(blob) = blob { self.recover_attachment_preview(message, &blob)?; }
         if let Some(data) = &self.search_preloads {
             let records = &data.records;
             let cache = records.cache.get(&message.id);

@@ -43,6 +43,7 @@ use crate::config::Config;
 
 pub mod periodic;
 mod messaging;
+pub(crate) mod attachment_processing;
 pub(crate) mod huddle;
 mod notifications;
 mod peer_callbacks;
@@ -179,6 +180,7 @@ pub fn registry() -> Registry {
     registry.register(purge_blob);
     registry.register(analyze_blob);
     registry.register(quote_cards_refresh);
+    attachment_processing::register(&mut registry);
     messaging::register(&mut registry);
     huddle::register(&mut registry);
     notifications::register(&mut registry);
@@ -313,6 +315,33 @@ impl EventSink for Jobs {
             tracing::debug!(job = request.class, id, "enqueued");
         }
         Ok(())
+    }
+
+    fn emit_committed(&self, after: &mut Tx<'_>, event: Event) {
+        use campfire_db::broadcasts::{Broadcast, Partial};
+        let message_id = match &event {
+            Event::Broadcast(request) => request.decode::<Broadcast>().and_then(Result::ok).and_then(|broadcast| match broadcast {
+                Broadcast::Turbo(frame) => match frame.partial {
+                    Some(Partial::Message { message_id } | Partial::MessageReplace { message_id } | Partial::MessagePresentation { message_id }) => Some(message_id),
+                    _ => None,
+                },
+                _ => None,
+            }),
+            _ => None,
+        };
+        self.emit(event);
+        // Detached message broadcasts render on the committing thread. Use its connection
+        // after the reader is released; enqueueing through Database::write would deadlock.
+        if let Some(id) = message_id {
+            let result = (|| {
+                if let Some(message) = campfire_db::Message::find_by_id(after.conn(), id)?
+                    && let Some((_, blob)) = message.attachment(after.conn())? {
+                    campfire_db::models::message_attachment_processing::recover(after, id, blob.id)?;
+                }
+                Ok::<_, campfire_db::Error>(())
+            })();
+            if let Err(error) = result { tracing::warn!(%error, "Skipping broadcast attachment recovery"); }
+        }
     }
 
     fn emit(&self, event: Event) {

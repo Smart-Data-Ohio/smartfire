@@ -41,9 +41,9 @@ async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given:
                     &message_dom_id(&message, Some(part)), Some(&html), true);
             } else { app.broadcasts.message_part_replace(&room, &message, part, &html); }
         }
-        Ok(presenter.take_github_refreshes())
+        Ok(presenter.take_render_refreshes())
     }).await.map_err(db_error)?;
-    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     Ok(())
 }
 
@@ -80,7 +80,7 @@ pub async fn broadcast_thread_refresh(app: &App, room_id: i64, thread_id: i64) -
 pub fn domain_partial(app: &App, partial: &campfire_db::broadcasts::Partial) -> campfire_db::Result<Option<String>> {
     use campfire_db::broadcasts::Partial;
     let (id, count) = match partial {
-        Partial::Message { message_id } | Partial::MessageReplace { message_id } => (*message_id, None),
+        Partial::Message { message_id } | Partial::MessageReplace { message_id } | Partial::MessagePresentation { message_id } => (*message_id, None),
         Partial::ThreadIndicator { message_id, reply_count } => (*message_id, Some(*reply_count)),
         _ => return Ok(None),
     };
@@ -92,7 +92,9 @@ pub fn domain_partial(app: &App, partial: &campfire_db::broadcasts::Partial) -> 
         // Ordinary message callbacks retain Rails' detached-controller default.
         let origin = if view.components.event_views.is_empty() { "http://example.org" } else { &app.db.env().default_url_origin };
         page::render_detached_at(app, account.as_ref(), origin, |ctx| {
-            if let Some(count) = count {
+            if matches!(partial, Partial::MessagePresentation { .. }) {
+                views::PresentationPartial { ctx, message: &view }.render().map(Some).map_err(|error| campfire_db::Error::Other(error.to_string()))
+            } else if let Some(count) = count {
                 view.details.reply_count = count.try_into().map_err(|_| campfire_db::Error::Other("negative reply count".into()))?;
                 views::ThreadIndicatorPartial { ctx, message: &view }.render().map(Some).map_err(|error| campfire_db::Error::Other(error.to_string()))
             } else { Ok(Some(views::uncached_message(ctx, &view))) }

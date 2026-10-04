@@ -1157,6 +1157,7 @@ impl Message {
         if let Some(blob_id) = blob_id {
             Attachment::create(tx, RECORD_TYPE, self.id, "attachment", blob_id)?;
             self.touch(tx)?;
+            super::message_attachment_processing::schedule(tx, self.id, blob_id);
         }
         Ok(())
     }
