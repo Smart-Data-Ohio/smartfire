@@ -7,6 +7,7 @@ import subprocess
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=Path, required=True)
 p.add_argument('--test-host', type=Path, required=True)
+p.add_argument('--scenario', choices=['all', 'inbox', 'inbox-filter', 'work'], default='all')
 args = p.parse_args()
 root = Path(__file__).resolve().parents[4]
 runner = Path(__file__).with_name('system_behavior.py')
@@ -15,6 +16,8 @@ cases = [
     ('inbox-filter', '--inject-inbox-preference', 'activity_inbox_test.rb: filters by type', 'event reminders'),
     ('work', '--inject-work-status', 'agent_work_assignment_test.rb:', 'committed work status remained planned'),
 ]
+if args.scenario != 'all':
+    cases = [case for case in cases if case[0] == args.scenario]
 for scenario, injection, name, assertion in cases:
     for mutated in [False, True]:
         command = ['python3', str(runner), '--binary', str(args.binary.resolve()),
@@ -39,4 +42,4 @@ for scenario, injection, name, assertion in cases:
                     or 'Agent system behavior: 0 passed; 1 failed; 0 deferred' not in rust):
                 raise RuntimeError(f'Invalid {scenario} control: intended writer assertion did not fail\n{output}')
             print(f'Cutover {scenario}: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged', flush=True)
-print('Cutover browser discrimination: 3 paired sequences passed; 3 writer defects rejected; 0 invalid controls')
+print(f'Cutover browser discrimination: {len(cases)} paired sequences passed; {len(cases)} writer defects rejected; 0 invalid controls')

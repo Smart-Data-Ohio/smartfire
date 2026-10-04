@@ -166,18 +166,21 @@ async fn compare(key: &str) {
 #[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c221_original_named_system_assertions() {
     compare("c221").await;
+    compare_cutover("inbox").await;
 }
 
 #[tokio::test]
 #[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c222_original_named_system_assertions() {
     compare("c222").await;
+    compare_cutover("inbox-filter").await;
 }
 
 #[tokio::test]
 #[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c223_original_named_system_assertions() {
     compare("c223").await;
+    compare_cutover("work").await;
 }
 
 #[tokio::test]
@@ -202,4 +205,81 @@ async fn ws12_browser_c226_original_named_system_assertions() {
 #[ignore = "requires Node, Docker and pinned Chromium; run parity/system/ws12"]
 async fn ws12_browser_c227_original_named_system_assertions() {
     compare("c227").await;
+}
+
+async fn compare_cutover(scenario: &str) {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .unwrap();
+    let test_host = std::env::current_exe().unwrap();
+    let target = test_host.parent().unwrap().parent().unwrap();
+    let binary = if let Some(path) = std::env::var_os("WS11UI_BROWSER_BINARY") {
+        std::path::PathBuf::from(path)
+    } else {
+        // The ignored-test CI job invokes nextest directly; unlike the shell
+        // entry point, it has only built the test harness. Build the real work host.
+        if scenario == "work" {
+            let output = tokio::process::Command::new("cargo")
+                .args([
+                    "build", "--locked", "-j", "4", "-p", "campfire", "--bin", "campfire",
+                ])
+                .arg("--manifest-path")
+                .arg(root.join("rust/Cargo.toml"))
+                .arg("--target-dir")
+                .arg(target.parent().unwrap())
+                .kill_on_drop(true)
+                .output()
+                .await
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "work browser host build failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+        target.join("campfire")
+    };
+    if scenario == "work" {
+        assert!(binary.is_file(), "current campfire binary is missing");
+    }
+    let namespace = std::env::var("PARITY_NAMESPACE")
+        .unwrap_or_else(|_| format!("ws11ui-ci-{}", std::process::id()));
+    let offset = match scenario {
+        "inbox" => 0,
+        "inbox-filter" => 3,
+        "work" => 6,
+        _ => unreachable!(),
+    };
+    let mut command = tokio::process::Command::new("python3");
+    command
+        .arg(root.join("rust/reference-tools/views/agents_ui/check_cutover_browser.py"))
+        .arg("--binary")
+        .arg(binary)
+        .arg("--test-host")
+        .arg(test_host)
+        .arg("--scenario")
+        .arg(scenario)
+        .env("PARITY_NAMESPACE", format!("{namespace}-{scenario}"))
+        .current_dir(root);
+    // The ignored-test CI job runs four nextest workers. Give the three paired
+    // hosts disjoint ports and container namespaces rather than serializing CI.
+    for (key, default) in [
+        ("WS11UI_SYSTEM_REFERENCE_PORT", 52798_u16),
+        ("WS11UI_SYSTEM_CANDIDATE_PORT", 52799_u16),
+        ("WS11UI_SYSTEM_TARGET_PORT", 52797_u16),
+    ] {
+        let base = std::env::var(key)
+            .map(|value| value.parse::<u16>().unwrap())
+            .unwrap_or(default);
+        command.env(key, (base + offset).to_string());
+    }
+    let output = command.kill_on_drop(true).output().await.unwrap();
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+    assert!(
+        output.status.success(),
+        "{scenario}: paired Rails/Rust sequence or writer control failed\n{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }

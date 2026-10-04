@@ -23,6 +23,10 @@ travel_to(Time.utc(2026, 9, 23, 12)) do
       HuddleGrant.delete_all
       Rooms::Direct.update_all(direct_member_key: nil)
       group = name == 'group_quiet'
+      if group
+        recipient.update!(dnd_enabled: true)
+        quiet.update!(quiet_hours_enabled: true, quiet_hours_start: '09:00', quiet_hours_end: '17:00')
+      end
       room = group ? Rooms::Direct.create_for({creator: caller}, users:) : Room.find(ActiveRecord::FixtureSet.identify(:david_and_jason))
       room.memberships.update_all(involvement: 'everything', connections: 0, connected_at: nil, created_at: Time.current, updated_at: Time.current)
       session = Session.find(ActiveRecord::FixtureSet.identify(:david_safari))
@@ -41,12 +45,7 @@ travel_to(Time.utc(2026, 9, 23, 12)) do
       original = Rails.configuration.x.web_push_pool
       Rails.configuration.x.web_push_pool = pool
       begin
-        case name
-        when 'dnd_allowed'; recipient.update!(dnd_enabled: true)
-        when 'group_quiet'
-          recipient.update!(dnd_enabled: true)
-          quiet.update!(quiet_hours_enabled: true, quiet_hours_start: '09:00', quiet_hours_end: '17:00')
-        end
+        recipient.update!(dnd_enabled: true) unless group
         items.each { |i| Huddle::PushInvitationJob.perform_now(i.id) }
         first_deliveries = deliveries.deep_dup
         if name == 'dnd_allowed'

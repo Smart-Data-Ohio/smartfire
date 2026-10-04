@@ -705,6 +705,225 @@ fn work_recipients_honor_current_room_thread_and_agent_assignment_preferences() 
     }
 }
 
+fn recorder_thread() -> (TestDb, ChannelThread) {
+    let t = channel_thread_test::frozen();
+    let thread = channel_thread_test::create_thread(
+        &t,
+        "designers",
+        "jz",
+        None,
+        Some("Recorder work thread"),
+    );
+    t.write(move |tx| {
+        crate::ThreadMembership::join(tx, thread.id, id("jz"))?;
+        crate::ThreadMembership::join(tx, thread.id, id("david"))?
+            .update_involvement(tx, crate::ThreadInvolvement::Everything)?;
+        Ok(())
+    });
+    (t, thread)
+}
+
+fn recorder_items(t: &TestDb) -> Vec<ActivityItem> {
+    let ids = t.read(|conn| {
+        crate::sql::query_all(
+            conn,
+            "SELECT id FROM activity_items WHERE user_id=? ORDER BY id",
+            [id("david")],
+            |row| row.get::<_, i64>(0),
+        )
+    });
+    ids.into_iter()
+        .map(|id| t.read(|conn| ActivityItem::find(conn, id)))
+        .collect()
+}
+
+// test/services/activity_items/recorder_test.rb:130, including the positive mentions clause.
+#[test]
+fn work_room_notifications_off_then_mentions_restores_updates() {
+    let (t, thread) = recorder_thread();
+    t.write(move |tx| {
+        crate::Membership::find_by_room_and_user(tx.conn(), thread.room_id, id("david"))?
+            .unwrap()
+            .update_involvement(tx, crate::Involvement::Nothing)
+    });
+    let planned = work(
+        &t,
+        &thread,
+        "jz",
+        WorkChanges {
+            status: Some(Some("planned".into())),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(
+        recorder_items(&t).is_empty(),
+        "tracking is suppressed while off"
+    );
+    let assigned = work(
+        &t,
+        &planned,
+        "jz",
+        WorkChanges {
+            owner_id: Some(json!(id("david"))),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert!(
+        recorder_items(&t).is_empty(),
+        "assignment is suppressed while off"
+    );
+    t.write(move |tx| {
+        crate::Membership::find_by_room_and_user(tx.conn(), thread.room_id, id("david"))?
+            .unwrap()
+            .update_involvement(tx, crate::Involvement::Mentions)
+    });
+    work(
+        &t,
+        &assigned,
+        "jz",
+        WorkChanges {
+            status: Some(Some("in_progress".into())),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let items = recorder_items(&t);
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].event_type, "work_update");
+    assert_eq!(items[0].source_id, events(&t, thread.id)[0].id);
+    assert!(items[0].unread());
+}
+
+// test/services/activity_items/recorder_test.rb:195: both items belong to the same recipient.
+#[test]
+fn work_status_update_retains_assignment_for_same_recipient() {
+    let (t, thread) = recorder_thread();
+    let planned = work(
+        &t,
+        &thread,
+        "jz",
+        WorkChanges {
+            status: Some(Some("planned".into())),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let update = recorder_items(&t).remove(0);
+    let assigned = work(
+        &t,
+        &planned,
+        "jz",
+        WorkChanges {
+            owner_id: Some(json!(id("david"))),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let assignment = recorder_items(&t).remove(1);
+    work(
+        &t,
+        &assigned,
+        "jz",
+        WorkChanges {
+            status: Some(Some("in_progress".into())),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let items = recorder_items(&t);
+    assert_eq!(
+        items
+            .iter()
+            .map(|i| i.event_type.as_str())
+            .collect::<Vec<_>>(),
+        ["work_update", "work_assignment"]
+    );
+    assert_eq!(items[0].id, update.id);
+    let latest = events(&t, thread.id).remove(0);
+    assert_eq!(items[0].source_id, latest.id);
+    assert_eq!(latest.to_status.as_deref(), Some("in_progress"));
+    assert_eq!(
+        items[1], assignment,
+        "the assignment is neither deleted nor repointed"
+    );
+}
+
+// test/services/activity_items/recorder_test.rb:243: opt-out applies only to agent assignments.
+#[test]
+fn agent_work_opt_out_allows_agent_updates_and_human_reassignment() {
+    let (t, thread) = recorder_thread();
+    t.write(|tx| {
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            (json!({"agent_work": false}), id("david")),
+        )?;
+        Ok(())
+    });
+    let mut planned = thread.clone();
+    planned.work_status = Some("planned".into());
+    let mut assigned = planned.clone();
+    assigned.work_owner_id = Some(id("david"));
+    let agent_before = planned.clone();
+    let agent_after = assigned.clone();
+    let assignment = t
+        .write(move |tx| {
+            WorkThreadEvent::create_for_change(
+                tx,
+                &agent_before,
+                &agent_after,
+                Some(&User::find(tx.conn(), id("bender"))?),
+                None,
+            )
+        })
+        .unwrap();
+    assert_eq!(assignment.event_type, "work_assignment");
+    assert!(recorder_items(&t).is_empty());
+
+    let mut progressed = planned.clone();
+    progressed.work_status = Some("in_progress".into());
+    let update = t
+        .write(move |tx| {
+            WorkThreadEvent::create_for_change(
+                tx,
+                &planned,
+                &progressed,
+                Some(&User::find(tx.conn(), id("bender"))?),
+                None,
+            )
+        })
+        .unwrap();
+    let items = recorder_items(&t);
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].event_type, "work_update");
+    assert_eq!(items[0].source_id, update.id);
+    let handled = items[0].clone();
+    t.write(move |tx| handled.mark_handled(tx));
+
+    let mut reassigned = assigned.clone();
+    reassigned.work_owner_id = Some(id("jason"));
+    let reassignment = t
+        .write(move |tx| {
+            WorkThreadEvent::create_for_change(
+                tx,
+                &assigned,
+                &reassigned,
+                Some(&User::find(tx.conn(), id("jz"))?),
+                None,
+            )
+        })
+        .unwrap();
+    let items = recorder_items(&t);
+    assert_eq!(items.len(), 2);
+    assert_eq!(items[0].source_id, update.id);
+    assert!(items[0].handled());
+    assert_eq!(items[1].event_type, "work_assignment");
+    assert_eq!(items[1].source_id, reassignment.id);
+    assert!(items[1].unread());
+    assert!(!items[1].handled());
+}
+
 // WS8bm: direct-model declarations embedded in the pinned controller test :387-411.
 fn messaging_work_oracle() -> serde_json::Value {
     serde_json::from_str(include_str!(
