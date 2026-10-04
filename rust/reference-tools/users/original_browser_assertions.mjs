@@ -239,7 +239,7 @@ async function pickers() {
  },{phone:true})
 }
 async function settled(p) {
- await p.waitForFunction(()=>{const el=document.querySelector('.member-panel__surface');return !el||el.getAnimations().every(a=>{const t=a.effect?.getComputedTiming?.();return !(t&&Number.isFinite(t.endTime)&&(a.playState==='running'||a.playState==='pending'))})})
+ await p.waitForFunction(()=>{const el=document.querySelector('.member-panel__surface');return !el||el.getAnimations().every(a=>{const t=a.effect?.getComputedTiming?.();return !(t&&Number.isFinite(t.endTime)&&(a.playState==='running'||a.playState==='pending'))})},null,{timeout:2000})
 }
 async function members() {
  for(const kind of ['mobile-escape','mobile-tab'])await scenario(kind,async p=>{
