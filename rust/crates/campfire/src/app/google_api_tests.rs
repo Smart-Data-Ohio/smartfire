@@ -21,6 +21,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 type Responses = VecDeque<(u16, Vec<u8>)>;
+mod acceptance_cases;
 type TargetedResponses = BTreeMap<(String, String), VecDeque<Result<(u16, Vec<u8>), Unavailable>>>;
 pub struct Recorded {
     pub answers: Mutex<Responses>,
@@ -82,10 +83,14 @@ impl Client for Recorded {
         body: Vec<u8>,
     ) -> BoxFuture<'a, Result<(u16, Vec<u8>), Unavailable>> {
         Box::pin(async move {
-            assert!(matches!(
-                host,
-                "www.googleapis.com" | "oauth2.googleapis.com"
-            ));
+            let expected_host = if matches!(target, "/token" | "/revoke") {
+                "oauth2.googleapis.com"
+            } else if target.starts_with("/calendar/") || target.starts_with("/drive/") {
+                "www.googleapis.com"
+            } else {
+                panic!("unrecorded Google endpoint: {target}");
+            };
+            assert_eq!(host, expected_host, "Google endpoint host for {target}");
             let header = |name: &str| {
                 headers
                     .iter()
@@ -269,6 +274,7 @@ async fn google_api_matches_recorded_rails_requests_refreshes_and_errors() {
             .unwrap()
             .unwrap();
         if name == "invalid_grant" {
+            assert!(!account.connected());
             assert_eq!(
                 account.disconnected_reason.as_deref(),
                 Some("Google rejected the connection")
@@ -301,21 +307,19 @@ async fn google_api_connection_urls_and_id_token_claims_match_rails() {
     }
     for case in v["email_tokens"].as_array().unwrap() {
         let result = api.email_from_id_token(
-            case["token"].as_str().unwrap(),
+            case["token"].as_str().unwrap_or_default(),
             Timestamp::from_second(v["now"].as_i64().unwrap()),
         );
         if let Some(email) = case["email"].as_str() {
             assert_eq!(result.unwrap(), email);
         } else {
-            assert_eq!(
-                result.unwrap_err().to_string(),
-                case["error"].as_str().unwrap()
-            );
+            let error = result.unwrap_err();
+            assert_eq!(error.class(), "Google::Client::Error");
+            assert_eq!(error.to_string(), case["error"].as_str().unwrap());
         }
     }
 }
-#[tokio::test]
-async fn google_api_unreadable_access_disconnects_before_http() {
+async fn unreadable_access(drive: bool) {
     let a = TestApp::boot().await.expect("default seed required");
     let r = Recorded::new(vec![]);
     install(&a, r.clone()).await;
@@ -329,28 +333,45 @@ async fn google_api_unreadable_access_disconnects_before_http() {
     .await;
     a.db()
         .write(|tx| {
-            tx.conn().execute(
-                "UPDATE google_accounts SET access_token='broken-envelope' WHERE user_id=?",
+            let raw: String = tx.conn().query_row(
+                "SELECT access_token FROM google_accounts WHERE user_id=?",
                 [DAVID],
+                |r| r.get(0),
+            )?;
+            let mut tampered = raw.into_bytes();
+            let middle = tampered.len() / 2;
+            tampered[middle] = if tampered[middle] == b'A' { b'B' } else { b'A' };
+            tx.conn().execute(
+                "UPDATE google_accounts SET access_token=? WHERE user_id=?",
+                rusqlite::params![String::from_utf8(tampered).unwrap(), DAVID],
             )?;
             Ok(())
         })
         .await
         .unwrap();
-    let result = a
-        .booted
-        .app
-        .google
-        .api()
-        .drive_file(
+    let api = a.booted.app.google.api();
+    let result = if drive {
+        api.drive_file(
             a.db(),
             &a.booted.app.secrets,
             DAVID,
             "1AbcDefGhIjKlMnOpQrSt",
             now,
         )
-        .await;
-    assert!(matches!(result, Err(api::Error::Unauthorized(_))));
+        .await
+    } else {
+        api.request(
+            a.db(),
+            &a.booted.app.secrets,
+            DAVID,
+            ApiRequest::calendar(Method::POST, api::EVENTS, Some(&json!({}))),
+            now,
+        )
+        .await
+    };
+    let error = result.unwrap_err();
+    assert!(matches!(error, api::Error::Unauthorized(_)));
+    assert_eq!(error.to_string(), "Google token could not be read");
     assert!(r.calls.lock().unwrap().is_empty());
     assert_eq!(
         a.db()
@@ -362,4 +383,9 @@ async fn google_api_unreadable_access_disconnects_before_http() {
             .as_deref(),
         Some(campfire_db::models::google_account::UNREADABLE_TOKEN_REASON)
     );
+}
+#[tokio::test]
+async fn google_api_unreadable_access_disconnects_before_http() {
+    unreadable_access(false).await;
+    unreadable_access(true).await;
 }

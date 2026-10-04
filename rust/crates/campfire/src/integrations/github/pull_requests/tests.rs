@@ -815,10 +815,12 @@ async fn github_pr_registered_card_callbacks_publish_public_and_private_room_and
         }
     }
     assert_eq!(frame(&mut socket).await["type"], "welcome");
+    let other_room = app.db.read(|c| campfire_db::Room::find(c, fixtures::identify("watercooler"))).await.unwrap();
     let mut identifiers = Vec::new();
     for gid in [
         crate::channels::room_gid(&room),
         crate::channels::threads::thread_gid(thread.id),
+        crate::channels::room_gid(&other_room),
     ] {
         let identifier=json!({"channel":"RoomMessagesChannel","signed_stream_name":rails_compat::turbo::signed_stream_name(&app.secrets,&[&gid.to_param(),"messages"])}).to_string();
         socket
@@ -832,6 +834,7 @@ async fn github_pr_registered_card_callbacks_publish_public_and_private_room_and
         assert_eq!(frame(&mut socket).await["type"], "confirm_subscription");
         identifiers.push(identifier);
     }
+    let publications = app.cable.capture_publications();
     for private in [false, true] {
         app.db
             .write(move |tx| {
@@ -886,6 +889,10 @@ async fn github_pr_registered_card_callbacks_publish_public_and_private_room_and
             seen.push(identifier.to_owned());
         }
         assert_ne!(seen[0], seen[1]);
+        let published = publications.take();
+        assert_eq!(published.len(), 2, "only the referencing room and mapped thread may receive updates");
+        let other_stream = format!("{}:messages", crate::channels::room_gid(&other_room).to_param());
+        assert!(published.iter().all(|(stream, _)| stream != &other_stream));
     }
     socket.close(None).await.unwrap();
     serving.abort();

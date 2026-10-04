@@ -1,9 +1,10 @@
-// motion_test.rb at d7c7de92: selectors use Selenium visibility, scripted
+// motion_test.rb at parity/reference.sha: selectors use Selenium visibility, scripted
 // geometry retains the original predicates; wait_until polls for 5s at 50ms.
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';
 import {CABLE_WAIT} from './behavior-deadlines.mjs';
 import {actOnVisible,visibleCount,visibleMatch,isSeleniumVisible,waitForVisibility,filterVisibleText,waitForCondition} from './behavior-visibility.mjs';
+import {readySidebar} from './behavior-browser-setup.mjs';
 export const motionCases=[
   'mobile drawer animates in, lands in place, and returns focus with motion on',
   'member selection mode moves no rows and resizes nothing',
@@ -134,6 +135,7 @@ export async function motion({author:page,base,caseName,fixture}) {
     assert.ok(geometry.right<=geometry.limit+1,'motion: menu clamped inside viewport');
     await page.keyboard.press('Escape');await waitForVisibility(page.locator('#room-menu[hidden]'),{state:'attached'}); // :174 visible: :all
   } else {
+    await readySidebar(page);
     await page.setViewportSize({width:390,height:844});
     const current='#sidebar a[aria-current="page"]';
     if(caseName===motionCases[6]) {

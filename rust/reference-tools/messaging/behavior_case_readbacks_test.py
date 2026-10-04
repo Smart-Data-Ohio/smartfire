@@ -27,7 +27,7 @@ class NamedReadbacks(unittest.TestCase):
             with self.subTest(case=case):
                 selected = branch
                 while not eval(compile(ast.Expression(selected.test), str(SOURCE), 'eval'),
-                               {'CASES': cases, 'file': file, 'case': case}):
+                               {'CASES': cases, 'file': file, 'case': case, 'new_upload_cases': {'uploading a fresh video in the thread composer', 'late upload progress preserves a delivered attachment and reply preview'}}):
                     self.assertTrue(selected.orelse, f'No readback for {case}')
                     selected = selected.orelse[0]
                     self.assertIsInstance(selected, ast.If, f'No named readback for {case}')

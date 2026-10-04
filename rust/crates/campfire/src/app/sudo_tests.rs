@@ -1,6 +1,8 @@
 //! Real HTTP/SQLite security tests for `test/controllers/sudos_controller_test.rb`.
 //! These require the WS19 default seed; missing input is a failure, never a silent skip.
-use crate::controllers::presenters::test_support::{BENDER, DAVID, JASON, KEVIN, Req, TestApp};
+use crate::controllers::presenters::test_support::{
+    BENDER, DAVID, JASON, KEVIN, Reply, Req, TestApp,
+};
 use axum::http::{Method, StatusCode};
 use campfire_db::{Account, TwoFactorBackupCode, TwoFactorCredential};
 use campfire_kit::{Crypto, Ctx, Kit, KitConfig, RailsCrypto, Result};
@@ -15,6 +17,21 @@ async fn app() -> TestApp {
         .expect("build the current pinned WS19 default parity seed")
 }
 
+trait RedirectResponse {
+    fn redirect_location(&self) -> Option<&str>;
+}
+impl RedirectResponse for Reply {
+    fn redirect_location(&self) -> Option<&str> {
+        assert!(
+            self.status.is_redirection(),
+            "{}: {}",
+            self.status,
+            self.text()
+        );
+        self.location()
+    }
+}
+
 #[tokio::test]
 async fn sudo_password_prompt_and_rejection_statuses() {
     let a = app().await;
@@ -24,15 +41,82 @@ async fn sudo_password_prompt_and_rejection_statuses() {
     assert!(prompt.text().contains("Confirm it's you"));
     assert!(prompt.text().contains("name=\"password\""));
     assert!(prompt.text().contains("name=\"totp_code\""));
+    let forms = regex::Regex::new(
+        r#"(?s)<form\b[^>]*action="(?:http://campfire.test)?/sudo"[^>]*>(.*?)</form>"#,
+    )
+    .unwrap();
+    let password_input =
+        regex::Regex::new(r#"<input\b[^>]*type="password"[^>]*name="password""#).unwrap();
+    assert!(
+        forms
+            .captures_iter(&prompt.text())
+            .any(|form| password_input.is_match(&form[1]))
+    );
+    assert!(
+        !regex::Regex::new(r#"<form\b[^>]*action="(?:http://campfire.test)?/sudo/google""#)
+            .unwrap()
+            .is_match(&prompt.text())
+    );
+    let sudo_forms = forms
+        .captures_iter(&prompt.text())
+        .map(|form| form[1].to_owned())
+        .collect::<Vec<_>>();
+    let inputs = regex::Regex::new(r#"<input\b[^>]*>"#).unwrap();
+    for (name, value) in [
+        ("password", None),
+        ("verifier", Some("totp")),
+        ("totp_code", None),
+    ] {
+        assert_eq!(
+            sudo_forms
+                .iter()
+                .flat_map(|form| inputs.find_iter(form))
+                .filter(|input| input.as_str().contains(&format!("name=\"{name}\""))
+                    && value
+                        .is_none_or(|value| input.as_str().contains(&format!("value=\"{value}\""))))
+                .count(),
+            1,
+            "{name}"
+        );
+    }
+    let failures_before = a
+        .db()
+        .read(|c| {
+            Ok(c.query_row(
+                "SELECT count(*) FROM audit_logs WHERE action='sudo.confirm.failure'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
     let bad = b
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
         .await;
     assert_eq!(bad.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        a.db()
+            .read(|c| Ok(c.query_row(
+                "SELECT count(*) FROM audit_logs WHERE action='sudo.confirm.failure'",
+                [],
+                |row| row.get::<_, i64>(0)
+            )?))
+            .await
+            .unwrap(),
+        failures_before + 1
+    );
     assert!(bad.text().contains("Confirmation failed. Try again."));
+    assert_eq!(
+        b.write(Req::new(Method::POST, "/account/join_code"))
+            .await
+            .redirect_location(),
+        Some("http://campfire.test/sudo/new")
+    );
     let unsupported = b
         .write(Req::new(Method::POST, "/sudo").form(&[("verifier", "other")]))
         .await;
     assert_eq!(unsupported.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(unsupported.text().contains("not available"));
     let rows = a
         .db()
         .read(|c| {
@@ -62,7 +146,11 @@ async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early
         .unwrap()
         .join_code;
     let gated = b.write(Req::new(Method::POST, "/account/join_code")).await;
-    assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
+    assert_eq!(
+        gated.redirect_location(),
+        Some("http://campfire.test/sudo/new")
+    );
+    assert_eq!(b.get("/sudo/new").await.status, StatusCode::OK);
     assert_eq!(
         a.db()
             .read(Account::first)
@@ -78,6 +166,13 @@ async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early
     assert_eq!(confirmed.status, StatusCode::OK);
     let text = confirmed.text();
     assert!(text.contains("action=\"/account/join_code\""));
+    assert_eq!(
+        regex::Regex::new(r#"<form\b[^>]*action="/account/join_code"[^>]*method="post""#)
+            .unwrap()
+            .find_iter(&text)
+            .count(),
+        1
+    );
     assert!(text.contains("data-controller=\"auto-submit\""));
     let replay =
         regex::Regex::new(r#"(?s)<form[^>]*action="/account/join_code"[^>]*>(.*?)</form>"#)
@@ -96,7 +191,7 @@ async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early
         .send(Req::new(Method::POST, "/account/join_code").form(&[("authenticity_token", &token)]))
         .await;
     assert_eq!(
-        resumed.location(),
+        resumed.redirect_location(),
         Some("http://campfire.test/account/edit")
     );
     assert_ne!(
@@ -112,7 +207,7 @@ async fn sudo_gate_and_replay_use_a_new_valid_csrf_token_without_executing_early
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
         .await;
     assert_eq!(
-        again.location(),
+        again.redirect_location(),
         Some("http://campfire.test/"),
         "pending request is consumed"
     );
@@ -163,7 +258,7 @@ async fn sudo_applies_to_all_present_rails_sensitive_actions() {
         let mut b = a.sign_in(DAVID).await;
         let reply = b.write(Req::new(method.clone(), &path).form(&pairs)).await;
         assert_eq!(
-            reply.location(),
+            reply.redirect_location(),
             Some("http://campfire.test/sudo/new"),
             "{method} {path}: {} {}",
             reply.status,
@@ -191,14 +286,51 @@ async fn sudo_secret_and_large_bodies_return_to_the_origin_and_never_replay() {
                     .form(&pairs),
             )
             .await;
-        assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
+        assert_eq!(
+            gated.redirect_location(),
+            Some("http://campfire.test/sudo/new")
+        );
         let confirmed = b
             .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
             .await;
         assert_eq!(
-            confirmed.location(),
+            confirmed.redirect_location(),
             Some("http://campfire.test/account/bots/new")
         );
+    }
+}
+
+#[tokio::test]
+async fn sudo_non_replayable_fizzy_post_uses_only_a_same_host_referrer() {
+    let a = app().await;
+    for (referrer, expected) in [
+        (None, "http://campfire.test/"),
+        (
+            Some("https://evil.example.test/phish"),
+            "http://campfire.test/",
+        ),
+        (
+            Some("http://campfire.test/users/me/profile"),
+            "http://campfire.test/users/me/profile",
+        ),
+    ] {
+        let mut b = a.sign_in(KEVIN).await;
+        let mut request =
+            Req::new(Method::POST, "/fizzy/connection").form(&[("access_token", "pasted-token")]);
+        if let Some(referrer) = referrer {
+            request = request.header("referer", referrer);
+        }
+        let gated = b.write(request).await;
+        assert_eq!(
+            gated.redirect_location(),
+            Some("http://campfire.test/sudo/new")
+        );
+        let confirmed = b
+            .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
+            .await;
+        assert_eq!(confirmed.status, StatusCode::FOUND);
+        assert_eq!(confirmed.redirect_location(), Some(expected));
+        assert!(!confirmed.text().contains("action=\"/fizzy/connection\""));
     }
 }
 
@@ -223,7 +355,12 @@ async fn sudo_totp_is_replay_protected_shares_lockout_and_does_not_spend_backup_
     let ok = b
         .write(Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", &code)]))
         .await;
-    assert_eq!(ok.location(), Some("http://campfire.test/"));
+    assert_eq!(ok.redirect_location(), Some("http://campfire.test/"));
+    let success = a.db().read(|c| Ok((
+        c.query_row("SELECT count(*) FROM audit_logs WHERE action='sudo.confirm.success'", [], |row| row.get::<_, i64>(0))?,
+        c.query_row("SELECT json_extract(details, '$.verifier') FROM audit_logs WHERE action='sudo.confirm.success' ORDER BY id DESC LIMIT 1", [], |row| row.get::<_, String>(0))?
+    ))).await.unwrap();
+    assert_eq!(success, (1, "totp".into()));
     for submitted in [&code, &codes[0], "wrong", "wrong", "wrong"] {
         let rejected = b
             .write(
@@ -260,6 +397,38 @@ async fn sudo_totp_is_replay_protected_shares_lockout_and_does_not_spend_backup_
         StatusCode::UNAUTHORIZED,
         "a fresh valid code is refused while locked out"
     );
+    let a = app().await;
+    let mut b = a.sign_in(DAVID).await;
+    for _ in 0..5 {
+        assert_eq!(
+            b.write(
+                Req::new(Method::POST, "/sudo")
+                    .form(&[("verifier", "totp"), ("totp_code", "000000")])
+            )
+            .await
+            .status,
+            StatusCode::UNAUTHORIZED
+        );
+    }
+    let credential = a
+        .db()
+        .read(|c| TwoFactorCredential::for_user(c, DAVID))
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(credential.locked_out(campfire_db::Timestamp::from_jiff(a.booted.app.clock.now())));
+    let secret = credential
+        .secret(&ArEncryption::new(&a.booted.app.secrets))
+        .unwrap();
+    let code = rails_compat::totp::at(&secret, a.booted.app.clock.now().as_second()).unwrap();
+    assert_eq!(
+        b.write(
+            Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", &code)])
+        )
+        .await
+        .status,
+        StatusCode::UNAUTHORIZED
+    );
 }
 
 #[tokio::test]
@@ -276,7 +445,24 @@ async fn sudo_unsupported_totp_without_enrollment_and_google_without_link() {
         .unwrap();
     let mut b = a.sign_in(DAVID).await;
     let prompt = b.get("/sudo/new").await;
+    assert_eq!(prompt.status, StatusCode::OK);
     assert!(!prompt.text().contains("name=\"totp_code\""));
+    let forms = regex::Regex::new(
+        r#"(?s)<form\b[^>]*action="(?:http://campfire.test)?/sudo"[^>]*>(.*?)</form>"#,
+    )
+    .unwrap();
+    let password =
+        regex::Regex::new(r#"<input\b[^>]*type="password"[^>]*name="password""#).unwrap();
+    assert!(
+        forms
+            .captures_iter(&prompt.text())
+            .any(|form| password.is_match(&form[1]))
+    );
+    assert!(
+        !regex::Regex::new(r#"<form\b[^>]*action="(?:http://campfire.test)?/sudo/google""#)
+            .unwrap()
+            .is_match(&prompt.text())
+    );
     let rejected = b
         .write(
             Req::new(Method::POST, "/sudo").form(&[("verifier", "totp"), ("totp_code", "123456")]),
@@ -284,7 +470,10 @@ async fn sudo_unsupported_totp_without_enrollment_and_google_without_link() {
         .await;
     assert_eq!(rejected.status, StatusCode::UNPROCESSABLE_ENTITY);
     let google = b.write(Req::new(Method::POST, "/sudo/google")).await;
-    assert_eq!(google.location(), Some("http://campfire.test/sudo/new"));
+    assert_eq!(
+        google.redirect_location(),
+        Some("http://campfire.test/sudo/new")
+    );
 }
 
 #[tokio::test]
@@ -313,6 +502,22 @@ async fn sudo_create_and_google_share_ten_attempts_in_three_minutes() {
             .text()
             .contains("Too many confirmation attempts. Try again in a few minutes.")
     );
+    let a = app().await;
+    let mut b = a.sign_in(DAVID).await;
+    for _ in 0..10 {
+        assert_eq!(
+            b.write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
+                .await
+                .status,
+            StatusCode::UNAUTHORIZED
+        );
+    }
+    assert_eq!(
+        b.write(Req::new(Method::POST, "/sudo").form(&[("password", "wrong")]))
+            .await
+            .status,
+        StatusCode::TOO_MANY_REQUESTS
+    );
 }
 
 #[tokio::test]
@@ -320,7 +525,7 @@ async fn sudo_confirmations_require_authentication_and_csrf() {
     let a = app().await;
     let mut anonymous = a.anonymous();
     assert_eq!(
-        anonymous.get("/sudo/new").await.location(),
+        anonymous.get("/sudo/new").await.redirect_location(),
         Some("http://campfire.test/session/new")
     );
     let mut b = a.sign_in(DAVID).await;
@@ -364,8 +569,16 @@ async fn sudo_bot_webhook_gate_compares_the_stripped_value_and_leaves_name_edits
         assert_eq!(
             b.write(Req::new(Method::PATCH, &action).form(&pairs))
                 .await
-                .location(),
+                .redirect_location(),
             Some("http://campfire.test/account/bots")
+        );
+        assert_eq!(
+            a.db()
+                .read(|c| campfire_db::User::find(c, BENDER))
+                .await
+                .unwrap()
+                .name,
+            "Bender renamed"
         );
     }
     let mut b = a.sign_in(DAVID).await;
@@ -375,7 +588,7 @@ async fn sudo_bot_webhook_gate_compares_the_stripped_value_and_leaves_name_edits
                 .form(&[("user[webhook_url]", "https://example.com/changed")])
         )
         .await
-        .location(),
+        .redirect_location(),
         Some("http://campfire.test/sudo/new")
     );
 }
@@ -405,7 +618,10 @@ async fn sudo_uploaded_files_are_never_stashed_or_staged_before_confirmation() {
                 ),
         )
         .await;
-    assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
+    assert_eq!(
+        gated.redirect_location(),
+        Some("http://campfire.test/sudo/new")
+    );
     assert_eq!(
         a.db()
             .read(|c| Ok(
@@ -419,7 +635,7 @@ async fn sudo_uploaded_files_are_never_stashed_or_staged_before_confirmation() {
     assert_eq!(
         b.write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
             .await
-            .location(),
+            .redirect_location(),
         Some("http://campfire.test/account/bots/new")
     );
 }
@@ -685,6 +901,10 @@ async fn sudo_views_match_six_rails_seed_bodies_byte_for_byte() {
             std::fs::write(format!("{dir}/{name}.actual"), &actual).unwrap();
             std::fs::write(format!("{dir}/{name}.expected"), expected.as_str().unwrap()).unwrap();
         }
-        assert!(super::asset_goldens::compare(name, &actual, expected.as_str().unwrap()));
+        assert!(super::asset_goldens::compare(
+            name,
+            &actual,
+            expected.as_str().unwrap()
+        ));
     }
 }

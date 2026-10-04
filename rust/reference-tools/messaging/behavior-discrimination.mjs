@@ -25,6 +25,8 @@ export function assertionFrames(error) {
 }
 const target=(module,anchor,message)=>({module:`behavior-${module}.mjs`,anchor,message});
 const D=new Map();
+D.set('uploading a fresh video in the thread composer',[{...target('native-uploads','await nativePhone'),native:{source:'test/system/sending_messages_test.rb',line:53}}]);
+D.set('late upload progress preserves a delivered attachment and reply preview',[{...target('native-uploads','await nativePhone'),native:{source:'test/system/workspace_markdown_test.rb',line:215}}]);
 const add=(names,module,anchor,message)=>{for(const name of names) D.set(name,[target(module,anchor,message)]);};
 add(['From Google Drive starts the legacy picker flow'],'attach-menu',"page.locator('.drive-picker__item')");
 add(['attach Drive files from the picker, send textless, and remove through edit','edit a room message in the composer and remove one of two attachments'],'drive',"scope.locator('.drive-attachments .drive-chip__name'),'Q3 Planning'");
@@ -102,7 +104,13 @@ add(['picker arrows move through options, Enter selects, and Escape returns focu
 add(['picker tabs move with arrow keys and switch the grid'],'toolbar','document.activeElement?.id');
 add(['message action menu is a bottom sheet with touch-sized targets on phones','shows the message action menu as a bottom sheet on phones'],'actions','viewport.height-menu.bottom');
 add(['message action menu stays a floating popover on desktop'],'actions','g.menu.width<g.viewport.width');
-D.set('a release click landing on the just-opened menu does not activate it',[target('actions','await assertMenuOpen(page)'),target('actions','[data-composer-target="context"][hidden]')]);
+D.set('a release click landing on the just-opened menu does not activate it',[{
+  ...target('native-release','await nativePhone'),
+  // Selenium also delivers a real compatibility click during long_press.
+  // If that click activates the menu, :60 is the intended failure. Credit
+  // requires the broken guard and a click at the original press point.
+  native:{source:'test/system/message_interactions_test.rb',lines:[60,82,83]},
+}]);
 add(['edits through the normal composer and restores the saved draft on cancel and success'],'actions','await restoredDraftAfterCancel()');
 add(['a duplicate delivery does not replace the message while its actions are open'],'actions','window.originalDeliveredMessage.isConnected');
 add(['keeps newer typing through an asynchronous edit and leaves failures in edit mode'],'actions',"field(page,'A newer draft typed while saving'");
@@ -163,6 +171,10 @@ add(['keeps an anchored older thread unread when a new reply arrives'],'thread-c
 // behavior.mjs is the dispatcher (there is no dash in its basename).
 for(const specs of D.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 const V=new Map();
+V.set('unrelated-hidden-context',[{
+  ...target('native-release','await nativePhone'),
+  native:{source:'test/system/message_interactions_test.rb',line:83,message:'#composer [data-composer-target'},
+}]);
 const variant=(names,module,anchor)=>{for(const name of names) V.set(name,[target(module,anchor)]);};
 variant(['missing-const'],'code',"code.locator('.code-token')");
 variant(['missing-def'],'code',"await highlight(marked(replacement,'python'),'def')");
@@ -243,10 +255,19 @@ export function mutationTarget(caseName,variant) {
 export function rejectionEvidence(caseName,variant,probe,error) {
   const expected=mutationTarget(caseName,variant),frames=assertionFrames(error);
   const nativeMotion=caseName===motionCases[0]&&variant==='default';
-  const nativeMatch=nativeMotion&&probe.nativeFailures?.some(failure=>failure.assertion&&failure.message.includes(expected[0].native.message)&&failure.backtrace.some(frame=>frame.includes(`${expected[0].native.source}:${expected[0].native.line}:`)));
-  const matched=nativeMotion?nativeMatch:expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor))&&(!target.phase||frames.some(frame=>frame.module===target.phase.module&&frame.source.includes(target.phase.anchor))));
+  const nativeRelease=caseName==='a release click landing on the just-opened menu does not activate it'&&variant==='default';
+  const nativeContext=caseName==='a release click landing on the just-opened menu does not activate it'&&variant==='unrelated-hidden-context';
+  const nativeUpload=['uploading a fresh video in the thread composer','late upload progress preserves a delivered attachment and reply preview'].includes(caseName)&&variant==='default';
+  const nativeMatch=(nativeMotion||nativeRelease||nativeContext||nativeUpload)&&probe.nativeFailures?.some(failure=>failure.assertion&&(!expected[0].native.message||failure.message.includes(expected[0].native.message))&&failure.backtrace.some(frame=>(expected[0].native.lines||[expected[0].native.line]).some(line=>frame.includes(`${expected[0].native.source}:${line}:`))));
+  const matched=nativeMotion||nativeRelease||nativeContext||nativeUpload?nativeMatch:expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor))&&(!target.phase||frames.some(frame=>frame.module===target.phase.module&&frame.source.includes(target.phase.anchor))));
   const reasons=[];
   if(nativeMotion&&!probe.observed?.some(state=>state.room==='/rooms/201306877'&&state.open&&state.duration==='0s'&&['none','matrix(1, 0, 0, 1, 0, 0)'].includes(state.transform))) reasons.push('native motion mutation not encountered');
+  if(nativeRelease&&!probe.observed?.some(state=>state.room==='/rooms/654632876'&&state.releaseClicks?.some(click=>click.releaseClick&&click.brokenGuard&&click.menuVisible&&click.atPressPoint))) reasons.push('native release mutation not encountered');
+  if(nativeContext&&!probe.observed?.some(state=>state.room==='/rooms/654632876'&&state.releaseGeometry?.inMenu&&
+    state.releaseClicks?.some(click=>click.releaseClick&&!click.brokenGuard&&click.menuVisible&&click.atPressPoint)&&
+    state.contextScopes?.some(context=>context.form==='composer'&&context.hidden===false)&&
+    state.contextScopes?.some(context=>context.form==='ws8bm-idle-composer'&&context.hidden===true))) reasons.push('native composer scope mutation not encountered');
+  if(nativeUpload&&!probe.observed?.some(state=>caseName.startsWith('uploading')?state.videoJobPerformed&&state.videoFaultSeen:state.progressFault?.delivered)) reasons.push('native upload mutation not encountered');
   if(!probe.ready) reasons.push('startup failed');
   if(!probe.applied) reasons.push('mutation not served');
   if(probe.networkFailures?.length) reasons.push('network failed');

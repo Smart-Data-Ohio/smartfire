@@ -18,7 +18,7 @@ test('every registered mutant names an existing intended assertion',()=>{
     for(const spec of mutationTarget(name,variant)) for(const target of [spec,...(spec.phase?[spec.phase]:[])]) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
     count++;
   }
-  assert.equal(count,203);
+  assert.equal(count,206);
 });
 test('earlier Loading timeout earns no delayed-marker rejection credit',()=>{
   const early=failure('behavior-search-forward.mjs',"waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post')");
@@ -47,12 +47,18 @@ test('method-name stack columns preserve only their own receiver',()=>{
 
 test('release-menu failure requires the broken guard and a click into the mounted menu',()=>{
   const name='a release click landing on the just-opened menu does not activate it';
-  const error=failure('behavior-actions.mjs','await assertMenuOpen(page)');
-  const probe={...valid,requiresReleaseClick:true};
+  const error={code:'ERR_ASSERTION',stack:'AssertionError: native pinned release failed'};
+  const probe={...valid,nativeFailures:[{assertion:true,message:'menu closed',backtrace:['test/system/message_interactions_test.rb:60:in test_phone']}]};
   assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
-  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{releaseClick:true,brokenGuard:true,menuVisible:true}]},error).valid,true);
-  const geometry=failure('behavior-actions.mjs',"assert.equal(hit,'menu')");
-  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{releaseClick:true,brokenGuard:true,menuVisible:true}]},geometry).valid,false);
+  const observed=[{room:'/rooms/654632876',releaseClicks:[{releaseClick:true,brokenGuard:true,menuVisible:true,atPressPoint:true}]}];
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed},error).valid,true);
+  for(const line of [56,59,80]) {
+    assert.equal(rejectionEvidence(name,'default',{...probe,observed,nativeFailures:[{assertion:true,message:'wrong phase',backtrace:[`test/system/message_interactions_test.rb:${line}:in test_phone`]}]},error).valid,false);
+  }
+  for(const property of ['brokenGuard','menuVisible','atPressPoint']) {
+    const wrong=structuredClone(observed);wrong[0].releaseClicks[0][property]=false;
+    assert.equal(rejectionEvidence(name,'default',{...probe,observed:wrong},error).valid,false);
+  }
 });
 
 
@@ -171,4 +177,22 @@ test('native motion requires the original off-canvas failure and actual zero-dur
   for(const fault of [{...failure,backtrace:['test/system/motion_test.rb:38:in test_phone']},{...failure,message:'Stimulus startup'}])
     assert.equal(rejectionEvidence(name,'default',{...valid,observed:[state],nativeFailures:[fault]},error).valid,false);
   assert.equal(rejectionEvidence(name,'default',{...valid,observed:[{...state,room:'/rooms/654632876'}],nativeFailures:[failure]},error).valid,false);
+});
+
+
+test('idle hidden context rejection requires the active composer and original post-click assertion',()=>{
+  const name='a release click landing on the just-opened menu does not activate it';
+  const error={code:'ERR_ASSERTION',stack:'AssertionError: native pinned release failed'};
+  const failure={assertion:true,message:'#composer [data-composer-target hidden context not found',backtrace:['test/system/message_interactions_test.rb:83:in test_phone']};
+  const state={room:'/rooms/654632876',releaseGeometry:{inMenu:true},releaseClicks:[{releaseClick:true,brokenGuard:false,menuVisible:true,atPressPoint:true}],contextScopes:[{form:'composer',hidden:false},{form:'ws8bm-idle-composer',hidden:true}]};
+  const probe={...valid,nativeFailures:[failure],observed:[state]};
+  assert.equal(rejectionEvidence(name,'unrelated-hidden-context',probe,error).valid,true);
+  for(const line of [56,60,80,82]) {
+    assert.equal(rejectionEvidence(name,'unrelated-hidden-context',{...probe,nativeFailures:[{...failure,backtrace:[`test/system/message_interactions_test.rb:${line}:in test_phone`]}]},error).valid,false);
+  }
+  for(const missing of ['contextScopes','releaseClicks','releaseGeometry']) {
+    const wrong=structuredClone(state);delete wrong[missing];
+    assert.equal(rejectionEvidence(name,'unrelated-hidden-context',{...probe,observed:[wrong]},error).valid,false);
+  }
+  assert.equal(rejectionEvidence(name,'unrelated-hidden-context',{...probe,nativeFailures:[{...failure,message:'unrelated hidden context'}]},error).valid,false);
 });
