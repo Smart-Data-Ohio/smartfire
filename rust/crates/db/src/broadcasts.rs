@@ -95,6 +95,8 @@ pub enum Partial {
     /// The message's own partial, rendered for `broadcast_replace_to conversation, :messages,
     /// target: message`: `messages/_message`.
     MessageReplace { message_id: i64 },
+    /// #226 completion refresh: `messages/_presentation` only.
+    MessagePresentation { message_id: i64 },
     /// `messages/_thread_indicator` with `message:` (the parent) and `reply_count:`.
     ThreadIndicator { message_id: i64, reply_count: i64 },
     /// `polls/_poll` with `poll:`.

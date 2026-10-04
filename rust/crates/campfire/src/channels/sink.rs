@@ -230,7 +230,7 @@ fn ooo_notice(cable: &Cable, b: campfire_db::models::user_status_settings::updat
 
 /// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
 /// directory partial descriptions belongs to WS8br; message/poll/pin partials use WS8b-m's seam.
-fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
+pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::{Broadcast, TurboAction};
     if let Broadcast::Turbo(frame) = broadcast
         && matches!(frame.action, campfire_db::broadcasts::TurboAction::Append | campfire_db::broadcasts::TurboAction::Replace)

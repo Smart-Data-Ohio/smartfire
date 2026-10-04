@@ -148,9 +148,20 @@ pub(super) async fn create_attachment_reply(app: &App, room: &Room, bot: &User, 
     let (room_id, creator_id, blob_id) = (room.id, bot.id, blob.id);
     let message = app
         .db
-        .write(move |tx| create_reply(tx, Some(&trigger), NewMessage { room_id, creator_id, attachment_blob_id: Some(blob_id), ..Default::default() }))
+        .write(move |tx| {
+            let message = create_reply(tx, Some(&trigger), NewMessage { room_id, creator_id, attachment_blob_id: Some(blob_id), ..Default::default() })?;
+            if message.thread_id.is_some() {
+                if let Some(blob) = campfire_storage::Blob::find(tx.conn(), blob_id).map_err(|e| campfire_db::Error::Other(e.to_string()))? {
+                    crate::controllers::presenters::attachments::enqueue_analysis(tx, &blob);
+                }
+                campfire_db::models::message_attachment_processing::schedule(tx, message.id, blob_id);
+            }
+            Ok(message)
+        })
         .await?;
-    process_attachment(app, blob).await.map_err(|e| anyhow!("{e:?}"))?;
+    if message.thread_id.is_none() {
+        process_attachment(app, blob).await.map_err(|e| anyhow!("{e:?}"))?;
+    }
     let id = message.id;
     Ok(app.db.read(move |conn| Message::find(conn, id)).await?)
 }
@@ -170,15 +181,17 @@ fn create_reply(tx: &mut campfire_db::Tx<'_>, trigger: Option<&Message>, mut att
 pub(super) async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyhow::Result<()> {
     let (app, room, message) = (app.clone(), room.clone(), message.clone());
     let db = app.db.clone();
-    db.read(move |conn| {
+    let refreshes = db.read(move |conn| {
         let presenter = Presenter::new(conn, &app, None);
         let view = presenter.message(&message)?;
         let account = campfire_db::Account::first(conn)?;
         let html = page::render_detached(&app, account.as_ref(), |ctx| views::message(ctx, &view));
         let partials = Rendered { message: Some(html), ..Rendered::default() };
-        app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
+        app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
+        Ok(presenter.take_render_refreshes())
     })
     .await?;
+    crate::controllers::presenters::refresh_after_render(&db, refreshes).await;
     Ok(())
 }
 
@@ -186,6 +199,40 @@ pub(super) async fn broadcast_create(app: &App, room: &Room, message: &Message) 
 mod tests {
     use super::*;
     use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, BENDER, DAVID};
+
+    #[tokio::test]
+    async fn attachment_processing_root_webhook_recovers_failed_inline_video_like_rails() {
+        let test_app = TestApp::boot_frozen().await.unwrap().without_job_runner().await;
+        let app = &test_app.booted.app;
+        let (_client, server) = crate::controllers::messages::attachment_processing_tests::subscribe(&test_app).await;
+        let (room, bot, trigger) = app.db.write(|tx| {
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            Ok((Room::find(tx.conn(), ALL_TALK)?, User::find(tx.conn(), BENDER)?,
+                Message::create(tx, NewMessage { room_id: ALL_TALK, creator_id: DAVID,
+                    body: Some("Root webhook trigger".into()), ..Default::default() })?))
+        }).await.unwrap();
+        let reply = create_attachment_reply(app, &room, &bot, trigger, webhook::Attachment {
+            data: b"corrupt MOV".to_vec(), filename: "attachment.mov".into(), content_type: "video/quicktime".into(),
+        }).await.unwrap();
+        test_app.publications().take();
+        broadcast_create(app, &room, &reply).await.unwrap();
+        let id = reply.id;
+        let actual = app.db.read(move |c| {
+            let blob_id: i64 = c.query_row("SELECT blob_id FROM active_storage_attachments WHERE record_type='Message' AND name='attachment' AND record_id=?", [id], |r| r.get(0))?;
+            let token: Option<String> = c.query_row("SELECT message_processing_token FROM active_storage_blobs WHERE id=?", [blob_id], |r| r.get(0))?;
+            let preview_attached: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND name='preview_image' AND record_id=?)", [blob_id], |r| r.get(0))?;
+            let count: i64 = c.query_row("SELECT count(*) FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob'", [], |r| r.get(0))?;
+            Ok(serde_json::json!({"processing_jobs":count,"preview_attached":preview_attached,"token_suffix":token.and_then(|t| t.rsplit(':').next().map(str::to_owned))}))
+        }).await.unwrap();
+        let mut actual = actual;
+        actual["append_without_poster"] = serde_json::json!(test_app.publications().take().iter().any(|(_, bytes)| {
+            let payload: serde_json::Value = serde_json::from_str(bytes).unwrap();
+            payload.as_str().is_some_and(|html| html.contains("<video") && !html.contains("poster="))
+        }));
+        let expected: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/message_attachment_processing_failures.json")).unwrap();
+        assert_eq!(actual, expected["root_webhook"], "rendering the root reply must preserve Rails' recovery request");
+        server.abort();
+    }
 
     #[test]
     fn ws11_legacy_webhook_retry_policy_keeps_transient_sources() {

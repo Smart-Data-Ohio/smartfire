@@ -670,7 +670,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
         .await
         .map_err(db_error)?;
-    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     let response = super::presenters::view_context::page_or_frame(
         c,
         StatusCode::OK,

@@ -33,6 +33,7 @@ pub mod auth_audit;
 pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;
+pub mod message_attachment_processing;
 pub mod board_tag_assignment;
 pub mod board_sla_nudge;
 pub mod board_sla_rule;

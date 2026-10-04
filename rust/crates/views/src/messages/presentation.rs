@@ -41,17 +41,17 @@ fn sound_presentation(sound: &SoundView) -> String {
 /// `Messages::AttachmentPresentation#render`.
 pub fn attachment_presentation(ctx: &ViewContext, attachment: &AttachmentView) -> String {
     match &attachment.preview {
-        AttachmentPreview::Video { poster_url } => video_preview(attachment, poster_url),
+        AttachmentPreview::Video { poster_url } => video_preview(attachment, poster_url.as_deref()),
         AttachmentPreview::Image { thumb_url } => lightboxed_image_preview(attachment, thumb_url),
         AttachmentPreview::File => file_link(ctx, attachment),
     }
 }
 
-fn video_preview(attachment: &AttachmentView, poster_url: &str) -> String {
+fn video_preview(attachment: &AttachmentView, poster_url: Option<&str>) -> String {
+    let poster = poster_url.map(|url| format!(r#" poster="{}""#, escape(url))).unwrap_or_default();
     let video = format!(
-        r#"<video src="{}" poster="{}" controls="controls" preload="none" width="100%" height="100%" class="message__attachment"></video>"#,
+        r#"<video src="{}"{poster} controls="controls" preload="none" width="100%" height="100%" class="message__attachment"></video>"#,
         escape(&attachment.blob_path),
-        escape(poster_url)
     );
     inline_media_dimension_constraints(preview_dimensions(attachment), &video)
 }

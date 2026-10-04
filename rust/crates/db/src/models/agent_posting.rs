@@ -377,6 +377,20 @@ pub fn post_service(tx: &mut Tx<'_>, agent_id: i64, a: NewMessage, drive: DriveI
 /// Storage preparation runs in the message savepoint. Denials roll back its rows and callbacks.
 /// REST and MCP still call the same posting service, with the app owning upload staging.
 pub fn post_service_with_preparation(
+    tx: &mut Tx<'_>, agent_id: i64, a: NewMessage, drive: DriveInput,
+    prepare_attachment: impl FnOnce(&mut Tx<'_>, &mut NewMessage) -> Result<()>,
+) -> Result<PostResult> {
+    let result = save_service_with_preparation(tx, agent_id, a, drive, prepare_attachment)?;
+    if let PostResult::Posted(message) = &result {
+        broadcast_create(tx, message)?;
+        super::bot_webhook_fanout::deliver(tx, message)?;
+    }
+    Ok(result)
+}
+
+/// Root attachment posts process their committed upload before broadcasting and fan-out,
+/// matching `Agents::Posting.post_root`. Other callers retain transactional delivery.
+pub fn save_service_with_preparation(
     tx: &mut Tx<'_>, agent_id: i64, mut a: NewMessage, drive: DriveInput,
     prepare_attachment: impl FnOnce(&mut Tx<'_>, &mut NewMessage) -> Result<()>,
 ) -> Result<PostResult> {
@@ -400,8 +414,6 @@ pub fn post_service_with_preparation(
         Err(Error::RecordInvalid(errors)) => return Ok(PostResult::Denied(invalid(errors))),
         Err(error) => return Err(error),
     };
-    broadcast_create(tx, &message)?;
-    super::bot_webhook_fanout::deliver(tx, &message)?;
     Ok(PostResult::Posted(Box::new(message)))
 }
 

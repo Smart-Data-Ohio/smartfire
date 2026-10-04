@@ -23,6 +23,7 @@ pub(crate) struct Preloads {
     pub cache: crate::controllers::presenters::message_cache_preloads::CacheFacts,
     pub users: HashMap<i64, RenderingUser>,
     pub attachments: HashMap<i64, campfire_storage::Blob>,
+    pub previewed_blobs: std::collections::HashSet<i64>,
     pub icons: IconCatalog,
     pub custom_icons: HashMap<String, String>,
     // Shared persisted provider facts, loaded before any message/quote rendering.
@@ -44,7 +45,7 @@ impl Preloads {
         let attachments=campfire_storage::Blob::attached_messages(p.conn,&ids)
             .map_err(super::super::presenters::storage_error)?;
         let icons=crate::rich_text::icons(p.conn).map_err(campfire_db::Error::Other)?;
-        Ok(Self { records,users,attachments,icons,threads:None,github:Default::default(),
+        Ok(Self { records,users,attachments,icons,previewed_blobs:Default::default(),threads:None,github:Default::default(),
             event_views:Default::default(),cache:Default::default(),custom_icons:Default::default(),
             fizzy_cards:Default::default(),link_references:Default::default() })
     }
@@ -93,6 +94,9 @@ impl Preloads {
         let attachments =
             campfire_storage::Blob::attached_messages(p.conn, &records.body_ids(messages))
                 .map_err(super::super::presenters::storage_error)?;
+        let videos = attachments.values().filter(|b| b.is_video()).map(|b| b.id).collect::<Vec<_>>();
+        let previewed_blobs = campfire_storage::Blob::previewed_blob_ids(p.conn, &videos)
+            .map_err(super::super::presenters::storage_error)?;
         let icons = crate::rich_text::icons(p.conn).map_err(campfire_db::Error::Other)?;
         let custom_icons = icons
             .custom
@@ -223,6 +227,7 @@ impl Preloads {
             records,
             users,
             attachments,
+            previewed_blobs,
             icons,
             custom_icons,
         })

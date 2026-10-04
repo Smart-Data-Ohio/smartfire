@@ -29,7 +29,7 @@ use campfire_kit::clock::FrozenClock;
 fn oracle() -> Value {serde_json::from_str(include_str!("../../../../vectors/messaging/forwards.json")).unwrap()}
 
 async fn fixture() -> TestApp {
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
     app.db().write(|tx| {
         let source = Message::create(tx, NewMessage {room_id: ALL_TALK, creator_id: DAVID, markdown_source: Some("**Snapshot**".into()), client_message_id: Some("forward-source".into()), drive_file_ids: vec!["abcdefghij".into()], ..Default::default()})?;
         let open = ChannelThread::create(tx, NewChannelThread {room_id: ALL_TALK, creator_id: DAVID, name: Some("Forward open".into()), ..Default::default()})?;
@@ -131,31 +131,32 @@ fn storage_keys(app:&TestApp)->Vec<String> {
 }
 
 #[tokio::test]
-async fn attachment_processing_failure_rolls_back_every_forward_and_thread_side_effect() {
+async fn attachment_processing_failure_preserves_every_forward_and_thread_side_effect() {
     let app = fixture().await;
     let thread = oracle()["stale_id"].as_i64().unwrap();
     let uploaded = app.david().write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
         .multipart(&[("message[client_message_id]", "processing-rollback")], ("message[attachment]", "source.txt", "text/plain", b"Forward rollback\n"))).await;
     assert_eq!(uploaded.status, StatusCode::OK, "{}", uploaded.text());
-    let (source, counts, previous_thread) = app.db().write(move |tx| {
+    let source = app.db().write(move |tx| {
         let source = Message::find_duplicate(tx.conn(), ALL_TALK, DAVID, "processing-rollback")?.unwrap();
         // Put the target back into its pre-post state; a successful forward would join/reopen it.
         tx.conn().execute("DELETE FROM thread_memberships WHERE thread_id = ? AND user_id = ?", (thread, DAVID))?;
         tx.conn().execute("UPDATE channel_threads SET closed_at = ?, last_activity_at = ? WHERE id = ?", (tx.now(), tx.now().since(jiff::SignedDuration::from_hours(-2)), thread))?;
         tx.conn().execute_batch("CREATE TRIGGER ws8bm_forward_reject_analysis BEFORE UPDATE OF metadata ON active_storage_blobs WHEN NEW.id > (SELECT blob_id FROM active_storage_attachments WHERE record_type = 'Message' AND record_id = (SELECT id FROM messages WHERE client_message_id = 'processing-rollback')) BEGIN SELECT RAISE(ABORT, 'WS8bm processing rollback'); END;")?;
-        Ok((source.id, forward_row_counts(tx.conn())?, ChannelThread::find(tx.conn(), thread)?))
+        Ok(source.id)
     }).await.unwrap();
-    let files = storage_keys(&app);
     let response = app.david().write(Req::new(Method::POST, &format!("/messages/{source}/forwards.json"))
         .header("content-type", "application/json").body(json!({"destinations": [{"room_id": ALL_TALK, "thread_id": thread}, {"room_id": QUIET_CORNER}]}).to_string())).await;
-    assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR, "{}", response.text());
+    assert_eq!(response.status, StatusCode::CREATED, "{}", response.text());
+    let files = storage_keys(&app);
+    assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
     app.db().read(move |conn| {
-        assert_eq!(forward_row_counts(conn)?, counts, "processing must participate in the forward transaction");
-        assert_eq!(ChannelThread::find(conn, thread)?, previous_thread);
-        assert!(ThreadMembership::find_by_thread_and_user(conn, thread, DAVID)?.is_none());
+        assert_eq!(conn.query_row("SELECT count(*) FROM messages WHERE forwarded_from_message_id=?", [source], |r| r.get::<_,i64>(0))?, 2);
+        assert!(ChannelThread::find(conn, thread)?.closed_at.is_none());
+        assert!(ThreadMembership::find_by_thread_and_user(conn, thread, DAVID)?.is_some());
         Ok(())
     }).await.unwrap();
-    assert_eq!(storage_keys(&app), files, "no copied or generated files survive rollback");
+    assert_eq!(storage_keys(&app), files, "processing failure retains committed private copies");
 }
 
 fn forward_row_counts(conn: &campfire_db::Connection) -> campfire_db::Result<Vec<i64>> {
@@ -164,7 +165,7 @@ fn forward_row_counts(conn: &campfire_db::Connection) -> campfire_db::Result<Vec
 }
 
 #[tokio::test]
-async fn generated_media_rolls_back_on_later_target_and_deferred_enqueue_failures() {
+async fn forward_media_failure_is_deferred_and_precommit_enqueue_failure_still_rolls_back() {
     for trigger in [
         "CREATE TRIGGER ws8bm_reject_later_variant BEFORE INSERT ON active_storage_variant_records WHEN (SELECT COUNT(*) FROM messages WHERE forwarded_from_message_id = (SELECT id FROM messages WHERE client_message_id = 'variant-source')) > 1 BEGIN SELECT RAISE(ABORT,'later variant failed'); END;",
         "CREATE TRIGGER ws8bm_reject_media_job BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT,'media enqueue failed'); END;"
@@ -177,9 +178,17 @@ async fn generated_media_rolls_back_on_later_target_and_deferred_enqueue_failure
         app.db().write(move |tx| {tx.conn().execute_batch(trigger)?;Ok(())}).await.unwrap();
         let response = app.david().write(Req::new(Method::POST, &format!("/messages/{id}/forwards.json"))
             .header("content-type", "application/json").body(json!({"destinations": [{"room_id": QUIET_CORNER}, {"room_id": ALL_TALK}]}).to_string())).await;
-        assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR, "{}", response.text());
-        assert_eq!(app.db().read(forward_row_counts).await.unwrap(), before);
-        assert_eq!(storage_keys(&app), files);
+        if trigger.contains("background_jobs") {
+            assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
+            assert_eq!(app.db().read(forward_row_counts).await.unwrap(), before);
+            assert_eq!(storage_keys(&app), files);
+        } else {
+            assert_eq!(response.status, StatusCode::CREATED);
+            let copied_files = storage_keys(&app);
+            assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
+            assert_eq!(storage_keys(&app), copied_files);
+            assert_eq!(app.db().read(move |c| Ok(c.query_row("SELECT count(*) FROM messages WHERE forwarded_from_message_id=?", [id], |r| r.get::<_,i64>(0))?)).await.unwrap(), 2);
+        }
     }
 }
 
@@ -200,7 +209,7 @@ pub(crate) async fn install_success_fixture(app: &TestApp) {
 
 #[tokio::test]
 async fn positive_forward_responses_and_snapshot_rows_match_rails_without_masks() {
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap().without_job_runner().await;
     install_success_fixture(&app).await;
     for row in success_oracle()["rows"].as_array().unwrap() {
         let ids = row["client_ids"].as_array().unwrap().iter().map(|id| id.as_str().unwrap()).collect::<Vec<_>>().join(",");

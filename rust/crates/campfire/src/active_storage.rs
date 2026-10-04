@@ -186,7 +186,7 @@ async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
 
     let storage = app.storage.clone();
     let source = blob.clone();
-    let image = process_media(move || storage.draw_preview_image(&source)).await?;
+    let image = process_media(move || storage.draw_preview_image(&source)).await?.defer_analysis();
 
     let storage = app.storage.clone();
     app.db
@@ -194,6 +194,7 @@ async fn preview_image(app: &App, blob: Blob) -> Result<Blob> {
             let conn = tx.conn();
             match storage.record_preview_image(conn, &blob, &image, tx.now().jiff()).map_err(storage_error)? {
                 Some(recorded) => {
+                    crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
                     keep_after_commit(tx, image);
                     Ok(recorded)
                 }
@@ -277,86 +278,6 @@ pub(crate) fn touch_attachment_records(
 
 fn storage_db_error(error: campfire_storage::Error) -> campfire_db::Error {
     campfire_db::Error::Other(error.to_string())
-}
-
-/// Thread posting wraps Message#process_attachment in its posting transaction. The writer
-/// already runs on a blocking thread; keep metadata, variants, touches and jobs in that Tx.
-pub(crate) fn process_attachment_in(
-    tx: &mut campfire_db::Tx<'_>,
-    storage: &Storage,
-    mut blob: Blob,
-) -> campfire_db::Result<()> {
-    // The approved post-commit JPEG exception concerns the original attachment,
-    // never a video's generated JPEG preview.
-    let discard_jpeg_variant = blob.content_type() == "image/jpeg";
-    let mut source = blob.clone();
-    source.metadata = Json::object();
-    let metadata = storage
-        .analyzed_metadata(&source)
-        .map_err(storage_db_error)?;
-    blob.metadata.merge(&metadata);
-    blob.update_metadata(tx.conn(), blob.metadata.clone())
-        .map_err(storage_db_error)?;
-    touch_attachment_records(tx, blob.id)?;
-    let variation = if blob.is_video() {
-        Variation::format_only("webp")
-    } else if blob.is_representable() {
-        Variation::resize_to_limit(1200, 800, None)
-    } else {
-        return Ok(());
-    };
-    if blob.is_previewable() {
-        blob = match storage
-            .existing_preview_file(tx.conn(), &blob)
-            .map_err(storage_db_error)?
-        {
-            Some(image) => image,
-            None => {
-                let staged = storage
-                    .draw_preview_image(&blob)
-                    .map_err(storage_db_error)?;
-                let recorded = storage
-                    .record_preview_image(tx.conn(), &blob, &staged, tx.now().jiff())
-                    .map_err(storage_db_error)?
-                    .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))?;
-                keep_after_commit(tx, staged);
-                recorded
-            }
-        };
-    }
-    let variation = storage
-        .variation_for(&blob, &variation)
-        .map_err(storage_db_error)?;
-    // Posting only reuses metadata for the approved original-JPEG exception;
-    // generated video previews must be usable while processing the attachment.
-    let existing = if discard_jpeg_variant {
-        storage.existing_variant(tx.conn(), &blob, &variation)
-    } else {
-        storage.existing_variant_file(tx.conn(), &blob, &variation)
-    }.map_err(storage_db_error)?;
-    if existing.is_none() {
-        let staged = storage
-            .transform_variant(&blob, &variation)
-            .map_err(storage_db_error)?
-            .defer_analysis();
-        if let Some(recorded) = storage
-            .record_variant(tx.conn(), &blob, &variation, &staged, tx.now().jiff())
-            .map_err(storage_db_error)?
-        {
-            if discard_jpeg_variant {
-                // Approved JPEG-only state: Rails commits the rows, then its closed
-                // output stream prevents upload and analysis. See the recorded oracle.
-                tx.after_commit(move |_| {
-                    drop(staged);
-                    Ok(())
-                });
-            } else {
-                crate::controllers::presenters::attachments::enqueue_analysis(tx, &recorded);
-                keep_after_commit(tx, staged);
-            }
-        }
-    }
-    Ok(())
 }
 
 /// Uploads a file to storage for a blob whose row the caller saves next (see [`keep_after_commit`]).

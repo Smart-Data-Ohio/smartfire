@@ -9,6 +9,8 @@ pub(crate) mod boosts_tests;
 #[cfg(test)]
 mod upload_tests;
 #[cfg(test)]
+pub(crate) mod attachment_processing_tests;
+#[cfg(test)]
 mod review_tests;
 pub mod pins;
 pub mod by_bots;
@@ -127,7 +129,7 @@ async fn create_action(c: &mut Ctx) -> Result {
     let app = c.app().clone();
     let base_url = c.url_for("");
     let viewer_id = require_current_user(c)?.id;
-    let html = c
+    let (html, refreshes) = c
         .app()
         .db
         .read(move |conn| {
@@ -135,11 +137,13 @@ async fn create_action(c: &mut Ctx) -> Result {
             presenter.use_viewer_zone(viewer_id)?;
             let item = campfire_views::fragment_cache::with(&app.fragment_cache, || presenter.message_item(&message))?;
             let account = campfire_db::Account::first(conn)?;
-            page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::CreateStream { ctx, message: &item, room_kind: kind }.render())
-                .map_err(|e| campfire_db::Error::Other(e.to_string()))
+            let html = page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::CreateStream { ctx, message: &item, room_kind: kind }.render())
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            Ok((html, presenter.take_render_refreshes()))
         })
         .await
         .map_err(db_error)?;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, html))
 }
 
@@ -625,6 +629,26 @@ fn invalid_attachment() -> Error {
 /// `Message#process_attachment`: analyze the blob now (its `after_update` touches the message),
 /// then generate the video preview or the `:thumb` representation.
 pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
+    use campfire_db::models::message_attachment_processing as processing;
+    let blob_id = blob.id;
+    let token = uuid::Uuid::new_v4().to_string();
+    let claimed = app.db.write({ let token = token.clone(); move |tx| processing::claim(tx, blob_id, &token) }).await;
+    match claimed {
+        Ok(true) => {
+            if let Err(error) = process_attachment_now(app, blob).await {
+                tracing::warn!(blob_id, %error, "Committed attachment processing failed");
+            }
+            if let Err(error) = app.db.write(move |tx| processing::release(tx, blob_id, &token)).await {
+                tracing::warn!(blob_id, %error, "Attachment processing release failed");
+            }
+        }
+        Err(error) => tracing::warn!(blob_id, %error, "Committed attachment processing claim failed"),
+        Ok(false) => (),
+    }
+    Ok(())
+}
+
+pub(crate) async fn process_attachment_now(app: &App, blob: Blob) -> Result<()> {
     let blob = analyze_attachment(app, blob).await?;
     if blob.is_video() {
         // attachment.preview(format: :webp).processed
@@ -633,8 +657,8 @@ pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
         // attachment.representation(:thumb).processed
         let thumb = Variation::resize_to_limit(1200, 800, None);
         if blob.content_type() == "image/jpeg" {
-            // Approved JPEG posting reuses `.processed?` metadata, without serving
-            // its intentionally absent file. Representation endpoints require files.
+            // Rails `.processed?` reuses the record. Serving endpoints handle a
+            // missing final file without regenerating an already recorded variant.
             let storage = app.storage.clone();
             let source = blob.clone();
             let variation = storage.variation_for(&source, &thumb).map_err(Error::internal)?;
@@ -656,8 +680,8 @@ async fn analyze_attachment(app: &App, blob: Blob) -> Result<Blob> {
 }
 
 /// `@message.update!(message_params)`. A new attachment replaces the old one (whose blob is purged
-/// later) without `process_attachment`: the blob is only analyzed, by `ActiveStorage::AnalyzeJob`
-/// after commit (verified against the reference with a bot's `PUT` and `attachment`).
+/// later). `Message::replace_attachment` schedules #226's processing after commit as well
+/// as Active Storage's ordinary analysis callback.
 pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: MessageParams) -> Result<Message> {
     let attachment_given = attributes.attachment.is_some();
     let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
@@ -728,11 +752,11 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
             let html = page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::uncached_message(ctx, &view));
             let partials = Rendered { message: Some(html), ..Rendered::default() };
             app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
-            Ok(presenter.take_github_refreshes())
+            Ok(presenter.take_render_refreshes())
         })
         .await
         .map_err(db_error)?;
-    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     Ok(())
 }
 
@@ -768,11 +792,11 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             for (part, html) in replacements {
                 app.broadcasts.message_part_replace(&room, &message, part, &html);
             }
-            Ok(presenter.take_github_refreshes())
+            Ok(presenter.take_render_refreshes())
         })
         .await
         .map_err(db_error)?;
-    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     Ok(())
 }
 
@@ -825,14 +849,14 @@ pub(crate) async fn present<T: Send + 'static>(
             presenter.use_viewer_zone(current_user_id)?;
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
-            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_github_refreshes()))
+            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches(), presenter.take_render_refreshes()))
         })
         .await
         .map_err(db_error)?;
     super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
         .await
         .map_err(db_error)?;
-    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     Ok(value)
 }
 

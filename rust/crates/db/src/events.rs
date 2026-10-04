@@ -182,6 +182,11 @@ pub trait EventSink: Send + Sync {
     /// Hands the event off, once its write has committed (or right away, for [`Tx::emit_now`]).
     fn emit(&self, event: Event);
 
+    /// A committed callback may render and request recovery on the committing connection.
+    fn emit_committed(&self, _after: &mut Tx<'_>, event: Event) {
+        self.emit(event);
+    }
+
     /// Writes what the event needs in the database, on the emitting write's connection, when it's
     /// emitted: a sink backed by the durable job queue inserts a job's row here, so the job
     /// commits or rolls back with the write that enqueued it (and its runner, woken by
@@ -245,6 +250,10 @@ impl<T: EventSink + ?Sized> EventSink for Arc<T> {
 
     fn emit(&self, event: Event) {
         (**self).emit(event)
+    }
+
+    fn emit_committed(&self, after: &mut Tx<'_>, event: Event) {
+        (**self).emit_committed(after, event)
     }
 
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> Result<()> {

@@ -84,25 +84,12 @@ async fn pr192_r3_fresh_video_retains_preview_and_variant_files() {
     ))
     .unwrap();
     let case = &vector["cases"][0];
-    assert_eq!(case["rails"]["status"], 500);
-    assert_eq!(
-        case["exception"]["class"],
-        "ActiveStorage::FileNotFoundError"
-    );
-    assert_eq!(case["exception"]["open_transactions"], 1);
-    assert!(
-        case["rails_state"]["row_deltas"]
-            .as_object()
-            .unwrap()
-            .values()
-            .all(|v| v == 0)
-    );
-    assert_eq!(case["rails_state"]["jobs"], json!([]));
     let reply = app
         .anonymous()
         .send(post(&app, source, "pr192-r3-fresh-video"))
         .await;
     assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
     let files = variant_files(&app, source).await;
     println!("PR192_R3_VIDEO status=201 variant_files={files:?}");
     assert_eq!(files.len(), 1);
@@ -130,7 +117,7 @@ async fn pr192_r3_fresh_video_retains_preview_and_variant_files() {
             let sql = format!("SELECT * FROM active_storage_attachments WHERE blob_id={} AND name='{}' AND record_type='{}'", expected["blob_id"], expected["name"].as_str().unwrap(), expected["record_type"].as_str().unwrap());
             row_state(conn, &sql, expected)
         }).collect::<campfire_db::Result<Vec<_>>>()?;
-        let jobs = conn.prepare("SELECT job_class,arguments FROM background_jobs ORDER BY job_class,id")?.query_map([], |r| Ok(json!({"class":r.get::<_,String>(0)?,"args":serde_json::from_str::<Value>(&r.get::<_,String>(1)?).unwrap()})))?.collect::<Result<Vec<_>,_>>()?;
+        let jobs = conn.prepare("SELECT job_class,arguments FROM background_jobs ORDER BY id")?.query_map([], |r| Ok(json!({"class":r.get::<_,String>(0)?,"args":serde_json::from_str::<Value>(&r.get::<_,String>(1)?).unwrap()})))?.collect::<Result<Vec<_>,_>>()?;
         let metadata: String = conn.query_row("SELECT metadata FROM active_storage_blobs WHERE id=?", [source], |r| r.get(0))?;
         Ok(json!({"message":message,"thread":thread,"blobs":blobs,"attachments":attachments,"jobs":jobs,"source_metadata":serde_json::from_str::<Value>(&metadata).unwrap(),"variant_count":conn.query_row("SELECT count(*) FROM active_storage_variant_records WHERE blob_id=16",[],|r|r.get::<_,i64>(0))?}))
     }).await.unwrap();
@@ -143,11 +130,24 @@ async fn pr192_r3_fresh_video_retains_preview_and_variant_files() {
 async fn pr192_r3_reused_video_variant_keeps_the_same_usable_file() {
     let app = closed_thread().await;
     let source = fresh_source(&app, 9).await;
-    for client in ["pr192-video-first", "pr192-video-second"] {
-        let reply = app.anonymous().send(post(&app, source, client)).await;
-        assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
-    }
+    let reply = app.anonymous().send(post(&app, source, "pr192-video-first")).await;
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
+    let first_files = variant_files(&app, source).await;
+    let snapshot = |storage: std::sync::Arc<campfire_storage::Storage>| move |conn: &campfire_db::Connection| {
+        let blob = Blob::find(conn, source).unwrap().unwrap();
+        let preview = storage.existing_preview_image(conn, &blob).unwrap().unwrap();
+        let webp = storage.existing_variant(conn, &preview, &Variation::format_only("webp")).unwrap().unwrap();
+        Ok([preview, webp].map(|b| (b.id, b.key.clone(), storage.service.download(&b.key).unwrap())))
+    };
+    let first = app.db().read(snapshot(app.booted.app.storage.clone())).await.unwrap();
+    let reply = app.anonymous().send(post(&app, source, "pr192-video-second")).await;
+    assert_eq!(reply.status.as_u16(), 201, "{}", reply.text());
+    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
     let files = variant_files(&app, source).await;
+    assert_eq!(files, first_files, "the second post must keep the existing variant record and file");
+    assert_eq!(app.db().read(snapshot(app.booted.app.storage.clone())).await.unwrap(), first,
+        "reposting must retain the original JPEG/WebP identities and bytes");
     assert_eq!(
         files.len(),
         1,
@@ -199,23 +199,24 @@ async fn pr192_r3_reused_jpeg_variant_retains_its_existing_file() {
     assert!(files[0].1 && files[0].2 > 0);
 }
 #[tokio::test]
-async fn pr192_r3_video_insert_failure_rolls_back_all_rows_and_files() {
+async fn pr192_r3_video_insert_failure_preserves_committed_message_and_original() {
     let app = closed_thread().await;
     let source = fresh_source(&app, 9).await;
     app.db().write(|tx| {
         tx.conn().execute_batch("CREATE TRIGGER pr192_video_failure BEFORE INSERT ON active_storage_variant_records BEGIN SELECT RAISE(ABORT,'injected video variant failure'); END")?;
         Ok(())
     }).await.unwrap();
-    let rows = super::agent_review_tests::snapshot(&app).await;
-    let files = super::agent_review_tests::stored_files(&app);
-    let reply = app
-        .anonymous()
-        .send(post(&app, source, "pr192-video-failure"))
-        .await;
-    assert_eq!(reply.status.as_u16(), 500);
-    assert_eq!(super::agent_review_tests::snapshot(&app).await, rows);
-    assert_eq!(super::agent_review_tests::stored_files(&app), files);
+    let reply = app.anonymous().send(post(&app, source, "pr192-video-failure")).await;
+    assert_eq!(reply.status.as_u16(), 201);
+    assert!(super::messages::attachment_processing_tests::perform_queued(&app, 1).await.is_err());
     assert!(variant_files(&app, source).await.is_empty());
+    app.db().read(move |c| {
+        assert!(campfire_db::Message::find_duplicate(c, 486777696, 394959859, "pr192-video-failure")?.is_some());
+        assert!(campfire_db::ChannelThread::find(c, THREAD)?.closed_at.is_none());
+        Ok(())
+    }).await.unwrap();
+    let blob = app.db().read(move |c| Ok(Blob::find(c, source).unwrap().unwrap())).await.unwrap();
+    assert!(app.booted.app.storage.service.exist(&blob.key));
 }
 #[tokio::test]
 async fn pr192_r3_mcp_payload_omits_html_cache_timestamps_at_both_sizes() {

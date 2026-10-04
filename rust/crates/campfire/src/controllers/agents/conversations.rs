@@ -205,8 +205,8 @@ async fn start(
             "Could not find or build blob: expected attachable"
         )));
     }
-    let storage = c.app().storage.clone();
     let in_thread = a.thread_id.is_some();
+    let deferred_delivery = !streaming && !in_thread && attachment.is_some();
     let (mut outcome, blob) = c
         .app()
         .db
@@ -218,7 +218,7 @@ async fn start(
             let result = if streaming {
                 agent_streaming::start(tx, agent_id, a)
             } else {
-                agent_posting::post_service_with_preparation(tx, agent_id, a, drive, |tx, a| {
+                let prepare = |tx: &mut campfire_db::Tx<'_>, a: &mut campfire_db::NewMessage| {
                     if let Some(attachment) = attachment {
                         blob = messages::attachment_blob(tx, attachment)?;
                         a.attachment_blob_id = blob.as_ref().map(|blob| blob.id);
@@ -227,7 +227,12 @@ async fn start(
                         }
                     }
                     Ok(())
-                })
+                };
+                if deferred_delivery {
+                    agent_posting::save_service_with_preparation(tx, agent_id, a, drive, prepare)
+                } else {
+                    agent_posting::post_service_with_preparation(tx, agent_id, a, drive, prepare)
+                }
             };
             let mut result = match result {
                 Err(campfire_db::Error::RecordNotFound(_)) => reply_not_found(),
@@ -237,7 +242,10 @@ async fn start(
                 blob = None;
             }
             if in_thread && let Some(blob) = blob.take() {
-                crate::active_storage::process_attachment_in(tx, &storage, blob)?;
+                crate::controllers::presenters::attachments::enqueue_analysis(tx, &blob);
+                if let agent_posting::PostResult::Posted(message) = &result {
+                    campfire_db::models::message_attachment_processing::schedule(tx, message.id, blob.id);
+                }
                 if let agent_posting::PostResult::Posted(message) = &mut result {
                     **message = campfire_db::Message::find(tx.conn(), message.id)?;
                 }
@@ -257,6 +265,13 @@ async fn start(
                 .await
                 .map_err(db_error)?;
         }
+    }
+    if deferred_delivery && let agent_posting::PostResult::Posted(message) = &outcome {
+        let message = message.clone();
+        c.app().db.write(move |tx| {
+            agent_posting::broadcast_create(tx, &message)?;
+            campfire_db::models::bot_webhook_fanout::deliver(tx, &message)
+        }).await.map_err(db_error)?;
     }
     present_post(c, outcome, 201, streaming).await
 }

@@ -1,0 +1,185 @@
+{
+  "same_attachment_jobs": 1,
+  "success": {
+    "pending": {
+      "message_processing_expires_at": "2026-03-02 16:15:00 UTC",
+      "token_suffix": "0"
+    },
+    "lease": {
+      "message_processing_token": null,
+      "message_processing_expires_at": null
+    },
+    "before": "<div id=\"presentation_message_attachment-processing-1\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center overflow-clip\"><video src=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a/alpha-centuri.mov\" controls=\"controls\" preload=\"none\" width=\"100%\" height=\"100%\" class=\"message__attachment\"></video></div>\n</div>\n",
+    "after": "<div id=\"presentation_message_attachment-processing-1\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 160.0px; aspect-ratio: 1.7777777777777777;\"><video src=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a/alpha-centuri.mov\" poster=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJ3ZWJwIiwicmVzaXplX3RvX2xpbWl0IjpbMTIwMCw4MDBdfSwicHVyIjoidmFyaWF0aW9uIn19--a6c8811afc7b80ce9f2a04670329d9e8c5ac127c/alpha-centuri.mov\" controls=\"controls\" preload=\"none\" width=\"100%\" height=\"100%\" class=\"message__attachment\"></video></div>\n</div>\n",
+    "frames": [
+      {
+        "channel": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"presentation_message_attachment-processing-1\"><template><div id=\"presentation_message_attachment-processing-1\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center flex overflow-clip\" style=\"width: 160.0px; aspect-ratio: 1.7777777777777777;\"><video src=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a/alpha-centuri.mov\" poster=\"/rails/active_storage/representations/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTUsInB1ciI6ImJsb2JfaWQifX0=--7c71b609e164f0951f45f869af04da103799358a/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJ3ZWJwIiwicmVzaXplX3RvX2xpbWl0IjpbMTIwMCw4MDBdfSwicHVyIjoidmFyaWF0aW9uIn19--a6c8811afc7b80ce9f2a04670329d9e8c5ac127c/alpha-centuri.mov\" controls=\"controls\" preload=\"none\" width=\"100%\" height=\"100%\" class=\"message__attachment\"></video></div>\n</div>\n</template></turbo-stream>"
+      }
+    ],
+    "message": {
+      "id": 935962058,
+      "action": false,
+      "board_post_opener": false,
+      "client_message_id": "attachment-processing-1",
+      "created_at": "2026-03-02 16:00:00 UTC",
+      "creator_id": 127326141,
+      "edited_at": null,
+      "embeds_suppressed": false,
+      "forward_note": null,
+      "forwarded_at": null,
+      "forwarded_from_message_id": null,
+      "forwarded_markdown": false,
+      "markdown_source": null,
+      "reply_notify_author": true,
+      "reply_target_deleted_at": null,
+      "reply_to_message_id": null,
+      "room_id": 486777696,
+      "stream_broadcast_at": null,
+      "streaming": false,
+      "streaming_updated_at": null,
+      "system_note": false,
+      "thread_id": null,
+      "updated_at": "2026-03-02 16:00:00 UTC"
+    },
+    "blob": {
+      "id": 15,
+      "byte_size": 3945267,
+      "checksum": "uBpNcgufEylNjFfte1x5LQ==",
+      "content_type": "video/quicktime",
+      "created_at": "2026-03-02 16:00:00 UTC",
+      "filename": "alpha-centuri.mov",
+      "message_processing_expires_at": null,
+      "message_processing_token": null,
+      "metadata": {
+        "identified": true,
+        "width": 320.0,
+        "height": 180.0,
+        "duration": 65.84,
+        "display_aspect_ratio": [
+          16,
+          9
+        ],
+        "audio": false,
+        "video": true,
+        "analyzed": true
+      },
+      "service_name": "local"
+    },
+    "queued_job": {
+      "class": "Message::AttachmentProcessingJob",
+      "queue": "default",
+      "message_id": 935962058,
+      "blob_id": 15,
+      "token_suffix": "0"
+    },
+    "image_analysis_jobs": [
+      16,
+      17
+    ],
+    "source_metadata": {
+      "identified": true,
+      "width": 320.0,
+      "height": 180.0,
+      "duration": 65.84,
+      "display_aspect_ratio": [
+        16,
+        9
+      ],
+      "audio": false,
+      "video": true,
+      "analyzed": true
+    },
+    "preview_metadata": {
+      "identified": true
+    },
+    "files": [
+      {
+        "content_type": "video/quicktime",
+        "bytes": 3945267,
+        "sha256": "420726f9cdff7b48f6bb2d6c79af6ff69dfcc4d290a8376d1901be0de9c62286"
+      },
+      {
+        "content_type": "image/jpeg",
+        "bytes": 11788,
+        "sha256": "57f272b82b06593ab72d04dc1c1108558c9981f271bf3574016c3bb55751d6e2"
+      },
+      {
+        "content_type": "image/webp",
+        "bytes": 3326,
+        "sha256": "eae9cdc9dae94aa8042a3bef1ff142818e0d0883016bd599555cc13deea8eff4"
+      }
+    ]
+  },
+  "claim": {
+    "claims": [
+      true,
+      false
+    ],
+    "renewal": true,
+    "active": {
+      "message_processing_token": "first:0",
+      "message_processing_expires_at": "2026-03-02 16:15:00 UTC"
+    },
+    "expired": true,
+    "stale_release": {
+      "message_processing_token": "second:0",
+      "message_processing_expires_at": "2026-03-02 16:30:00 UTC"
+    },
+    "released": {
+      "message_processing_token": null,
+      "message_processing_expires_at": null
+    }
+  },
+  "retries": [
+    {
+      "executions": 1,
+      "wait": 3.1342434883117676
+    },
+    {
+      "executions": 2,
+      "wait": 18.827584266662598
+    },
+    {
+      "terminal": "ActiveStorage::PreviewError"
+    }
+  ],
+  "terminal": {
+    "message_processing_token": "failed",
+    "message_processing_expires_at": null
+  },
+  "terminal_jobs": 0,
+  "terminal_html": "<div id=\"presentation_message_attachment-processing-3\" dir=\"auto\"\n     data-reply-target=\"body\"\n     data-messages-target=\"body\"\n     data-search-results-target=\"body\"\n     data-message-edit-format=\"rich_text\">\n  <div class=\"max-inline-size center overflow-clip\"><video src=\"/rails/active_storage/blobs/redirect/eyJfcmFpbHMiOnsiZGF0YSI6MTksInB1ciI6ImJsb2JfaWQifX0=--d5771ad49c1eabb9dad877d4289d00c1e958af06/alpha-centuri.mov\" controls=\"controls\" preload=\"none\" width=\"100%\" height=\"100%\" class=\"message__attachment\"></video></div>\n</div>\n",
+  "enqueue_cooldowns": [
+    {
+      "message_processing_token": "enqueue_failed:1",
+      "message_processing_expires_at": "2026-03-02 16:16:21 UTC",
+      "delay": 60.0
+    },
+    {
+      "message_processing_token": "enqueue_failed:2",
+      "message_processing_expires_at": "2026-03-02 16:18:21 UTC",
+      "delay": 120.0
+    },
+    {
+      "message_processing_token": "enqueue_failed:3",
+      "message_processing_expires_at": "2026-03-02 16:22:21 UTC",
+      "delay": 240.0
+    },
+    {
+      "message_processing_token": "enqueue_failed:4",
+      "message_processing_expires_at": "2026-03-02 16:30:21 UTC",
+      "delay": 480.0
+    },
+    {
+      "message_processing_token": "enqueue_failed:5",
+      "message_processing_expires_at": "2026-03-02 16:45:21 UTC",
+      "delay": 900.0
+    },
+    {
+      "message_processing_token": "enqueue_failed:5",
+      "message_processing_expires_at": "2026-03-02 17:00:21 UTC",
+      "delay": 900.0
+    }
+  ]
+}

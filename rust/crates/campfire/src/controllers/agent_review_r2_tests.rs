@@ -321,9 +321,6 @@ async fn pr192_r2_fresh_jpeg_approved_status_and_committed_state() {
     ))
     .unwrap();
     let case = &vector["cases"][0];
-    assert_eq!(case["rails"]["status"], 500);
-    assert_eq!(case["exception"]["class"], "IOError");
-    assert_eq!(case["exception"]["message"], "closed stream");
     let reply = app
         .anonymous()
         .send(
@@ -345,6 +342,7 @@ async fn pr192_r2_fresh_jpeg_approved_status_and_committed_state() {
     for (key, value) in case["approved"]["headers"].as_object().unwrap() {
         assert_eq!(reply.header(key), value.as_str());
     }
+    super::messages::attachment_processing_tests::perform_queued(&app, 1).await.unwrap();
     let state = case["state"].clone();
     let storage = app.booted.app.storage.clone();
     let actual=app.db().read(move |conn| {
@@ -363,13 +361,13 @@ async fn pr192_r2_fresh_jpeg_approved_status_and_committed_state() {
         Ok(json!({"message":message,"thread":thread,"variant":variant,"image":image,"attachments":attachments,"source_metadata":serde_json::from_str::<Value>(&metadata).unwrap(),"variant_file_exists":exists,"variant_file_size":if exists {Some(std::fs::metadata(storage.service.path_for(&blob.key)).unwrap().len())} else {None},"jobs":jobs,"variant_count":conn.query_row("SELECT count(*) FROM active_storage_variant_records WHERE blob_id=1",[],|r|r.get::<_,i64>(0))?,"attachment_count":conn.query_row("SELECT count(*) FROM active_storage_attachments WHERE (record_type='Message' AND record_id=935962058) OR (record_type='ActiveStorage::VariantRecord' AND record_id=(SELECT id FROM active_storage_variant_records WHERE blob_id=1 ORDER BY id DESC LIMIT 1))",[],|r|r.get::<_,i64>(0))?}))
     }).await.unwrap();
     println!(
-        "PR192_R2_JPEG Rust_status={} Rails_status=500 jobs={} variant_file_exists={}",
+        "PR192_R2_JPEG Rust_status={} Rails_status=201 jobs={} variant_file_exists={}",
         reply.status.as_u16(),
         actual["jobs"].as_array().unwrap().len(),
         actual["variant_file_exists"]
     );
     assert_eq!(
         actual, case["state"],
-        "approved status difference must preserve every agreed state field"
+        "post-job state must match fresh #226 Rails output"
     );
 }

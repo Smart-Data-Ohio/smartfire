@@ -10,6 +10,7 @@ use serde::de::DeserializeOwned;
 use crate::kind::{Execution, JobError, JobKind, JobResult, RetryPolicy};
 
 type Exhausted<C> = Arc<dyn Fn(C, serde_json::Value, u32, &anyhow::Error) + Send + Sync>;
+type ExhaustedIn<C> = Arc<dyn Fn(&mut campfire_db::Tx<'_>, C, serde_json::Value, u32) -> campfire_db::Result<()> + Send + Sync>;
 
 /// A registered job class, its type erased.
 pub(crate) struct Kind<C> {
@@ -17,6 +18,7 @@ pub(crate) struct Kind<C> {
     pub version: u32,
     pub policy: RetryPolicy,
     pub exhausted: Option<Exhausted<C>>,
+    pub exhausted_in: Option<ExhaustedIn<C>>,
     pub perform: Arc<
         dyn Fn(C, serde_json::Value, u32, Execution) -> BoxFuture<'static, JobResult> + Send + Sync,
     >,
@@ -29,6 +31,7 @@ impl<C> Clone for Kind<C> {
             version: self.version,
             policy: self.policy,
             exhausted: self.exhausted.clone(),
+            exhausted_in: self.exhausted_in.clone(),
             perform: self.perform.clone(),
         }
     }
@@ -81,6 +84,7 @@ impl<C: Send + 'static> Registry<C> {
             version: J::VERSION,
             policy: J::retry_policy(),
             exhausted: None,
+            exhausted_in: None,
             perform: Arc::new(perform),
         };
         assert!(
@@ -110,6 +114,24 @@ impl<C: Send + 'static> Registry<C> {
         kind.exhausted = Some(Arc::new(move |context, arguments, version, error| {
             if let Ok(job) = decode::<J>(arguments, version) {
                 callback(context, job, error);
+            }
+        }));
+        self
+    }
+
+    /// Durable exhaustion cleanup, committed atomically with the still-owned terminal
+    /// queue outcome. Use this for a failure marker that must survive a worker restart.
+    pub fn on_exhausted_in<J, F>(&mut self, callback: F) -> &mut Self
+    where
+        J: JobKind + DeserializeOwned,
+        F: Fn(&mut campfire_db::Tx<'_>, C, J) -> campfire_db::Result<()> + Send + Sync + 'static,
+    {
+        let kind = self.kinds.get_mut(J::CLASS).expect("register the job before its exhaustion block");
+        assert!(kind.exhausted_in.is_none(), "{} has two durable exhaustion blocks", J::CLASS);
+        kind.exhausted_in = Some(Arc::new(move |tx, context, arguments, version| {
+            match decode::<J>(arguments, version) {
+                Ok(job) => callback(tx, context, job),
+                Err(_) => Ok(()),
             }
         }));
         self

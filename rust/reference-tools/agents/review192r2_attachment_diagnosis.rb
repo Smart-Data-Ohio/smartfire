@@ -1,15 +1,7 @@
-# The caller authorized a status difference for a post-commit Rails defect, not for state.
 require 'active_support/testing/time_helpers'
 extend ActiveSupport::Testing::TimeHelpers
 Rails.logger=ActiveSupport::Logger.new($stderr)
-exceptions=[]
-ActionDispatch::ExceptionWrapper.prepend(Module.new do
-  define_method(:initialize) do |*args|
-    e=args.last
-    exceptions << {class:e.class.name,message:e.message,backtrace:e.backtrace}
-    super(*args)
-  end
-end)
+ActiveJob::Base.logger=Rails.logger
 ActiveJob::Base.queue_adapter=:test
 travel_to Time.utc(2026,3,2,16) do
   agent=Agent.find(773018776)
@@ -23,6 +15,10 @@ travel_to Time.utc(2026,3,2,16) do
   headers={'Accept'=>'application/json','Content-Type'=>'application/json','Authorization'=>['Bearer',secret].join(' ')}
   session.post('/rooms/486777696/agents/messages',params:body,headers:headers)
   first={status:session.response.status,response:session.response.body,headers:session.response.headers.slice('content-type','retry-after')}
+  queued=ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j[:job]==Message::AttachmentProcessingJob }
+  raise 'processing job missing after commit' unless queued
+  ActiveJob::Base.queue_adapter.enqueued_jobs.delete(queued)
+  ActiveJob::Base.execute(queued)
   message=Message.find_by!(client_message_id:'pr192-r2-fresh-jpeg')
   thread=ChannelThread.find(1900700020)
   variant=ActiveStorage::VariantRecord.where(blob_id:1).order(:id).last!
@@ -36,8 +32,8 @@ travel_to Time.utc(2026,3,2,16) do
     variant_file_exists:File.exist?(path),variant_file_size:File.exist?(path) ? File.size(path) : nil,
     variant_count:ActiveStorage::VariantRecord.where(blob_id:1).count,
     attachment_count:ActiveStorage::Attachment.where(record_type:'Message',record_id:message.id).or(ActiveStorage::Attachment.where(record_type:'ActiveStorage::VariantRecord',record_id:variant.id)).count,
-    jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|{class:j[:job].name,args:j[:job].name=='ChannelThread::PushMessageJob' ? {thread_id:j[:args].fetch(0).fetch('_aj_globalid').delete_prefix('gid://campfire/ChannelThread/').to_i,message_id:j[:args].fetch(1).fetch('_aj_globalid').delete_prefix('gid://campfire/Message/').to_i} : j[:args]}}}
+    jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|{class:j[:job].name,args:j[:job].name=='ChannelThread::PushMessageJob' ? {thread_id:j[:args].fetch(0).fetch('_aj_globalid').delete_prefix('gid://campfire/ChannelThread/').to_i,message_id:j[:args].fetch(1).fetch('_aj_globalid').delete_prefix('gid://campfire/Message/').to_i} : j[:job].name=='ActiveStorage::AnalyzeJob' ? {blob_id:j[:args][0]['_aj_globalid'].split('/').last.to_i} : j[:args]}}}
   session.post('/rooms/486777696/agents/messages',params:body,headers:headers)
   approved={status:session.response.status,response:session.response.body,headers:session.response.headers.slice('content-type','retry-after')}
-  puts JSON.pretty_generate({notes:['Approved by the maintainer: keep Rust 201 for this post-commit Rails IOError, while asserting the same persisted state and jobs.','The successful response is the Rails idempotent replay of the committed first request. Random storage keys are omitted; all nonrandom blob attributes and file presence are asserted. Jobs use logical named arguments rather than runtime-specific serialization envelopes.'],cases:[{name:'fresh_jpeg_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:first,approved:approved,state:state,exception:exceptions.first}]})
+  puts JSON.pretty_generate(notes:['Fresh #226 on the pinned harness: the post commits, then its actual processing job generates the thumbnail in committed transactions.'],cases:[{name:'fresh_jpeg_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:first,approved:approved,state:state}])
 end
