@@ -12,6 +12,15 @@ const mode=process.env.WS11UI_BROWSER_MODE
 const broken=process.env.WS11UI_BROWSER_CONTROL==='1'
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']})
 const requests=[]
+// Rails uses Capybara's two-second default, with explicit ten-second waits at
+// these original assertion sites. Keep that distinction in this translation.
+function assertionWait(file,line) {
+ const explicit={
+  'test/system/people_group_dms_test.rb':[16,34,38,68,85,97,107,238,284,368,373,377,392,396],
+  'test/system/starred_people_test.rb':[26,36,53,59,100,105,115,120,134,140,144,154]
+ }
+ return explicit[file]?.includes(line)?10000:2000
+}
 function equal(file,line,actual,expected) {
   assert.deepEqual(actual,expected,`${file}:${line}: original assertion`)
   console.log(`ORIGINAL_ASSERTION ${file}:${line}`)
@@ -21,16 +30,16 @@ async function visible(file,line,locator,text=null) {
   // Selenium treats the zero-size popover wrapper with a visible absolute child
   // as displayed. Playwright's wrapper visibility uses its own rectangle.
   if(locator.toString().includes('profile-card-popover')) {
-    await locator.first().waitFor({state:'attached'})
-    await locator.locator('.profile-card-popover__panel').waitFor()
+    await locator.first().waitFor({state:'attached',timeout:assertionWait(file,line)})
+    await locator.locator('.profile-card-popover__panel').waitFor({timeout:assertionWait(file,line)})
     equal(file,line,await locator.locator('.profile-card-popover__panel').isVisible(),true)
   } else {
-    await locator.first().waitFor()
+    await locator.first().waitFor({timeout:assertionWait(file,line)})
     equal(file,line,await locator.first().isVisible(),true)
   }
 }
 async function present(file,line,locator) {
-  await locator.first().waitFor({state:'attached'})
+  await locator.first().waitFor({state:'attached',timeout:assertionWait(file,line)})
   equal(file,line,await locator.count()>0,true)
 }
 async function focused(file,line,p,selector) {
@@ -62,7 +71,7 @@ async function scenario(name,fn,{user='david',phone=false,path='/rooms/'+labels[
   const context=await browser.newContext({viewport:phone?{width:390,height:844}:{width:1440,height:1000}})
   await context.route('**/*',r=>new URL(r.request().url()).origin===new URL(base).origin?r.continue():r.abort())
   await context.addCookies([{name:'session_token',value:labels[`session_cookies.${user}`],url:base}])
-  const p=await context.newPage();p.setDefaultTimeout(12000)
+  const p=await context.newPage();p.setDefaultTimeout(10000)
   const diagnose=diagnostics(p);const bad=[]
   p.on('pageerror',e=>bad.push(String(e)))
   p.on('requestfailed',r=>{if(new URL(r.url()).pathname.startsWith('/assets/')&&r.failure()?.errorText!=='net::ERR_ABORTED')bad.push(r.failure().errorText)})
@@ -280,7 +289,7 @@ async function step(p,line,n) {await visible(T,line,p.locator('.tour__progress')
 async function complete(p,action,hiddenLine,stampLine) {
  const response=p.waitForResponse(r=>new URL(r.url()).pathname==='/users/me/tour'&&r.request().method()!=='GET')
  await action();assert.equal((await response).status(),204,'real stamp request')
- await tour(p).waitFor({state:'hidden'});equal(T,hiddenLine,await tour(p).isVisible(),false)
+ await tour(p).waitFor({state:'hidden',timeout:2000});equal(T,hiddenLine,await tour(p).isVisible(),false)
  requests.push({kind:'tour',user:'jz',line:stampLine})
  await p.reload();await controller(p,'tour');equal(T,hiddenLine+4,await tour(p).isVisible(),false)
 }
