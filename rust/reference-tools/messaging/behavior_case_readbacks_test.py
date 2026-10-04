@@ -16,12 +16,13 @@ class NamedReadbacks(unittest.TestCase):
         condition = compile(ast.Expression(branch.test), str(SOURCE), 'eval')
         native = 'a release click landing on the just-opened menu does not activate it'
         other = 'opens message actions from context menu and keyboard, and cancels a moving long press'
-        for batch in ([other, native], [native, other], [native]):
+        uploads = {'uploading a fresh video in the thread composer', 'late upload progress preserves a delivered attachment and reply preview'}
+        for batch in ([other, native], [native, other], [native], *([other, upload] for upload in uploads)):
             with self.subTest(batch=batch):
                 self.assertTrue(eval(condition, {'file': 'message_interactions',
-                                                 'case': batch[0], 'batch': batch}))
+                                                 'case': batch[0], 'batch': batch, 'new_upload_cases': uploads}))
         self.assertFalse(eval(condition, {'file': 'message_interactions',
-                                          'case': other, 'batch': [other]}))
+                                          'case': other, 'batch': [other], 'new_upload_cases': uploads}))
 
     def test_original_named_cases_keep_their_persisted_row_checks(self):
         tree = ast.parse(SOURCE.read_text())
@@ -43,7 +44,7 @@ class NamedReadbacks(unittest.TestCase):
             with self.subTest(case=case):
                 selected = branch
                 while not eval(compile(ast.Expression(selected.test), str(SOURCE), 'eval'),
-                               {'CASES': cases, 'file': file, 'case': case}):
+                               {'CASES': cases, 'file': file, 'case': case, 'new_upload_cases': {'uploading a fresh video in the thread composer', 'late upload progress preserves a delivered attachment and reply preview'}}):
                     self.assertTrue(selected.orelse, f'No readback for {case}')
                     selected = selected.orelse[0]
                     self.assertIsInstance(selected, ast.If, f'No named readback for {case}')

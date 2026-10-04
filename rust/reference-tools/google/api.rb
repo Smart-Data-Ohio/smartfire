@@ -53,7 +53,7 @@ result = { reference: ENV.fetch("PARITY_REFERENCE_SHA"), now: now.to_i,
   result[:scenarios] << {name:,responses:answers,requests:calls.dup,result:value,error:}
 end
 result[:email_tokens] = [
-  {}, {iss:"accounts.google.com"}, {iss:"evil"}, {aud:"other"}, {exp:now.to_i}, {email:nil}, {email:" "}, {exp:"#{now.to_i+3600}suffix"}
+  {}, {iss:"accounts.google.com"}, {iss:"evil"}, {aud:"other"}, {exp:now.to_i}, {exp:now.to_i-3600}, {email:nil}, {email:" "}, {exp:"#{now.to_i+3600}suffix"}
 ].map do |overrides|
   token=helper.send(:google_id_token,**{exp:now.to_i+3600}.merge(overrides))
   begin
@@ -62,4 +62,11 @@ result[:email_tokens] = [
     {token:,email:nil,error:e.message}
   end
 end
+result[:email_tokens].concat([nil, '', 'not-a-jwt'].map do |token|
+  begin
+    {token:,email:Google::Client.email_from_id_token(token),error:nil}
+  rescue Google::Client::Error=>e
+    {token:,email:nil,error:e.message}
+  end
+end)
 puts JSON.pretty_generate(result)

@@ -1,6 +1,22 @@
-# Cutover: close the three browser deferrals
+# WS8bm PR #241 refreshed pin and complete system ledger
 
-Current systems: **135 passed / 0 deferred / 0 blocked**. Release-click now runs the literal pinned Selenium body and helpers; scroll and reopen await the real completed sidebar/current-link before opening. Causal scheduling controls reproduce the old failures on both hosts and pass after the fixes. Each case has ten complete paired positives with persisted-row checks; all three broken implementations reject at their intended assertions. No product assets, goldens, predicates or deadlines changed. [Causal diagnoses, commands, retained setup failures and verification](ws8bm-deferrals.md).
+Merged main/#236 while retaining the reviewed causal closures and main's dynamic pin/hash plumbing. Current pin: `78b9b1546bdab4c6c1c9b8ddb94512f661289112`. Current inventory: **137 passed / 0 deferred / 0 blocked systems**; controller inventory remains **156/156**.
+
+The two new upload declarations run their literal pinned Capybara/Selenium bodies: fresh thread video and late progress preserving a delivered attachment/reply. Each passes **10/10 independent Rails/Rust pairs**, including exact persisted rows and original fixture bytes. Both intended served mutants reject at their original assertions on both apps, with **0 invalid / 0 escaped / 0 retries**. No Rust product, assets, goldens, masks, assertions or deadlines change.
+
+Fresh-clone nextest: **4,948 passed / 0 failed / 20 existing skips**, four workers, zero retries. Strict workspace clippy and the release-input-only build pass. Helpers: **79 Node / 48 Python**. [Pin migration, causal harness fixes, excluded interrupted attempts and raw verification lines](ws8bm-review241-pin.md).
+
+All three retained causal closures also pass a fresh new-pin control; their four existing mutants reject on both hosts with zero invalid/escaped. Final owned processes, listeners, containers and generated big outputs are empty.
+
+# Historical PR #241 scope correction
+
+The active-composer scope is restored, and the served hidden-sibling fault rejects specifically at the original line-83 assertion on both apps. Release: **10/10 stock pairs plus one metadata-delay pair**; release negatives: **2/2 intended paired rejections**; scroll negative: **1/1 clean intended paired rejection**. No retries, wider predicates or longer deadlines. Inventory remains **135/135**.
+
+Fresh-clone nextest: **4,948 passed / 0 failed / 20 existing skips**. Strict clippy and the release-input build pass. Helpers: **71 Node / 41 Python**. Final owned processes, listeners, containers and generated big output are all empty. [Failing-first evidence, source-preservation checks and raw lines](ws8bm-review241.md). No Rust product, asset or golden changes.
+
+# Historical cutover: close the three browser deferrals
+
+Current systems: **135 passed / 0 deferred / 0 blocked**. Release-click runs the pinned Selenium body and helpers with main's original `#composer` scope retained; scroll and reopen await the real completed sidebar/current-link before opening. Causal scheduling controls reproduce the old failures on both hosts and pass after the fixes. Each case has ten complete paired positives with persisted-row checks; all three broken implementations reject at their intended assertions. No product assets, goldens, predicates or deadlines changed. [Causal diagnoses, commands, retained setup failures and verification](ws8bm-deferrals.md).
 
 # Historical #230 ledger follow-up
 

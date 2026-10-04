@@ -1,5 +1,5 @@
 {
-  "reference": "parity",
+  "reference": "78b9b154",
   "sources": {
     "app/controllers/channel_threads_controller.rb": "3be99780463dc3033c01ac82f8df206a27e1912b8234ef172383d2a229758f2c",
     "app/views/channel_threads/show.html.erb": "ca89dbda17176587431322aa093b23497fee5cb0e97f6ee90589f5515a5e0051",

@@ -80,8 +80,27 @@
         },
         {
           "name": "uploading a fresh video in the thread composer",
-          "status": "deferred",
-          "remaining_reason": "Added since the previous reference pin; a paired Rails/Rust browser execution has not been recorded for this declaration."
+          "status": "passed",
+          "evidence": "ws8bm-review241-pin.md: literal pinned native Selenium/Capybara body; .scratch/ws8bm-review241-pin/{video,progress}-ten.log and matching -negative.log; ten paired controls each with persisted rows and exact disk bytes, paired intended rejections, zero invalid/escaped and zero automatic retries.",
+          "closure_note": "The literal pinned sending_messages_test.rb:29-55 body runs with its hidden-all file input, real pinned alpha-centuri.mov, CSRF-enabled test hosts and explicit Message::AttachmentProcessingJob execution. The real disk preview/variant existence checks and unchanged 15 s poster assertion pass ten independent pairs. The poster-removal mutant is encountered after processing and fails only the original line-53 assertion on both hosts. Native browser namespace isolation removes host Docker network-change setup failures; no assertion, deadline or retry changes. No Rust product difference was exposed.",
+          "closure_proof": {
+            "independent_fixtures": true,
+            "automatic_retries": 0,
+            "positive_runs": {
+              "Rails": {
+                "passed": 10,
+                "failed": 0
+              },
+              "Rust": {
+                "passed": 10,
+                "failed": 0
+              }
+            },
+            "negative": {
+              "Rails": "intended rejection",
+              "Rust": "intended rejection"
+            }
+          }
         },
         {
           "name": "editing messages",
@@ -214,8 +233,27 @@
         },
         {
           "name": "late upload progress preserves a delivered attachment and reply preview",
-          "status": "deferred",
-          "remaining_reason": "Added since the previous reference pin; a paired Rails/Rust browser execution has not been recorded for this declaration."
+          "status": "passed",
+          "evidence": "ws8bm-review241-pin.md: literal pinned native Selenium/Capybara body; .scratch/ws8bm-review241-pin/{video,progress}-ten.log and matching -negative.log; ten paired controls each with persisted rows and exact disk bytes, paired intended rejections, zero invalid/escaped and zero automatic retries.",
+          "closure_note": "The literal pinned workspace_markdown_test.rb:174-218 body holds the real uploader/progress independently, resumes the actual browser upload and POST, then delivers late progress after the persisted reply appears. Main/pin #231 protects delivered messages. Ten independent pairs retain the original predicates, 2 s default and 15 s broadcast waits; persisted reply/notify identity, attachment and original moon.jpg disk bytes match. Restoring the old pending-element guard bug encounters the delivered row and fails the original line-215 body-equality assertion on both hosts. No Rust product difference, retry or widened deadline.",
+          "closure_proof": {
+            "independent_fixtures": true,
+            "automatic_retries": 0,
+            "positive_runs": {
+              "Rails": {
+                "passed": 10,
+                "failed": 0
+              },
+              "Rust": {
+                "passed": 10,
+                "failed": 0
+              }
+            },
+            "negative": {
+              "Rails": "intended rejection",
+              "Rust": "intended rejection"
+            }
+          }
         },
         {
           "name": "mention suggestions select a room member without sending the unfinished message",
@@ -366,8 +404,8 @@
           "name": "a release click landing on the just-opened menu does not activate it",
           "status": "passed",
           "previous_remaining_reason": "Review #230 follow-up: message_interactions_test.rb:55-86,80. The earlier release-hit elementFromPoint assertion intermittently returned DIV instead of a menu item. The implementation and disputed passing repetitions/mutant receipt are unchanged, so there is no causal resolution or valid closure credit. Restored to deferred; an unchanged-path success does not close the declaration.",
-          "evidence": "Cutover branch rust/ws8bm-deferrals, based on 78b9b1546: new causal setup fix, fresh paired browser positives and original persisted-row checks; 10/10 Rails and 10/10 Rust successful pairs in release-ten.log; release-negative-final.log; release-delay-before.log; release-native-delay.log. Complete causal traces, rejected intended mutants and retained unrelated startup failures in rust/plans/ws8bm-deferrals.md. Logs under .scratch/ws8bm-deferrals/. No pixel checks.",
-          "closure_note": "message_interactions_test.rb:55-86. The translation resized the content viewport to 390x844 and used CDP touch, while pinned Selenium resizes the outer window and sends W3C touch actions. A 250ms hold of the real actions response reproduced DIV != menu on both translated hosts. The unchanged native body/helpers use a 390x701 content viewport: the cold sheet starts at y210.31 and covers the unchanged y307.34 press point even with the same delayed response. The actual trusted compatibility click is suppressed; removing suppression activates the menu and fails the original menu assertion with the broken guard and press-point click witnessed. No product fix, extra geometry wait or deadline change.",
+          "evidence": "PR #241 scope correction on rust/ws8bm-deferrals: 10/10 Rails and 10/10 Rust complete independent pairs, with original persisted-row checks, in .scratch/ws8bm-review241-fix/release-ten.log. The exact #composer scope is restored. Failing-first sibling-context escape and corrected intended negatives are documented in rust/plans/ws8bm-review241.md. No pixel checks.",
+          "closure_note": "message_interactions_test.rb:55-86. The translation resized the content viewport to 390x844 and used CDP touch, while pinned Selenium resizes the outer window and sends W3C touch actions. A 250ms hold of the real actions response reproduced DIV != menu on both translated hosts. The native body/helpers retain main's exact #composer context scope and use a 390x701 content viewport: the cold sheet starts at y210.31 and covers the unchanged y307.34 press point even with the same delayed response. The actual trusted compatibility click is suppressed; removing suppression activates the menu and fails the original menu assertion with the broken guard and press-point click witnessed. No product fix, extra geometry wait or deadline change.",
           "closure_proof": {
             "independent_fixtures": true,
             "automatic_retries": 0,

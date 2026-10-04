@@ -88,10 +88,21 @@ fn replay(file: &str, title: &str) {
         .find_map(|step| step.get("stored_before"))
         .unwrap()
         .clone();
-    t.write(move |tx| {
-        raw_attrs(tx, &initial)?;
-        Ok(())
-    });
+    if matches!(
+        title,
+        "out of office defaults off" | "meeting status and quiet-during-meetings default off"
+    ) {
+        assert_eq!(
+            snapshot(&t.read(|c| Settings::find(c, id("david")))),
+            initial,
+            "{title}: untouched fixture defaults"
+        );
+    } else {
+        t.write(move |tx| {
+            raw_attrs(tx, &initial)?;
+            Ok(())
+        });
+    }
     let mut user = t.read(|c| Settings::find(c, id("david")));
     for step in steps {
         let now = stamp(step["now"].as_str().unwrap());
@@ -167,11 +178,15 @@ fn replay(file: &str, title: &str) {
                 json!(t.write(move |tx| u.claim_ooo_broadcast(tx, active, now)))
             }
             "ooo_preset_until" => {
-                match user.ooo_preset_until(
+                let result = user.ooo_preset_until(
                     step["args"][0].as_str().unwrap(),
                     step["args"][1].as_str(),
                     now,
-                ) {
+                );
+                if step.get("error").is_some() {
+                    assert!(result.is_err(), "{title}: {op} must raise");
+                }
+                match result {
                     Ok(end) => time(end),
                     Err(error) => {
                         assert_eq!(json!(error.to_string()), step["error"], "{title}");

@@ -1,4 +1,4 @@
-// motion_test.rb at d7c7de92: selectors use Selenium visibility, scripted
+// motion_test.rb at parity/reference.sha: selectors use Selenium visibility, scripted
 // geometry retains the original predicates; wait_until polls for 5s at 50ms.
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';

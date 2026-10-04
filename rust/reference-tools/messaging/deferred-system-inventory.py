@@ -13,6 +13,8 @@ causal_deferrals = {
     'a release click landing on the just-opened menu does not activate it',
     'mobile drawer keeps the room list scroll position across close and reopen',
     'mobile drawer reopens on the current room when it is already in view',
+    'uploading a fresh video in the thread composer',
+    'late upload progress preserves a delivered attachment and reply preview',
 }
 totals = {'passed': 0, 'deferred': 0, 'blocked_ws12': 0}
 for row in inventory['files']:
@@ -35,7 +37,8 @@ for row in inventory['files']:
             proof = case.get('closure_proof', {})
             assert proof.get('independent_fixtures') is True and proof.get('automatic_retries') == 0, \
                 f"{case['name']}: causal proof requires independent fixtures without automatic retries"
-            for app, minimum in [('Rails', 1), ('Rust', 10)]:
+            paired_upload = case['name'].startswith(('uploading a fresh video', 'late upload progress'))
+            for app, minimum in [('Rails', 10 if paired_upload else 1), ('Rust', 10)]:
                 runs = proof.get('positive_runs', {}).get(app, {})
                 assert type(runs.get('passed')) is int and runs['passed'] >= minimum and runs.get('failed') == 0, \
                     f"{case['name']}: causal proof requires {minimum} {app} passes and zero failures"

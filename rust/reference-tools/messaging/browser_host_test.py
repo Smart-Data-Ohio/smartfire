@@ -4,16 +4,31 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from browser_host import prepare_source
+from browser_host import prepare_source, build_host
 
 
 class HostSourceTests(unittest.TestCase):
+    def test_generated_executable_cannot_replace_the_workspace_suite_binary(self):
+        import json
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'campfire'},
+                        'profile': {'test': True}, 'executable': str(root / 'target/ws8bm-browser-host/debug/deps/host')}
+            result = SimpleNamespace(returncode=0, stdout=json.dumps(artifact))
+            with patch('browser_host.prepare_source', return_value=root / 'generated'), \
+                    patch('browser_host.subprocess.run', return_value=result) as run:
+                self.assertEqual(build_host(root, {'CARGO_TARGET_DIR': str(root / 'target')}), artifact['executable'])
+            self.assertEqual(run.call_args.kwargs['env']['CARGO_TARGET_DIR'], str(root / 'target/ws8bm-browser-host'))
+            self.assertEqual(run.call_args.kwargs['env']['CAMPFIRE_REFERENCE'], str(root))
+
     def test_refreshes_outer_inputs_without_copying_targets_or_old_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             inputs = {
                 "rust/Cargo.toml": b"workspace",
-                "rust/parity/reference.sha": b"1111111111111111111111111111111111111111\n",
+                "rust/parity/reference.sha": b"pinned",
+                "rust/reference-tools/messaging/browser-attachment-jobs.rs": b"explicit attachment job adapter",
                 "rust/crates/campfire/src/controllers/presenters/test_support.rs":
                     b"async fn ws8bm_browser_host_without_jobs() {}",
                 "rust/reference-tools/messaging/older_provider_callbacks.rb": b"callback",
@@ -35,21 +50,18 @@ class HostSourceTests(unittest.TestCase):
                 self.assertEqual((generated.parent / "public/500.html").read_bytes(), inputs["public/500.html"])
                 callback = generated / "reference-tools/messaging/older_provider_callbacks.rb"
                 self.assertEqual(callback.read_bytes(), b"callback")
-                pin = generated / "parity/reference.sha"
-                self.assertEqual(pin.read_bytes(), inputs["rust/parity/reference.sha"])
                 for name in ("extreme_cast_inputs.json.gz", "normalized_cast_inputs.json.gz", "render_replay_inputs.json.gz", "casting_followups_inputs.json"):
                     relative = "reference-tools/views/agents_ui/" + name
                     self.assertEqual((generated / relative).read_bytes(), inputs["rust/" + relative])
+                self.assertEqual((generated / "parity/reference.sha").read_bytes(), b"pinned")
                 self.assertFalse((generated / "target").exists())
                 (generated / "stale.rs").write_bytes(b"old generated source")
                 (root / "public/500.html").write_bytes(b"updated error page")
                 (root / "rust/reference-tools/messaging/older_provider_callbacks.rb").write_bytes(b"updated callback")
-                (root / "rust/parity/reference.sha").write_bytes(b"2222222222222222222222222222222222222222\n")
                 prepare_source(root)
                 self.assertFalse((generated / "stale.rs").exists())
                 self.assertEqual((generated.parent / "public/500.html").read_bytes(), b"updated error page")
                 self.assertEqual(callback.read_bytes(), b"updated callback")
-                self.assertEqual(pin.read_bytes(), b"2222222222222222222222222222222222222222\n")
 
     def test_requires_a_tracked_error_page(self):
         with tempfile.TemporaryDirectory() as directory:

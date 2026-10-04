@@ -1,3 +1,4 @@
+import {nativeUpload,uploadCases} from './behavior-native-uploads.mjs';
 import {PIN} from './reference-pin.mjs';
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
@@ -37,15 +38,21 @@ const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
 assert.ok(['drive_attachments','motion','mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
-const browser=await chromium.launch({headless:true});
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
 const selectedMutant=process.env.WS8BM_MUTANT;
+// These paths execute the pinned Selenium driver. Starting an unused second
+// browser can block before any assertion; it supplies no test readiness.
+const nativeOnly=cases.every(name=>uploadCases.includes(name)||name===RELEASE_CASE||name===NATIVE_MOTION_CASE||(name===PHONE_CASE&&!negative&&!selectedMutant));
+const browser=nativeOnly?null:await chromium.launch({headless:true});
 async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
+    if(uploadCases.includes(caseName)) {
+      await nativeUpload(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],caseName,probe,negative||!!selectedMutant);return;
+    }
     if(caseName===RELEASE_CASE) {
-      await nativeRelease(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],probe,negative||!!selectedMutant);return;
+      await nativeRelease(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],probe,negative||!!selectedMutant,variant);return;
     }
     // The positive phone control is the pinned Selenium sequence itself.
     // Served negatives retain their translated initial creation checkpoint.
@@ -647,4 +654,4 @@ try {
   }
   if(failures) process.exitCode=1;
 }
-finally {await browser.close();}
+finally {if(browser) await browser.close();}

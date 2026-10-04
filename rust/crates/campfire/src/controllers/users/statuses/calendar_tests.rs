@@ -1,5 +1,21 @@
 use super::*;
 use campfire_db::models::calendar_dispatch::{dispatch_meetings, dispatch_ooo};
+use rusqlite::trace::{TraceEvent, TraceEventCodes};
+use std::cell::RefCell;
+
+thread_local! {
+    static UPDATE_STATEMENTS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+fn observe_updates(event: TraceEvent<'_>) {
+    // Like Rails' sql.active_record subscriber, count statements even when the
+    // conditional UPDATE matches zero rows and still acquires the writer lock.
+    if let TraceEvent::Stmt(_, sql) = event
+        && sql.trim_start().starts_with("UPDATE")
+    {
+        UPDATE_STATEMENTS.with(|statements| statements.borrow_mut().push(sql.to_owned()));
+    }
+}
 
 fn vectors() -> Value {
     serde_json::from_str(include_str!(
@@ -82,6 +98,9 @@ async fn replay(names: &[&str]) {
                         "DELETE FROM background_jobs WHERE job_class='Calendar::MeetingRefreshJob'",
                         [],
                     )?;
+                    UPDATE_STATEMENTS.with(|statements| statements.borrow_mut().clear());
+                    tx.conn()
+                        .trace_v2(TraceEventCodes::SQLITE_TRACE_STMT, Some(observe_updates));
                     Ok(())
                 })
                 .await
@@ -104,6 +123,19 @@ async fn replay(names: &[&str]) {
                         .is_empty()
                 );
             }
+            let updates = app
+                .db()
+                .write(|tx| {
+                    tx.conn().trace_v2(TraceEventCodes::empty(), None);
+                    Ok(UPDATE_STATEMENTS.with(|statements| statements.take()))
+                })
+                .await
+                .unwrap();
+            assert_eq!(
+                json!(updates.len()),
+                run["updates"],
+                "{name} UPDATE statements: {updates:?}"
+            );
             let current = settings(&app).await;
             assert_eq!(
                 json!(current.ooo_broadcast),
@@ -160,11 +192,56 @@ calendar_scenario!(
     "ooo_end",
     "ooo_expired_already_false"
 );
-calendar_scenario!(
-    ws17_ooo_broadcast_contains_label_note_return_date,
-    "ooo_manual",
-    "ooo_invisible"
-);
+#[tokio::test]
+async fn ws17_ooo_broadcast_contains_label_note_return_date() {
+    // test/models/calendar/ooo_dispatcher_test.rb:52-72 uses this note/date
+    // through dispatch_due!, rather than a detached badge or notice presenter.
+    let now = stamp("2026-09-20T12:00:00Z");
+    let app = TestApp::boot_without_periodic_with_clock(std::sync::Arc::new(
+        campfire_kit::FrozenClock::new(now.jiff()),
+    ))
+    .await
+    .unwrap()
+    .without_job_runner()
+    .await;
+    setup(
+        &app,
+        json!({"missing":true,"attrs":{"ooo_until":"2026-09-24T12:00:00Z","ooo_note":"Back soon"}}),
+    )
+    .await;
+    let browser = app.sign_in(DAVID).await;
+    let (_server, mut socket) = subscribe_with_cookie(&app, &browser.cookie_header()).await;
+    assert_eq!(dispatch_ooo(app.db(), now).await.unwrap().flipped, 1);
+    let mut frames = std::collections::BTreeMap::new();
+    for _ in 0..2 {
+        let actual: Value = serde_json::from_str(&socket.next_text().await).unwrap();
+        let channel: Value = serde_json::from_str(actual["identifier"].as_str().unwrap()).unwrap();
+        assert_eq!(channel["channel"], "Turbo::StreamsChannel");
+        assert!(
+            frames
+                .insert(
+                    channel["signed_stream_name"].as_str().unwrap().to_owned(),
+                    actual["message"].as_str().unwrap().to_owned(),
+                )
+                .is_none(),
+            "one frame per stream"
+        );
+    }
+    let stream = |suffix| {
+        rails_compat::turbo::signed_stream_name(
+            &app.booted.app.secrets,
+            &[&user_gid(DAVID).to_param(), suffix],
+        )
+    };
+    let badge = &frames[&stream("status")];
+    assert!(badge.contains("Out of office"));
+    assert!(badge.contains("Back soon"));
+    let notice = &frames[&stream("ooo_notice")];
+    assert!(notice.contains("is out of office until September 24, 2026"));
+    assert!(notice.contains("Back soon"));
+    socket.assert_silent().await;
+    replay(&["ooo_manual", "ooo_invisible"]).await;
+}
 calendar_scenario!(
     ws17_calendar_ooo_start_broadcasts_badge_and_notice,
     "ooo_calendar"
@@ -201,9 +278,18 @@ async fn ws17_both_optins_refresh_through_meeting_dispatcher_only() {
     setup(&app, row).await;
     let now = stamp(golden["now"].as_str().unwrap());
     assert_eq!(dispatch_ooo(app.db(), now).await.unwrap().refreshed, 0);
+    let count = app.db().read(|conn| {
+        Ok(conn.query_row("SELECT count(*) FROM background_jobs WHERE job_class='Calendar::MeetingRefreshJob'", [], |r| r.get::<_,i64>(0))?)
+    }).await.unwrap();
+    assert_eq!(count, 0);
     assert_eq!(dispatch_meetings(app.db(), now).await.unwrap().refreshed, 1);
-    let count=app.db().read(|conn|Ok(conn.query_row("SELECT count(*) FROM background_jobs WHERE job_class='Calendar::MeetingRefreshJob'",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-    assert_eq!(count, 1);
+    let jobs = app.db().read(|conn| {
+        Ok(conn.prepare("SELECT arguments FROM background_jobs WHERE job_class='Calendar::MeetingRefreshJob' ORDER BY id")?
+            .query_map([], |r| r.get::<_,String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+            .iter().map(|args| serde_json::from_str::<Value>(args).unwrap()).collect::<Vec<_>>())
+    }).await.unwrap();
+    assert_eq!(jobs, vec![json!({"user_id":DAVID})]);
 }
 
 async fn failed_member(kind: &str) {
@@ -276,8 +362,24 @@ async fn failed_member(kind: &str) {
     assert_eq!(stats.failed_user_ids, vec![DAVID]);
     assert_eq!(stats.flipped, 1, "{stats:?}");
     assert_eq!(stats.refreshed, 0);
+    let mut expected_streams = if meeting {
+        vec!["status"]
+    } else {
+        vec!["status", "ooo_notice"]
+    }
+    .into_iter()
+    .map(|suffix| {
+        rails_compat::turbo::signed_stream_name(
+            &app.booted.app.secrets,
+            &[&user_gid(JASON).to_param(), suffix],
+        )
+    })
+    .collect::<std::collections::BTreeSet<_>>();
     for _ in 0..if meeting { 1 } else { 2 } {
         let actual: Value = serde_json::from_str(&socket.next_text().await).unwrap();
+        let channel: Value = serde_json::from_str(actual["identifier"].as_str().unwrap()).unwrap();
+        assert_eq!(channel["channel"], "Turbo::StreamsChannel");
+        assert!(expected_streams.remove(channel["signed_stream_name"].as_str().unwrap()));
         let html = actual["message"].as_str().unwrap();
         assert!(html.contains(&format!("user_{JASON}")));
         assert!(
@@ -288,6 +390,7 @@ async fn failed_member(kind: &str) {
             }) || html.contains("Out of office")
         );
     }
+    assert!(expected_streams.is_empty());
     socket.assert_silent().await;
     let david = settings(&app).await;
     assert_eq!(david.ooo_broadcast, None);
@@ -306,8 +409,14 @@ async fn ws17_ooo_failing_member_does_not_stop_sweep_and_rolls_back_claim() {
 
 // Exact DM broadcast setup: active one-hour OOO, claimed true then clock advanced two hours.
 async fn dm_notice_broadcast(name: &str) {
-    let clock=std::sync::Arc::new(campfire_kit::FrozenClock::new(crate::controllers::presenters::test_support::SEED_NOW.parse().unwrap()));
-    let app=TestApp::boot_with_clock(clock.clone()).await.expect("parity seed");
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        crate::controllers::presenters::test_support::SEED_NOW
+            .parse()
+            .unwrap(),
+    ));
+    let app = TestApp::boot_with_clock(clock.clone())
+        .await
+        .expect("parity seed");
     let (_server, mut socket) = subscribe(&app).await;
     let invisible = name == "invisible_flip";
     app.db().write(move |tx| {

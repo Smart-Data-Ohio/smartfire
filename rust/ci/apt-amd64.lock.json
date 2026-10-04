@@ -19,7 +19,8 @@
     "libasound2t64",
     "libpango-1.0-0",
     "libcairo2",
-    "fonts-liberation"
+    "fonts-liberation",
+    "iproute2"
   ],
   "packages": [
     {
@@ -100,6 +101,13 @@
       "sha256": "b58306b60e1dff920e1e18bc7e1e499f2ef75184190ab3d98657b165969bf7c9"
     },
     {
+      "package": "iproute2",
+      "version": "6.15.0-1",
+      "architecture": "amd64",
+      "url": "https://deb.debian.org/debian/pool/main/i/iproute2/iproute2_6.15.0-1_amd64.deb",
+      "sha256": "7b2dcade4a83ded723fcab21c5a53c47f29352c9c5e1661a089a1e481b3fb48a"
+    },
+    {
       "package": "libacl1",
       "version": "2.3.2-2+b1",
       "architecture": "amd64",
@@ -177,6 +185,13 @@
       "sha256": "81535f3c2c0efc732965907c8749103a0a26377c761622c9ce39b4c92dcde52f"
     },
     {
+      "package": "libbpf1",
+      "version": "1:1.5.0-3",
+      "architecture": "amd64",
+      "url": "https://deb.debian.org/debian/pool/main/libb/libbpf/libbpf1_1.5.0-3_amd64.deb",
+      "sha256": "04c96ead3024888d80d08c8d08cc8cf4589f4614627acc69519f87ffb5adc1c2"
+    },
+    {
       "package": "libbrotli1",
       "version": "1.1.0-2+b7",
       "architecture": "amd64",
@@ -217,6 +232,13 @@
       "architecture": "amd64",
       "url": "https://deb.debian.org/debian/pool/main/libc/libcap2/libcap2_2.75-10%2bdeb13u1%2bb3_amd64.deb",
       "sha256": "89fc4d34fc7a28ad6f0fcd0c561ab253b9dedf6f77f5a000b47c276c8295bf67"
+    },
+    {
+      "package": "libcap2-bin",
+      "version": "1:2.75-10+deb13u1+b3",
+      "architecture": "amd64",
+      "url": "https://deb.debian.org/debian/pool/main/libc/libcap2/libcap2-bin_2.75-10%2bdeb13u1%2bb3_amd64.deb",
+      "sha256": "6404b8ee315ce3eb8e273981650e419ff0e91aed5213d4975a6895f98944ea80"
     },
     {
       "package": "libcom-err2",
@@ -492,6 +514,13 @@
       "sha256": "7244ec3839b61fac0c1884fe08aaa040f26e8f1f35f1f5d3482eacefd30d1b44"
     },
     {
+      "package": "libmnl0",
+      "version": "1.0.5-3",
+      "architecture": "amd64",
+      "url": "https://deb.debian.org/debian/pool/main/libm/libmnl/libmnl0_1.0.5-3_amd64.deb",
+      "sha256": "4ec9c1096e0b954e3bdb03a62314ee7f49999045d3d55be3e4ded520ffc9baf5"
+    },
+    {
       "package": "libmount1",
       "version": "2.41.5-0+deb13u1",
       "architecture": "amd64",
@@ -744,6 +773,20 @@
       "sha256": "8b9f6a7983e9418564e48a627518de4c03917b56efe68d7f3e93bd8fffa1cc10"
     },
     {
+      "package": "libtirpc-common",
+      "version": "1.3.6+ds-1",
+      "architecture": "all",
+      "url": "https://deb.debian.org/debian/pool/main/libt/libtirpc/libtirpc-common_1.3.6%2bds-1_all.deb",
+      "sha256": "300f582e2c9151a8d329568c705cadc76252c417147312fe331c4560d2c7a6c3"
+    },
+    {
+      "package": "libtirpc3t64",
+      "version": "1.3.6+ds-1",
+      "architecture": "amd64",
+      "url": "https://deb.debian.org/debian/pool/main/libt/libtirpc/libtirpc3t64_1.3.6%2bds-1_amd64.deb",
+      "sha256": "ef4536c09bf5063554310e22d586ae90990100ba66d2fe7c35660e9e658913b6"
+    },
+    {
       "package": "libunistring5",
       "version": "1.3-2",
       "architecture": "amd64",
@@ -924,6 +967,13 @@
       "architecture": "amd64",
       "url": "https://deb.debian.org/debian/pool/main/libx/libxshmfence/libxshmfence1_1.3.3-1_amd64.deb",
       "sha256": "7b339e9e5b2349723d35af4df89bcc7aa456bbdf8ba1754358f9b44c3fe1f964"
+    },
+    {
+      "package": "libxtables12",
+      "version": "1.8.11-2",
+      "architecture": "amd64",
+      "url": "https://deb.debian.org/debian/pool/main/i/iptables/libxtables12_1.8.11-2_amd64.deb",
+      "sha256": "4de5aa59faef5e98d6ba9f5f521a915be5641f224f597862f8d29e8319e8db16"
     },
     {
       "package": "libz3-4",

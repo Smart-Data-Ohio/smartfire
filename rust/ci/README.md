@@ -15,7 +15,7 @@ inputs. Branch protection is managed separately by the release lead.
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
 | browsers | Pinned Playwright image and gateway `ws` lockfile, then exactly 7 WS12, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
-| messaging | Python/Node harness regression tests, then `python3 reference-tools/messaging/behavior-check.py --keep-going` (all scripted paired Rails/Rust cases, including native Selenium cases and persisted-row assertions) |
+| messaging | Python/Node harness regression tests, then `python3 reference-tools/messaging/behavior-check.py --keep-going` (all scripted paired Rails/Rust cases, including native Selenium upload cases and persisted-row assertions) |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget, work against Rails and Rust) |
 
 No external harness in the requested messaging/WS11 scope lacks a scripted entry
@@ -23,14 +23,14 @@ point. The screen-matrix pixel harness is outside this correctness package.
 
 The main Rust/Debian images, archived Rails Ruby base, Playwright/Chromium image,
 Node and Docker CLI images, and Pebble are digest-pinned. Nextest, libfaketime,
-media sources, ChromeDriver (matching Chromium 153.0.8010.12), and LiveKit are
+media sources, util-linux 2.42.4 (unshare), ChromeDriver (matching Chromium 153.0.8010.12), and LiveKit are
 checksum-pinned. npm dependencies use committed lockfile integrity hashes.
 The CI-only APT prerequisites and their complete runtime dependency closure,
 including libraries already present in the toolchain, are pinned by exact version,
-architecture, archive URL and SHA-256 in `apt-amd64.lock.json` (149 archives).
+architecture, archive URL and SHA-256 in `apt-amd64.lock.json` (156 archives).
 `install_apt.py` verifies every archive before invoking `dpkg`, checks the installed
 versions and package audit, and has no online dependency resolver or fallback.
-To update this lock, resolve the 19 `requested` packages with `--no-install-recommends`
+To update this lock, resolve the 20 `requested` packages with `--no-install-recommends`
 against the CI toolchain, follow their installed Depends/Pre-Depends closure
 (including installed virtual providers), download exact-version reinstalls of
 the complete graph, and record the authenticated APT archive identities/hashes.
@@ -74,6 +74,11 @@ tools-only host source (7 source utilities), skips comments/literals, and fails
 on an unclassifiable ignore. Exporters, recorders, measurements, and browser host helpers
 remain ignored with `utility:` reasons. The two ignored kit documentation
 examples remain documentation examples, not test attributes.
+
+Native Selenium isolates Chromium/ChromeDriver with unprivileged user, network and PID
+namespaces. The CI container permits these syscalls, and the pinned `iproute2`
+prerequisite brings up its private loopback device. Generated browser-host test
+executables use their own cache under `target/ws8bm-browser-host/`.
 
 Each correctness job uploads its full log, selected-test JUnit (where applicable),
 and a JSON head/duration/exit receipt under `target/ci-receipts`. A red external

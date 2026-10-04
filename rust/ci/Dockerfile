@@ -25,3 +25,17 @@ RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
     mkdir -p /usr/lib/chromium && \
     ln -s /ms-playwright/chromium-1243/chrome-linux64/chrome /usr/lib/chromium/chromium && \
     rm -rf /tmp/chromedriver* /var/lib/apt/lists /var/cache/apt/archives
+
+# Native Selenium's namespace supervisor needs --forward-signals (2.42+).
+# Build only unshare; use the locked Debian runtime libraries above.
+RUN curl --fail --silent --show-error --location \
+      https://www.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz \
+      --output /tmp/util-linux.tar.xz && \
+    echo 'fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec  /tmp/util-linux.tar.xz' | sha256sum -c - && \
+    tar -xf /tmp/util-linux.tar.xz -C /tmp && \
+    cd /tmp/util-linux-2.42.4 && \
+    ./configure --disable-all-programs --enable-unshare --disable-shared --enable-static --disable-nls && \
+    make -j 4 unshare && \
+    install -s -m 755 unshare /usr/local/bin/unshare && \
+    /usr/local/bin/unshare --help | grep -q -- --forward-signals && \
+    cd / && rm -rf /tmp/util-linux*

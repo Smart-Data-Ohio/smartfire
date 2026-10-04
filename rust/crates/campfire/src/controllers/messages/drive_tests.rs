@@ -99,3 +99,61 @@ async fn root_and_thread_drive_requests_match_rails_bytes_order_json_validation_
 fn counts(conn: &campfire_db::Connection) -> campfire_db::Result<(i64,i64)> {
     Ok((conn.query_row("SELECT COUNT(*) FROM messages",[],|r|r.get(0))?,conn.query_row("SELECT COUNT(*) FROM drive_attachments",[],|r|r.get(0))?))
 }
+
+// test/controllers/messages_drive_attachments_test.rb:208: the persisted rows
+// must survive the real show route and presenter, with the generic Rails chip.
+#[tokio::test]
+async fn persisted_drive_attachments_reach_the_message_http_response() {
+    let app = TestApp::boot_frozen()
+        .await
+        .expect("default seed required")
+        .without_job_runner()
+        .await;
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/google_profile_html.json"
+    ))
+    .unwrap();
+    let row = oracle["drive"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| !r["urls"].as_array().unwrap().is_empty())
+        .unwrap();
+    let ids = vec![
+        "1AbcDefGhIjKlMnOpQrSt".into(),
+        "2BcDefGhIjKlMnOpQrStU".into(),
+    ];
+    let message = app
+        .db()
+        .write(move |tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("attached".into()),
+                    client_message_id: Some("review239-drive".into()),
+                    drive_file_ids: ids,
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let response = app
+        .david()
+        .get(&format!("/rooms/{ALL_TALK}/messages/{}", message.id))
+        .await;
+    assert_eq!(response.status, 200);
+    let html = response.text();
+    let expected = row["html"].as_str().unwrap().replace(
+        "drive_attachments_message_0013",
+        "drive_attachments_message_review239-drive",
+    );
+    assert!(
+        html.contains(&expected),
+        "persisted attachments missing from HTTP show: {html}"
+    );
+    assert_eq!(html.matches("class=\"drive-attachments\"").count(), 1);
+    assert_eq!(html.matches("class=\"drive-attachment\"").count(), 2);
+}
