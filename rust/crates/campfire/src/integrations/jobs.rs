@@ -198,6 +198,40 @@ mod tests {
     use super::*;
     use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, BENDER, DAVID};
 
+    #[tokio::test]
+    async fn attachment_processing_root_webhook_recovers_failed_inline_video_like_rails() {
+        let test_app = TestApp::boot_frozen().await.unwrap().without_job_runner().await;
+        let app = &test_app.booted.app;
+        let (_client, server) = crate::controllers::messages::attachment_processing_tests::subscribe(&test_app).await;
+        let (room, bot, trigger) = app.db.write(|tx| {
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            Ok((Room::find(tx.conn(), ALL_TALK)?, User::find(tx.conn(), BENDER)?,
+                Message::create(tx, NewMessage { room_id: ALL_TALK, creator_id: DAVID,
+                    body: Some("Root webhook trigger".into()), ..Default::default() })?))
+        }).await.unwrap();
+        let reply = create_attachment_reply(app, &room, &bot, trigger, webhook::Attachment {
+            data: b"corrupt MOV".to_vec(), filename: "attachment.mov".into(), content_type: "video/quicktime".into(),
+        }).await.unwrap();
+        test_app.publications().take();
+        broadcast_create(app, &room, &reply).await.unwrap();
+        let id = reply.id;
+        let actual = app.db.read(move |c| {
+            let blob_id: i64 = c.query_row("SELECT blob_id FROM active_storage_attachments WHERE record_type='Message' AND name='attachment' AND record_id=?", [id], |r| r.get(0))?;
+            let token: Option<String> = c.query_row("SELECT message_processing_token FROM active_storage_blobs WHERE id=?", [blob_id], |r| r.get(0))?;
+            let preview_attached: bool = c.query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND name='preview_image' AND record_id=?)", [blob_id], |r| r.get(0))?;
+            let count: i64 = c.query_row("SELECT count(*) FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob'", [], |r| r.get(0))?;
+            Ok(serde_json::json!({"processing_jobs":count,"preview_attached":preview_attached,"token_suffix":token.and_then(|t| t.rsplit(':').next().map(str::to_owned))}))
+        }).await.unwrap();
+        let mut actual = actual;
+        actual["append_without_poster"] = serde_json::json!(test_app.publications().take().iter().any(|(_, bytes)| {
+            let payload: serde_json::Value = serde_json::from_str(bytes).unwrap();
+            payload.as_str().is_some_and(|html| html.contains("<video") && !html.contains("poster="))
+        }));
+        let expected: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/message_attachment_processing_failures.json")).unwrap();
+        assert_eq!(actual, expected["root_webhook"], "rendering the root reply must preserve Rails' recovery request");
+        server.abort();
+    }
+
     #[test]
     fn ws11_legacy_webhook_retry_policy_keeps_transient_sources() {
         use campfire_jobs::JobKind;

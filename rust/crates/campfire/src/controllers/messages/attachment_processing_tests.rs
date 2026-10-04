@@ -141,7 +141,7 @@ async fn state(app: &TestApp, blob: i64) -> (Option<String>, Option<Timestamp>, 
     }).await.unwrap()
 }
 
-async fn subscribe(
+pub(crate) async fn subscribe(
     app: &TestApp,
 ) -> (
     crate::channels::tests::support::Client,
@@ -240,6 +240,64 @@ fn start(app: &TestApp) -> campfire_jobs::Runner {
         app.booted.app.clone(),
         config,
     )
+}
+
+#[tokio::test]
+async fn attachment_processing_completion_render_failure_retries_like_rails() {
+    use rusqlite::OptionalExtension;
+    let (app, clock, id, blob) = setup(false).await;
+    let (_client, server) = subscribe(&app).await;
+    seed_job(&app, id, blob).await;
+    // Media and touch can succeed, but the detached completion presenter cannot render.
+    app.db().write(|tx| {
+        tx.conn().execute_batch("ALTER TABLE boosts RENAME TO unavailable_boosts")?;
+        Ok(())
+    }).await.unwrap();
+    app.publications().take();
+    let runner = start(&app);
+    let retry = tokio::time::timeout(Duration::from_secs(15), async {
+        loop {
+            let row = app.db().read(|c| Ok(c.query_row(
+                "SELECT status,attempts,run_at FROM background_jobs WHERE job_class=?",
+                [CLASS], |r| Ok((r.get::<_,String>(0)?, r.get::<_,i64>(1)?, r.get::<_,Timestamp>(2)?)),
+            ).optional()?)).await.unwrap();
+            if row.as_ref().is_none_or(|r| r.0 == "ready" && r.1 > 0) { break row; }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    runner.shutdown(Duration::from_secs(1)).await;
+    let storage = app.booted.app.storage.clone();
+    let preview_attached = app.db().read(move |c| {
+        let source = Blob::find(c, blob).unwrap().unwrap();
+        Ok(storage.existing_preview_image(c, &source).unwrap().is_some())
+    }).await.unwrap();
+    let (token, expires, count) = state(&app, blob).await;
+    let expected: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/message_attachment_processing_failures.json"
+    )).unwrap();
+    assert!(app.publications().take().is_empty());
+    assert_eq!(json!({
+        "preview_attached": preview_attached,
+        "retry_jobs": count,
+        "retry_executions": retry.as_ref().map(|r| vec![r.1]).unwrap_or_default(),
+        "lease": {"message_processing_token":token,"message_processing_expires_at":expires.map(|t| t.jiff().to_string())},
+    }), expected["completion_failure"], "a committed preview does not acknowledge a failed completion broadcast");
+
+    app.db().write(|tx| {
+        tx.conn().execute_batch("ALTER TABLE unavailable_boosts RENAME TO boosts")?;
+        Ok(())
+    }).await.unwrap();
+    clock.set(retry.unwrap().2.jiff());
+    let runner = start(&app);
+    tokio::time::timeout(Duration::from_secs(15), async {
+        while state(&app, blob).await.2 != 0 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    runner.shutdown(Duration::from_secs(1)).await;
+    assert_eq!(app.publications().take().len(), 1, "the retry must publish completion");
+    assert!(render(&app, id).await.contains("poster=\""));
+    server.abort();
 }
 
 #[tokio::test]
