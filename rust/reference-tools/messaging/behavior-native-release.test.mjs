@@ -1,9 +1,10 @@
+import {PIN} from './reference-pin.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {extractRelease,RELEASE_CASE} from './behavior-native-release.mjs';
-const source=execFileSync('git',['show','d7c7de92:test/system/message_interactions_test.rb'],{encoding:'utf8'});
+const source=execFileSync('git',['show',`${PIN}:test/system/message_interactions_test.rb`],{encoding:'utf8'});
 test('the hidden context assertion is scoped to the active composer',()=>{
   const {body}=extractRelease(source);
   assert.ok(body.includes(`assert_selector "#composer [data-composer-target='context'][hidden]", visible: false`));
@@ -16,7 +17,7 @@ test('native release preserves the pinned body except main\'s composer scope',()
   assert.ok(body.includes('assert_equal "menu", hit'));
   assert.ok(body.includes('visible: false'));
   assert.ok(body.includes('page.current_window.resize_to(390, 844)'));
-  const helper=execFileSync('git',['show','d7c7de92:test/test_helpers/system_test_helper.rb'],{encoding:'utf8'});
+  const helper=execFileSync('git',['show',`${PIN}:test/test_helpers/system_test_helper.rb`],{encoding:'utf8'});
   assert.ok(helper.includes('def long_press(node, move_by: nil, hold: 0.7)'));
   assert.ok(helper.includes('visible: true, wait: 10'));
 });

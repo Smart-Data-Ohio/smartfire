@@ -25,7 +25,7 @@ Capybara.register_driver :ws8bm_native_phone do |app|
   %w[--headless=new --ozone-platform=headless --no-sandbox --disable-dev-shm-usage --mute-audio --window-size=1400,1400].each { |arg| options.add_argument(arg) }
   options.add_argument("--proxy-server=#{ENV.fetch("WS8BM_NATIVE_PROXY")}") if ENV["WS8BM_NATIVE_PROXY"]
   options.add_argument("--proxy-bypass-list=<-loopback>") if ENV["WS8BM_NATIVE_PROXY"]
-  Capybara::Selenium::Driver.new(app, browser: :remote, url: "http://127.0.0.1:52023", options: options)
+  Capybara::Selenium::Driver.new(app, browser: :remote, url: "http://127.0.0.1:#{ENV.fetch("WS8BM_NATIVE_DRIVER_PORT")}", options: options)
 end
 Capybara.default_driver = :ws8bm_native_phone
 class Ws8bmNativePhoneTest < Minitest::Test

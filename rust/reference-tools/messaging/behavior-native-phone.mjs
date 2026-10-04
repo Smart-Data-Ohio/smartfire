@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 import {basename,dirname} from 'node:path';
 import {nativeAssetProxy} from './behavior-native-proxy.mjs';
 import {PIN,REFERENCE_IMAGE} from './reference-pin.mjs';
+import {running,stopChild} from './behavior-native-child.mjs';
 export const PHONE_CASE='keeps the thread drawer usable on a phone and preserves the channel';
 export function extractPhone(source) {
   const start=source.indexOf(`  test "${PHONE_CASE}" do\n`);
@@ -50,16 +51,18 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     }
     writeFileSync(proof+'/system_test_helper.rb',execFileSync('git',['show',`${PIN}:test/test_helpers/system_test_helper.rb`],{cwd:root}));
     writeFileSync(proof+'/sessions.json',readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url)));
-    // Refuse an occupied port; never reuse or stop someone else's driver.
-    await new Promise((resolve,reject)=>{const check=createServer();check.once('error',reject);check.listen(52023,'127.0.0.1',()=>check.close(resolve));});
+    // Selenium's pinned local Service owns its port. Give this out-of-process
+    // driver its own ephemeral endpoint too, rather than a machine-wide slot.
+    const driverPort=await new Promise((resolve,reject)=>{const check=createServer();check.once('error',reject);check.listen(0,'127.0.0.1',()=>{const port=check.address().port;check.close(()=>resolve(port));});});
     log=openSync(scratch+'/chromedriver.log','a');
-    driver=spawn('chromedriver',['--port=52023','--allowed-ips=127.0.0.1'],{stdio:['ignore',log,log],env:{...process.env,TMPDIR:temp}});
+    driver=spawn('chromedriver',[`--port=${driverPort}`,'--allowed-ips=127.0.0.1'],{stdio:['ignore',log,log],env:{...process.env,TMPDIR:temp}});
+    driver.once('exit',(status,signal)=>console.log(`WS8bm native driver exit: ${JSON.stringify({label,port:driverPort,pid:driver.pid,status,signal})}`));
     let startupError;driver.once('error',error=>{startupError=error;});
     const deadline=Date.now()+15000;
     for(;;) {
       if(startupError) throw startupError;
-      if(driver.exitCode!==null) throw new Error('ChromeDriver exited during startup');
-      try {if((await fetch('http://127.0.0.1:52023/status')).ok) break;}catch{}
+      if(!running(driver)) throw new Error('ChromeDriver exited during startup');
+      try {if((await fetch(`http://127.0.0.1:${driverPort}/status`)).ok) break;}catch{}
       if(Date.now()>=deadline) throw new Error('ChromeDriver startup timeout');
       await new Promise(resolve=>setTimeout(resolve,50));
     }
@@ -71,7 +74,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     }
     if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
     if(mutation||Number(process.env.WS8BM_SETUP_DELAY||0)) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}
-    const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',REFERENCE_IMAGE,'exec','ruby','/tools/behavior-native-phone.rb'];
+    const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'-e',`WS8BM_NATIVE_DRIVER_PORT=${driverPort}`,'--entrypoint','bundle',REFERENCE_IMAGE,'exec','ruby','/tools/behavior-native-phone.rb'];
     const result=await new Promise((resolve,reject)=>{
       const child=spawn('docker',args);let stdout='',stderr='';
       const timer=setTimeout(()=>{child.kill('SIGTERM');reject(new Error('Native browser process timeout'));},120000);
@@ -96,7 +99,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
       if(proxy)await proxy.close();
     } finally {
       try {
-        if(driver&&driver.exitCode===null) {const stopped=new Promise(resolve=>driver.once('exit',resolve));driver.kill('SIGTERM');await stopped;}
+        await stopChild(driver);
       } finally {
         try {if(log!==undefined) closeSync(log);}
         finally {rmSync(proof,{recursive:true,force:true});rmSync(temp,{recursive:true,force:true});}
