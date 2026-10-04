@@ -287,7 +287,7 @@ const tour=p=>p.locator('#tour .tour__card')
 const next=p=>p.locator("#tour [data-tour-target='next']")
 async function step(p,line,n) {await visible(T,line,p.locator('.tour__progress'),`Step ${n} of 5`)}
 async function complete(p,action,hiddenLine,stampLine) {
- const response=p.waitForResponse(r=>new URL(r.url()).pathname==='/users/me/tour'&&r.request().method()!=='GET')
+ const response=p.waitForResponse(r=>new URL(r.url()).pathname==='/users/me/tour'&&r.request().method()!=='GET',{timeout:2000})
  await action();assert.equal((await response).status(),204,'real stamp request')
  await tour(p).waitFor({state:'hidden',timeout:2000});equal(T,hiddenLine,await tour(p).isVisible(),false)
  requests.push({kind:'tour',user:'jz',line:stampLine})
@@ -309,7 +309,7 @@ async function tours() {
   await complete(p,()=>next(p).press('Escape'),52,53)
  },{user:'jz'})
  await scenario('tour-restart',async p=>{
-  await controller(p,'tour');await p.getByRole('button',{name:'Skip tour',exact:true}).click();await tour(p).waitFor({state:'hidden'});equal(T,64,await tour(p).isVisible(),false)
+  await controller(p,'tour');await p.getByRole('button',{name:'Skip tour',exact:true}).click();await tour(p).waitFor({state:'hidden',timeout:assertionWait(T,64)});equal(T,64,await tour(p).isVisible(),false)
   if(broken)await mutate(p,'tour','start')
   await p.locator('#help-menu-button').click();await p.getByRole('menuitem',{name:'Restart tour',exact:true}).click()
   await visible(T,69,tour(p));await step(p,70,1)
@@ -341,7 +341,7 @@ async function stars() {
    equal(S,147,await p.locator(`#channel-members [aria-label='Offline members'] [data-member-id='${id}']`).count(),0)
    await present(S,148,p.locator(`#channel-members [aria-label='Starred members'] [data-member-id='${id}'] .member-panel__presence`))
   } else {
-   await p.locator("#channel-members [aria-label='Starred members']").waitFor({state:'detached'});equal(S,153,await p.locator("#channel-members [aria-label='Starred members']").count(),0)
+   await p.locator("#channel-members [aria-label='Starred members']").waitFor({state:'detached',timeout:assertionWait(S,153)});equal(S,153,await p.locator("#channel-members [aria-label='Starred members']").count(),0)
    await present(S,154,p.locator(`#channel-members [aria-label='Offline members'] [data-member-id='${id}'][data-starred='false']`).filter({hasText:'Kevin'}))
   }
  }
@@ -376,7 +376,7 @@ async function stars() {
   await p.locator('.profile-card-popover__close').press('Escape');await present(S,105,hiddenCard(p));equal(S,106,await menu(p).count(),0)
  },{user:'jz'})
  await scenario('star-phone',async p=>{
-  await ready(p);await p.setViewportSize({width:390,height:844});await p.locator('#channel-members').waitFor({state:'hidden'});
+  await ready(p);await p.setViewportSize({width:390,height:844});await p.locator('#channel-members').waitFor({state:'hidden',timeout:assertionWait(S,112)});
   equal(S,112,await p.locator('#channel-members').isVisible(),false)
   await p.getByRole('button',{name:'Show members',exact:true}).click();await visible(S,115,row(p));await settled(p)
   if(broken)await corruptStarPayload(p)

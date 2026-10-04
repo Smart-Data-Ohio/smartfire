@@ -2155,7 +2155,7 @@
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_no_selector \"#tour .tour__card\", visible: true",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:312",
-          "assertion_anchor": "await controller(p,'tour');await p.getByRole('button',{name:'Skip tour',exact:true}).click();await tour(p).waitFor({state:'hidden'});equal(T,64,await tour(p).isVisible(),false)",
+          "assertion_anchor": "await controller(p,'tour');await p.getByRole('button',{name:'Skip tour',exact:true}).click();await tour(p).waitFor({state:'hidden',timeout:assertionWait(T,64)});equal(T,64,await tour(p).isVisible(),false)",
           "assertion_scope": "tour-restart",
           "additional_assertion_sources": [
             {
@@ -2383,7 +2383,7 @@
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_unstarred kevin",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:344",
-          "assertion_anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached'});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)",
+          "assertion_anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached',timeout:assertionWait(S,153)});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)",
           "assertion_scope": "star-card",
           "additional_assertion_sources": [
             {
@@ -2487,7 +2487,7 @@
           "caller_line": 40,
           "rust_assertion": {
             "path": "rust/reference-tools/users/original_browser_assertions.mjs:344",
-            "anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached'});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)"
+            "anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached',timeout:assertionWait(S,153)});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)"
           }
         },
         {
@@ -2712,7 +2712,7 @@
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_unstarred kevin",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:344",
-          "assertion_anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached'});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)",
+          "assertion_anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached',timeout:assertionWait(S,153)});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)",
           "assertion_scope": "star-menu",
           "additional_assertion_sources": [
             {
@@ -2927,7 +2927,7 @@
           "caller_line": 61,
           "rust_assertion": {
             "path": "rust/reference-tools/users/original_browser_assertions.mjs:344",
-            "anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached'});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)"
+            "anchor": "await p.locator(\"#channel-members [aria-label='Starred members']\").waitFor({state:'detached',timeout:assertionWait(S,153)});equal(S,153,await p.locator(\"#channel-members [aria-label='Starred members']\").count(),0)"
           }
         },
         {
