@@ -451,8 +451,14 @@ fn kit_app() -> Router {
     async fn parsed(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
         Ok(c.head(campfire_kit::StatusCode::NO_CONTENT))
     }
+    async fn file(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+        let body = c.take_body_file().await.map_err(campfire_kit::Error::internal)?;
+        let size = body.metadata().map_err(campfire_kit::Error::internal)?.len();
+        Ok(c.render_as(campfire_kit::StatusCode::OK, "text/plain", size.to_string()))
+    }
     let router = Router::new()
         .route("/report", post(campfire_kit::unparsed_action(report)))
+        .route("/file", post(campfire_kit::unparsed_action(file)))
         .route("/parsed", post(campfire_kit::action(parsed)));
     let kit = campfire_kit::Kit::new(campfire_kit::KitConfig::default(), campfire_kit::testing::crypto(), campfire_kit::testing::frozen_clock(), ());
     campfire_kit::app(router, kit)
@@ -481,6 +487,24 @@ async fn post_chunked(port: u16, path: &str, total: usize, end: bool) -> u16 {
     let mut raw = Vec::new();
     tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut raw)).await.expect("a reply").unwrap();
     parse(&raw).status
+}
+
+#[tokio::test]
+async fn raw_file_uploads_are_spooled_with_bounded_memory_and_keep_configured_limits() {
+    let server = Server::start(&[], kit_app()).await;
+    const SIZE: usize = 100_000_000;
+    for port in [server.http, server.target] {
+        let (status, rise) = allocation_rise(post_chunked(port, "/file", SIZE, true)).await;
+        assert_eq!(status, 200, "port {port}");
+        assert!(rise < SIZE / 4, "{rise} bytes retained for a {SIZE}-byte file on port {port}");
+    }
+    server.stop().await;
+    let limited = Server::start(&[("MAX_REQUEST_BODY", "4096")], kit_app()).await;
+    for port in [limited.http, limited.target] {
+        assert_eq!(post_chunked(port, "/file", 64 * 1024, true).await, 413);
+        assert_eq!(post_chunked(port, "/file", 4096, true).await, 200);
+    }
+    limited.stop().await;
 }
 
 /// MAX_REQUEST_BODY is enforced as the upload streams through validation, never held whole

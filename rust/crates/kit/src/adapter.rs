@@ -134,7 +134,7 @@ where
         None if !parse_body => {
             match body::validate_unparsed(body, kit.config().max_body_bytes).await {
                 Ok(body) => {
-                    unread = Some(body);
+                    unread = body;
                     Ok(ParsedBody::empty())
                 }
                 Err(error) => Err(error),
