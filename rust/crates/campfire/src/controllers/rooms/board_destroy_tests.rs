@@ -1,4 +1,4 @@
-//! Board-scoped ports of the inherited RoomsController destroy declarations.
+//! The unchanged Rails board-route error; actual board cleanup uses /rooms/:id.
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{Room, RoomType};
@@ -25,219 +25,158 @@ async fn board(app: &TestApp, creator: i64, members: &[i64]) -> i64 {
 fn delete(id: i64, format: &str) -> Req {
     Req::new(Method::DELETE, &format!("/rooms/boards/{id}{format}"))
 }
-async fn unchanged(app: &TestApp, id: i64, members: usize) {
-    app.db().read(move |conn| {
-        let room = Room::find(conn, id)?;
-        assert!(room.deleted_at.is_none() && room.destroy_enqueued_at.is_none());
-        assert_eq!(room.user_ids(conn)?.len(), members);
-        let writes: i64 = conn.query_row("SELECT (SELECT count(*) FROM audit_logs WHERE action='room.destroy' AND target_id=?1) + (SELECT count(*) FROM background_jobs WHERE job_class='Room::DestroyJob' AND json_extract(arguments,'$.room_id')=?1)", [id], |r| r.get(0))?;
-        assert_eq!(writes, 0);
-        Ok(())
-    }).await.unwrap();
-}
+// All fields and rows are compared, rather than only row counts or soft-delete flags.
+const UNCHANGED_TABLES: &[&str] = &[
+    "rooms",
+    "memberships",
+    "messages",
+    "channel_threads",
+    "audit_logs",
+    "background_jobs",
+    "active_storage_attachments",
+    "active_storage_blobs",
+    "active_storage_variant_records",
+    "activity_items",
+    "board_tag_assignments",
+    "board_sla_rules",
+    "board_sla_nudges",
+    "board_stale_digests",
+    "boosts",
+];
+type DomainSnapshot = Vec<Vec<Vec<rusqlite::types::Value>>>;
 
-#[tokio::test]
-async fn board_destroy_matches_inherited_rails_action_bytes_state_and_broadcasts() {
-    // The oracle records the pinned board-route callback crash explicitly, and exercises
-    // the inherited action through /rooms/:id. It does not pretend Rails' board route works.
-    let oracle: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../../vectors/board_destroy.json")).unwrap();
-    let app = app().await;
-    for case in oracle["cases"].as_array().unwrap() {
-        assert_eq!(case["board_route_status"], 500);
-        let id = case["id"].as_i64().unwrap();
-        let creator = case["creator"].as_i64().unwrap();
-        let members: Vec<i64> = case["members"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|id| id.as_i64().unwrap())
-            .collect();
-        app.db().write(move|tx| {
-            tx.conn().execute("INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(?1,'Rooms::Board','Launch',?2,?3,?3)",rusqlite::params![id,creator,tx.now()])?;
-            Room::find(tx.conn(),id)?.grant_to(tx,&members)?;
-            Ok(())
-        }).await.unwrap();
-        let mut browser = app.sign_in(case["actor"].as_i64().unwrap()).await;
-        let (mut cable, _server) =
-            super::opens_rails_cases::stream_for(&app, &browser, &["rooms"]).await;
-        let accept = match case["format"].as_str().unwrap() {
-            "json" => "application/json",
-            "turbo_stream" => "text/vnd.turbo-stream.html, text/html",
-            _ => "text/html",
-        };
-        let reply = browser
-            .write(
-                Req::new(Method::DELETE, case["path"].as_str().unwrap()).header("accept", accept),
-            )
-            .await;
-        assert_eq!(
-            reply.status.as_u16() as u64,
-            case["response"]["status"].as_u64().unwrap(),
-            "{}",
-            case["name"]
-        );
-        assert_eq!(
-            reply.text(),
-            case["response"]["body"].as_str().unwrap(),
-            "{}",
-            case["name"]
-        );
-        for (name, value) in case["response"]["headers"].as_object().unwrap() {
-            assert_eq!(
-                reply.header(name),
-                value.as_str(),
-                "{}: {name}",
-                case["name"]
-            );
-        }
-        assert_eq!(
-            super::direct_selection_tests::next_flash(&app, &reply, &mut None),
-            case["flash"]
-        );
-        let state = app.db().read(move|conn| {
-            let room = Room::find(conn,id)?;
-            let audit = conn.query_row("SELECT action,actor_id,target_type,target_id,target_label,details FROM audit_logs WHERE action='room.destroy' AND target_id=? ORDER BY id DESC LIMIT 1",[id],|r| Ok(json!({"action":r.get::<_,String>(0)?,"actor_id":r.get::<_,i64>(1)?,"target_type":r.get::<_,String>(2)?,"target_id":r.get::<_,i64>(3)?,"target_label":r.get::<_,String>(4)?,"details":serde_json::from_str::<serde_json::Value>(&r.get::<_,String>(5)?).unwrap()}))).optional()?;
-            Ok(json!({"deleted":room.deleted_at.is_some(),"claimed":room.destroy_enqueued_at.is_some(),"memberships":room.user_ids(conn)?.len(),"audit":audit}))
-        }).await.unwrap();
-        assert_eq!(state, case["state"], "{}", case["name"]);
-        let jobs = app.db().read(move|conn| {
-            let mut statement = conn.prepare("SELECT job_class,arguments FROM background_jobs WHERE job_class='Room::DestroyJob' AND json_extract(arguments,'$.room_id')=? ORDER BY id")?;
-            Ok(statement.query_map([id],|r| {
-                let arguments: serde_json::Value = serde_json::from_str(&r.get::<_,String>(1)?).unwrap();
-                Ok(json!([r.get::<_,String>(0)?,[arguments["room_id"]]]))
-            })?.collect::<rusqlite::Result<Vec<_>>>()?)
-        }).await.unwrap();
-        assert_eq!(json!(jobs), case["jobs"], "{}", case["name"]);
-        for broadcast in case["broadcasts"].as_array().unwrap() {
-            assert_eq!(broadcast["broadcasting"], "rooms");
-            assert_eq!(
-                super::opens_rails_cases::frame(&mut cable).await,
-                broadcast["message"].as_str().unwrap()
-            );
-        }
-        cable.assert_silent().await;
-    }
-}
-
-#[tokio::test]
-async fn board_destroy_requires_creator_or_administrator_after_membership() {
-    let app = app().await;
-    let id = board(&app, DAVID, &[DAVID, JZ]).await;
-    let reply = app.sign_in(JZ).await.write(delete(id, ".json")).await;
-    assert_eq!(reply.status, StatusCode::FORBIDDEN);
-    assert_eq!(reply.text(), "");
-    unchanged(&app, id, 2).await;
-    let inaccessible = board(&app, JZ, &[JZ]).await;
-    let reply = app.david().write(delete(inaccessible, ".json")).await;
-    assert_eq!(reply.status, StatusCode::FOUND);
-    assert_eq!(reply.location(), Some("http://campfire.test/"));
-    assert_eq!(
-        super::direct_selection_tests::next_flash(&app, &reply, &mut None),
-        json!({"alert":"Room not found or inaccessible"})
-    );
-    unchanged(&app, inaccessible, 1).await;
-    let reply = app.david().write(delete(id, ".json")).await;
-    assert_eq!(reply.status, StatusCode::OK);
-    super::directs_rails_cases::pending_destroy(&app, id).await;
-}
-
-#[tokio::test]
-async fn board_destroy_creator_html_and_turbo_redirect_flash_and_broadcast() {
-    for accept in ["text/html", "text/vnd.turbo-stream.html, text/html"] {
-        let app = app().await;
-        let id = board(&app, JZ, &[DAVID, JZ]).await;
-        let mut browser = app.sign_in(JZ).await;
-        let (mut cable, _server) =
-            super::opens_rails_cases::stream_for(&app, &browser, &["rooms"]).await;
-        let reply = browser.write(delete(id, "").header("accept", accept)).await;
-        assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
-        assert_eq!(reply.location(), Some("http://campfire.test/"));
-        assert_eq!(
-            super::direct_selection_tests::next_flash(&app, &reply, &mut None),
-            json!({"notice":"Deleted #Launch"})
-        );
-        super::directs_rails_cases::pending_destroy(&app, id).await;
-        assert_eq!(
-            super::opens_rails_cases::frame(&mut cable).await,
-            format!(
-                "<turbo-stream action=\"remove\" target=\"list_rooms_board_{id}\"></turbo-stream>"
-            )
-        );
-        cable.assert_silent().await;
-        let (actor,target,details): (i64,String,String) = app.db().read(move|conn| Ok(conn.query_row("SELECT actor_id,target_type,details FROM audit_logs WHERE action='room.destroy' AND target_id=?",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?)))?)).await.unwrap();
-        assert_eq!(actor, JZ);
-        assert_eq!(target, "Room");
-        assert_eq!(
-            serde_json::from_str::<serde_json::Value>(&details).unwrap(),
-            json!({"name":"Launch"})
-        );
-        assert_eq!(
-            browser.get(&format!("/rooms/{id}")).await.location(),
-            Some("http://campfire.test/")
-        );
-    }
-}
-
-#[tokio::test]
-async fn board_destroy_scope_rejects_missing_deleted_and_other_room_types() {
-    let app = app().await;
-    for kind in [
-        RoomType::Closed,
-        RoomType::Open,
-        RoomType::Direct,
-        RoomType::Voice,
-        RoomType::Stage,
-    ] {
-        let id = app
-            .db()
-            .write(move |tx| {
-                let room = Room::create(tx, kind, Some("Other"), DAVID)?;
-                room.grant_to(tx, &[DAVID])?;
-                Ok(room.id)
-            })
-            .await
-            .unwrap();
-        let before_members = app
-            .db()
-            .read(move |conn| Ok(Room::find(conn, id)?.user_ids(conn)?.len()))
-            .await
-            .unwrap();
-        let reply = app.david().write(delete(id, ".json")).await;
-        assert_eq!(
-            reply.location(),
-            Some("http://campfire.test/"),
-            "{kind:?}: {}",
-            reply.text()
-        );
-        unchanged(&app, id, before_members).await;
-    }
-    assert_eq!(
-        app.david()
-            .write(delete(-1999999, ".json"))
-            .await
-            .location(),
-        Some("http://campfire.test/")
-    );
-    let id = board(&app, DAVID, &[DAVID]).await;
+async fn snapshot(app: &TestApp) -> DomainSnapshot {
     app.db()
-        .write(move |tx| {
-            tx.conn()
-                .execute("UPDATE rooms SET deleted_at=? WHERE id=?", (tx.now(), id))?;
-            Ok(())
+        .read(|conn| {
+            UNCHANGED_TABLES
+                .iter()
+                .map(|table| {
+                    let mut statement =
+                        conn.prepare(&format!("SELECT * FROM {table} ORDER BY id"))?;
+                    let columns = statement.column_count();
+                    Ok(statement
+                        .query_map([], |row| {
+                            (0..columns)
+                                .map(|index| row.get(index))
+                                .collect::<rusqlite::Result<Vec<_>>>()
+                        })?
+                        .collect::<rusqlite::Result<Vec<_>>>()?)
+                })
+                .collect::<campfire_db::Result<_>>()
         })
         .await
-        .unwrap();
-    assert_eq!(
-        app.david().write(delete(id, ".json")).await.location(),
-        Some("http://campfire.test/")
-    );
+        .unwrap()
 }
 
+async fn reference_error(name: &str) {
+    let oracle: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../vectors/board_destroy.json")).unwrap();
+    assert_eq!(oracle["cases"].as_array().unwrap().len(), 7);
+    let case = oracle["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["name"] == name)
+        .unwrap();
+    assert_eq!(case["response"]["status"], 500);
+    assert_eq!(case["exception"]["class"], "NoMethodError");
+    assert_eq!(case["exception"]["method"], "name");
+    assert_eq!(case["unchanged_tables"], json!(UNCHANGED_TABLES));
+    assert_eq!(case["jobs"], json!([]));
+    assert_eq!(case["broadcasts"], json!([]));
+    let app = app().await;
+    let id = case["id"].as_i64().unwrap();
+    let creator = case["creator"].as_i64().unwrap();
+    let members: Vec<i64> = case["members"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|id| id.as_i64().unwrap())
+        .collect();
+    let kind = if name == "wrong_type" {
+        "Rooms::Closed"
+    } else {
+        "Rooms::Board"
+    };
+    app.db().write(move |tx| {
+        tx.conn().execute("INSERT INTO rooms(id,type,name,creator_id,created_at,updated_at) VALUES(?1,?2,'Launch',?3,?4,?4)", rusqlite::params![id,kind,creator,tx.now()])?;
+        Room::find(tx.conn(),id)?.grant_to(tx,&members)?;
+        Ok(())
+    }).await.unwrap();
+    let mut browser = app.sign_in(case["actor"].as_i64().unwrap()).await;
+    let token = browser.authenticity_token().await;
+    let (mut cable, _server) =
+        super::opens_rails_cases::stream_for(&app, &browser, &["rooms"]).await;
+    let before = snapshot(&app).await;
+    let accept = match case["format"].as_str().unwrap() {
+        "json" => "application/json",
+        "turbo_stream" => "text/vnd.turbo-stream.html, text/html",
+        _ => "text/html",
+    };
+    let reply = browser
+        .send(
+            Req::new(Method::DELETE, case["path"].as_str().unwrap())
+                .header("accept", accept)
+                .header(campfire_kit::csrf::HEADER, &token),
+        )
+        .await;
+    assert_eq!(
+        reply.status.as_u16() as u64,
+        case["response"]["status"].as_u64().unwrap(),
+        "{name}"
+    );
+    assert_eq!(
+        reply.text(),
+        case["response"]["body"].as_str().unwrap(),
+        "{name}"
+    );
+    // Compare absence too: the public exception has neither a redirect nor cache directives.
+    for header in ["content-type", "location", "cache-control"] {
+        assert_eq!(
+            reply.header(header),
+            case["response"]["headers"][header].as_str(),
+            "{name}: {header}"
+        );
+    }
+    assert_eq!(
+        super::direct_selection_tests::next_flash(&app, &reply, &mut None),
+        case["flash"]
+    );
+    assert_eq!(
+        snapshot(&app).await,
+        before,
+        "{name}: domain or queue rows changed"
+    );
+    let state = app.db().read(move |conn| {
+        let room = Room::find(conn,id)?;
+        let audit = conn.query_row("SELECT action,actor_id,target_type,target_id,target_label,details FROM audit_logs WHERE action='room.destroy' AND target_id=? ORDER BY id DESC LIMIT 1", [id], |row| Ok(json!({"action":row.get::<_,String>(0)?,"actor_id":row.get::<_,i64>(1)?,"target_type":row.get::<_,String>(2)?,"target_id":row.get::<_,i64>(3)?,"target_label":row.get::<_,String>(4)?,"details":serde_json::from_str::<serde_json::Value>(&row.get::<_,String>(5)?).unwrap()}))).optional()?;
+        Ok(json!({"deleted":room.deleted_at.is_some(),"claimed":room.destroy_enqueued_at.is_some(),"memberships":room.user_ids(conn)?.len(),"audit":audit}))
+    }).await.unwrap();
+    assert_eq!(state, case["state"], "{name}");
+    cable.assert_silent().await;
+}
+
+macro_rules! board_route_case {
+    ($name:ident) => {
+        #[tokio::test]
+        async fn $name() {
+            reference_error(stringify!($name)).await;
+        }
+    };
+}
+board_route_case!(admin_json);
+board_route_case!(creator_html);
+board_route_case!(admin_turbo);
+board_route_case!(forbidden_member);
+board_route_case!(inaccessible_admin);
+board_route_case!(missing);
+board_route_case!(wrong_type);
+
 #[tokio::test]
-async fn board_destroy_requires_session_and_csrf_and_rejected_queue_rolls_back() {
+async fn board_destroy_still_requires_session_and_csrf_before_the_reference_error() {
     let app = app().await;
     let id = board(&app, DAVID, &[DAVID, JZ]).await;
+    let before = snapshot(&app).await;
     assert_eq!(
         app.anonymous().send(delete(id, ".json")).await.location(),
         Some("http://campfire.test/session/new")
@@ -246,17 +185,11 @@ async fn board_destroy_requires_session_and_csrf_and_rejected_queue_rolls_back()
         app.david().send(delete(id, ".json")).await.status,
         StatusCode::UNPROCESSABLE_ENTITY
     );
-    unchanged(&app, id, 2).await;
-    app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER reject_board_destroy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Room::DestroyJob' BEGIN SELECT RAISE(ABORT,'injected board queue failure'); END;")?;Ok(())}).await.unwrap();
-    assert_eq!(
-        app.david().write(delete(id, ".json")).await.status,
-        StatusCode::INTERNAL_SERVER_ERROR
-    );
-    unchanged(&app, id, 2).await;
+    assert_eq!(snapshot(&app).await, before);
 }
 
 #[tokio::test]
-async fn board_destroy_durable_worker_cleans_board_rows_and_purges_attachment_files() {
+async fn base_board_destroy_durable_worker_cleans_board_rows_and_purges_attachment_files() {
     let app = app().await;
     // The seed intentionally includes a message whose author has already been deleted.
     // Compare the complete FK result before/after, so cleanup introduces no orphan rows.
@@ -277,7 +210,10 @@ async fn board_destroy_durable_worker_cleans_board_rows_and_purges_attachment_fi
     let path = app.booted.app.storage.path_for(&blob);
     assert!(path.exists());
     assert_eq!(
-        app.david().write(delete(id, ".json")).await.status,
+        app.david()
+            .write(Req::new(Method::DELETE, &format!("/rooms/{id}.json")))
+            .await
+            .status,
         StatusCode::OK
     );
     super::directs_rails_cases::pending_destroy(&app, id).await;

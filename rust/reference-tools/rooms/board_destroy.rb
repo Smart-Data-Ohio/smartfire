@@ -1,4 +1,4 @@
-# Inherited RoomsController#destroy, through the real board route and session/CSRF stack.
+# The unchanged board DELETE route, including its inherited nil-room failure.
 require "json"
 require "digest"
 require "active_support/testing/time_helpers"
@@ -25,6 +25,16 @@ def browser(user_id)
   [client, token]
 end
 
+# Snapshot full rows, including queue records, before the request. Session activity is
+# intentionally outside this domain snapshot; no room destruction work may begin.
+UNCHANGED_TABLES = %w[rooms memberships messages channel_threads audit_logs background_jobs
+  active_storage_attachments active_storage_blobs active_storage_variant_records activity_items
+  board_tag_assignments board_sla_rules board_sla_nudges board_stale_digests boosts]
+def domain_snapshot
+  connection = ActiveRecord::Base.connection
+  UNCHANGED_TABLES.to_h { |table| [table, connection.select_all("SELECT * FROM #{connection.quote_table_name(table)} ORDER BY id").to_a] }
+end
+
 cases = []
 [
   ["admin_json", 127326141, 127326141, [127326141, 773523953], "json"],
@@ -43,16 +53,15 @@ cases = []
   path += ".json" if format == "json"
   broadcasts = []
   headers = { "X-CSRF-Token" => token, "Accept" => {"html" => "text/html", "json" => "application/json", "turbo_stream" => "text/vnd.turbo-stream.html, text/html"}.fetch(format) }
-  client.delete path, headers: headers
-  board_status = client.response.status
-  # The pinned board subclass accidentally removes destroy from both inherited callbacks.
-  # Preserve that finding; do not modify Rails or claim these are board-route success bytes.
-  # Exercise the exact inherited destroy action via its working base route on the same board.
-  reference_path = path.sub("/rooms/boards/", "/rooms/")
   subscription = ActiveSupport::Notifications.subscribe("broadcast.action_cable") { |*args| broadcasts << args.last.slice(:broadcasting, :message) }
   jobs_before = ActiveJob::Base.queue_adapter.enqueued_jobs.size
-  client.delete reference_path, headers: headers unless name == "wrong_type"
+  before = domain_snapshot
+  client.delete path, headers: headers
   ActiveSupport::Notifications.unsubscribe(subscription)
+  raise "domain write during #{name}" unless before == domain_snapshot
+  raise "unexpected response during #{name}" unless client.response.status == 500
+  error = client.request.env.fetch("action_dispatch.exception")
+  raise "unexpected exception during #{name}: #{error.inspect}" unless error.is_a?(NoMethodError) && error.name == :name
   ActiveSupport::IsolatedExecutionState.clear
   response = {status: client.response.status, body: client.response.body, headers: client.response.headers.slice("Content-Type", "Location", "Cache-Control")}
   flash = client.request.flash.to_hash
@@ -61,7 +70,8 @@ cases = []
   state = {deleted: room.deleted?, claimed: room.destroy_enqueued_at.present?, memberships: room.memberships.count,
     audit: audit&.attributes&.slice("action", "actor_id", "target_type", "target_id", "target_label", "details")}
   jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.drop(jobs_before).map { |job| [job[:job].name, job[:args]] }
-  cases << {name: name, id: id, actor: actor, creator: creator, members: members, format: format, path: path, reference_path: reference_path, board_route_status: board_status, response: response, flash: flash, state: state, broadcasts: broadcasts, jobs: jobs} unless name == "wrong_type"
+  raise "unexpected jobs or broadcasts during #{name}" unless jobs.empty? && broadcasts.empty?
+  cases << {name: name, id: id, actor: actor, creator: creator, members: members, format: format, path: path, response: response, flash: flash, state: state, broadcasts: broadcasts, jobs: jobs, unchanged_tables: UNCHANGED_TABLES, exception: {class: error.class.name, method: error.name, source: error.backtrace.find { |line| line.include?("app/controllers/rooms_controller.rb:") }&.sub(Rails.root.to_s + "/", "")}}
 end
-puts JSON.pretty_generate(reference: "d7c7de92", notes: "Board DELETE itself raises NoMethodError at rooms_controller.rb:29 before writes: its subclass callback scopes omit destroy. These are unmodified inherited-action responses via /rooms/:id on boards; the board-route crash remains flagged pending a Rails fix/decision.", cases: cases)
-warn "Rails inherited board destroy: #{cases.size} complete HTTP/state/broadcast comparisons; board-route crash retained explicitly"
+puts JSON.pretty_generate(reference: "d7c7de92", notes: "The unchanged board DELETE route raises NoMethodError on nil @room.name at rooms_controller.rb:29 because the subclass callback scopes exclude destroy. The lead decision is to reproduce this Rails reference error, as with directs#show. All seven responses are from /rooms/boards/:id itself; complete domain rows, durable queue, enqueued jobs and broadcasts remain unchanged. Board deletion by the UI continues through the existing /rooms/:id route. Nothing remains flagged.", cases: cases)
+warn "Rails board DELETE: #{cases.size} unchanged-route HTTP/state/broadcast comparisons; 7 reference 500s; zero domain writes, jobs or broadcasts"

@@ -84,24 +84,6 @@ async fn restriction(app: &TestApp) {
 }
 
 #[tokio::test]
-async fn destroy_board_marks_enqueues_and_returns_json() {
-    let app = setup().await.without_job_runner().await;
-    let reply = app
-        .david()
-        .write(Req::new(
-            Method::DELETE,
-            &format!("/rooms/boards/{BOARD}.json"),
-        ))
-        .await;
-    assert_eq!(reply.status, StatusCode::OK, "{}", reply.text());
-    assert_eq!(
-        reply.text(),
-        format!("{{\"deleted\":true,\"room_id\":{BOARD}}}")
-    );
-    super::directs_rails_cases::pending_destroy(&app, BOARD).await;
-}
-
-#[tokio::test]
 async fn sidebar_boards_list_between_channels_and_voice() {
     let app = setup().await;
     let board = fresh(&app, DAVID, &[DAVID, JZ]).await;
