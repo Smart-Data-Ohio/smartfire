@@ -96,7 +96,7 @@ try:
   server=subprocess.Popen([str(binary),'server'],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT)
   deadline=time.monotonic()+30
   while True:
-   if server.poll() is not None:raise RuntimeError('Rust server exited; '+str(run/'rust-server.log'))
+   if server.poll() is not None:raise RuntimeError('Rust server exited: '+(run/'rust-server.log').read_text())
    try:urllib.request.urlopen(f'http://127.0.0.1:{ports[1]}/up',timeout=1).close();break
    except OSError:
     if time.monotonic()>deadline:raise RuntimeError('Rust server failed startup')
