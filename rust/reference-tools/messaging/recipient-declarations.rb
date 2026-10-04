@@ -18,5 +18,5 @@ end)
 browser.post("/rooms/#{room.id}/messages.turbo_stream",params:{message:{markdown_source:'Recipient marker',client_message_id:'recipient-marker'}},headers:headers)
 # Human viewer streams only. Bender's bot delivery is checked by its owner.
 selected=frames.select{|frame|[127326141,149087659,712064548].any?{|id|frame[:stream]=="user_#{id}_unreads"}}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',status:browser.response.status,frames:selected)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],status:browser.response.status,frames:selected)+"\n")
 puts "WS8bm root recipients: #{selected.size} actual Rails personal unread frames; room members only"

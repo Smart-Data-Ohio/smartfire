@@ -36,5 +36,5 @@ travel_to Time.utc(2026,3,2,16) do
   capture.call(:completion) {Agent::Delivery.post_github_action_webhook!(webhook,event,agent:agent)}
   agent.destroy!
   capture.call(:legacy) {webhook.deliver(message)}
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",secret:secret,cases:cases)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],secret:secret,cases:cases)
 end

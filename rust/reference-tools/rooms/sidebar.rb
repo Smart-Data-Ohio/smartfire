@@ -66,4 +66,4 @@ large = Current.set(user: david) { Rooms::Direct.find_or_create_for([david,jason
 render_row.call("group_ten", large, large.memberships.find_by!(user: david), david)
 Current.reset
 puts JSON.pretty_generate(rows)
-warn "Rails sidebar rows: #{rows.size} byte goldens; reference d7c7de92"
+warn "Rails sidebar rows: #{rows.size} byte goldens; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

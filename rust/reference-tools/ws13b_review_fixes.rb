@@ -1,7 +1,7 @@
 require "json"
 require "active_support/testing/time_helpers"
 
-# Probe the real issuance, revocation callbacks and gateway parser at d7c7de92.
+# Probe the real issuance, revocation callbacks and gateway parser at the current reference pin.
 # Rails broadcasts rings synchronously; there is no deferred Rails ring job.
 class WS13bReviewFixes
   include ActiveSupport::Testing::TimeHelpers
@@ -108,7 +108,7 @@ class WS13bReviewFixes
       changed = grant.mark_out_of_call!(seen_after: floor)
       {seen_at: seen.iso8601(6), changed: changed, seen_after: grant.reload.last_seen_at&.iso8601(6)}
     end
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", rings: rings, failures: failures, times: times, boundaries: boundaries)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rings: rings, failures: failures, times: times, boundaries: boundaries)
   ensure
     ActiveSupport::Notifications.unsubscribe(observer) if observer
     travel_back

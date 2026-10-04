@@ -5,5 +5,5 @@ htmls=[%q{<p>see <code>https://x.com/jack/status/21</code> and https://x.com/jac
 format=texts.map { |text| {text:text,format:Twitter::PostFormatter.format(text).to_s,plain:Twitter::PostFormatter.plain(text).to_s,clamp:Twitter::PostFormatter.clamp?(text)} }
 extract=urls.map { |text| {text:text,refs:Twitter::PostUrl.extract(text).map(&:to_h),matches:Twitter::PostUrl.post_url?(text)} }
 non_code=htmls.map { |html| text=Twitter::PostUrl.non_code_text(html);{html:html,text:text,refs:Twitter::PostUrl.extract(text).map(&:to_h)} }
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',format:format,extract:extract,non_code:non_code})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],format:format,extract:extract,non_code:non_code})+"\n")
 puts "WS15e X text Rails oracle: #{format.size} formats, #{extract.size} extractions, #{non_code.size} non-code fragments"

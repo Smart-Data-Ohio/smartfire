@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "setup": [
     "DELETE FROM activity_items",
     "INSERT INTO channel_threads (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (9,4320,NULL,'2026-03-02 16:00:00',127326141,'2026-03-02 16:00:00',NULL,1,'Consumer <post>',NULL,NULL,NULL,NULL,699448332,NULL,'2026-03-02 16:00:00',NULL,'planned','2026-03-02 16:00:00')",

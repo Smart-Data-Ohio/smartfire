@@ -156,7 +156,7 @@ bounds = %w[1700000000.000001 1700000000.000002 1700000000.000003 1700000000.999
     {'ts'=>ts, 'bounds'=>bound, 'contains'=>bounds_writer.send(:in_bounds?,ts,{oldest:bound['oldest'],latest:bound['latest']})}
   end
 end
-output = {'reference'=>'d7c7de9264c63015be398001d7a1094e7695a6db', 'time'=>Time.current.iso8601(6),
+output = {'reference'=>ENV.fetch("PARITY_REFERENCE_SHA"), 'time'=>Time.current.iso8601(6),
   'bounds'=>bounds, 'json_columns'=>json_columns, 'initial'=>initial, 'imported'=>imported, 'undone'=>undone,
   'reimported'=>reimported, 'requests'=>requests}
 output.merge!('retained'=>retained, 'mutations'=>mutations, 'changed'=>changed) if retained

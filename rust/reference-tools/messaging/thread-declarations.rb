@@ -33,5 +33,5 @@ browser.patch("/rooms/#{room.id}/threads/#{locked.id}.json",params:{thread:{stat
 rows << {name:'unlock',status:browser.response.status,active:locked.reload.active?,last_activity_at:locked.last_activity_at.utc.iso8601(3)}
 browser.post("/rooms/#{room.id}/threads/#{live.id}/messages.json",params:{message:{markdown_source:'Hello',client_message_id:'sweep-trigger'}},headers:headers,as: :json)
 rows << {name:'sweep',status:browser.response.status,closed_at:stale.reload.closed_at.utc.iso8601(3)}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',closed_ids:threads.first(4).map(&:id),rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],closed_ids:threads.first(4).map(&:id),rows:rows)+"\n")
 puts 'WS8bm thread declarations: closed/locked/stale ordering, direct refusal, stale unlock and sibling sweep through real Rails requests'

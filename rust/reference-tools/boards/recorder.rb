@@ -20,11 +20,17 @@ Rails.logger = ActiveSupport::Logger.new($stderr)
  end
  queries=[]
  callback=->(*args){payload=args.last;queries<<payload[:sql] unless payload[:cached]}
- ActiveSupport::Notifications.subscribed(callback,'sql.active_record') do
-  thread.update_work!(actor:actor,work_status:'done')
+ # Record the cold database workload independently of Rails runner's executor cache.
+ ActiveRecord::Base.uncached do
+  ActiveSupport::Notifications.subscribed(callback,'sql.active_record') do
+   thread.update_work!(actor:actor,work_status:'done')
+  end
  end
  rosters=queries.grep(/SELECT.*FROM "(?:thread_memberships|memberships)"/i)
  users=queries.grep(/SELECT.*FROM "users"/i)
+ if ENV["PARITY_QUERY_TRACE"]
+  File.open(ENV.fetch("PARITY_QUERY_TRACE"), "a") { |file| file.puts(JSON.generate(name:n,sql:queries)) }
+ end
  results << {followers:n,membership_selects:rosters.size,user_selects:users.size,total:queries.size}
 end
 actor=User.find(127326141)
@@ -50,5 +56,5 @@ ActiveSupport::Notifications.subscribed(callback,'broadcast.action_cable') do
  thread.update_work!(actor:actor,work_status:'done')
 end
 raise 'read grouped item was not reopened' unless initial.reload.read_at.nil?
-puts JSON.pretty_generate(reference:'d7c7de92 plus approved board drift',fanout:results,unread_repoint_activity_frames:unread_frames,read_repoint_activity_frames:frames.size)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),fanout:results,unread_repoint_activity_frames:unread_frames,read_repoint_activity_frames:frames.size)
 warn "Rails recorder oracle: #{results.size} fanout traces; unread/read repoint activity frames=#{unread_frames}/#{frames.size}"

@@ -29,4 +29,4 @@ selected=["DND is manual-only outside quiet hours", "quiet hours cover an overni
   end
  end
 end
-puts JSON.generate(reference:"d7c7de92",rows:)
+puts JSON.generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:)

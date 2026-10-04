@@ -152,5 +152,5 @@ rows = specs.map do |spec|
     FileUtils.cp(backup, database); FileUtils.rm_f(backup)
   end
 end
-puts JSON.pretty_generate(reference:'d7c7de92', now:BASE.iso8601, rows:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now:BASE.iso8601, rows:)
 warn "Pinned Rails MeetingRefresh: #{rows.length} scenarios; #{rows.sum { |r| r[:steps].size }} ordered refreshes; recorded HTTP only"

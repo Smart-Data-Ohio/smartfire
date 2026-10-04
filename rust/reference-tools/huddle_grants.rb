@@ -55,7 +55,7 @@ class HuddleGrantOracle
       grant.record_seen!
       liveness << { at: Time.current.to_i, last_seen: grant.reload.last_seen_at.to_i, in_call: grant.in_call?, jobs: jobs.dup, updated_at: grant.updated_at.to_i }
     end
-    puts JSON.pretty_generate({ reference_pin: "d7c7de92", now: Time.utc(2026, 1, 1, 12).to_i, authorization: cases, liveness: liveness })
+    puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.utc(2026, 1, 1, 12).to_i, authorization: cases, liveness: liveness })
   ensure
     travel_back
   end

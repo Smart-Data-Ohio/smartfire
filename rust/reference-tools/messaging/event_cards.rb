@@ -22,5 +22,5 @@ end
 ids=messages.map(&:id).join(',');eids=events.map(&:id).join(',')
 selects={'rooms'=>"id=#{venue.id}",'events'=>"id IN (#{eids})",'messages'=>"id IN (#{ids})",'action_text_rich_texts'=>"record_type='Message' AND record_id IN (#{ids})",'event_references'=>"message_id IN (#{ids})"}
 rows=selects.to_h{|table,where|[table,ActiveRecord::Base.connection.select_all("SELECT * FROM #{table} WHERE #{where} ORDER BY id").to_a]}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:,cases:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:,cases:)+"\n")
 puts "WS8bm2 event cards Rails oracle: #{cases.size} populated containers; #{rows.size} fixture tables"

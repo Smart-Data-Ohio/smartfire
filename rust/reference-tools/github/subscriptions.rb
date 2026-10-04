@@ -90,7 +90,7 @@ vectors=cases.map do |c|
  {**c,request_body:c.fetch(:body,params),status:res.status,location:res['Location'],content_type:res['Content-Type'],body:res.status>=400 ? nil : res.body,flash:Thread.current[:subscription_flash],rows:,requests:Thread.current[:subscription_requests],bot_member:Membership.where(room_id:815,user:User.active_bots.where(name:"GitHub")).exists?,disconnected:GithubConnectedAccount.first&.disconnected_reason}
 end
 File.write("/work/vectors/github_subscription_http.json",JSON.pretty_generate(vectors)+"\n")
-puts "GitHub subscriptions Rails oracle: #{vectors.size} HTTP/status/flash/persistence cases; reference d7c7de92"
+puts "GitHub subscriptions Rails oracle: #{vectors.size} HTTP/status/flash/persistence cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
 sections=[{name:"admin_empty"},{name:"admin_subscribed",subscribed:true},{name:"creator_subscribed",subscribed:true,role:0},{name:"plain",subscribed:true,role:0,creator:812},{name:"direct",kind:"Rooms::Direct"}].map do |c|
  Github::Notification.delete_all;Github::RepositorySubscription.delete_all
  owner.update_columns(role:c.fetch(:role,1));owner.reload
@@ -102,4 +102,4 @@ sections=[{name:"admin_empty"},{name:"admin_subscribed",subscribed:true},{name:"
  {**c,subscriptions:,html:ApplicationController.render(partial:"rooms/github_subscriptions/section",locals:{room:r})}
 end
 File.write("/work/vectors/github_subscription_sections.json",JSON.pretty_generate(sections)+"\n")
-puts "GitHub subscription sections Rails oracle: #{sections.size} role/room/form HTML cases; reference d7c7de92"
+puts "GitHub subscription sections Rails oracle: #{sections.size} role/room/form HTML cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

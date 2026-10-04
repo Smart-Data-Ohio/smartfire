@@ -8,4 +8,4 @@ message = Message.find(818)
 empty = ApplicationController.render(partial: 'github/pull_requests/cards', locals: { message: })
 selected << { name: 'no_cards', cards: empty }
 File.write('/work/vectors/github_room_cards.json', JSON.pretty_generate(selected)+"\n")
-puts "GitHub room-card Rails oracle: #{selected.size} card-container cases through actual associations; reference d7c7de92"
+puts "GitHub room-card Rails oracle: #{selected.size} card-container cases through actual associations; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

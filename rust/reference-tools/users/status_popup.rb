@@ -36,5 +36,5 @@ http=[['frame_save',{presence_setting:'dnd',custom_status_emoji:'🚂',custom_st
   ActiveSupport::IsolatedExecutionState.clear
   {name:name,path:path,params:params,frame:frame,status:session.response.status,location:session.response.headers['location'],state:user.reload.attributes.slice('presence_setting','custom_status_emoji','custom_status_text','custom_status_expires_at')}
 end
-puts JSON.pretty_generate(reference:'d7c7de92',status_reference:'2e20b24c',popup:cases,http:http)
-warn "Rails status popup oracle: #{cases.size} complete popup bodies, #{http.size} HTTP update/state cases; status files 2e20b24c, other files d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),popup:cases,http:http)
+warn "Rails status popup oracle: #{cases.size} complete popup bodies, #{http.size} HTTP update/state cases; plain pinned reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

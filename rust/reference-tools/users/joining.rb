@@ -28,5 +28,5 @@ user=User.find_by!(email_address:'new@37signals.com')
 valid={status:session.response.status,location:session.response.headers['Location'],user_delta:User.count-count,role:user.role,room_ids:user.rooms.order(:id).pluck(:id),open_ids:Rooms::Open.order(:id).pluck(:id),session_count:user.sessions.count}
 session.get "/join/#{join}";ActiveSupport::IsolatedExecutionState.clear
 signed_get={status:session.response.status,location:session.response.headers['Location']}
-puts JSON.pretty_generate(reference:'d7c7de92',join:join,html:html,valid_get:valid_get,wrong_get:wrong_get,duplicate:duplicate,wrong_post:wrong_post,valid:valid,signed_get:signed_get)
-warn 'Rails joining oracle: 1 complete signup body; 6 HTTP cases with user, room and session state; reference d7c7de92'
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),join:join,html:html,valid_get:valid_get,wrong_get:wrong_get,duplicate:duplicate,wrong_post:wrong_post,valid:valid,signed_get:signed_get)
+warn "Rails joining oracle: 1 complete signup body; 6 HTTP cases with user, room and session state; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

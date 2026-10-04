@@ -92,5 +92,5 @@ audit_subject = Current.set(user: david) { Rooms::Closed.create_for({name: "Audi
 ActiveRecord::Base.connection.execute("CREATE TRIGGER reject_room_audit BEFORE INSERT ON audit_logs WHEN NEW.action='room.destroy' BEGIN SELECT RAISE(ABORT,'injected audit failure'); END")
 cases[:audit_failure] = admin.call(:delete, "/rooms/#{audit_subject.id}.json")
 cases[:audit_failure_state] = {deleted: audit_subject.reload.deleted?, enqueued: audit_subject.destroy_enqueued_at.present?}
-puts JSON.pretty_generate(reference: "d7c7de92", cases: cases)
-warn "Rails room HTTP oracle: #{cases.size} cases; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), cases: cases)
+warn "Rails room HTTP oracle: #{cases.size} cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

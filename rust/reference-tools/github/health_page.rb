@@ -34,4 +34,4 @@ vectors=configs.map do |config|
  {config:,snapshot:snapshots.as_json,html:}
 end
 File.write("/work/vectors/github_health_page.json",JSON.pretty_generate(vectors)+"\n")
-puts "Integration health Rails oracle: #{vectors.size} complete page/count/configuration cases; reference d7c7de92"
+puts "Integration health Rails oracle: #{vectors.size} complete page/count/configuration cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

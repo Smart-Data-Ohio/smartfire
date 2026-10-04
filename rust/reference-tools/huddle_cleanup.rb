@@ -53,7 +53,7 @@ class HuddleCleanupOracle
     replies << 404
     capture.call("already_removed_success", cleanup.perform!)
     capture.call("completed_noop", cleanup.perform!)
-    puts JSON.pretty_generate({ reference_pin: "d7c7de92", now: now.to_i, enqueues: enqueues.size, states: states })
+    puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: now.to_i, enqueues: enqueues.size, states: states })
   ensure
     travel_back
     server&.close

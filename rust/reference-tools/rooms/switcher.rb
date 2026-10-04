@@ -38,5 +38,5 @@ result[:anonymous_status] = anonymous.response.status
 anonymous.get "/switcher.json", params: {bot_key: "394959859-BenderToken1"}
 ActiveSupport::IsolatedExecutionState.clear
 result[:bot_status] = anonymous.response.status
-warn "Rails switcher oracle: 2 byte payloads, 2 auth responses; reference d7c7de92"
+warn "Rails switcher oracle: 2 byte payloads, 2 auth responses; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
 puts JSON.pretty_generate(result)

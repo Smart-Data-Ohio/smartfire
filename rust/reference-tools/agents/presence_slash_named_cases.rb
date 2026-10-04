@@ -38,5 +38,5 @@ begin
     c=AgentSlashCommand.new(agent:agent,room:room,name:kind=="builtin" ? "poll" : "inspect",description:kind=="description" ? "x"*141 : nil)
     c.valid?;commands[kind]=c.errors.to_hash
   end
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",presence:presence,commands:commands}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],presence:presence,commands:commands}.as_json)
 end

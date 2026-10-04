@@ -98,4 +98,4 @@ rows = []
     end
   end
 end
-puts JSON.generate(reference: "d7c7de92", rows:)
+puts JSON.generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:)

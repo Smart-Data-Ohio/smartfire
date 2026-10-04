@@ -24,5 +24,5 @@ ActiveRecord::Base.transaction do
  end
  raise ActiveRecord::Rollback
 end
-puts JSON.pretty_generate(reference_pin:'d7c7de92',allowed:,scalar_forms:forms.size,positions:11,cases:)
+puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],allowed:,scalar_forms:forms.size,positions:11,cases:)
 warn "WS11 next4 Rails numeric IDs: #{forms.size} forms; #{cases.size} executed predicates"

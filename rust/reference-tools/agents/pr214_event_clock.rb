@@ -23,7 +23,7 @@ begin
   end
   raise ActiveRecord::Rollback
  end
- puts JSON.pretty_generate(reference_pin:'d7c7de92',rows:rows,calls:calls)
+ puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:rows,calls:calls)
 ensure
  Time.define_singleton_method(:current,original)
 end

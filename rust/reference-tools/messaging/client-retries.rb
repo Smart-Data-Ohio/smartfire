@@ -38,5 +38,5 @@ scenario = MessagingOracleDatabase.scenarios(ARGV.fetch(0))
     end
   end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:) + "\n")
 puts "WS8bm client-retries oracle: #{rows.size} scenarios; #{rows.sum { |r| r[:responses].size }} actual Rails requests; root/reply/initial scalar IDs and raw blank-value semantics"

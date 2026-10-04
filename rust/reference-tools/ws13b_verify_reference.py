@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Verify the Rails implementation and test declarations inside the oracle image."""
+
+from status_pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import hashlib
 import os
 from pathlib import Path
@@ -33,11 +35,14 @@ PATHS = [
     "app/models/dnd_allowed_user.rb",
     "app/controllers/internal/huddle_controller.rb",
 ]
-image = os.environ.get("PARITY_IMAGE", "ws13-reference:d7c7de92")
-raw = subprocess.check_output(["docker", "run", "--rm", "--name", "ws13b-source-check", "--network", "none", "--entrypoint", "sha256sum", image, *[f"/rails/{path}" for path in PATHS]], text=True, cwd=ROOT)
+image = os.environ.get("PARITY_IMAGE", PIN_IMAGE)
+raw = subprocess.check_output(["docker", "run", "--rm", "--name", "ws13b-source-check", "--network", "none", "--entrypoint", "sha256sum", image, *[f"/rails/{path}" for path in PATHS if not path.startswith("test/")]], text=True, cwd=ROOT)
 for line in raw.splitlines():
     digest, path = line.split()
     local = path.removeprefix("/rails/")
-    expected = hashlib.sha256(subprocess.check_output(["git", "show", f"d7c7de92:{local}"], cwd=ROOT)).hexdigest()
+    expected = hashlib.sha256(subprocess.check_output(["git", "show", f"{PIN_FULL}:{local}"], cwd=ROOT)).hexdigest()
     assert digest == expected, local
-print(f"WS13b reference identity: {len(PATHS)} files match d7c7de92")
+print(f"WS13b reference identity: {len(PATHS)} files match {PIN}")
+for path in PATHS:
+    if path.startswith("test/"):
+        assert (ROOT/path).read_bytes() == subprocess.check_output(["git","show",f"{PIN_FULL}:{path}"],cwd=ROOT),path

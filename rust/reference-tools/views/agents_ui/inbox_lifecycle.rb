@@ -47,5 +47,5 @@ request.call('deleted source open JSON','post',"/activity/#{item.id}/open.json")
 request.call('deleted source open HTML','post',"/activity/#{item.id}/open",{},'text/html')
 
 travel_back
-puts JSON.pretty_generate(reference:'d7c7de92',message_id:message.id,steps:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),message_id:message.id,steps:)
 warn "Rails inbox lifecycle: #{steps.count{|s|s[:method]}} HTTP responses; 2 real reminder dispatches; reminder, recurrence and deleted-source"

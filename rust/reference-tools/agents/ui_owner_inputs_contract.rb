@@ -1,10 +1,10 @@
-# WS11 owner APIs: actual model writes and raw validation/form values at d7c7de92.
+# WS11 owner APIs: actual model writes and raw validation/form values at the current reference pin.
 ApplicationJob.queue_adapter = :test
 require 'json'
 inputs = [nil, '', ' ', '12', ' 12 ', '+12', '012', '12.0', '12.5', '12e1', '12x', 'x12', 'abc', '0', '-1', '1_000', '0x10', '9223372036854775807', '9223372036854775808', 12, 12.0, 12.5, true, false, [], ['12'], {'value'=>'12'}]
 bot = User.find_by!(name: 'Bender Bot')
 owner = User.find_by!(email_address: 'david@37signals.com')
-result = {reference: 'd7c7de9264c63015be398001d7a1094e7695a6db'}
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA")}
 result[:caps] = %w[daily_message_cap daily_board_post_cap daily_external_action_cap].flat_map do |field|
   inputs.map do |input|
     permitted = ActionController::Parameters.new(agent: {field=>input}).permit(agent: [field])[:agent]

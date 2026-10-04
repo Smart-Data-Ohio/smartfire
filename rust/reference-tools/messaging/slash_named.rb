@@ -58,5 +58,5 @@ names.each_with_index do |name,i|
   cases << {name:,room_id:room.id,rows:,initial:initial.transform_values { |v| v.is_a?(Time) || v.is_a?(ActiveSupport::TimeWithZone) ? v.utc.strftime('%Y-%m-%d %H:%M:%S.%6N') : v },huddle:config,observations:}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',now:'2026-09-23T12:00:00Z',cases:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:'2026-09-23T12:00:00Z',cases:)+"\n")
 puts "WS8bm2 named slash Rails: #{cases.size}/35 built-in cases; #{cases.sum { |c| c[:observations].size }} observations; actual attachment TracePoint and committed webhook/badge/notice hooks"

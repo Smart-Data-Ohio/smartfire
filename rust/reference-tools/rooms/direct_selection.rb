@@ -44,5 +44,5 @@ add_inputs.each do |value|
   additions << {input:value,status:client.response.status,location:client.response.headers['Location'],flash:flash,next_flash:next_flash,user_ids:room.reload.user_ids.sort,notes:room.messages.where(system_note:true).map(&:plain_text_body),audits:AuditLog.where(target_type:'Room',target_id:room.id).pluck(:action,:details)}
 end
 predicates=[[[127326141,149087659]],[[127326141],149087659],[[127326141],[149087659]],[[[127326141,149087659]]]].map { |input| {input:input,user_ids:User.where(id:input).pluck(:id).sort,sql:User.where(id:input).to_sql} }
-puts JSON.pretty_generate({reference:'d7c7de92',creates:creates,additions:additions,predicates:predicates})
-warn "Rails direct selection oracle: #{creates.size} create inputs, #{additions.size} member inputs; reference d7c7de92"
+puts JSON.pretty_generate({reference: ENV.fetch('PARITY_REFERENCE_SHA'),creates:creates,additions:additions,predicates:predicates})
+warn "Rails direct selection oracle: #{creates.size} create inputs, #{additions.size} member inputs; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

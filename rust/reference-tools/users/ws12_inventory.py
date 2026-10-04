@@ -3,6 +3,11 @@
 from pathlib import Path
 import json
 import re
+import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from status_pin_identity import PIN_FULL
 
 root = Path(__file__).resolve().parents[3]
 patterns = [
@@ -36,7 +41,8 @@ if reconciliation_path.exists():
 cases = []
 for path in files:
     relative = str(path.relative_to(root))
-    for line, text in enumerate(path.read_text().splitlines(),1):
+    source = subprocess.check_output(["git", "show", f"{PIN_FULL}:{relative}"], cwd=root, text=True)
+    for line, text in enumerate(source.splitlines(),1):
         match = re.match(r'\s*test "(.*?)" do',text)
         if not match or (path.name=="channel_threads_controller_test.rb" and line not in work_cases):
             continue
@@ -184,6 +190,6 @@ for path in files:
                 status = "deferred"
         cases.append(dict(file=relative,line=line,test=title,status=status,owner=owner,evidence=evidence))
 out = root / "rust/plans/ws12-rails-cases.json"
-out.write_text(json.dumps(dict(reference="d7c7de92; approved board drift uses origin/main on continuation",partial=True,cases=cases),indent=2)+"\n")
+out.write_text(json.dumps(dict(reference=PIN_FULL,partial=True,cases=cases),indent=2)+"\n")
 counts = {status:sum(c["status"]==status for c in cases) for status in sorted({c["status"] for c in cases})}
 print(f"WS12 Rails inventory: {len(cases)} declarations; " + "; ".join(f"{n} {s}" for s,n in counts.items()))

@@ -96,4 +96,4 @@ vectors=cases.map do |c|
  {**c,request_body:body,status:res.status,location:res["Location"],flash:Thread.current[:flash],account:,profile:user.reload.github_login,claimant_login:other.reload.github_login,requests:Thread.current[:requests],audit:}
 end
 File.write("/work/vectors/github_connections_http.json",JSON.pretty_generate(vectors)+"\n")
-puts "GitHub connections Rails oracle: #{vectors.size} HTTP/status/flash/identity/revocation cases; reference d7c7de92"
+puts "GitHub connections Rails oracle: #{vectors.size} HTTP/status/flash/identity/revocation cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

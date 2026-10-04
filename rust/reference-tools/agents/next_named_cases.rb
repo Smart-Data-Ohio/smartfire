@@ -89,4 +89,4 @@ travel_to Time.utc(2026, 3, 2, 16) do
     jobs: ApplicationJob.queue_adapter.enqueued_jobs.count { |job| job[:job] == Agent::DeliveryJob }
   }
 end
-puts JSON.pretty_generate(reference_pin: "d7c7de92", results: results)
+puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], results: results)

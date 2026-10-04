@@ -1,4 +1,4 @@
-# Independent PR #176 cursor probe: real deletion callbacks on Rails d7c7de92.
+# Independent PR #176 cursor probe: real deletion callbacks on the current Rails reference pin.
 require 'active_support/testing/time_helpers'
 require 'timeout'
 extend ActiveSupport::Testing::TimeHelpers
@@ -80,4 +80,4 @@ result[:concurrent_commits]={first_types:types.call(first), second_types:types.c
   second_cursor_is_interleaved_event:second[:next_since]==interleaved.id, deletion_id_after_interleaved_event:deleted.id>interleaved.id,
   resumed_types:types.call(third), resumed_cursor_is_deletion:third[:next_since]==deleted.id,
   deletion_count:agent.agent_events.where(event_type:'work_unassigned').count, thread_exists:ChannelThread.exists?(thread.id)}
-puts JSON.pretty_generate({reference:'d7c7de92',results:result}.as_json)
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:result}.as_json)

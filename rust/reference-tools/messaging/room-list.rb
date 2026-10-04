@@ -44,5 +44,5 @@ rows = states.map do |state|
     ids: facts.fetch("messages").map(&:id), divider_id: facts["unread_divider_message_id"],
     count: facts["unread_count"] || 0, scroll: facts["scroll_to_unread_divider"], jump_url: facts["jump_to_unread_url"], html:)
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", message_ids: messages.map(&:id), child_id: child.id, foreign_id: foreign.id, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], message_ids: messages.map(&:id), child_id: child.id, foreign_id: foreign.id, rows:) + "\n")
 puts "WS8bm room-list oracle: #{rows.size} real Rails room requests; selected roots/unread facts and show list-slot bytes; 0 session-bound values"

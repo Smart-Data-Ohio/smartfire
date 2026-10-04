@@ -78,5 +78,5 @@ cases = inputs.map do |name, attributes, cache, google|
   end
 end
 Current.reset
-puts JSON.pretty_generate(reference: 'd7c7de92', now: now.iso8601, cases: cases)
-warn "Rails layout preferences oracle: #{cases.size} persisted settings/cache cases; complete sound and Drive meta bytes; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), now: now.iso8601, cases: cases)
+warn "Rails layout preferences oracle: #{cases.size} persisted settings/cache cases; complete sound and Drive meta bytes; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
