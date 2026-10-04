@@ -51,3 +51,17 @@ Summary [   0.896s] 1 test run: 1 passed, 2853 skipped
 ```
 
 Original Rails recurrence file (source bytes checked against d7c7de92): `63 runs, 360 assertions, 0 failures, 0 errors, 0 skips`. Total continuation: **31 records closed; 190 remain**.
+
+## Batch 4: references, reminder occurrences and venues
+
+Eighteen named model tests close the next eighteen declarations. References check missing/no links, exact event identity on edit, and message deletion preserving the event. Reminders use the real due-ID scan and per-event transactional claim, with frozen midnight and consecutive occurrence clocks. Venues cover optional/voice/stage, rejected text/DM/nonmember rooms and exact error, self-room venue, retained links after leaving, real room deletion, all/local propagation, clearing, and no inbox mutation for venue-only edits. No production divergence found.
+
+```sh
+cargo nextest run -p campfire_db -j 4 -E 'test(cutover_reference_test::) | test(cutover_reminder_test::) | test(cutover_venue_test::)' --no-fail-fast
+```
+
+```text
+Summary [   0.726s] 18 tests run: 18 passed, 1411 skipped
+```
+
+Three original Rails files (source bytes matched d7c7de92): `35 runs, 117 assertions, 0 failures, 0 errors, 0 skips`. Total continuation: **49 records closed; 172 remain**.

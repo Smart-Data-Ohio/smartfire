@@ -1246,3 +1246,7 @@ fn event_nil_series_start_matches_rails_failure_without_writes() {
         assert_eq!(t.events().len(), before_events);
     }
 }
+
+mod cutover_reference_test;
+mod cutover_reminder_test;
+mod cutover_venue_test;

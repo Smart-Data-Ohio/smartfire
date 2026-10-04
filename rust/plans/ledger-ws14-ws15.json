@@ -1172,16 +1172,25 @@
       "rails_line": 41,
       "title": "a message without an event link references nothing",
       "id": "WS14e-041",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_message_without_link_has_no_events",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+          "line": 31
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 131,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a message without an event link references nothing. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/reference_sync_test.rb",
           "line": 41
         }
       },
-      "historical_line": 131,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1191,16 +1200,25 @@
       "rails_line": 64,
       "title": "a link to a missing event creates nothing",
       "id": "WS14e-042",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_missing_event_creates_no_references",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+          "line": 37
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 133,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a link to a missing event creates nothing. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/reference_sync_test.rb",
           "line": 64
         }
       },
-      "historical_line": 133,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1210,16 +1228,25 @@
       "rails_line": 75,
       "title": "editing a message to add an event link adds the reference",
       "id": "WS14e-043",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_edit_adds_the_exact_event",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+          "line": 47
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 134,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: editing a message to add an event link adds the reference. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/reference_sync_test.rb",
           "line": 75
         }
       },
-      "historical_line": 134,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1229,16 +1256,25 @@
       "rails_line": 99,
       "title": "deleting the message removes its references",
       "id": "WS14e-044",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_message_destroy_removes_join_and_preserves_event",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+          "line": 68
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 136,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: deleting the message removes its references. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/reference_sync_test.rb",
           "line": 99
         }
       },
-      "historical_line": 136,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1290,16 +1326,25 @@
       "rails_line": 113,
       "title": "consecutive occurrences of a series are each reminded once at their own time",
       "id": "WS14e-047",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_reminder_test::cutover_reminder_consecutive_occurrences_are_claimed_once_at_own_times",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reminder_test.rs",
+          "line": 12
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 150,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: consecutive occurrences of a series are each reminded once at their own time. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/reminder_dispatcher_test.rb",
           "line": 113
         }
       },
-      "historical_line": 150,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1309,16 +1354,25 @@
       "rails_line": 141,
       "title": "a series starting just before midnight still builds its occurrences",
       "id": "WS14e-048",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_reminder_test::cutover_reminder_start_crossing_midnight_builds_two_occurrences",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reminder_test.rs",
+          "line": 71
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 151,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a series starting just before midnight still builds its occurrences. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/reminder_dispatcher_test.rb",
           "line": 141
         }
       },
-      "historical_line": 151,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1538,16 +1592,25 @@
       "rails_line": 11,
       "title": "a venue is optional",
       "id": "WS14e-059",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_optional_is_valid_and_absent",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 71
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 176,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a venue is optional. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 11
         }
       },
-      "historical_line": 176,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1557,16 +1620,25 @@
       "rails_line": 18,
       "title": "a voice or Stage channel venue is valid",
       "id": "WS14e-060",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_voice_and_stage_are_valid",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 76
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 177,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a voice or Stage channel venue is valid. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 18
         }
       },
-      "historical_line": 177,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1576,16 +1648,25 @@
       "rails_line": 25,
       "title": "a text channel or DM venue is rejected",
       "id": "WS14e-061",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_text_and_direct_are_rejected",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 84
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 178,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a text channel or DM venue is rejected. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 25
         }
       },
-      "historical_line": 178,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1595,16 +1676,25 @@
       "rails_line": 35,
       "title": "the organizer must belong to the venue",
       "id": "WS14e-062",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_organizer_membership_is_required",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 91
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 179,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the organizer must belong to the venue. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 35
         }
       },
-      "historical_line": 179,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1614,16 +1704,25 @@
       "rails_line": 44,
       "title": "an event in a voice channel may use its own room as the venue",
       "id": "WS14e-063",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_voice_event_can_use_own_room",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 107
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 180,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an event in a voice channel may use its own room as the venue. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 44
         }
       },
-      "historical_line": 180,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1633,16 +1732,25 @@
       "rails_line": 51,
       "title": "other edits stay valid after the organizer leaves the venue",
       "id": "WS14e-064",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_unrelated_edits_remain_valid_after_organizer_leaves",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 120
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 181,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: other edits stay valid after the organizer leaves the venue. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 51
         }
       },
-      "historical_line": 181,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1652,16 +1760,25 @@
       "rails_line": 60,
       "title": "deleting the venue clears the link but keeps the event",
       "id": "WS14e-065",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_destroy_clears_link_and_preserves_event",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 145
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 182,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: deleting the venue clears the link but keeps the event. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 60
         }
       },
-      "historical_line": 182,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1671,16 +1788,25 @@
       "rails_line": 69,
       "title": "scheduling a series copies the venue to every occurrence",
       "id": "WS14e-066",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_series_copies_to_all_occurrences",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 165
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 183,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: scheduling a series copies the venue to every occurrence. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 69
         }
       },
-      "historical_line": 183,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1690,16 +1816,25 @@
       "rails_line": 79,
       "title": "this and following propagates a venue change",
       "id": "WS14e-067",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_following_propagates_change",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 172
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 184,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: this and following propagates a venue change. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 79
         }
       },
-      "historical_line": 184,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1709,16 +1844,25 @@
       "rails_line": 90,
       "title": "this and following propagates clearing the venue",
       "id": "WS14e-068",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_following_propagates_clear",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 181
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 185,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: this and following propagates clearing the venue. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 90
         }
       },
-      "historical_line": 185,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1728,16 +1872,25 @@
       "rails_line": 101,
       "title": "a single-occurrence edit changes the venue for that occurrence only",
       "id": "WS14e-069",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_local_edit_changes_only_one_occurrence",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 189
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 186,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a single-occurrence edit changes the venue for that occurrence only. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 101
         }
       },
-      "historical_line": 186,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1747,16 +1900,25 @@
       "rails_line": 112,
       "title": "a venue-only edit creates no inbox items",
       "id": "WS14e-070",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_only_edit_creates_no_inbox_items",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+          "line": 199
+        },
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+      },
+      "historical_line": 187,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a venue-only edit creates no inbox items. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/venue_test.rb",
           "line": 112
         }
       },
-      "historical_line": 187,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",

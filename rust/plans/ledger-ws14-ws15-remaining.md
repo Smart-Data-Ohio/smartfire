@@ -1,29 +1,11 @@
 # WS14 / WS15 cutover assertions still open
 
-**Partial slice: 190 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
+**Partial slice: 172 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
 
 The three inventories retain historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`. Continuation batches and Rails/native execution receipts are recorded in `ledger-ws14-ws15-b-report.md`.
 
 | Record | Current ledger row | Rails declaration | Assertion still required |
 |---|---|---|---|
-| WS14e-041 | `rust/plans/ws14e-test-inventory.md:142` | `test/models/event/reference_sync_test.rb:41` | a message without an event link references nothing |
-| WS14e-042 | `rust/plans/ws14e-test-inventory.md:144` | `test/models/event/reference_sync_test.rb:64` | a link to a missing event creates nothing |
-| WS14e-043 | `rust/plans/ws14e-test-inventory.md:145` | `test/models/event/reference_sync_test.rb:75` | editing a message to add an event link adds the reference |
-| WS14e-044 | `rust/plans/ws14e-test-inventory.md:147` | `test/models/event/reference_sync_test.rb:99` | deleting the message removes its references |
-| WS14e-047 | `rust/plans/ws14e-test-inventory.md:161` | `test/models/event/reminder_dispatcher_test.rb:113` | consecutive occurrences of a series are each reminded once at their own time |
-| WS14e-048 | `rust/plans/ws14e-test-inventory.md:162` | `test/models/event/reminder_dispatcher_test.rb:141` | a series starting just before midnight still builds its occurrences |
-| WS14e-059 | `rust/plans/ws14e-test-inventory.md:187` | `test/models/event/venue_test.rb:11` | a venue is optional |
-| WS14e-060 | `rust/plans/ws14e-test-inventory.md:188` | `test/models/event/venue_test.rb:18` | a voice or Stage channel venue is valid |
-| WS14e-061 | `rust/plans/ws14e-test-inventory.md:189` | `test/models/event/venue_test.rb:25` | a text channel or DM venue is rejected |
-| WS14e-062 | `rust/plans/ws14e-test-inventory.md:190` | `test/models/event/venue_test.rb:35` | the organizer must belong to the venue |
-| WS14e-063 | `rust/plans/ws14e-test-inventory.md:191` | `test/models/event/venue_test.rb:44` | an event in a voice channel may use its own room as the venue |
-| WS14e-064 | `rust/plans/ws14e-test-inventory.md:192` | `test/models/event/venue_test.rb:51` | other edits stay valid after the organizer leaves the venue |
-| WS14e-065 | `rust/plans/ws14e-test-inventory.md:193` | `test/models/event/venue_test.rb:60` | deleting the venue clears the link but keeps the event |
-| WS14e-066 | `rust/plans/ws14e-test-inventory.md:194` | `test/models/event/venue_test.rb:69` | scheduling a series copies the venue to every occurrence |
-| WS14e-067 | `rust/plans/ws14e-test-inventory.md:195` | `test/models/event/venue_test.rb:79` | this and following propagates a venue change |
-| WS14e-068 | `rust/plans/ws14e-test-inventory.md:196` | `test/models/event/venue_test.rb:90` | this and following propagates clearing the venue |
-| WS14e-069 | `rust/plans/ws14e-test-inventory.md:197` | `test/models/event/venue_test.rb:101` | a single-occurrence edit changes the venue for that occurrence only |
-| WS14e-070 | `rust/plans/ws14e-test-inventory.md:198` | `test/models/event/venue_test.rb:112` | a venue-only edit creates no inbox items |
 | WS14e-071 | `rust/plans/ws14e-test-inventory.md:204` | `test/controllers/rooms/events_controller_test.rb:10` | index lists upcoming, past, and cancelled events separately |
 | WS14e-072 | `rust/plans/ws14e-test-inventory.md:206` | `test/controllers/rooms/events_controller_test.rb:37` | a member can create an event and members are invited |
 | WS14e-073 | `rust/plans/ws14e-test-inventory.md:207` | `test/controllers/rooms/events_controller_test.rb:51` | a member can create a repeating event with one invitation per member |
