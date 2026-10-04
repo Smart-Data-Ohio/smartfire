@@ -147,6 +147,9 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
     const reply=panel.getByRole('combobox',{name:'Write a thread reply',exact:true});await waitForVisibleProperty(reply,'value','Thread draft');
     await actOnVisible(reply,'fill',{},['Thread draft sent']);await actOnVisible(panel.getByRole('button',{name:'Send Reply',exact:true}),'click',{});
     await waitForVisibility(filterVisibleText(panel.locator('.message__body'),'Thread draft sent'),{timeout:DELIVERY_WAIT});
+    // composer_test.rb also waits for Turbo's response to clear the draft:
+    // the Cable broadcast above can arrive before the send response.
+    await waitForVisibleProperty(reply,'value','');
     await room(fixture.pets_id);await room(654632876);await thread();await waitForVisibleProperty(reply,'value','');
   } else throw new Error(`unimplemented composer case ${caseName}`);
 }
