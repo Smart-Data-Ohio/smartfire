@@ -1,43 +1,11 @@
 # WS14 / WS15 cutover assertions still open
 
-**Partial slice: 172 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
+**Partial slice: 140 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
 
 The three inventories retain historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`. Continuation batches and Rails/native execution receipts are recorded in `ledger-ws14-ws15-b-report.md`.
 
 | Record | Current ledger row | Rails declaration | Assertion still required |
 |---|---|---|---|
-| WS14e-071 | `rust/plans/ws14e-test-inventory.md:204` | `test/controllers/rooms/events_controller_test.rb:10` | index lists upcoming, past, and cancelled events separately |
-| WS14e-072 | `rust/plans/ws14e-test-inventory.md:206` | `test/controllers/rooms/events_controller_test.rb:37` | a member can create an event and members are invited |
-| WS14e-073 | `rust/plans/ws14e-test-inventory.md:207` | `test/controllers/rooms/events_controller_test.rb:51` | a member can create a repeating event with one invitation per member |
-| WS14e-074 | `rust/plans/ws14e-test-inventory.md:208` | `test/controllers/rooms/events_controller_test.rb:74` | create rejects a series above the occurrence cap |
-| WS14e-075 | `rust/plans/ws14e-test-inventory.md:210` | `test/controllers/rooms/events_controller_test.rb:109` | index lists past occurrences individually |
-| WS14e-076 | `rust/plans/ws14e-test-inventory.md:213` | `test/controllers/rooms/events_controller_test.rb:172` | updating this and following shifts later occurrences and notifies once per attendee |
-| WS14e-077 | `rust/plans/ws14e-test-inventory.md:214` | `test/controllers/rooms/events_controller_test.rb:196` | updating without a scope leaves the rest of the series untouched |
-| WS14e-078 | `rust/plans/ws14e-test-inventory.md:215` | `test/controllers/rooms/events_controller_test.rb:218` | changing the rule away from the first event is rejected |
-| WS14e-079 | `rust/plans/ws14e-test-inventory.md:217` | `test/controllers/rooms/events_controller_test.rb:253` | an administrator who is not the organizer can use this and following, but an ordinary member cannot |
-| WS14e-080 | `rust/plans/ws14e-test-inventory.md:218` | `test/controllers/rooms/events_controller_test.rb:288` | cancelling this and following cancels later occurrences with one item per attendee |
-| WS14e-081 | `rust/plans/ws14e-test-inventory.md:219` | `test/controllers/rooms/events_controller_test.rb:307` | cancelling without a scope cancels only that occurrence |
-| WS14e-082 | `rust/plans/ws14e-test-inventory.md:220` | `test/controllers/rooms/events_controller_test.rb:322` | cancelling this event explicitly cancels only that occurrence |
-| WS14e-083 | `rust/plans/ws14e-test-inventory.md:221` | `test/controllers/rooms/events_controller_test.rb:337` | show renders cancel scopes for series occurrences and a single cancel for single events |
-| WS14e-084 | `rust/plans/ws14e-test-inventory.md:222` | `test/controllers/rooms/events_controller_test.rb:356` | index issues a bounded number of queries regardless of occurrence count |
-| WS14e-086 | `rust/plans/ws14e-test-inventory.md:225` | `test/controllers/rooms/events_controller_test.rb:419` | requires authentication |
-| WS14e-088 | `rust/plans/ws14e-test-inventory.md:227` | `test/controllers/rooms/events_controller_test.rb:443` | the organizer can update times and attendees are notified |
-| WS14e-089 | `rust/plans/ws14e-test-inventory.md:235` | `test/controllers/rooms/events_controller_test.rb:541` | a member can create an event with a venue |
-| WS14e-090 | `rust/plans/ws14e-test-inventory.md:236` | `test/controllers/rooms/events_controller_test.rb:553` | the organizer can set and clear the venue |
-| WS14e-091 | `rust/plans/ws14e-test-inventory.md:237` | `test/controllers/rooms/events_controller_test.rb:571` | create rejects a text channel venue |
-| WS14e-092 | `rust/plans/ws14e-test-inventory.md:238` | `test/controllers/rooms/events_controller_test.rb:582` | create rejects a venue the organizer does not belong to |
-| WS14e-093 | `rust/plans/ws14e-test-inventory.md:239` | `test/controllers/rooms/events_controller_test.rb:595` | update rejects a venue the organizer does not belong to |
-| WS14e-094 | `rust/plans/ws14e-test-inventory.md:240` | `test/controllers/rooms/events_controller_test.rb:609` | the edit form keeps a venue the editor cannot see so an unrelated edit does not clear it |
-| WS14e-095 | `rust/plans/ws14e-test-inventory.md:253` | `test/controllers/rooms/events_controller_test.rb:792` | index issues the same queries regardless of event count when venues are shared |
-| WS14e-096 | `rust/plans/ws14e-test-inventory.md:258` | `test/controllers/rooms/events_controller_test.rb:863` | show renders no Meet row for a non-https link |
-| WS14e-097 | `rust/plans/ws14e-test-inventory.md:268` | `test/controllers/rooms/events/attendances_controller_test.rb:49` | a response on the first event of a series is copied to every future occurrence |
-| WS14e-098 | `rust/plans/ws14e-test-inventory.md:269` | `test/controllers/rooms/events/attendances_controller_test.rb:64` | a later response stays local unless apply to all future is checked |
-| WS14e-099 | `rust/plans/ws14e-test-inventory.md:285` | `test/system/events_test.rb:4` | scheduling an event invites members, who respond and see it in the inbox |
-| WS14e-100 | `rust/plans/ws14e-test-inventory.md:286` | `test/system/events_test.rb:48` | scheduling a repeating event invites once per member and copies the first response |
-| WS14e-101 | `rust/plans/ws14e-test-inventory.md:287` | `test/system/events_test.rb:102` | scheduling an event announces it in the room with a card members respond from |
-| WS14e-106 | `rust/plans/ws14e-test-inventory.md:298` | `test/integration/event_cards_test.rb:108` | a link to an event in another room stays a plain link with no card for anyone |
-| WS14e-107 | `rust/plans/ws14e-test-inventory.md:299` | `test/integration/event_cards_test.rb:142` | a message without an event link renders no card |
-| WS14e-108 | `rust/plans/ws14e-test-inventory.md:300` | `test/integration/event_cards_test.rb:153` | rendering a room page costs no extra queries per message with an event link |
 | WS14g-004 | `rust/plans/ws14g-rails-test-map.md:148` | `test/controllers/messages_drive_attachments_test.rb:221` | viewers with and without Drive consent receive identical attachment markup |
 | WS14g-005 | `rust/plans/ws14g-rails-test-map.md:149` | `test/controllers/messages_drive_attachments_test.rb:239` | edit form lists attachments as removable chips with the blank sentinel |
 | WS14g-007 | `rust/plans/ws14g-rails-test-map.md:265` | `test/controllers/sudos_controller_test.rb:29` | confirming with the password verifies and audit-logs |

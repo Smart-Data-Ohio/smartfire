@@ -65,3 +65,23 @@ Summary [   0.726s] 18 tests run: 18 passed, 1411 skipped
 ```
 
 Three original Rails files (source bytes matched d7c7de92): `35 runs, 117 assertions, 0 failures, 0 errors, 0 skips`. Total continuation: **49 records closed; 172 remain**.
+
+## Batch 5: remaining Event HTTP, attendance, interaction and card assertions
+
+Thirty-two named HTTP tests close the remaining WS14e declarations: 24 event controller cases, two attendance propagation cases, three scheduling/inbox/card interaction cases and three card integration cases. Setup uses the original Rails fixtures, fresh real sessions, the real CSRF/router path and a frozen September 22 clock. Non-fixture seed rows are cleared before fixture loading; a seed-issued cookie is not reused after replacing its sessions.
+
+The two whole-request index query guards exposed missing preloads. Before the fix the occurrence-count case reads **47 then 57** statements, and the shared-venue case reads **38 then 78**. Both original Rails guards pass. The index now loads events and all presentation associations in batches (organizers, attendance/counts, venues, venue membership/live streams, calendar copies and series neighbors), keeping the show reader intact. Both guards now pass without count growth; the room/event-link guard already passes against the owner renderer. No JS/CSS or asset fingerprints changed.
+
+The interaction ports exercise the server assertions behind the original system flows: links and form fields, schedule redirects and heading/description/current response, series list labels, invitation identity/count, inbox open redirect, persisted responses, lazy card attendance frame and an in-frame response without navigation. A pinned Rails HTTP probe runs those same assertions: `reference-tools/cutover/events-interactions.rb`. It uses real Rails controllers/models and fixture users, not generated expectations from Rust. It passes **3 runs, 114 assertions, 0 failures, 0 errors, 0 skips**. No browser/pixel run is claimed.
+
+The three original controller/attendance/card files also run unmodified in Rails: **79 runs, 498 assertions, 0 failures, 0 errors, 0 skips**. Their installed source bytes match d7c7de92. Targeted Rust rerun also includes the prior attendance-shape and event-page regressions:
+
+```sh
+cargo nextest run -p campfire -j 4 -E 'test(tests::cutover::) | test(pr174_) | test(event_pages)' --no-fail-fast
+```
+
+```text
+Summary [  28.141s] 36 tests run: 36 passed, 2850 skipped
+```
+
+Total continuation: **81 ledger records closed by 78 named native tests; 140 remain**. All WS14e records now have passing assertions or the previously documented test-only disposition. The 140 remaining exact WS14g/WS15g declarations are listed in `ledger-ws14-ws15-remaining.md`; they remain in the gate.

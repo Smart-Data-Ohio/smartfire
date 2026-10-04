@@ -1928,16 +1928,25 @@
       "rails_line": 10,
       "title": "index lists upcoming, past, and cancelled events separately",
       "id": "WS14e-071",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_separates_upcoming_past_and_cancelled",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 7
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 193,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: index lists upcoming, past, and cancelled events separately. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 10
         }
       },
-      "historical_line": 193,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1947,16 +1956,25 @@
       "rails_line": 37,
       "title": "a member can create an event and members are invited",
       "id": "WS14e-072",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_member_create_invites_and_parses_posted_zone",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 37
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 195,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a member can create an event and members are invited. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 37
         }
       },
-      "historical_line": 195,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1966,16 +1984,25 @@
       "rails_line": 51,
       "title": "a member can create a repeating event with one invitation per member",
       "id": "WS14e-073",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_series_create_invites_once_per_member",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 62
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 196,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a member can create a repeating event with one invitation per member. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 51
         }
       },
-      "historical_line": 196,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1985,16 +2012,25 @@
       "rails_line": 74,
       "title": "create rejects a series above the occurrence cap",
       "id": "WS14e-074",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_above_cap_renders_error_without_writes",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 91
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 197,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: create rejects a series above the occurrence cap. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 74
         }
       },
-      "historical_line": 197,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2004,16 +2040,25 @@
       "rails_line": 109,
       "title": "index lists past occurrences individually",
       "id": "WS14e-075",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_lists_each_past_occurrence",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 101
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 199,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: index lists past occurrences individually. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 109
         }
       },
-      "historical_line": 199,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2023,16 +2068,25 @@
       "rails_line": 172,
       "title": "updating this and following shifts later occurrences and notifies once per attendee",
       "id": "WS14e-076",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_following_shift_notifies_once_per_attendee",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 134
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 202,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: updating this and following shifts later occurrences and notifies once per attendee. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 172
         }
       },
-      "historical_line": 202,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2042,16 +2096,25 @@
       "rails_line": 196,
       "title": "updating without a scope leaves the rest of the series untouched",
       "id": "WS14e-077",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_default_update_leaves_other_occurrences_untouched",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 164
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 203,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: updating without a scope leaves the rest of the series untouched. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 196
         }
       },
-      "historical_line": 203,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2061,16 +2124,25 @@
       "rails_line": 218,
       "title": "changing the rule away from the first event is rejected",
       "id": "WS14e-078",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_follower_rule_change_is_rejected",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 179
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 204,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: changing the rule away from the first event is rejected. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 218
         }
       },
-      "historical_line": 204,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2080,16 +2152,25 @@
       "rails_line": 253,
       "title": "an administrator who is not the organizer can use this and following, but an ordinary member cannot",
       "id": "WS14e-079",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_admin_following_edit_succeeds_and_member_edit_is_denied",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 193
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 206,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: an administrator who is not the organizer can use this and following, but an ordinary member cannot. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 253
         }
       },
-      "historical_line": 206,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2099,16 +2180,25 @@
       "rails_line": 288,
       "title": "cancelling this and following cancels later occurrences with one item per attendee",
       "id": "WS14e-080",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_following_cancel_cancels_later_and_notifies_once",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 218
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 207,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: cancelling this and following cancels later occurrences with one item per attendee. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 288
         }
       },
-      "historical_line": 207,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2118,16 +2208,25 @@
       "rails_line": 307,
       "title": "cancelling without a scope cancels only that occurrence",
       "id": "WS14e-081",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_default_cancel_is_local",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 267
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 208,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: cancelling without a scope cancels only that occurrence. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 307
         }
       },
-      "historical_line": 208,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2137,16 +2236,25 @@
       "rails_line": 322,
       "title": "cancelling this event explicitly cancels only that occurrence",
       "id": "WS14e-082",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_explicit_this_event_cancel_is_local",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 271
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 209,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: cancelling this event explicitly cancels only that occurrence. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 322
         }
       },
-      "historical_line": 209,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2156,16 +2264,25 @@
       "rails_line": 337,
       "title": "show renders cancel scopes for series occurrences and a single cancel for single events",
       "id": "WS14e-083",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_show_cancel_scope_inputs_only_for_series",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 275
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 210,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: show renders cancel scopes for series occurrences and a single cancel for single events. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 337
         }
       },
-      "historical_line": 210,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2175,16 +2292,25 @@
       "rails_line": 356,
       "title": "index issues a bounded number of queries regardless of occurrence count",
       "id": "WS14e-084",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_query_count_is_independent_of_occurrence_count",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 300
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion."
+      },
+      "historical_line": 211,
+      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: index issues a bounded number of queries regardless of occurrence count. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 356
         }
       },
-      "historical_line": 211,
-      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2215,16 +2341,25 @@
       "rails_line": 419,
       "title": "requires authentication",
       "id": "WS14e-086",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_signed_out_index_redirects_to_sign_in",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 332
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 214,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: requires authentication. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 419
         }
       },
-      "historical_line": 214,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2255,16 +2390,25 @@
       "rails_line": 443,
       "title": "the organizer can update times and attendees are notified",
       "id": "WS14e-088",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_uses_existing_zone_and_notifies_attendees",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 340
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 216,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the organizer can update times and attendees are notified. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 443
         }
       },
-      "historical_line": 216,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2274,16 +2418,25 @@
       "rails_line": 541,
       "title": "a member can create an event with a venue",
       "id": "WS14e-089",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_with_venue_persists_the_room",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 356
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 224,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a member can create an event with a venue. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 541
         }
       },
-      "historical_line": 224,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2293,16 +2446,25 @@
       "rails_line": 553,
       "title": "the organizer can set and clear the venue",
       "id": "WS14e-090",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_sets_and_clears_venue",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 377
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 225,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the organizer can set and clear the venue. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 553
         }
       },
-      "historical_line": 225,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2312,16 +2474,25 @@
       "rails_line": 571,
       "title": "create rejects a text channel venue",
       "id": "WS14e-091",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_rejects_text_venue_without_writes",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 421
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 226,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: create rejects a text channel venue. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 571
         }
       },
-      "historical_line": 226,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2331,16 +2502,25 @@
       "rails_line": 582,
       "title": "create rejects a venue the organizer does not belong to",
       "id": "WS14e-092",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_rejects_nonmember_venue_without_writes",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 425
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 227,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: create rejects a venue the organizer does not belong to. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 582
         }
       },
-      "historical_line": 227,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2350,16 +2530,25 @@
       "rails_line": 595,
       "title": "update rejects a venue the organizer does not belong to",
       "id": "WS14e-093",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_rejects_nonmember_venue_and_keeps_original",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 429
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 228,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: update rejects a venue the organizer does not belong to. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 595
         }
       },
-      "historical_line": 228,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2369,16 +2558,25 @@
       "rails_line": 609,
       "title": "the edit form keeps a venue the editor cannot see so an unrelated edit does not clear it",
       "id": "WS14e-094",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_editor_keeps_hidden_venue_during_unrelated_edit",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 453
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 229,
+      "historical_receipt": "Covered: `full_event_forms_match_pinned_rails_bytes (hidden stored venue rendering; unrelated HTTP edit still deferred)`",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the edit form keeps a venue the editor cannot see so an unrelated edit does not clear it. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 609
         }
       },
-      "historical_line": 229,
-      "historical_receipt": "Covered: `full_event_forms_match_pinned_rails_bytes (hidden stored venue rendering; unrelated HTTP edit still deferred)`"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2388,16 +2586,25 @@
       "rails_line": 792,
       "title": "index issues the same queries regardless of event count when venues are shared",
       "id": "WS14e-095",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_shared_venue_index_query_count_is_independent_of_event_count",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 487
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion."
+      },
+      "historical_line": 242,
+      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: index issues the same queries regardless of event count when venues are shared. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 792
         }
       },
-      "historical_line": 242,
-      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2407,16 +2614,25 @@
       "rails_line": 863,
       "title": "show renders no Meet row for a non-https link",
       "id": "WS14e-096",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_show_hides_non_https_meet_link",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+          "line": 540
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 247,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: show renders no Meet row for a non-https link. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events_controller_test.rb",
           "line": 863
         }
       },
-      "historical_line": 247,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2426,16 +2642,25 @@
       "rails_line": 49,
       "title": "a response on the first event of a series is copied to every future occurrence",
       "id": "WS14e-097",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::attendances::cutover_attendance_head_response_copies_to_each_future_occurrence",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/attendances.rs",
+          "line": 18
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 257,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a response on the first event of a series is copied to every future occurrence. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events/attendances_controller_test.rb",
           "line": 49
         }
       },
-      "historical_line": 257,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2445,16 +2670,25 @@
       "rails_line": 64,
       "title": "a later response stays local unless apply to all future is checked",
       "id": "WS14e-098",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::attendances::cutover_attendance_later_response_is_local_until_apply_future_checked",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/attendances.rs",
+          "line": 36
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 258,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a later response stays local unless apply to all future is checked. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/controllers/rooms/events/attendances_controller_test.rb",
           "line": 64
         }
       },
-      "historical_line": 258,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2464,16 +2698,25 @@
       "rails_line": 4,
       "title": "scheduling an event invites members, who respond and see it in the inbox",
       "id": "WS14e-099",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_schedule_invitation_inbox_open_and_response",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+          "line": 121
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+      },
+      "historical_line": 274,
+      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
+      "reconciliation_receipt": {
         "detail": "Browser interaction still required for: scheduling an event invites members, who respond and see it in the inbox. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/system/events_test.rb",
           "line": 4
         }
       },
-      "historical_line": 274,
-      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2483,16 +2726,25 @@
       "rails_line": 48,
       "title": "scheduling a repeating event invites once per member and copies the first response",
       "id": "WS14e-100",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_repeating_schedule_invites_once_and_copies_response",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+          "line": 135
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+      },
+      "historical_line": 275,
+      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
+      "reconciliation_receipt": {
         "detail": "Browser interaction still required for: scheduling a repeating event invites once per member and copies the first response. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/system/events_test.rb",
           "line": 48
         }
       },
-      "historical_line": 275,
-      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2502,16 +2754,25 @@
       "rails_line": 102,
       "title": "scheduling an event announces it in the room with a card members respond from",
       "id": "WS14e-101",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_announcement_card_response_stays_in_requested_frame",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+          "line": 154
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+      },
+      "historical_line": 276,
+      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
+      "reconciliation_receipt": {
         "detail": "Browser interaction still required for: scheduling an event announces it in the room with a card members respond from. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/system/events_test.rb",
           "line": 102
         }
       },
-      "historical_line": 276,
-      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2605,16 +2866,25 @@
       "rails_line": 108,
       "title": "a link to an event in another room stays a plain link with no card for anyone",
       "id": "WS14e-106",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_foreign_event_link_is_plain_for_members_and_nonmembers",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
+          "line": 24
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 287,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a link to an event in another room stays a plain link with no card for anyone. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/event_cards_test.rb",
           "line": 108
         }
       },
-      "historical_line": 287,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2624,16 +2894,25 @@
       "rails_line": 142,
       "title": "a message without an event link renders no card",
       "id": "WS14e-107",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_message_without_event_link_has_no_card",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
+          "line": 67
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 288,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a message without an event link renders no card. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/event_cards_test.rb",
           "line": 142
         }
       },
-      "historical_line": 288,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -2643,16 +2922,25 @@
       "rails_line": 153,
       "title": "rendering a room page costs no extra queries per message with an event link",
       "id": "WS14e-108",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_whole_room_query_count_is_independent_of_event_link_count",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
+          "line": 103
+        },
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+      },
+      "historical_line": 289,
+      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: rendering a room page costs no extra queries per message with an event link. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/integration/event_cards_test.rb",
           "line": 153
         }
       },
-      "historical_line": 289,
-      "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14g",
