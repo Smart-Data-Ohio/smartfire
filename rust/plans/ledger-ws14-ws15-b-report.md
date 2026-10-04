@@ -68,7 +68,7 @@ Three original Rails files (source bytes matched d7c7de92): `35 runs, 117 assert
 
 ## Batch 5: remaining Event HTTP, attendance, interaction and card assertions
 
-Thirty-two named HTTP tests close the remaining WS14e declarations: 24 event controller cases, two attendance propagation cases, three scheduling/inbox/card interaction cases and three card integration cases. Setup uses the original Rails fixtures, fresh real sessions, the real CSRF/router path and a frozen September 22 clock. Non-fixture seed rows are cleared before fixture loading; a seed-issued cookie is not reused after replacing its sessions.
+Thirty-two named HTTP tests close the next thirty-two WS14e declarations: 24 event controller cases, two attendance propagation cases, three scheduling/inbox/card interaction cases and three card integration cases. Setup uses the original Rails fixtures, fresh real sessions, the real CSRF/router path and a frozen September 22 clock. Non-fixture seed rows are cleared before fixture loading; a seed-issued cookie is not reused after replacing its sessions.
 
 The two whole-request index query guards exposed missing preloads. Before the fix the occurrence-count case reads **47 then 57** statements, and the shared-venue case reads **38 then 78**. Both original Rails guards pass. The index now loads events and all presentation associations in batches (organizers, attendance/counts, venues, venue membership/live streams, calendar copies and series neighbors), keeping the show reader intact. Both guards now pass without count growth; the room/event-link guard already passes against the owner renderer. No JS/CSS or asset fingerprints changed.
 
@@ -84,4 +84,109 @@ cargo nextest run -p campfire -j 4 -E 'test(tests::cutover::) | test(pr174_) | t
 Summary [  28.141s] 36 tests run: 36 passed, 2850 skipped
 ```
 
-Total continuation: **81 ledger records closed by 78 named native tests; 140 remain**. At the original starting head, all 108 WS14e records had passing receipts; the later parent review reopens two reminder-pusher assertions, retained below. The 140 remaining exact WS14g/WS15g declarations are listed in `ledger-ws14-ws15-remaining.md`; they remain in the gate.
+Total continuation at the original starting head: **81 ledger records closed by 78 named native tests; 140 remained**. The exact open declarations remain in the gate and are listed in `ledger-ws14-ws15-remaining.md`.
+
+## Parent review reconciliation
+
+While final verification was running, the parent PR advanced to `ec35cd92c74a07addc2f91e9f67207098c8b7d64`. Merge commit `553eb2196fe265346d75dca688f57112e921964a` retains its strengthened tests and receipt corrections, together with all 81 closures above. No continuation commits were pushed to the parent branch.
+
+The parent review reopened four earlier receipt claims, which are preserved as open assertions rather than folded into this slice:
+
+- **WS14e-051**: execute the registered reminder-push job with the Lounge venue and assert the queued push suffix.
+- **WS14e-057**: execute the registered reminder-push job for a recently started but already ended event, with a still-running control.
+- **WS15g-056**: execute the registered GitHub fetch-PR job for a mapped PR and assert the thread card/header broadcast title and file.
+- **WS15g-057**: execute that job with neither references nor mappings and assert zero broadcasts plus the committed fetch.
+
+Current disposition: **81 assertions closed in this slice; 144 remain (2 WS14e, 97 WS14g, 45 WS15g)**. This is the requested coherent stopping point at about 80 closures. The ledger retains the precise Rails declarations, missing assertions and current row locations for all remaining records.
+
+
+## Final validation
+
+Verified code: `553eb2196fe265346d75dca688f57112e921964a`, in a fresh local clone created with `git clone --no-hardlinks`, then advanced to the merged head. Only this report changes after that code head. Commands below run inside the canonical `campfire-toolchain-ci-rust-speedups:latest` image with Rust 1.98.1, canonical libvips, `CI=true`, build jobs 2, the existing machine-wide rustc slot throttle and nextest workers 4. The shared `rust/target` cache is retained; checkout inputs come exclusively from the fresh clone. No test timing threshold or concurrency setting changed.
+
+All three current-schema seeds were rebuilt and validated by Rails before being copied into the fresh clone:
+
+```sh
+PARITY_IMAGE=ws11ui-cutover-reference:current-schema rust/parity/bin/ci-seed prepare
+PARITY_IMAGE=ws11ui-cutover-reference:current-schema rust/parity/bin/ci-seed check-image
+PARITY_IMAGE=ws11ui-cutover-reference:current-schema rust/parity/bin/ci-seed build
+PARITY_IMAGE=ws11ui-cutover-reference:current-schema rust/parity/bin/ci-seed validate
+```
+
+```text
+  "passed": 29,
+  "failed": 0
+ci-seed: default validated
+  "passed": 4,
+  "failed": 0
+ci-seed: first_run validated
+  "passed": 40,
+  "failed": 0
+ci-seed: agents_ui validated
+```
+
+Final full-workspace run:
+
+```sh
+cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast
+```
+
+```text
+     Summary [1876.631s] 5034 tests run: 5034 passed (7 slow), 20 skipped
+```
+
+The earlier fresh-clone run before merging the parent review corrections also passed: `Summary [1748.683s] 5030 tests run: 5030 passed (7 slow), 20 skipped`. The final PASS log contains **78/78** unique test names from the 81 updated records; none of this slice's tests is skipped. These tests run under the existing blocking db/app CI package selectors in `.github/workflows/rust.yml`. The canonical `avatar_bot_logo_uploads_match_pinned_rails` comparison passes. No inherited flake appeared.
+
+Strict lint check on the merged code:
+
+```sh
+cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings
+```
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 43.01s
+```
+
+Exit status 0. Two test-only helper lints encountered earlier were fixed by moving the regex outside its loop and returning the query count directly; no lint suppression was added. The affected HTTP tests were rerun:
+
+```sh
+cargo nextest run -p campfire -j 4 -E 'test(tests::cutover::)' --no-fail-fast
+```
+
+```text
+     Summary [  20.911s] 33 tests run: 33 passed, 2853 skipped
+```
+
+Workspace doctests (the recurrence guard compile-fail case passes; the two existing kit examples remain ignored):
+
+```sh
+cargo test --workspace --exclude html5ever --doc --no-fail-fast -- --test-threads=4
+```
+
+```text
+test crates/db/src/models/calendar_event/changes.rs - models::calendar_event::changes::EventChanges (line 20) - compile fail ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Ledger validation:
+
+```sh
+python3 rust/reference-tools/cutover/check-ws14-ws15.py
+```
+
+```text
+Acceptance ledger: 445 records checked; 181 baseline-CI passed; 119 new assertions; 1 test-only outside gate; 144 explicitly open
+```
+
+Production-input binary build, excluding test vectors/reference tools and Rails source outside the explicit asset inputs:
+
+```sh
+bash ci/with-release-inputs.sh cargo build --workspace --bins
+```
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 1m 20s
+```
+
+Exit status 0. Own fresh-clone/Rails storage/scratch output is removed after the PR is opened; the shared target cache and inherited worktree output are preserved.
