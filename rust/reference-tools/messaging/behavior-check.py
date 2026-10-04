@@ -28,10 +28,12 @@ RUST = ROOT / "rust"
 SCRATCH = ROOT / ".scratch"
 PIN = "d7c7de9264c63015be398001d7a1094e7695a6db"
 CASES = {
+    "motion": ['mobile drawer animates in, lands in place, and returns focus with motion on', 'member selection mode moves no rows and resizes nothing', 'people directory bar shifts no rows when toggling', 'people directory bar stays stuck while scrolling', 'room menu measures at full scale when clamping to the viewport edge', 'mobile drawer keeps the room list scroll position across close and reopen', 'mobile drawer reveals a current room far down the list on first open', 'mobile drawer reopens on the current room when it is already in view'],
     "mobile_layout": ['the profile page fits phone widths without scrolling sideways', 'headers outside the workspace shell stay opaque over scrolled content', 'headers outside the workspace shell never cover the page or its scrollbar', 'pages outside the workspace shell show no drawer toggle that opens nothing', 'every drawer destination has one toggle that opens the drawer on itself'],
     "channel_threads_controller": ['converts a thread to work, assigns an eligible owner, and keeps an audit trail', 'work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable', 'assigned owner can change work status but cannot reassign it', 'only a thread manager can remove work tracking', 'a manager can assign an eligible agent and the agent is notified', 'the owner picker lists eligible agents with profiles and excludes ineligible ones', 'a member who cannot manage the thread cannot assign an agent', 'ordinary thread fields remain separate from work tracking'],
     "sending_messages": ["sending messages between two users", "editing messages", "deleting messages"],
     "workspace_markdown": [
+        "workspace follows the system theme and mobile navigation remains reachable",
         "Markdown messages reach other users and editing preserves the original source",
         "desktop keyboard composition keeps line breaks and sends once after composition ends",
         "untrusted markup stays inert in the delivered message",
@@ -115,6 +117,7 @@ CASES = {
         "thread drafts persist per thread without touching the channel draft",
     ],
     "composer_attach_menu": [
+        "From Google Drive starts the enhanced share flow when sharing is configured",
         "+ shows both attach options when Drive is available",
         "From this device triggers the file input",
         "+ opens the file picker directly without Drive",
@@ -207,17 +210,21 @@ if args.mutant:
     env["WS8BM_MUTANT"] = args.mutant
 else:
     env.pop("WS8BM_MUTANT", None)
+browser_image = "ws8bm-browser-reference-d7c7de92"
+subprocess.run(["docker", "build", "--build-context", f"current_schema={ROOT / 'db'}", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/messaging/browser.Dockerfile"), "-t", browser_image, str(RUST)], cwd=ROOT, check=True)
+env["PARITY_IMAGE"] = browser_image
 subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"], cwd=ROOT, env=env, check=True)
-subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+# Build every host this invocation uses, including on a cold target. A
+# paused-only case uses TestApp's real binary and needs no second app build.
+# Preserve continuation's upload boundary as well as URL/PR jobs.
+paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable", "workspace follows the system theme and mobile navigation remains reachable"}
+needs_paused_jobs=not args.slice and any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
+selected_names=[name for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case]
+if args.slice or any(name not in paused_job_cases for name in selected_names):
+    subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+test_host=build_host(ROOT,env) if needs_paused_jobs else None
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
-# Preserve continuation's upload boundary as well as URL/PR jobs.
-paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable"}
-needs_paused_jobs=not args.slice and any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
-test_host=build_host(ROOT,env) if needs_paused_jobs else None
-browser_image = "ws8bm-browser-reference-d7c7de92"
-subprocess.run(["docker", "build", "--build-arg", f"BASE_IMAGE={image}", "-f", str(RUST / "reference-tools/messaging/browser.Dockerfile"), "-t", browser_image, str(RUST)], cwd=ROOT, check=True)
-env["PARITY_IMAGE"] = browser_image
 visibility_atom = subprocess.check_output([
     "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
     "exec", "ruby", "-rselenium-webdriver", "-e",
@@ -232,7 +239,12 @@ for line in (RUST / "parity/.env.reference").read_text().splitlines():
 env.update(CAMPFIRE_FROZEN_TIME="2026-03-02T16:00:00Z", CAMPFIRE_LOG="error", TARGET_BIND="127.0.0.1")
 target = Path(env.get("CARGO_TARGET_DIR", RUST / "target"))
 reference = str(RUST / "parity/bin/reference")
-ports = [52020, 52021, 52022]
+# Keep the historical default, while allowing a worker to choose slots outside
+# its OS ephemeral-client range. No application wait or retry is changed.
+port_base = int(env.get("WS8BM_BROWSER_PORT_BASE", "52020"))
+if not 1 <= port_base <= 65533:
+    raise ValueError("WS8BM_BROWSER_PORT_BASE must leave room for three ports")
+ports = [port_base + offset for offset in range(3)]
 # Refuse occupied ports; never stop another worker's listener.
 reservations = []
 try:
@@ -296,7 +308,9 @@ for file in files:
         batches += [[case for case in selected if case in navigation]]
     batches += [[case] for case in selected if case not in readonly + navigation]
     if file == "composer_attach_menu":
-        batches = [selected]  # No server writes; new contexts for each case.
+        enhanced=[case for case in selected if case.startswith("From Google Drive starts the enhanced")]
+        ordinary=[case for case in selected if case not in enhanced]
+        batches=([ordinary] if ordinary else [])+[[case] for case in enhanced] # Distinct server configuration.
     jobs = probe_jobs(batches, selected, negative=args.negative, mutant=args.mutant,
                       mutation_variants=mutation_variants,
                       diagnostic_variants=diagnostic_variants if args.mutant_set else None)
@@ -311,7 +325,9 @@ for file in files:
             work = Path(directory)
             fixture = work / "fixture"
             shutil.copytree(RUST / "parity/.seed/default", fixture)
-            if file == "channel_threads_controller":
+            if file == "motion":
+                subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "motion", case], cwd=ROOT, env=env, check=True)
+            elif file == "channel_threads_controller":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "work-controller", case], cwd=ROOT, env=env, check=True)
             elif file == "mobile_layout":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "mobile-layout"], cwd=ROOT, env=env, check=True)
@@ -336,8 +352,11 @@ for file in files:
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             elif file == "composer_attach_menu":
+                fixture_kind="attach-share" if case.startswith("From Google Drive starts the enhanced") else "attach-menu"
+                if fixture_kind=="attach-share":
+                    (fixture / "db/drive-share-mocks.rb").write_bytes(subprocess.check_output(["git","show",f"{PIN}:test/support/drive_share_mocks.rb"],cwd=ROOT))
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
-                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "attach-menu"], cwd=ROOT, env=env, check=True)
+                                str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
             elif file == "boosting_messages":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "boosts"], cwd=ROOT, env=env, check=True)
@@ -364,7 +383,7 @@ for file in files:
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if file == "channel_threads_controller":
+            if file == "channel_threads_controller" or case in {"workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
                 run_env['WS8BM_WORK_DATABASES']=json.dumps({
                     f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db/production.sqlite3'),
                     f'http://127.0.0.1:{ports[1]}':str(work / 'db/production.sqlite3'),
@@ -374,12 +393,17 @@ for file in files:
             if file == "composer_attach_menu":
                 run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
             paused_jobs=any(name in paused_job_cases for name in batch)
+            if case.startswith("From Google Drive starts the enhanced"):
+                run_env.update(GOOGLE_PICKER_API_KEY="test-picker-key",GOOGLE_CLOUD_PROJECT_NUMBER="123456789012")
             if paused_jobs:
                 run_env["WS8BM_BROWSER_HOST"]="1"
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log:
                 try:
                     reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
+                    if case.startswith("From Google Drive starts the enhanced"):
+                        for key in ["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_PICKER_API_KEY","GOOGLE_CLOUD_PROJECT_NUMBER"]:
+                            reference_up += ["-e",key+"="+run_env[key]]
                     if paused_jobs:
                         reference_up += ["-e", "WS8BM_TEST_JOB_ADAPTER=1"]
                     subprocess.run(reference_up, cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
@@ -453,10 +477,19 @@ for file in files:
                     databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
                     for database in databases:
                         with sqlite3.connect(database) as conn:
-                            if file == "mobile_layout" or case.startswith("text fields"):
+                            if case == "workspace follows the system theme and mobile navigation remains reachable":
+                                reference_source = subprocess.check_output(["git","show",f"{PIN}:test/system/workspace_markdown_test.rb"],cwd=ROOT,text=True)
+                                literal=textwrap.dedent(reference_source.split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("  MARKDOWN")[0])
+                                assert conn.execute("SELECT COUNT(*) FROM messages WHERE creator_id=773523953 AND room_id=654632876 AND markdown_source=?",(literal,)).fetchone()[0]==1
+                                mobile=conn.execute("SELECT creator_id,room_id,markdown_source FROM messages WHERE markdown_source LIKE 'Mobile draft%' ORDER BY id").fetchall()
+                                print(f"WS8bm workspace final write: {database}: {mobile!r}",flush=True)
+                                assert mobile==[(773523953,201306877,"Mobile draft\n")]
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
-                                    for table in ["messages","channel_threads"]:
-                                        query=f"SELECT * FROM {table} ORDER BY id"
+                                    assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]==seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]+2
+                            elif file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    for table in (["messages","channel_threads","users","rooms"] if file == "motion" else ["messages","channel_threads"]):
+                                        query=("SELECT id,name,email_address,role,status FROM users ORDER BY id" if table=="users" else "SELECT id,name,type,creator_id FROM rooms ORDER BY id" if table=="rooms" else f"SELECT * FROM {table} ORDER BY id")
                                         assert conn.execute(query).fetchall()==seed.execute(query).fetchall()
                             elif file == "channel_threads_controller":
                                 from behavior_work_rows import assert_work_rows
@@ -494,7 +527,7 @@ for file in files:
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE id=607264868").fetchone() == ("Redacted!",)
                             elif case == "deleting messages":
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE id=607264868").fetchone()[0] == 0
-                            elif case == CASES["workspace_markdown"][0]:
+                            elif case == "Markdown messages reach other users and editing preserves the original source":
                                 markdown = textwrap.dedent(source.decode().split("MARKDOWN = <<~'MARKDOWN'.freeze\n")[1].split("  MARKDOWN")[0])
                                 # The actual browser edit uses multipart FormData, whose
                                 # wire serialization preserves CRLF in the saved string.
@@ -504,10 +537,10 @@ for file in files:
                                 actual = conn.execute("SELECT markdown_source FROM messages WHERE markdown_source LIKE '## Review complete%'").fetchall()
                                 assert actual == [(edited,)], f"{database}: saved source {actual!r}; expected {edited!r}"
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (markdown,)).fetchone()[0] == 0
-                            elif case == CASES["workspace_markdown"][1]:
+                            elif case == "desktop keyboard composition keeps line breaks and sends once after composition ends":
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", ("First line\nSecond line",)).fetchone()[0] == 1
-                            elif case == CASES["workspace_markdown"][2]:
-                                payload = textwrap.dedent(source.decode().split("payload = <<~'MARKDOWN'\n")[1].split("    MARKDOWN")[0])
+                            elif case == "untrusted markup stays inert in the delivered message":
+                                payload = textwrap.dedent(source.decode().split("payload = <<~'MARKDOWN'\n")[1].split("  MARKDOWN")[0])
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (payload,)).fetchone()[0] == 1
                             elif case == "Markdown replies and file attachments remain usable":
                                 parent = conn.execute("SELECT id FROM messages WHERE markdown_source='**A useful point** with `inline code`.'").fetchone()
@@ -527,7 +560,7 @@ for file in files:
                             elif case == "sending preserves the submitted source and a newer draft":
                                 for body in ["**First message** stays exact.", "A newer draft is still here."]:
                                     assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source=?", (body,)).fetchone()[0] == 1
-                            elif case == CASES["threads"][0]:
+                            elif case == "creates a thread from a channel message and keeps the channel draft separate":
                                 thread = conn.execute("SELECT id,parent_message_id,auto_archive_after_minutes FROM channel_threads WHERE name='Design review thread'").fetchone()
                                 assert thread is not None and thread[1:] == (607264868, 1440)
                                 assert conn.execute("SELECT involvement FROM thread_memberships WHERE thread_id=? AND user_id=773523953", (thread[0],)).fetchone() == ("nothing",)
@@ -537,7 +570,7 @@ for file in files:
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE id=?", (reply,)).fetchone() == ("A reply from the thread drawer.",)
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='A channel draft stays here.'").fetchone()[0] == 0
                                 assert conn.execute("SELECT COUNT(*) FROM boosts JOIN messages ON messages.id=boosts.message_id WHERE messages.thread_id=? AND boosts.content='👍'", (thread[0],)).fetchone()[0] == 1
-                            elif case == CASES["threads"][1]:
+                            elif case == "the thread root counts its replies live and hides the count when none remain":
                                 thread = conn.execute("SELECT id,parent_message_id FROM channel_threads WHERE name='Indicator thread'").fetchone()
                                 assert thread is not None and thread[1] == 607264868
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE thread_id=?", (thread[0],)).fetchone()[0] == 0
@@ -558,7 +591,7 @@ for file in files:
                                 thread = conn.execute("SELECT id FROM channel_threads WHERE name=?", (name,)).fetchone()
                                 assert thread is not None
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("A safe thread body.",)]
-                            elif case == CASES["threads"][2]:
+                            elif case == "a stray create re-entry does not wipe the half-filled thread name":
                                 thread = conn.execute("SELECT id FROM channel_threads WHERE name='Survives a stray reset'").fetchone()
                                 assert thread is not None
                                 assert conn.execute("SELECT markdown_source FROM messages WHERE thread_id=?", (thread[0],)).fetchall() == [("The name survives the re-entry.",)]
