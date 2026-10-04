@@ -7,6 +7,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 FILES = [
+    "app/services/periodic/runner.rb", "app/helpers/users/avatars_helper.rb",
     "app/models/event/channel_timeline.rb", "app/models/event_attendance.rb", "app/models/event_calendar_entry.rb",
     "app/models/calendar/meet_link.rb", "app/models/calendar/entry_sync.rb", "app/models/google/client.rb", "app/jobs/calendar/meet_link_job.rb",
     "app/jobs/link_embed/fetch_job.rb", "app/models/link_embed/fetcher.rb", "app/models/link_embed/metadata_parser.rb", "app/models/opengraph/location.rb", "app/models/opengraph/fetch.rb",

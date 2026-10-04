@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record the owner-blocked adapter contract beside its real atomic Rust output.
+"""Record the approved adapter contract beside its real atomic Rust output.
 
 This diagnostic is not a passing parity gate. The Rails adapter has no corresponding
 soft-refusal API on Rust's durable queue. --control suppresses the actual durable
@@ -59,13 +59,13 @@ async fn adapter_owner_contract_probe() {
    let rails=group["cases"].as_array().unwrap().iter().find(|c|c["mode"]=="runtime_error"&&c["fail_at"]==fail_at).unwrap();
    assert_ne!(actual["state"],rails["state"],"do not claim adapter parity: Rails committed metadata/claims, Rust rolled back");
    let key=format!("{} refusal {fail_at}",group["kind"].as_str().unwrap());
-   println!("WS8bm2 adapter owner probe {key} size={}: Rust {reads}; Rails {}; actual Rust atomic rollback differs from Rails after-commit refusal",group["size"],rails["reads"]);
+   println!("WS8bm2 adapter approved-difference probe {key} size={}: Rust {reads}; Rails {}; actual Rust atomic rollback differs from Rails after-commit refusal",group["size"],rails["reads"]);
    if let Some(previous)=counts.insert(key,reads){assert_eq!(previous,reads,"adapter physical read growth");}
    records.push(json!({"kind":group["kind"],"size":group["size"],"fail_at":fail_at,"reads":reads,"actual":actual}));server.abort();
   }
  }
  println!("WS8bm2 adapter actual JSON {}",json!(records));
- println!("WS8bm2 adapter owner probe: 8/8 atomic refusal executions; complete actual rows and empty publications; flat reads; Rails adapter parity remains owner-blocked");
+ println!("WS8bm2 adapter approved-difference probe: 8/8 atomic refusal executions; complete actual rows and empty publications; flat reads; atomic rollback is an approved difference under decision 2");
 }
 ''')
     parent.write_bytes(original[parent] + b'\n#[cfg(test)]\nmod adapter_rejection_probe;\n')
@@ -80,7 +80,7 @@ async fn adapter_owner_contract_probe() {
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.with_suffix('.log').write_text(r.stdout)
     for line in r.stdout.splitlines():
-        if line.startswith(('WS8bm2 adapter owner', 'test result:')):
+        if line.startswith(('WS8bm2 adapter approved-difference', 'test result:')):
             print(line, flush=True)
     if a.control:
         assert r.returncode != 0 and '\nadapter actual durable refusal\n' in r.stdout, r.stdout[-2000:]

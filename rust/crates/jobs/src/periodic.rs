@@ -93,6 +93,13 @@ impl<C: Clone + Send + 'static> Periodic<C> {
         self.tasks.iter()
     }
 
+    /// Isolate real registered consumer tasks without substituting their callables.
+    #[cfg(feature = "test-support")]
+    pub fn retain_tasks(&mut self, names: &[&str]) {
+        self.tasks.retain(|task| names.contains(&task.name));
+        self.last_run.retain(|name, _| names.contains(name));
+    }
+
     pub fn is_empty(&self) -> bool {
         self.tasks.is_empty()
     }

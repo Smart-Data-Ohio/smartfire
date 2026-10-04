@@ -38,7 +38,7 @@ try:
  container='rust/crates/campfire/src/controllers/message_features/container_input_tests.rs'
  replace(container,'#[tokio::test]\nasync fn exceptional_root_and_nested_containers_match_rails_with_flat_reads()', 'async fn exceptional_root_and_nested_containers_match_rails_with_flat_reads()')
  replace(container,'#[tokio::test]\nasync fn exceptional_relative_consumers_match_rails_complete_state_with_flat_reads()', 'async fn exceptional_relative_consumers_match_rails_complete_state_with_flat_reads()')
- witnesses=[(1,relative,'relative/split actual output differs from Rails'),(2,relative,'relative/split actual output differs from Rails'),(3,container,'container actual HTTP envelope differs from Rails'),(4,container,'container persisted rows.status'),(5,container,'container actual HTTP envelope differs from Rails'),(6,container,'ordered publication differs from Rails: container actual publications'),(8,container,'container actual HTTP envelope differs from Rails')]
+ witnesses=[(1,relative,'relative/split actual output differs from Rails'),(2,relative,'relative/split actual output differs from Rails'),(3,container,'container actual HTTP envelope differs from Rails'),(4,container,'container persisted rows.status'),(5,container,'container actual HTTP envelope differs from Rails'),(6,container,'container actual publications UTC/slash_0'),(8,container,'container actual HTTP envelope differs from Rails')]
  for n,path,_ in witnesses:
   with (ROOT/path).open('a') as f:
    async_test=path==container

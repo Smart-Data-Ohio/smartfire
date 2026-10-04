@@ -432,6 +432,7 @@ impl<'a> Presenter<'a> {
     pub fn user_view(&self, id: i64) -> Result<UserView> {
         let user = self.user(id)?;
         let mut view = user_view(self.secrets, &user);
+        view.avatar_url = avatar_path_in_zone(self.secrets, &user, &self.render_zone);
         if let Some(data) = &self.search_preloads {
             if let Some(row) = data.users.get(&id)
                 && user.is_bot()

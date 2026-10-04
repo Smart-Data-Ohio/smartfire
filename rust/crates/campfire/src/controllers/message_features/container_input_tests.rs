@@ -71,8 +71,7 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
             if actual != expected {
                 failures.push(json!({"size":group["size"],"case":case["name"],"actual":actual,"expected":expected}));
             }
-            let mut tables = group["baseline"].as_object().unwrap().clone();
-            tables.extend(case["state"].as_object().unwrap().clone());
+            let tables = comparison_support::expected_tables(group, case);
             app.db()
                 .read(move |conn| {
                     for (table, expected) in &tables {
@@ -108,6 +107,13 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
             )
             .await;
             socket.assert_silent().await;
+            if case["name"] == "UTC/slash_0" {
+                let reads = warm_message_zones(&app, group).await;
+                if let Some(previous) = counts.insert("legacy warm four-zone fragments".into(), reads) {
+                    assert_eq!(previous, reads, "warm zone physical read growth");
+                }
+                println!("WS8bm2 warm legacy message size={}: Rust {reads}; complete independently captured Rails partials and actual cache hits in four zones", group["size"]);
+            }
             if !case["saved_page"].is_null() {
                 // The Saved page renders each stored reminder; compare its actual items.
                 let page = browser.get("/saved").await;
@@ -149,26 +155,58 @@ pub(super) async fn compare_feature_input_requests(vector: Value) -> usize {
     checked
 }
 
+/// Warm the real record-version API with UTC, then render the same persisted
+/// message in three other zones and return to UTC. Every whole partial is from
+/// an independently captured real Rails slash publication, not a rebuilt tag.
+/// Producer control 12 in check_rendering_mutants.py collapses the real cache
+/// key to UTC and must fail at the New York whole-fragment assertion.
+async fn warm_message_zones(app: &TestApp, group: &Value) -> usize {
+    use crate::controllers::presenters::{Presenter, page};
+    let expected = group["cases"].as_array().unwrap().iter().filter_map(|case| {
+        let name = case["name"].as_str()?;
+        let zone = name.strip_suffix("/slash_0")?;
+        let frame = case["frames"][0]["html"].as_str().unwrap();
+        let html = frame.split_once("<template>").unwrap().1.strip_suffix("</template></turbo-stream>").unwrap();
+        Some((zone.to_owned(), html.to_owned()))
+    }).collect::<HashMap<_,_>>();
+    assert_eq!(expected.len(), 4);
+    let runtime = app.booted.app.clone();
+    let queries = app.db().capture_queries();
+    app.db().read(move |conn| {
+        // The independently installed entropy provider identifies the observed
+        // row. No expected frame or persisted-state field supplies this ID.
+        let id = conn.query_row("SELECT id FROM messages WHERE client_message_id=?", ["fixture-relative-message"], |row| row.get::<_,i64>(0))?;
+        let message = campfire_db::Message::find(conn,id)?;
+        let account = campfire_db::Account::first(conn)?;
+        for name in ["UTC", "America/New_York", "Australia/Lord_Howe", "Pacific/Apia", "UTC"] {
+            let zone = campfire_views::time::Zone::lookup(name).unwrap();
+            let mut presenter = Presenter::new(conn,&runtime,None);
+            presenter.render_zone = zone.clone();
+            let view = presenter.message(&message)?;
+            page::render_detached_in_zone(&runtime,account.as_ref(),"http://campfire.test",&zone,|ctx| {
+                let actual = campfire_views::messages::message(ctx,&view);
+                assert_eq!(actual,expected[name],"warm zone actual legacy fragment differs from Rails: {name}");
+                let stored = campfire_views::messages::cached_message_fragment_with_cards_in_zone(view.id,view.updated_at,&ctx.base_url,&view.components.github_cards_stamp,&zone).expect("warm zone actual legacy cache lookup missed its rendered fragment");
+                assert_eq!(stored.as_str(),actual,"warm zone actual cached bytes differ from the real renderer");
+                if name == "UTC" {
+                    assert_eq!(campfire_views::messages::cached_message_fragment(view.id,view.updated_at,&ctx.base_url).unwrap().as_str(),actual,"default legacy cache reader must share the UTC renderer key");
+                }
+            });
+        }
+        Ok(())
+    }).await.unwrap();
+    app.db().stop_capturing_queries();
+    queries.lock().unwrap().len()
+}
+
 /// Producer controls also exercise the real consumer output, not a separately
 /// reconstructed parser result. See check_input_mutants.py and the report.
 #[tokio::test]
 async fn exceptional_relative_consumers_match_rails_complete_state_with_flat_reads() {
-    let mut vector: Value = serde_json::from_str(include_str!(
+    let vector: Value = serde_json::from_str(include_str!(
         "../../../../../vectors/messaging/relative_consumers.json"
-    ))
-    .unwrap();
-    // WS8b-m owns messages/_message and Presenter::user_view. Both currently
-    // hardcode UTC for the timestamp/avatar bytes. Keep those 24 named cases
-    // in the full Rails oracle and diagnostic probe rather than masking them.
-    for group in vector["groups"].as_array_mut().unwrap() {
-        group["cases"].as_array_mut().unwrap().retain(|case| {
-            case["zone"] == "UTC"
-                || !["slash_0", "slash_1", "slash_2", "slash_4"]
-                    .iter()
-                    .any(|suffix| case["name"].as_str().unwrap().ends_with(suffix))
-        });
-    }
-    assert_eq!(compare_feature_input_requests(vector).await, 56);
+    )).unwrap();
+    assert_eq!(compare_feature_input_requests(vector).await, 80);
 }
 
 /// PR #223 review: `/event Review in 10^140 days` (and 10^142 hours) returned 500 in

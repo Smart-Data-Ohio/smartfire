@@ -188,6 +188,10 @@
       "huddle": true,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/huddle",
           "thread_id": null,
           "result": {
@@ -244,6 +248,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/huddle",
           "thread_id": null,
           "result": {
@@ -298,6 +306,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/event Launch party friday 5pm",
           "thread_id": null,
           "result": {
@@ -352,6 +364,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/event Launch party",
           "thread_id": null,
           "result": {
@@ -406,6 +422,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/event Retro yesterday",
           "thread_id": null,
           "result": {
@@ -431,6 +451,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/event Retro 2026-09-01 15:00",
           "thread_id": null,
           "result": {
@@ -485,6 +509,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/event",
           "thread_id": null,
           "result": {
@@ -561,6 +589,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/poll",
           "thread_id": null,
           "result": {
@@ -586,6 +618,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/poll",
           "thread_id": 9,
           "result": {
@@ -640,6 +676,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/remind in 20 minutes review the deploy",
           "thread_id": null,
           "result": {
@@ -707,6 +747,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/remind sometime review the deploy",
           "thread_id": null,
           "result": {
@@ -732,6 +776,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/remind in 20 minutes",
           "thread_id": null,
           "result": {
@@ -786,6 +834,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/status 🚂 On a train",
           "thread_id": null,
           "result": {
@@ -840,6 +892,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/status",
           "thread_id": null,
           "result": {
@@ -894,6 +950,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/dnd",
           "thread_id": null,
           "result": {
@@ -919,6 +979,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/dnd",
           "thread_id": null,
           "result": {
@@ -944,6 +1008,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/dnd 2h",
           "thread_id": null,
           "result": {
@@ -969,6 +1037,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/dnd off",
           "thread_id": null,
           "result": {
@@ -1023,6 +1095,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/dnd eventually",
           "thread_id": null,
           "result": {
@@ -1077,6 +1153,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo 2h Back soon",
           "thread_id": null,
           "result": {
@@ -1102,6 +1182,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo off",
           "thread_id": null,
           "result": {
@@ -1156,6 +1240,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo 1 week",
           "thread_id": null,
           "result": {
@@ -1181,6 +1269,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo friday 5pm Wrapping up",
           "thread_id": null,
           "result": {
@@ -1206,6 +1298,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo 2026-10-01 15:00",
           "thread_id": null,
           "result": {
@@ -1260,6 +1356,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo tomorrow Back soon",
           "thread_id": null,
           "result": {
@@ -1285,6 +1385,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo friday",
           "thread_id": null,
           "result": {
@@ -1310,6 +1414,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo monday Wrapping up",
           "thread_id": null,
           "result": {
@@ -1364,6 +1472,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo 2026-10-05",
           "thread_id": null,
           "result": {
@@ -1389,6 +1501,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo oct 8 Back soon",
           "thread_id": null,
           "result": {
@@ -1443,6 +1559,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo sep 1",
           "thread_id": null,
           "result": {
@@ -1497,6 +1617,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo 3d",
           "thread_id": null,
           "result": {
@@ -1551,6 +1675,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo tomorrow Back soon",
           "thread_id": null,
           "result": {
@@ -1627,6 +1755,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo off",
           "thread_id": null,
           "result": {
@@ -1681,6 +1813,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo",
           "thread_id": null,
           "result": {
@@ -1706,6 +1842,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo eventually",
           "thread_id": null,
           "result": {
@@ -1731,6 +1871,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo 2026-09-01 15:00",
           "thread_id": null,
           "result": {
@@ -1756,6 +1900,10 @@
           "frames": null
         },
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/ooo tomorrow xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
           "thread_id": null,
           "result": {
@@ -1810,6 +1958,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/shrug ship it",
           "thread_id": null,
           "result": {
@@ -1908,6 +2060,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/shrug ship it",
           "thread_id": null,
           "result": {
@@ -2018,6 +2174,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/shrug ship it",
           "thread_id": 9,
           "result": {
@@ -2227,6 +2387,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/shrug Hey @[Legacy Note]",
           "thread_id": 9,
           "result": {
@@ -2414,6 +2578,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/shrug Hey @[Legacy Note]",
           "thread_id": null,
           "result": {
@@ -2500,6 +2668,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/shrug hi",
           "thread_id": 9,
           "result": {
@@ -2564,6 +2736,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/me is reviewing the deploy",
           "thread_id": null,
           "result": {
@@ -2628,6 +2804,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/me",
           "thread_id": null,
           "result": {
@@ -2682,6 +2862,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/play tada",
           "thread_id": null,
           "result": {
@@ -2746,6 +2930,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            186
+          ],
           "text": "/shrug ship it",
           "thread_id": null,
           "result": {
@@ -2810,6 +2998,10 @@
       "huddle": false,
       "observations": [
         {
+          "message_counts": [
+            185,
+            185
+          ],
           "text": "/frobnicate",
           "thread_id": null,
           "result": {
