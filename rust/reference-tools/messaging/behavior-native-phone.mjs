@@ -27,9 +27,8 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
   const scratch=root+'.scratch/ws8bm-native-phone';
   mkdirSync(scratch,{recursive:true});
   const proof=mkdtempSync(scratch+'/proof-');
-  // Chrome's Unix socket path must be short. This owned cache is authorized;
-  // no /tmp path or another worker's files/listeners are used.
-  const cache='/home/riels/.cache/rust-port/ws8bm';mkdirSync(cache,{recursive:true});
+  // Chrome needs a short Unix socket path, shared with the reference Ruby container.
+  const cache=process.env.WS8BM_BROWSER_SCRATCH||'/home/riels/.cache/rust-port/ws8bm';mkdirSync(cache,{recursive:true});
   const temp=mkdtempSync(cache+'/s-');
   let driver,log,proxy;
   const container='ws8bm-native-'+basename(temp);

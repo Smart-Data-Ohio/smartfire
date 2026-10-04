@@ -24,6 +24,7 @@ docker run --rm --init --network host --user "$(id -u):$(id -g)" \
   --env CARGO_PROFILE_TEST_DEBUG=line-tables-only --env RUSTFLAGS='-C link-arg=-fuse-ld=mold' \
   --env WS12_BROWSER_SCRATCH="$scratch/ws12" --env WS13_BROWSER_SCRATCH="$scratch/ws13" \
   --env WS11UI_BROWSER_SCRATCH="$scratch/ws11ui" \
+  --env WS8BM_BROWSER_SCRATCH="$scratch/ws8bm" \
   --env PARITY_IMAGE="${PARITY_IMAGE:-ws19b-ci-reference}" --env PARITY_CAPTURE_RUNTIME=docker \
   --env WS8BM_PINNED_BROWSER=1 \
   "${RUST_CORRECTNESS_IMAGE:-campfire-correctness}" "$@"
