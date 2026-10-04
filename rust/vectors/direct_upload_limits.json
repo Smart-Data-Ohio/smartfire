@@ -45,6 +45,103 @@
       "metadata_status": 200
     },
     {
+      "name": "zero_with_length",
+      "byte_size": 0,
+      "checksum": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "body": "",
+      "headers": {
+        "Content-Type": "application/octet-stream",
+        "Content-Length": "0"
+      },
+      "metadata_status": 200,
+      "put_status": 204,
+      "file_exists": true,
+      "stored_bytes": 0,
+      "stored_checksum": "1B2M2Y8AsgTpgAmY7PhCfg=="
+    },
+    {
+      "name": "zero_without_length",
+      "byte_size": 0,
+      "checksum": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "body": "",
+      "headers": {
+        "Content-Type": "application/octet-stream"
+      },
+      "metadata_status": 200,
+      "put_status": 204,
+      "file_exists": true,
+      "stored_bytes": 0,
+      "stored_checksum": "1B2M2Y8AsgTpgAmY7PhCfg=="
+    },
+    {
+      "name": "nonzero_without_length",
+      "byte_size": 3,
+      "checksum": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "body": "",
+      "headers": {
+        "Content-Type": "application/octet-stream"
+      },
+      "metadata_status": 200,
+      "put_status": 422,
+      "file_exists": false
+    },
+    {
+      "name": "chunked_matching",
+      "byte_size": 3,
+      "checksum": "9WGq9u8L8U1CCLtGpMyzrQ==",
+      "body": "xxx",
+      "headers": {
+        "Content-Type": "application/octet-stream",
+        "Transfer-Encoding": "chunked"
+      },
+      "metadata_status": 200,
+      "put_status": 204,
+      "file_exists": true,
+      "stored_bytes": 3,
+      "stored_checksum": "9WGq9u8L8U1CCLtGpMyzrQ=="
+    },
+    {
+      "name": "chunked_zero",
+      "byte_size": 0,
+      "checksum": "1B2M2Y8AsgTpgAmY7PhCfg==",
+      "body": "",
+      "headers": {
+        "Content-Type": "application/octet-stream",
+        "Transfer-Encoding": "chunked"
+      },
+      "metadata_status": 200,
+      "put_status": 204,
+      "file_exists": true,
+      "stored_bytes": 0,
+      "stored_checksum": "1B2M2Y8AsgTpgAmY7PhCfg=="
+    },
+    {
+      "name": "content_length_mismatch",
+      "byte_size": 4,
+      "checksum": "9WGq9u8L8U1CCLtGpMyzrQ==",
+      "body": "xxx",
+      "headers": {
+        "Content-Type": "application/octet-stream",
+        "Content-Length": "3"
+      },
+      "metadata_status": 200,
+      "put_status": 422,
+      "file_exists": false
+    },
+    {
+      "name": "chunked_length_mismatch",
+      "byte_size": 4,
+      "checksum": "9WGq9u8L8U1CCLtGpMyzrQ==",
+      "body": "xxx",
+      "headers": {
+        "Content-Type": "application/octet-stream",
+        "Transfer-Encoding": "chunked"
+      },
+      "metadata_status": 200,
+      "put_status": 422,
+      "file_exists": false
+    },
+    {
       "name": "direct_video",
       "fixture": "test/fixtures/files/alpha-centuri.mov",
       "content_type": "video/quicktime",

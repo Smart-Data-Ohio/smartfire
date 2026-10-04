@@ -8,6 +8,11 @@ require "net/http"
 require "tempfile"
 require "digest"
 require "base64"
+require "socket"
+require "timeout"
+
+pin = File.read(File.join(ENV.fetch("PARITY_WORK"), "parity/reference.sha")).strip
+raise "reference pin mismatch" unless ENV.fetch("PARITY_REFERENCE_SHA") == pin
 
 ApplicationJob.queue_adapter = :test
 user = User.find_by!(email_address: "david@37signals.com")
@@ -75,6 +80,51 @@ cases << { name: "metadata_over_multipart_limit", byte_size: 10 * 1024 * 1024 * 
 [0, -1, 2**63 - 1].each do |size|
   reply = create.call(size, "1B2M2Y8AsgTpgAmY7PhCfg==")
   cases << { name: "metadata_#{size}", byte_size: size, metadata_status: reply.code.to_i }
+end
+
+# Net::HTTP adds Content-Length: 0 to empty PUTs. Send these exact HTTP/1.1
+# headers over a socket to exercise ActionDispatch::Request#content_length.
+[
+  ["zero_with_length", 0, "", { "Content-Length" => "0" }],
+  ["zero_without_length", 0, "", {}],
+  ["nonzero_without_length", 3, "", {}],
+  ["chunked_matching", 3, "xxx", { "Transfer-Encoding" => "chunked" }],
+  ["chunked_zero", 0, "", { "Transfer-Encoding" => "chunked" }],
+  ["content_length_mismatch", 4, "xxx", { "Content-Length" => "3" }],
+  ["chunked_length_mismatch", 4, "xxx", { "Transfer-Encoding" => "chunked" }]
+].each do |name, size, body, framing|
+  # Even the length-mismatch controls have a valid body checksum, so their 422
+  # proves length validation rather than accidentally passing on checksum failure.
+  checksum = Base64.strict_encode64(Digest::MD5.digest(body))
+  metadata = create.call(size, checksum)
+  raise "#{name} metadata: #{metadata.code}" unless metadata.code == "200"
+  blob = JSON.parse(metadata.body)
+  uri = URI(blob.fetch("direct_upload").fetch("url"))
+  upload_headers = { "Content-Type" => "application/octet-stream" }.merge(framing)
+  status = Timeout.timeout(300) do
+    Socket.tcp("127.0.0.1", 80, connect_timeout: 30) do |socket|
+      fields = { "Host" => "campfire.test", "Cookie" => cookies.map { |k, v| "#{k}=#{v}" }.join("; "),
+        "Connection" => "close" }.merge(upload_headers)
+      socket.write("PUT #{uri.request_uri} HTTP/1.1\r\n" + fields.map { |k, v| "#{k}: #{v}\r\n" }.join + "\r\n")
+      if framing.key?("Transfer-Encoding")
+        socket.write("#{body.bytesize.to_s(16)}\r\n#{body}\r\n") unless body.empty?
+        socket.write("0\r\n\r\n")
+      else
+        socket.write(body)
+      end
+      status_line = socket.gets or raise "#{name}: missing HTTP response"
+      status = status_line.split[1].to_i
+      socket.read
+      status
+    end
+  end
+  path = ActiveStorage::Blob.service.send(:path_for, blob.fetch("key"))
+  row = { name: name, byte_size: size, checksum: checksum, body: body, headers: upload_headers,
+    metadata_status: metadata.code.to_i, put_status: status, file_exists: File.exist?(path) }
+  if File.exist?(path)
+    row.merge!(stored_bytes: File.size(path), stored_checksum: Base64.strict_encode64(Digest::MD5.file(path).digest))
+  end
+  cases << row
 end
 
 # The composer uses message[attachment] multipart, not the direct-upload endpoint.

@@ -56,16 +56,28 @@ impl DiskService {
         self.root.join(folder_for(key)).join(key)
     }
 
-    /// `upload(key, io, checksum:)`: write, then verify the MD5 and delete on mismatch.
+    /// `upload(key, io, checksum:)`: stage beside the blob, verify MD5, then atomically
+    /// publish. A failed upload removes its staging file and preserves any completed blob.
     pub fn upload(&self, key: &str, mut reader: impl Read, checksum: Option<&str>) -> Result<()> {
         let path = self.make_path_for(key)?;
-        let mut file = fs::File::create(&path)?;
+        let mut builder = tempfile::Builder::new();
+        builder.prefix(".upload-");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            // Retain File::create's permissions, restricted by the process umask.
+            builder.permissions(fs::Permissions::from_mode(0o666));
+        }
+        // NamedTempFile removes the staged path on every error, including persist failure.
+        let mut file = builder.tempfile_in(path.parent().expect("blob path has a parent"))?;
         io::copy(&mut reader, &mut file)?;
         file.flush()?;
-        drop(file);
-        if let Some(checksum) = checksum {
-            self.ensure_integrity_of(key, checksum)?;
+        if let Some(checksum) = checksum
+            && checksum_file(file.path())? != checksum
+        {
+            return Err(Error::Integrity);
         }
+        file.persist(&path).map_err(|error| error.error)?;
         Ok(())
     }
 
@@ -148,14 +160,6 @@ impl DiskService {
             fs::create_dir_all(parent)?;
         }
         Ok(path)
-    }
-
-    fn ensure_integrity_of(&self, key: &str, checksum: &str) -> Result<()> {
-        if checksum_file(&self.path_for(key))? != checksum {
-            self.delete(key)?;
-            return Err(Error::Integrity);
-        }
-        Ok(())
     }
 }
 

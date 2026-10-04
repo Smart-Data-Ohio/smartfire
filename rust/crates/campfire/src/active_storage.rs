@@ -530,19 +530,21 @@ pub async fn disk_update(c: &mut Ctx) -> Result {
     require_active_storage_authentication(c).await?;
     let storage = c.app().storage.clone();
     let encoded_token = c.param_str("encoded_token").unwrap_or("").to_string();
-    let Some(token) = disk::decode_verified_token(&*storage.verifier, &encoded_token, c.now()) else {
+    let Some(token) = disk::decode_verified_token(&*storage.verifier, &encoded_token, c.now())
+    else {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
-    if !acceptable_content(c, &token) {
-        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
-    }
     // Rails' DiskController passes request.body to DiskService#upload. The adapter has
     // already validated/spooled the whole PUT, including any configured front-server limit.
     let body = c.take_body_file().await.map_err(Error::internal)?;
+    if !acceptable_content(c, &token, body.metadata().map_err(Error::internal)?.len()) {
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
+    }
     let (key, checksum) = (token.key.clone(), token.checksum.clone());
-    let uploaded = tokio::task::spawn_blocking(move || storage.service.upload(&key, body, Some(&checksum)))
-        .await
-        .map_err(Error::internal)?;
+    let uploaded =
+        tokio::task::spawn_blocking(move || storage.service.upload(&key, body, Some(&checksum)))
+            .await
+            .map_err(Error::internal)?;
     match uploaded {
         Ok(()) => Ok(c.head(StatusCode::NO_CONTENT)),
         Err(campfire_storage::Error::Integrity) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
@@ -551,10 +553,19 @@ pub async fn disk_update(c: &mut Ctx) -> Result {
 }
 
 /// `token[:content_type] == request.content_mime_type && token[:content_length] == request.content_length`
-fn acceptable_content(c: &Ctx, token: &disk::DiskToken) -> bool {
+fn acceptable_content(c: &Ctx, token: &disk::DiskToken, body_length: u64) -> bool {
     let media_type = c.request.media_type();
-    let content_length = c.request.header("content-length").and_then(|l| l.trim().parse::<i64>().ok());
-    token.content_type.as_deref().map(str::to_ascii_lowercase) == media_type.map(|m| m.to_ascii_lowercase())
+    // ActionDispatch::Request#content_length measures raw_post when Transfer-Encoding
+    // is present. Otherwise an absent Content-Length becomes zero via Ruby's to_i.
+    let content_length = if c.request.header("transfer-encoding").is_some() {
+        i64::try_from(body_length).ok()
+    } else {
+        c.request
+            .header("content-length")
+            .map_or(Some(0), |length| length.trim().parse::<i64>().ok())
+    };
+    token.content_type.as_deref().map(str::to_ascii_lowercase)
+        == media_type.map(|m| m.to_ascii_lowercase())
         && Some(token.content_length) == content_length
 }
 
