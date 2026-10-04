@@ -1,8 +1,12 @@
+# #230 ledger follow-up
+
+Release-click is deferred again, alongside scroll preservation and reopen focus. Current http-3 system counts: **127 passed / 8 deferred / 0 owner-blocked**. These are ledger corrections only; no browser or Rust suite was rerun. [Verifier regression, exact reasons and raw output](ws8bm-review230-ledger.md). Older receipts below are historical, and disputed repetitions supply no closure credit.
+
 # WS8bm #230 correction
 
-Main `566c1bd77` is merged. Review fixes are tools/docs only: the workspace persisted-row assertion is back to 2 s; native motion opens HQ and uses a served native fault at the original off-canvas assertion; invalid scroll/reopen closures are withdrawn. Main/#231 fixes the shared upload-progress client race and the original attachment predicate/filename proof now pass. Current round-3 inventory: **156/156 controllers; 128 passed / 7 deferred / 0 owner-blocked systems**. [Full audit, before/after proofs and retained invalid attempts](ws8bm-review230.md). All older checkpoint summaries below are historical and superseded where corrected here.
+Main `566c1bd77` is merged. Review fixes are tools/docs only: the workspace persisted-row assertion is back to 2 s; native motion opens HQ and uses a served native fault at the original off-canvas assertion; disputed release-click and invalid scroll/reopen closures are withdrawn. Main/#231 fixes the shared upload-progress client race and the original attachment predicate/filename proof now pass. Current round-3 inventory: **156/156 controllers; 127 passed / 8 deferred / 0 owner-blocked systems**. [Full audit, before/after proofs and retained invalid attempts](ws8bm-review230.md). All older checkpoint summaries below are historical and superseded where corrected here.
 
-# WS8bm -3: eleven deferred behaviours covered
+# Historical WS8bm -3: eleven deferred behaviours covered
 
 Branch `rust/ws8bm-messages-http-3`, based on merged #221/main `b6444b7a7`. Eight motion behaviours, workspace theme/mobile navigation, the enhanced Drive picker and release-click now have paired live browser checks, persisted-row checks and served faults rejected at their intended assertions. Current inventory is **156/156 controllers; 129 passed / 6 deferred / 0 owner-blocked systems**. This is a partial continuation; the exact six own follow-ups, original-line audit, failing-first evidence and every raw target summary are in [the -3 review report](ws8bm-pr3-review.md).
 

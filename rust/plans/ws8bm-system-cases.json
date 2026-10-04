@@ -302,7 +302,6 @@
         {
           "name": "From Google Drive starts the legacy picker flow",
           "status": "deferred",
-          "evidence": null,
           "remaining_reason": "Needs the pinned server-side WebMock Drive list response and actual Google connection fixture, then visible Q3 Planning through the real picker route (composer_attach_menu_test.rb:34-44). Current harness does not yet provide that server-side transport; no owner block."
         },
         {
@@ -349,9 +348,8 @@
         },
         {
           "name": "a release click landing on the just-opened menu does not activate it",
-          "status": "passed",
-          "evidence": "Fresh source clone: .scratch/ws8bm-pr3/release-control3.log (3 paired attempts, 0 failed) and final-controls.log; original 700 ms press and instantaneous elementFromPoint/click, visible menu, hidden-all composer context and unchanged message/thread/reaction rows. all-mutants.log rejects the real broken release guard on both apps at the post-action menu assertion, with releaseClick/brokenGuard/menuVisible observed. Earlier invalid attempts are retained; no diagnostic readiness wait, press-point change or longer deadline.",
-          "diagnostic": ".scratch/ws8bm-pr3/release-control3.log: three fresh fixture pairs pass at the unchanged 700 ms press/instant hit sequence. all-mutants.log: paired default rejection is valid at the post-release menu assertion, with releaseClick/brokenGuard/menuVisible observed true. An earlier release-mutant3.log attempt is INVALID because of a network failure and remains uncredited. No added metadata wait."
+          "status": "deferred",
+          "remaining_reason": "Review #230 follow-up: message_interactions_test.rb:55-86,80. The earlier release-hit elementFromPoint assertion intermittently returned DIV instead of a menu item. The implementation and disputed passing repetitions/mutant receipt are unchanged, so there is no causal resolution or valid closure credit. Restored to deferred; an unchanged-path success does not close the declaration."
         },
         {
           "name": "shows the message action menu as a bottom sheet on phones",
@@ -640,19 +638,16 @@
         {
           "name": "attach Drive files from the picker, send textless, and remove through edit",
           "status": "deferred",
-          "evidence": null,
           "remaining_reason": "Needs server-side Drive list/file WebMock fixtures, the two actual picker selections, chip geometry/removal, textless persisted file-ID set, and edit-frame replacement before final empty attachment rows (drive_attachments_test.rb:10-76). Current harness lacks those external transports; no owner block."
         },
         {
           "name": "edit a room message in the composer and remove one of two attachments",
           "status": "deferred",
-          "evidence": null,
           "remaining_reason": "Needs two Drive metadata/list responses followed by real root composer edit, removal, one remaining visible link and exact persisted FILE_ID, plus hidden context DOM assertion (drive_attachments_test.rb:79-113). Own server-side mock transport remains unported."
         },
         {
           "name": "attach a Drive file from the thread composer",
           "status": "deferred",
-          "evidence": null,
           "remaining_reason": "Needs pinned Drive list/file transport, real joined-thread fixture and the original 10 s settled drawer transform/picker/link assertions, followed by thread-message attachment IDs (drive_attachments_test.rb:116-140,151-164). Own harness work; merged WS12/#201/automations are not prerequisites."
         }
       ]
@@ -717,7 +712,6 @@
         {
           "name": "motion is off by default in the test environment",
           "status": "deferred",
-          "evidence": null,
           "remaining_reason": "Asserts server-emitted data-test-motion=off and all three 0ms tokens (motion_test.rb:19-23). Both live harnesses boot production, where the Rails layout intentionally omits that attribute. Supplying the test-only input for other cases cannot earn credit for this server-emission declaration; a real test-environment host contract is still needed."
         },
         {
@@ -754,7 +748,6 @@
           "name": "mobile drawer keeps the room list scroll position across close and reopen",
           "status": "deferred",
           "previous_remaining_reason": "Needs 15 real Scroll rooms, focus/blur and actual >=400 px overflow, exact scrollTop=400, current room outside view, exact closed/open offset retention and visible focus after reopening (motion_test.rb:177-238). Own fixture and sequence remain unported; preserve the original 5 s polling.",
-          "previous_evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
           "remaining_reason": "Review #230: motion_test.rb:177-238. The fresh Rust negative fails at initial scrollTop=400 (behavior-motion.mjs drawer scroll lands) before closing; no valid paired intended closed-offset proof. Restored to deferred; unchanged-path retries supply no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
         },
         {
@@ -767,7 +760,6 @@
           "name": "mobile drawer reopens on the current room when it is already in view",
           "status": "deferred",
           "previous_remaining_reason": "Needs 15 Scroll rooms, original focused current link, 5 s settled-scroll/current-in-view predicate, exact closed/reopened scroll offset and focused current link (motion_test.rb:260-292). Own fixture and sequence remain unported.",
-          "previous_evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
           "remaining_reason": "Review #230: motion_test.rb:260-292. The fresh Rails negative fails at the initial current-link focus before closing/reopening; no valid paired post-reopen-focus proof. Restored to deferred; unchanged-path rerun supplies no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
         }
       ]
