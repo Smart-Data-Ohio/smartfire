@@ -1,108 +1,171 @@
 # Smartfire in Rust
 
-This directory is the start of a Rust port of Smartfire, the Rails app at the root of this
-repository. It derives from [basecamp/once-campfire-rust](https://github.com/basecamp/once-campfire-rust),
-37signals' Rust port of stock [ONCE Campfire](https://github.com/basecamp/once-campfire), which is
-MIT licensed (Copyright 37signals, LLC; see [`MIT-LICENSE`](MIT-LICENSE)). It was imported with its
-full history by `git subtree add --prefix=rust` from upstream `main` at `24c85975`, and we don't
-track upstream after that.
+This tree implements Smartfire, the Rails app at the repository root, in Rust. It derives from
+37signals' MIT-licensed [ONCE Campfire Rust port](https://github.com/basecamp/once-campfire-rust),
+imported with its full history by `git subtree add --prefix=rust` at upstream `24c85975`.
+We do not track subsequent upstream changes. See [`MIT-LICENSE`](MIT-LICENSE).
 
-What changed on import:
+## Current status
 
-- **The reference is our Rails app**, the repository root, instead of a `reference/` submodule
-  pinned to stock Campfire (upstream matched basecamp/once-campfire `90b33002`). Tools find it
-  through `CAMPFIRE_REFERENCE`, which defaults to `rust/..`; see [`AGENTS.md`](AGENTS.md).
-- **Parity with Smartfire is the goal and isn't reached yet.** The port covers stock Campfire's
-  screens and routes; Smartfire's own features (boards, threads, huddles and stages, Slack import,
-  Google and GitHub integrations, two-factor and more) aren't ported. The parity harness in
-  `parity/` compares the two apps, and `parity/screens.yml` has to grow to cover what Smartfire
-  added. Until cutover, any difference from the Rails app is a bug.
-- CI runs from `.github/workflows/rust.yml` at the repository root. Upstream's image publishing
-  workflow wasn't brought over; deployment goes through our own GCP pipeline. Before testing,
-  CI builds or restores the `default` and `first_run` parity seeds from the Rails commit in
-  `parity/reference.sha` and validates them with Rails. Missing seeds fail tests when `CI` is
-  set; local tests may skip with a message. See [`parity/seeds/README.md`](parity/seeds/README.md).
+Smartfire's boards, threads, huddles and stages, Slack import, Google and GitHub integrations,
+agent APIs, and two-factor authentication have controllers, jobs and views in this tree.
+The former stock-Campfire-only status is obsolete; the current handler table is
+[`crates/campfire/src/controllers.rs`](crates/campfire/src/controllers.rs#L195), with integration
+routes also registered in [`app.rs`](crates/campfire/src/app.rs#L303). This is implementation
+status, not a claim that every original Rails assertion or the production cutover has passed.
+The remaining behavioral gaps and exceptions are listed under [Known differences](#known-differences).
 
-Everything below is upstream's README as imported: it describes their port against stock
-Campfire, including its numbers and its deliberate differences from Rails, which we inherit but
-haven't decided to keep.
+The Rails app remains the behavior oracle. `CAMPFIRE_REFERENCE` selects its absolute root and
+otherwise defaults to the repository root. Canonical Rails oracle images and generated seeds
+use [`parity/reference.sha`](parity/reference.sha); approved source copies are described in
+[`crates/assets/OVERRIDES.md`](crates/assets/OVERRIDES.md). The port uses the Rails SQLite schema,
+storage layout and compatible signed/AES-GCM cookies. Boot loads an empty database's compiled
+schema or checks an existing database's exact migration set; it does not run Rails migrations or
+add the former upstream extra message index ([schema preparation](crates/db/src/schema.rs#L103)).
+Apply needed Rails migrations before switching runtimes.
 
----
+### Current behavior
 
-## Upstream: Campfire in Rust
+These contracts supersede the imported upstream operational claims:
 
-A port of [ONCE Campfire](https://github.com/basecamp/once-campfire) from Rails to Rust. It was
-built to be impossible to tell apart from the Rails app: the same screens pixel for pixel, the same
-protocols, and the Rails app's existing SQLite database and storage directory. With that parity
-reached, it now diverges from Rails where that makes it faster or better; each divergence is listed
-under [Known differences](#known-differences). Everything moved to Rust except the frontend: the CSS,
-Stimulus controllers, Turbo, Lexxy and the other vendored JavaScript ship as they are, apart from
-the few files in [`crates/assets/overrides/`](crates/assets/OVERRIDES.md).
+- **CSRF and sessions:** Rails-compatible masked global and per-form authenticity tokens are
+  checked and rendered in meta tags and forms, including forms opened before a runtime switch
+  ([kit CSRF](crates/kit/src/csrf.rs#L1), [view helpers](crates/views/src/helpers/request_forgery.rs#L113),
+  [Rails vectors](crates/kit/tests/rails_vectors.rs)). The encrypted session holds CSRF, flash,
+  return destinations and sign-in/step-up state, rather than only flash and a return URL
+  ([session](crates/kit/src/session.rs#L1), [session keys](crates/campfire/src/concerns/session_keys.rs)).
+- **Background jobs:** Redis/Resque are replaced by the durable `campfire_jobs` queue in SQLite's
+  `background_jobs`. Production jobs persist with the originating transaction, wake after commit,
+  survive restarts, and use claims and retry/discard policies; the ad hoc best-effort helper is
+  test-only ([job integration](crates/campfire/src/jobs.rs#L1), [queue store](crates/jobs/src/store.rs)).
+- **Web Push:** 410 and OpenSSL-equivalent key/TLS failures invalidate a subscription; 404 is
+  retained. Notification titles and bodies are preserved, and oversized encryption raises rather
+  than truncating. The VAPID subject is fixed to `mailto:support@smartdata.net`; `VAPID_SUBJECT` and
+  `TLS_DOMAIN` do not configure it ([delivery/build](crates/campfire/src/integrations/web_push.rs#L48),
+  [invalidation](crates/campfire/src/integrations/web_push.rs#L115),
+  [size regression](crates/campfire/src/integrations/web_push/encryption.rs#L192),
+  [configuration regression](crates/campfire/src/config.rs#L282)).
+- **Routes, assets and rich text:** `/rooms/directs/:id` preserves Rails' inherited nil-room 500;
+  the working conversation page is `/rooms/:id`
+  ([handler](crates/campfire/src/controllers/rooms/directs.rs#L14)). Copy-link markup uses Rails'
+  `content` value, without the removed upstream clipboard JavaScript override
+  ([asset history](crates/assets/OVERRIDES.md#L17)). The sanitizer keeps `name` on anchors and removes
+  it elsewhere, and the current allowlists strip `style`, including highlight colors
+  ([sanitizer](crates/richtext/src/sanitizer.rs#L244), [style regression](crates/richtext/src/sanitizer.rs#L521)). A still-valid User SGID whose
+  row was deleted reproduces Rails' missing-user partial error; other missing attachments can
+  render ☒ ([renderer](crates/richtext/src/attachables.rs#L364)).
+- **PWA manifest:** values retain Rails ERB HTML escaping, including `&amp;` in the small-logo URL;
+  the former upstream JSON-escaping divergence is gone
+  ([manifest](crates/views/src/pwa.rs#L11), [template](crates/views/templates/pwa/manifest.json)).
 
-The port ships as a single `campfire` executable (plus libvips and ffmpeg). It replaces Ruby, Puma,
-Redis, Resque and Thruster. Against the Rails app it replaces, it serves pages, posts and real-time
-delivery 20–95× faster, and holds 10,000 connected clients in a fifth of the memory.
+### Verification and CI
 
-### What was done
+[`../.github/workflows/rust.yml`](../.github/workflows/rust.yml) builds or restores and validates
+**`default`, `first_run` and `agents_ui`** seeds from the pinned Rails reference. Missing seeds
+fail seed-dependent tests when `CI` is set; local tests can skip with a message. Report which
+seeds and test groups actually ran. See [`parity/seeds/README.md`](parity/seeds/README.md).
+Some workspace/doctest steps remain advisory (`continue-on-error`), so a successful CI run alone
+is not evidence that the complete correctness suite or a production-copy rehearsal passed.
 
-Upstream, the Rails app lived in `reference/` as a git submodule, pinned to the commit being
-matched (here, the reference is the repository root). It is the oracle for everything: no expected output was written by hand. Golden vectors, screenshots and
-protocol recordings all come from running the real Rails app.
+The current screen oracle has **172 states and 288 lean cells**, documented with canonical
+commands in [`parity/SCREENS.md`](parity/SCREENS.md). These are inventory sizes, not pass totals.
+[`parity/allowlist.yml`](parity/allowlist.yml) has no approved Smartfire divergences: it documents
+normalization of entropy and runtime framing while keeping application/security headers,
+cookie attributes, asset bytes and PWA bodies visible. The former upstream screenshot totals and
+manifest allowlist are not current Smartfire acceptance evidence.
 
-**The port (`crates/`)**
+From `rust/`, with the Dockerfile's Rust toolchain:
 
-| Crate | What it replaces |
+```sh
+export CARGO_BUILD_JOBS=4
+parity/bin/reference build
+parity/bin/seed build default first_run agents_ui
+cargo nextest run --locked --workspace --exclude html5ever -j 4
+cargo test --locked --workspace --exclude html5ever --doc -- --test-threads=4
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+```
+
+For canonical pinned CI seeds, use `parity/bin/ci-seed prepare`, `image`, `build` and `validate`
+in order. The screen matrix uses its own additional seeds and commands in `parity/SCREENS.md`.
+Golden vectors are generated from Rails by `reference-tools/`; for slash vectors,
+`reference-tools/db/ws8-slash-vectors.sh` builds a default image keyed by `parity/reference.sha`
+when absent. An explicit `PARITY_IMAGE` must match the pin's `Gemfile.lock`. After regeneration,
+run the consuming crates' tests. See [`AGENTS.md`](AGENTS.md) for layout and working rules.
+
+## Building and deploying
+
+This repository's deployable Rust image is private in **GCP Artifact Registry**, tagged
+**`rust-git-<full Git SHA>`** and built for **`linux/amd64`** by
+[`publish-rust-image.yml`](../.github/workflows/publish-rust-image.yml). Pull requests build
+without publishing; main pushes publish or resolve an existing immutable tag. The registry image
+path comes from the tracked workflow's `GCP_IMAGE` repository variable.
+
+Deploy the selected commit with
+[`deploy-gcp.yml`](../.github/workflows/deploy-gcp.yml), selecting **`runtime=rust`**.
+Rails remains the default runtime. The workflow resolves `rust-git-SHA` to a digest and uses the
+common backup, freeze, rehearsal and cutover path in
+[`deploy/gcp/campfire-release.sh`](../deploy/gcp/campfire-release.sh). Production Rust deployment
+also checks for a successful Rust CI run for that commit. An image build or workflow definition
+does not establish that a candidate has completed a production-copy rehearsal.
+The upstream GHCR `latest`/version/`main` images and arm64 recipe are historical upstream artifacts.
+See [`deploy/README.md`](../deploy/README.md) for the release procedure.
+
+The image runs one `campfire` executable with libvips and ffmpeg, replacing Ruby/Puma,
+Redis/Resque and Thruster. It retains `/rails/storage` and the ONCE backup hooks. `TLS_DOMAIN`
+configures front-server TLS/ACME; `DISABLE_SSL` supports a proxy deployment. `TARGET_PORT`
+defaults to 3000 and `TARGET_BIND` to `127.0.0.1`; callers outside the container should use the
+front listener unless explicitly configured otherwise
+([front configuration](crates/kit/src/front/config.rs#L75)). Web Push uses `VAPID_PUBLIC_KEY` and
+`VAPID_PRIVATE_KEY`, with the fixed subject described above. Other settings are in
+[`crates/campfire/src/config.rs`](crates/campfire/src/config.rs).
+
+For a local source image, from `rust/`:
+
+```sh
+docker build -t smartfire-rust --build-context reference=.. .
+cargo run -p campfire -- server  # needs SECRET_KEY_BASE or SECRET_KEY_BASE_DUMMY=1
+```
+
+## Known differences
+
+These are current code boundaries and observable differences from Rails, not a blanket cutover
+approval. Each entry states its reason and points to implementation or regression evidence;
+older approvals remain scoped to their recorded inputs.
+
+| Difference | Reason and evidence |
 |---|---|
-| `rails_compat` | Rails' signed and encrypted cookies, signed IDs, signed global IDs, Turbo stream names and bcrypt, byte-compatible with Rails so sessions carry over |
-| `kit` | Rack, Action Dispatch and Thruster, on Axum: Rails-style nested params, sessions, flash, format negotiation, forgery protection by `Sec-Fetch-Site`, ETags and gzip built from a page's cached parts, plus an in-process front server with TLS and ACME, HTTP/2 and Thruster's response cache |
-| `db` | Active Record over the existing schema (rusqlite), with the same callbacks, timestamps and STI values, and a Rails-compatible fixture loader |
-| `richtext` | The Action Text pipeline: sanitizing, mentions, opengraph embeds and autolinking, byte-identical to Rails on a 647-case corpus apart from the deliberate differences below |
-| `storage` | Active Storage: the same blob keys, disk layout, variants (libvips) and video previews (ffmpeg), with byte-identical thumbnails |
-| `cable` | The Action Cable protocol server and pub/sub, frame-for-frame with Rails, on a WebSocket implementation of its own that shares and compresses broadcasts |
-| `assets` | Propshaft and importmap-rails, with identical fingerprinted filenames and tags |
-| `views` | The ERB templates as Askama templates at the same paths, DOM-identical apart from the deliberate differences below |
-| `routes` | Path helpers from `config/routes.rb` |
-| `campfire` | Every controller, the channels, the jobs, Web Push, opengraph unfurling, bot webhooks and search |
+| Relative-duration overflow at unit-dependent ranges | Shared arithmetic is fixed-width I512 rather than Ruby's unbounded integers: power-of-ten inputs first overflow at 10^147 minutes, 10^145 hours, or 10^143 days/weeks (the preceding power still fits, including 10^144 hours); the 12 recorded hour/day inputs produce 24 mismatched outcomes. [Timestamp limit:23](crates/db/src/time.rs#L23), [parser:235](crates/db/src/slash_commands/time_parser.rs#L235), [boundary vectors](vectors/messaging/extreme_range.json), [diagnostic test:84](crates/campfire/src/controllers/message_features/extreme_range_tests.rs#L84), [strict probe](reference-tools/messaging/probe_extreme_range.py). |
+| Security response headers on HTTP/1.1 Active Storage proxies | Rust retains six security defaults that Rails' Live responses omit, including successful streams and handled 404/416 responses. [Defaults:26](crates/campfire/src/security.rs#L26), [all-header regression:118](crates/campfire/src/controllers/agent_review_r5_tests.rs#L118), [scoped header list](plans/ws11api-approved-differences.md#http11-proxy-security-headers-pr-203-follow-up). |
+| Huge-integer password-confirmation replay → 302 | Rust discards optional replay parameters when the encrypted session would overflow, avoiding Rails' 500 for 1,001/1,002-digit JSON integers; this evidence concerns replay parameters, not arbitrary path IDs. [Sudo guard:57](crates/campfire/src/concerns/sudo.rs#L57), [HTTP regression:233](crates/campfire/src/controllers/accounts/bots/casting_followups_tests.rs#L233). |
+| Committed-file retention | Successful COMMIT transfers file ownership before fallible callbacks, so an earlier callback error cannot leave committed rows without their staged files as Rails can. [Callback/file regression:47](crates/campfire/src/controllers/agent_review_r4_tests.rs#L47), [retention contract](plans/ws11api-approved-differences.md#committed-file-ownership-and-missing-file-serving-pr-192-fourth-and-fifth-reviews). |
+| Malformed SLA arrays → 400 | Rust rejects retained hashes/nested arrays before mutation instead of Rails' 500, preserving rules and audits; accepted empty/scalar arrays keep Rails behavior. [Validation:15](crates/campfire/src/controllers/rooms/board_automations/sla.rs#L15), [complete-response regression:142](crates/campfire/src/controllers/rooms/board_automation_tests.rs#L142). |
+| Stricter race rechecks | Rust checks current membership/grants/suspension inside writes and seals private replies against current ownership, avoiding stale Rails authorization or private fields. [Race contract and original evidence](plans/ws11api-approved-differences.md#current-authorization-and-owner-transfer-races-205-review), [work authorization:190](crates/db/src/models/agent_work.rs#L190), [write-boundary regressions](crates/campfire/src/controllers/agent_work_writes_tests.rs). |
+| Atomic durable enqueue vs Rails adapter soft-refusal | A failed SQLite job insert rolls back the originating write; Rails can commit a room tombstone despite adapter refusal and recover it later. [Job persistence:1](crates/campfire/src/jobs.rs#L1), [queue-failure/recovery regression:8](crates/campfire/src/controllers/rooms/queue_recovery_tests.rs#L8), [message rollback:570](crates/campfire/src/controllers/messages/http_tests.rs#L570). |
+| No AES-CBC legacy-cookie fallback | The encryptor and cookie reader implement AES-256-GCM only; GCM vectors do not establish continuity for any deployed CBC cookies. [Encryptor:11](crates/rails_compat/src/message_encryptor.rs#L11), [cookie reader:154](crates/rails_compat/src/cookies.rs#L154). |
+| Active Storage blobs embedded in rich-text bodies render ☒ | The attachable resolver has no blob renderer, so these SGIDs fall through to the missing-attachment marker; top-level message files/previews are separate. [Attachable types:109](crates/richtext/src/attachables.rs#L109), [resolution:208](crates/richtext/src/attachables.rs#L208), [render fallback:368](crates/richtext/src/attachables.rs#L368). |
+| Session-cookie write frequency | Rust sends an encrypted session cookie on changes rather than Rails' refresh on each loaded/carried session, reducing cookie traffic while retaining its contents. [Session contract:6](crates/kit/src/session.rs#L6), [HTTP regression:636](crates/kit/tests/http.rs#L636). |
+| Authentication-cookie refresh frequency | Rust re-signs `session_token` when session activity is due for its hourly refresh; Rails re-signs it on every authenticated application request. [Refresh:708](crates/campfire/src/concerns.rs#L708), [HTTP regression:176](crates/campfire/src/app/tests.rs#L176), [Rails authentication](../app/controllers/concerns/authentication.rb). |
+| `last_room` cookie write frequency | Rust writes the permanent cookie only when the room changes, avoiding Rails' write and expiry renewal on every room page. [Cookie write:921](crates/campfire/src/concerns.rs#L921), [HTTP regression:477](crates/campfire/src/controllers/rooms/tests.rs#L477), [Rails room visit](../app/controllers/concerns/tracked_room_visit.rb#L8). |
+| ETag construction for cached pages | Rust hashes page-part digests to reuse cached compression instead of hashing the entire body; validators still change with content. [ETag construction:137](crates/kit/src/deflater/splice.rs#L137), [content-change test:517](crates/kit/src/deflater/splice.rs#L517). |
+| Compressed Action Cable frames | Rust negotiates `permessage-deflate` without context takeover to share compressed broadcasts; Rails' Cable does not negotiate it, while decoded messages retain the protocol. [Socket handshake:125](crates/cable/src/socket.rs#L125), [handshake regression:549](crates/cable/src/socket.rs#L549). |
+| Rich-text hardening limits | Attribute angle brackets are escaped before autolinking, `name` is anchor-only, and content attachments stop after eight levels to bound unsafe/expensive input. [Sanitizer:244](crates/richtext/src/sanitizer.rs#L244), [hardening regressions:55](crates/richtext/tests/hardening.rs#L55). |
+| Resource and listener bounds | Rust caps buffered JSON/form parameter bodies at 16 MiB before parsing and Cable subscriptions/identifiers at 64/4 KiB; its app listener defaults to loopback. These bound resource use and the forwarded-header trust boundary. [Body limits:19](crates/kit/src/body.rs#L19), [Cable limits:92](crates/cable/src/connection.rs#L92), [front defaults:75](crates/kit/src/front/config.rs#L75). |
+| Media subprocess deadlines | Rust kills and reaps ffprobe after 30 seconds and ffmpeg preview extraction after 60 seconds; Rails' analyzer/previewer subprocesses have no such deadlines. [ffprobe:15](crates/storage/src/analyze.rs#L15), [ffmpeg:20](crates/storage/src/process.rs#L20), [kill/reap regression:168](crates/storage/src/process.rs#L168). |
+| Composer unfurl budget | Rust adds a 10-second overall budget including slot waits, DNS, redirects and image validation, with at most 16 unfurls in flight; Rails' composer has no overall budget. Both use 5-second open/read/write operation timeouts. [Unfurl:27](crates/campfire/src/integrations/opengraph.rs#L27), [deadline regression:190](crates/campfire/src/integrations/opengraph/tests.rs#L190), [Rails fetch:9](../app/models/opengraph/fetch.rb#L9). |
+| Push HTTP-exchange deadline | Rust uses 10-second open/read and 60-second write timeouts, plus a 30-second HTTP-exchange deadline after DNS resolution; Rails uses 60-second operation timeouts without that overall exchange deadline. These bound time spent awaiting a push service, not DNS. [Timeouts:28](crates/campfire/src/integrations/web_push.rs#L28), [DNS before delivery:75](crates/campfire/src/integrations/web_push.rs#L75), [exchange deadline:182](crates/campfire/src/integrations/web_push.rs#L182). |
 
-The plan behind it, including why it uses Axum and why pixel parity is tested the way it is, is in
-[`plans/rust-conversion.md`](plans/rust-conversion.md).
+## Imported upstream history
 
-**How parity is proven (`parity/`)**
+The following performance measurements and build account describe the upstream stock ONCE
+Campfire port before Smartfire-specific work. They are retained as history, not current Smartfire
+benchmarks, parity receipts or operating instructions. In particular, the historical token-free
+CSRF and additive-index optimizations below were superseded by the current contracts above.
+Upstream originally used a `reference/` submodule at stock Campfire `90b33002`.
 
-- A Playwright harness runs the Rails app and the Rust app side by side in pinned containers, on
-  identical seed data generated by the Rails app, with frozen clocks. It compares 225 screen states
-  across Chromium, Firefox and WebKit, four viewports, light and dark mode, and the CSS
-  breakpoints.
-- For every state it compares:
-  - the server HTML
-  - the live DOM
-  - the accessibility tree
-  - every subresource the page loads
-  - the Action Cable frames
-  - the screenshot, pixel for pixel with zero tolerance
-- Before any Rust code existed, the harness had to show the Rails app matching itself, so that
-  nondeterminism couldn't hide real differences.
-
-Results when the port was finished, before it started to diverge:
-
-| Check | Result |
-|---|---|
-| Rust vs Rails, full matrix (all engines, viewports, schemes and breakpoints, 5 seeds) | All 5,018 cells compared; every cell passes on the fixed build |
-| Rust vs Rails, lean gate (the default per-change check) | 970/970, 0 flaky, nothing allowlisted |
-| Response header shape, about 70 request types | 0 differences |
-| Rollback | Rails boots on, reads, searches and edits a database the Rust app wrote |
-
-The only thing masked then was the random join code on the first-run screen. Since the port began
-to diverge, the harness also leaves out the CSRF tags Rails renders, masks the digests of the files
-in `crates/assets/overrides/`, and ignores the session cookie writes and the manifest body that now
-differ on purpose; everything else still has to match. The latest lean gate, for the release that
-made the repository public, passed 873 of 874 cells in Chromium, Firefox and WebKit; the one left is
-the web app manifest, allowlisted as a deliberate difference (`parity/allowlist.yml`).
-
-### Performance
+### Historical upstream performance
 
 These numbers come from benchmarking the [`v0.1.1`](https://github.com/basecamp/once-campfire-rust/releases/tag/v0.1.1)
-image against the Rails app: production images of both, the same seed data, the same 4 pinned
+image against stock ONCE Campfire: production images of both, the same seed data, the same 4 pinned
 hardware threads, host networking, and 3 interleaved runs per app. The medians are below; the full
 tables with spreads are in
 [`bench/results/v0.1.1-20260928/report.md`](bench/results/v0.1.1-20260928/report.md). The host ran
@@ -219,7 +282,7 @@ In the order they landed:
 | Cable: 4 KiB read buffers instead of zero-filling 128 KiB per read; encode each broadcast once and share it across subscribers; batch socket writes | 4.7× less CPU per delivery; half the latency and memory under fan-out |
 | Fat LTO, one codegen unit, jemalloc | A further 5–14% per route |
 | Splice precompressed messages into gzipped pages ([below](#gzip-and-etags-from-cached-page-parts)) | Room page 2,527 → 5,461 req/s; messages page 3,709 → 16,523 req/s; search 2,123 → 5,526 req/s |
-| Forgery protection by `Sec-Fetch-Site` instead of CSRF tokens ([Known differences](#known-differences)) | Room page +9%, messages page +6%, search +10%; pages render the same until their content changes, so revalidation gets a 304 |
+| Forgery protection by `Sec-Fetch-Site` instead of CSRF tokens (upstream token-free configuration) | Room page +9%, messages page +6%, search +10%; pages render the same until their content changes, so revalidation gets a 304 |
 | Index messages by `(room_id, created_at)`; check "more than a page" without counting the room | In a room with 236k messages: room page 95 → 6,051 req/s (64×), messages page 87 → 17,972 req/s (208×). Before, a room page sorted the room's whole history, so rooms slowed as they grew; now a long room serves as fast as a new one |
 | Cache every part of a page, not just its messages, and take the ETag from the parts ([below](#gzip-and-etags-from-cached-page-parts)); send cookies only when they change | Room page 2.9×, search 2.8×, messages page 1.3× |
 | Cable: own WebSocket framing with shared, once-compressed frames; connections on their own runtime ([above](#100000-clients-and-a-raspberry-pi-5)) | 100,000 clients in 1.6 GB instead of 5.9 GB while fanning out; a post during a 100,000-client fan-out 637 → 43 ms; frames 10 KB → 2.3 KB on the wire |
@@ -241,7 +304,7 @@ the same on every request, so the app stopped compressing them per request, in t
    (with the same text between them) comes before it again: the steady state for a room page. The
    layout around the messages was still compressed live, because every page carried a fresh CSRF
    token.
-2. **Cached page parts.** Without CSRF tokens (see [Known differences](#known-differences)), a page
+2. **Cached page parts.** Without CSRF tokens (in the upstream token-free configuration), a page
    renders byte for byte the same until what it shows changes, so the layout can be stored too. A
    page is now split into parts that cover it end to end: its cached messages and the text between
    them. Each part is compressed once, against the part before it, and kept under the part's
@@ -266,224 +329,7 @@ come from different runs (the page-parts run on a busy host, which understates i
 [`bench/results/header-csrf-20260927`](bench/results/header-csrf-20260927/report.md) and
 [`bench/results/page-parts-20260927`](bench/results/page-parts-20260927/report.md).
 
-### Running it
-
-It's a drop-in replacement for the Rails image: the same environment variables, ports and storage
-layout. Point it at an existing Campfire's storage and everyone stays signed in.
-
-With [ONCE](https://github.com/basecamp/once), on any server with Docker:
-
-```sh
-once deploy ghcr.io/basecamp/once-campfire-rust --host chat.example.com
-```
-
-ONCE provides the secrets, TLS, backups and upgrades. The image is published for amd64 and arm64:
-`:latest` and a version tag for each [release](https://github.com/basecamp/once-campfire-rust/releases),
-and `:main` for every change to `main` (see [`.github/workflows`](.github/workflows)).
-
-Or with Docker alone:
-
-```sh
-docker run -d -p 80:80 -p 443:443 \
-  -e SECRET_KEY_BASE=... -e VAPID_PUBLIC_KEY=... -e VAPID_PRIVATE_KEY=... \
-  -e TLS_DOMAIN=chat.example.com \
-  -v campfire:/rails/storage \
-  ghcr.io/basecamp/once-campfire-rust
-```
-
-- **TLS:** with `TLS_DOMAIN` set, the app gets and renews its own Let's Encrypt certificate. It
-  keeps certificates where Thruster did, so an existing install keeps its certificate.
-- **Plain HTTP:** set `DISABLE_SSL` instead, for running behind another proxy.
-- **Web Push:** `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` are a P-256 key pair in URL-safe Base64
-  (as the Rails image takes them). They're checked at boot; without a valid pair, push
-  notifications are off and the log says why. `VAPID_SUBJECT` is the contact push services see (a
-  `mailto:` or `https:` URL); it defaults to `https://` and your `TLS_DOMAIN`.
-- **The app port:** as with Puma behind Thruster, the app also answers on `TARGET_PORT` (3000)
-  without the front server's cache and compression, but only on loopback. Set `TARGET_BIND`
-  (e.g. `0.0.0.0`) to open it further; it trusts `X-Forwarded-*` from whoever reaches it.
-- **Storage:** everything lives under `/rails/storage`: the SQLite database, uploaded files and
-  backups.
-- **Media:** the image builds libvips 8.16.1 (thumbnails and other variants) and ffmpeg 7.1.5
-  (video posters, and ffprobe for video and audio metadata) from the Debian trixie source packages
-  the Rails image installs, with the same flags and libraries, so thumbnails and posters are byte
-  for byte the ones Rails makes. Only what Campfire can reach goes in: libvips loads PNG, GIF,
-  JPEG, TIFF, WebP, AVIF and HEIC/HEIF (with EXIF orientation and ICC profiles) and saves PNG,
-  JPEG, GIF and WebP; ffmpeg keeps every built-in demuxer and decoder plus dav1d for AV1, the
-  filters that pick and orient a poster frame, and only the MJPEG encoder and `image2` muxer that
-  write it; other encoders and muxers, hardware, network and external codec libraries are left
-  out. That took the image from 640 MB to 169 MB unpacked, and from 246 MB to 67 MB to download
-  (see the [`Dockerfile`](Dockerfile)).
-- **Many clients:** every connected browser is a socket, and the app raises its open-file limit to
-  the hard limit at startup (Docker's default soft limit would stop it at 65,536). Past that, it's
-  memory (~15 KB per client) and bandwidth; see
-  [100,000 clients](#100000-clients-and-a-raspberry-pi-5).
-- **ONCE hooks:** `/hooks/pre-backup` runs `campfire backup`, which uses SQLite's online backup API.
-- **Other options:** see `crates/campfire/src/config.rs`.
-
-To build the image yourself, from `rust/`: `docker build -t campfire-rust --build-context
-reference=.. .` (the reference app comes in as a named build context). For development:
-
-```sh
-cargo test --workspace --exclude html5ever   # all crates
-cargo run -p campfire -- server               # needs SECRET_KEY_BASE or SECRET_KEY_BASE_DUMMY=1
-```
-
-### Verifying changes
-
-```sh
-parity/bin/reference build && parity/bin/candidate build   # Rails and Rust images
-parity/bin/seed build                                      # seed data, generated by the Rails app
-parity/bin/candidate compare                               # lean parity gate, Rust vs Rails
-parity/bin/compare --matrix full ...                       # full matrix, for release checks
-reference-tools/http_shape/sweep.py <rails-url> <rust-url> # response header shape
-bench/run                                                  # benchmark both apps
-bench/results/pi-100k-20260928/run100k.sh BIN LABEL        # 100,000 cable clients (PI=1: a Pi 5's budget)
-```
-
-[`parity/SCREENS.md`](parity/SCREENS.md) documents the screen inventory, masks and the flake policy.
-[`AGENTS.md`](AGENTS.md) describes the repository layout and working rules, and
-[`CONTRIBUTING.md`](CONTRIBUTING.md) how to propose changes. Report security issues as
-[`SECURITY.md`](SECURITY.md) describes.
-
-### Known differences
-
-Deliberate:
-
-- **Compressed WebSocket frames.** The app accepts the `permessage-deflate` compression browsers
-  offer (without context takeover, so each broadcast is compressed once for all of its
-  subscribers); Rails' Action Cable doesn't negotiate it. The frames decode to the same messages.
-- **No CSRF tokens.** Forgery protection checks the `Sec-Fetch-Site` header browsers send, as Rails
-  main's `protect_from_forgery using: :header_only` does, instead of per-request tokens. Writes are
-  accepted from `same-origin` and `same-site` requests; `cross-site` ones, and HTTPS requests
-  without the header, get a 422. The `Origin` check still applies. On plain HTTP, where browsers
-  don't send the header, a missing one is accepted, and the `SameSite=Lax` session cookie and the
-  `Origin` check protect writes. Pages have no `csrf-token` meta tag or `authenticity_token` fields,
-  so they render byte for byte the same until what they show changes: ETags now match on
-  revalidation, and a page's markup can be cached. Browsers from before 2023 that don't send the
-  header (e.g. Safari before 16.4) can't submit forms over HTTPS. Tabs opened before an upgrade keep
-  working: their tokens are ignored, and the header does the job.
-- **Redis and Resque are gone.** Jobs run in-process and are best-effort: a crash loses queued
-  webhooks and pushes, as a Redis restart would under Rails. Each kind of job (pushes, webhooks,
-  purges, ...) has its own queue and `JOB_CONCURRENCY` workers, so a slow bot's webhooks can't hold
-  up push notifications.
-- **Push subscriptions are kept through our own failures.** Rails destroys a push subscription on
-  any OpenSSL error, which includes a bad VAPID key and any TLS failure (an empty CA store, a skewed
-  clock), so a configuration mistake deleted everyone's subscriptions on the next message. The
-  VAPID keys are now checked once at boot (Web Push is off, with a log line, when they're missing
-  or don't form a key pair), and a subscription is destroyed only when the push service answers
-  410 or 404 (RFC 8030; Rails keeps it on a 404) or its own key isn't a valid P-256 point.
-- **Long messages still get push notifications.** Rails puts the whole message in the notification,
-  and one over about 4 KB fails to encrypt (a Web Push message holds 4096 bytes), so nobody is
-  notified. The notification's body is now cut short with an ellipsis at 3 KB, and its title at 256
-  bytes.
-- **The VAPID subject is configurable.** Rails identifies every install to push services as
-  `mailto:support@37signals.com`; this uses `VAPID_SUBJECT`, or `https://` and the first
-  `TLS_DOMAIN`, or the project's URL.
-- **Cookies are only sent when they change.** Rails rewrites the session cookie, re-signs the
-  `session_token` cookie and re-sets `last_room` on nearly every response. The session cookie is now
-  written only when the session changed, and deleted once it's empty (it only holds the flash and a
-  return-to URL); `session_token` is re-signed when the session's hourly activity refresh runs, which
-  keeps its 20-year expiry rolling; `last_room` is set when it changes. An authenticated request whose
-  session doesn't need that refresh also no longer passes through the database writer.
-- **ETags aren't a digest of the body** on pages of 1 KB or more: they're a SHA-256 over the page's
-  parts (its cached messages and the text around them, or the whole body as one part). Identical
-  pages still get identical ETags, and any change gets a new one.
-- **One more index.** On boot the app adds `index_messages_on_room_id_and_created_at` to the Rails
-  schema if it's missing (a one-time 49 ms for 236k messages). Rails' schema pages a room's messages
-  through `index_messages_on_room_id` alone, which sorts the room's whole history for every page.
-  The index is additive, so the database still works with the Rails image.
-- **Leaner libvips and ffmpeg.** The image builds both from the same Debian sources as the Rails
-  image, leaving out what Campfire can't reach (see [Running it](#running-it)). Thumbnails, video
-  posters and metadata come out byte for byte the same for every image and video format either
-  image handles. libvips loses only loaders that `Vips.block_untrusted` already blocks
-  (ImageMagick, SVG, PDF, JPEG XL, JPEG 2000, OpenEXR, FITS, Matlab, OpenSlide). ffmpeg loses the
-  decoders and demuxers that come from external libraries with no built-in equivalent: tracker
-  modules (libopenmpt), game-console music (libgme), JPEG XL and SVG frames, codec2 speech,
-  teletext subtitles, and DASH/IMF manifests. Tracker modules and game-console music attached to
-  a message are now stored without duration or bit rate, which Campfire never shows.
-- **Limits where Rails had none, or raised.** Request bodies other than file uploads are capped at
-  16 MiB (a 413), and so are Active Storage direct uploads, which Campfire's editor doesn't use:
-  asking for a larger one is a 413. A QR code for more than a QR code can hold is a 422, not a 500.
-  Page numbers are capped at a billion. A WebSocket connection holds up to 64 subscriptions with identifiers of up to
-  4 KiB, and a client that doesn't read what it's sent for 30 seconds is disconnected. Deactivating
-  or banning a user closes their open connections once the change commits.
-- **Link unfurling is bounded in time.** Rails gives each connect and read of an unfurl 60
-  seconds, across up to 10 redirects and the image check. Now an unfurl gets 10 seconds in all and
-  5 per connect or read, and a page that takes longer unfurls nothing. At most 16 unfurls run at
-  once, and only a `meta` tag's first 256 attributes are read.
-- **Bot webhooks are bounded.** A delivery gets 60 seconds in all, on top of Rails' 7 per connect
-  or read; one that runs out answers "Failed to respond within 60 seconds", as a 7-second timeout
-  answers with its own. A reply larger than 100 MB (after decompression) fails the delivery and
-  posts nothing; Rails read replies of any size into memory.
-- **Push deliveries are bounded in time.** A push service gets 10 seconds per connect or read and 30
-  in all, where the web-push gem leaves `Net::HTTP`'s 60 seconds per step; a slow service would
-  otherwise hold one of the few push workers for minutes.
-- **The front server is stricter than Thruster.** The app's own listener on `TARGET_PORT` binds
-  loopback only (Puma bound every interface) and has the front's timeouts and `MAX_REQUEST_BODY`
-  (see [Running it](#running-it)). The response cache counts its keys toward `CACHE_SIZE`, skips
-  URIs longer than 2 KB, keys on the raw path (Thruster decoded it, so `/a%2Fb` and `/a/b` shared
-  an entry), and lets range requests through to the app instead of answering them with a whole
-  cached body.
-- **Media is processed off the database writer.** Rails saves a blob's row and then uploads its
-  file after commit; here the upload is copied into storage first, straight from the request's
-  tempfile, and deleted again if the save fails. Variants, video posters and analysis run on
-  background threads (at most four at a time), and only their rows are written in a transaction, so
-  a large image or video doesn't hold up other writes. A variant or poster is saved already
-  analyzed, where Rails analyzes it in a job after commit; the rows end up the same. Two requests for
-  the same missing variant may both transform it: the first to save wins and the other's file is
-  deleted. ffmpeg is stopped after 60 seconds of drawing a poster and ffprobe after 30 seconds of
-  reading a file, which Rails doesn't limit.
-- **Passwords are hashed and checked outside the database.** bcrypt (about 250 ms) runs before the
-  write that saves a password, and a sign-in looks the user up and then verifies the password after
-  releasing the database connection. An unknown email address still costs one bcrypt, as in Rails.
-- **Searches are for words.** Rails passes a search's words to SQLite's full-text `MATCH` as they
-  are, so `NOT`, `AND`, `OR` or `NEAR` in the wrong place is a 500. Each word is now matched as
-  itself.
-- **`/rooms/directs/:id` redirects to the room** instead of answering 500.
-- **New-ping suggestions appear.** The user picker for a new ping asks for JSON; in Rails it asks
-  for anything, gets HTML, and never shows a suggestion.
-- **Autolinking can't break out of an attribute.** rails_autolink finds URLs and email addresses
-  with regular expressions over the sanitized HTML, which Nokogiri serializes with `<` and `>` left
-  raw in attribute values. A URL after a `>` in, say, a `title` was taken for text and linked, and
-  the inserted `<a href="...">` closed the attribute, turning the rest of its value into live
-  markup (a stored XSS; it affects the Rails app). The port escapes `<` and `>` in attribute values
-  before autolinking, so URLs inside attributes stay as they were. The same DOM otherwise.
-- **Cached markup doesn't carry the request's host.** A message's "Copy link" button held an
-  absolute URL built from the Host header, inside a fragment cached for everyone, so one request
-  with a forged Host changed the link everyone copied. The button now carries the message's path
-  (`data-copy-to-clipboard-url-value`), and the copy-to-clipboard controller (an override) makes it
-  absolute against the page. The bot API's cached JSON, whose URLs must be absolute, is cached per
-  base URL instead.
-- **Rich text drops `name` attributes.** Rails' default sanitizer allowlist keeps them, which lets
-  a message clobber the page's DOM globals (`<img name="body">` shadows `document.body`). Nothing
-  Campfire's composer writes has one.
-- **Rich text keeps only highlight colors in `style`.** Where Rails runs `style` through Loofah's
-  CSS scrubber, the sanitizer keeps only `color` and `background-color` with a plain color value
-  (a keyword, hex, `rgb()`/`hsl()`, or a custom property like Lexxy's `var(--highlight-1)`), which
-  is all Lexxy writes. It shows in the HTML body the bot API and webhooks send; message pages drop
-  `style` altogether, as they did.
-- **The web app manifest is valid JSON.** Rails HTML-escapes the account name and URLs into
-  `webmanifest.json`, so a name with `\` or `"` broke the manifest and the small logo's URL read
-  `?size=small&amp;v=...`. They're JSON strings now.
-- **Content attachments nest at most 8 deep.** An `<action-text-attachment>` carrying HTML in its
-  `content` renders that content, attachments included; each level parses and sanitizes
-  everything below it again, so a 336 KB body of nested ones took 10 seconds to render. Deeper
-  levels now render empty. Campfire's composer doesn't nest them at all.
-- **A mention of a deleted user shows ☒.** Rails can't find a "missing" partial for users, so
-  the mention raised and blanked the whole message, and editing the message raised too. The rest of
-  the message now shows with ☒ in the mention's place, and the editor leaves the mention out.
-- **Not ported:** the duplicate `session_token` cookie Rails' Active Storage streaming sends; and
-  legacy AES-CBC encrypted cookies, since Campfire started on GCM.
-
-Not fully covered:
-
-- HTTP-01 ACME validation is only unit-tested. TLS-ALPN-01 was tested end to end against a local
-  ACME server.
-- Rich text is checked against Rails on a 647-case corpus, 400 of them fuzzed, which matches
-  exactly apart from the deliberate differences above. Active Storage attachments embedded in a
-  message body, which Campfire's composer can't create, render as ☒.
-
-### How it was built
+### How the upstream port was built
 
 The port was built in about a day by coordinated Claude Code agents, each owning one crate or
 harness component. They followed the plan in `plans/rust-conversion.md`, which Codex also reviewed.
@@ -492,6 +338,6 @@ parity gate going green, the Thruster replacement, the benchmarks, and each opti
 before and after numbers. The optimizations and divergences since then were made the same way, one
 pull request each, with their measurements in `bench/results/`.
 
-### License
+## License
 
-MIT, like Campfire. See [`MIT-LICENSE`](MIT-LICENSE).
+MIT. See [`MIT-LICENSE`](MIT-LICENSE).
