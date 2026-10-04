@@ -24,5 +24,5 @@ rows = [2, 12].map do |count|
   observed
 end
 sources = %w[app/models/channel_thread.rb app/models/room.rb].to_h { |f| [f, Digest::SHA256.file(Rails.root.join(f)).hexdigest] }
-puts JSON.pretty_generate(reference:'d7c7de92', now:Time.current.utc.iso8601(6), sources:, rows:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"), now:Time.current.utc.iso8601(6), sources:, rows:)
 rows.each { |r| warn "Pinned Rails board lifecycle: #{r[:posts]} aged posts; #{r[:room_reads]} Room SELECTs" }

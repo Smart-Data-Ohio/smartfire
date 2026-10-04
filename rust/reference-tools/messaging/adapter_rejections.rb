@@ -72,5 +72,5 @@ source.fetch('groups').each do |group|
   end
   groups << group.slice('kind', 'size', 'embed_id', 'sibling_id', 'opposite_id', 'thread_id').merge(rows:, cases:)
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', groups:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], groups:) + "\n")
 puts "WS8bm2 adapter rejection Rails: #{groups.sum { |g| g[:cases].length }} actual callback/adapter executions; complete rows, enqueues, errors and ordered broadcasts"

@@ -27,4 +27,4 @@ check.call(account.refresh_token, output.fetch("plaintext").fetch("refresh_token
 check.call(account.connected?, true)
 check.call(account.app_token?, true)
 check.call(Rails.application.message_verifier("github_app_oauth_state").verified(output.fetch("signed_state")), "fixture-session-state")
-puts "GitHub Rails rollback: #{checks} checks passed; 0 failed; reference d7c7de92"
+puts "GitHub Rails rollback: #{checks} checks passed; 0 failed; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

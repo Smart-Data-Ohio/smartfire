@@ -36,7 +36,7 @@ try:
         assert result.returncode != 0 and summary, f"Expected {count} executed failures, not a compile error: {output[-4000:]}"
         print(f"Against {BASE} ({package}): {summary.group()}")
     assert fixture.is_file(), "HTTP regression must export the actual Rust-written wrong-case row before asserting"
-    result = subprocess.run(["docker", "run", "--rm", "--name", "ws9-round-four-proof", "--network", "none", "--entrypoint", "", "--user", f"{os.getuid()}:{os.getgid()}", "--env-file", str(ROOT / "rust/parity/.env.reference"), "-e", "RAILS_LOG_LEVEL=fatal", "-e", "DATABASE_URL=sqlite3:/work/review/zone.sqlite3", "-v", f"{OUT}:/work/review", "-v", f"{ROOT}/rust/reference-tools/auth/round_four_rollback.rb:/work/round_four_rollback.rb:ro", env.get("WS9_REFERENCE_IMAGE", "ws9-reference:d7c7de92"), "bin/rails", "runner", "/work/round_four_rollback.rb"], cwd=ROOT, env=env, capture_output=True, text=True)
+    result = subprocess.run(["docker", "run", "--rm", "--name", "ws9-round-four-proof", "--network", "none", "--entrypoint", "", "--user", f"{os.getuid()}:{os.getgid()}", "--env-file", str(ROOT / "rust/parity/.env.reference"), "-e", "RAILS_LOG_LEVEL=fatal", "-e", "DATABASE_URL=sqlite3:/work/review/zone.sqlite3", "-v", f"{OUT}:/work/review", "-v", f"{ROOT}/rust/reference-tools/auth/round_four_rollback.rb:/work/round_four_rollback.rb:ro", env.get("WS9_REFERENCE_IMAGE", env.get("PARITY_IMAGE", "campfire-reference")), "bin/rails", "runner", "/work/round_four_rollback.rb"], cwd=ROOT, env=env, capture_output=True, text=True)
     output = result.stdout + result.stderr
     (OUT / "rails-red.log").write_text(output)
     assert result.returncode != 0 and "ROLLBACK FAILURE: Rails rejected Rust's time zone" in output, output

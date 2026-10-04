@@ -56,7 +56,7 @@ env = dict(os.environ, CI="1", TMPDIR=str(clone / ".scratch"),
            CARGO_TARGET_DIR=str(args.target_dir.resolve() if args.target_dir else clone / "rust/target"),
            CABLE_TEST_PORT_RANGE="52000-52049", MAIL_TEST_PORT_RANGE="52000-52049",
            CAMPFIRE_REFERENCE=str(clone), PARITY_NAMESPACE="ws8bm-owner", PARITY_OWNER="ws8bm",
-           PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92"))
+           PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"))
 env.pop("RUST_TEST_THREADS", None)
 print(f"WS8bm owner integration: worker {worker}; shell {OWNER}; isolated merge {clone}; main unmerged", flush=True)
 commands = [

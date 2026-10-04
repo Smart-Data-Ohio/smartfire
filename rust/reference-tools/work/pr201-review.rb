@@ -88,6 +88,6 @@ else
       raise ActiveRecord::Rollback
     end
   end
-  puts JSON.pretty_generate(reference:'d7c7de92 plus approved board drift',rows:)
+  puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),rows:)
   warn "Rails shared message/thread/work icon JSON: #{rows.size} complete responses; brand/collision/custom/emoji/unknown/blank; 0 masks"
 end

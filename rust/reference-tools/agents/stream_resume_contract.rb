@@ -13,5 +13,5 @@ travel_to Time.utc(2026,3,2,16) do
   errors=message.errors[:streaming]
   saved=message.save
   persisted=Message.find(message.id)
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:{valid:valid,saved:saved,errors:errors,streaming:persisted.streaming?,source:persisted.markdown_source}})
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:{valid:valid,saved:saved,errors:errors,streaming:persisted.streaming?,source:persisted.markdown_source}})
 end

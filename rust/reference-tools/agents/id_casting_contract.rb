@@ -15,4 +15,4 @@ rows=values.map do |value|
  end.uniq.sort
  {input:value,candidates:candidates}
 end
-puts JSON.pretty_generate(reference_pin:'d7c7de92',cases:rows)
+puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:rows)

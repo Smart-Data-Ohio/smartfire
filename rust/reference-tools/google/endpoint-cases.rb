@@ -2,7 +2,7 @@
 require 'json'
 require 'net/http'
 require 'action_dispatch/testing/integration'
-load Rails.root.join('test/test_helpers/google_calendar_test_helper.rb')
+load File.join(ENV.fetch("PARITY_WORK"), "reference-tools/google/google_calendar_test_helper.rb")
 helper=Object.new.extend(GoogleCalendarTestHelper)
 Rails.logger=ActiveSupport::Logger.new($stderr)
 ActiveJob::Base.queue_adapter=:test
@@ -67,4 +67,4 @@ specs.each do |spec|
     raise ActiveRecord::Rollback
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',now:BASE.to_i,file:,list:,rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:BASE.to_i,file:,list:,rows:})

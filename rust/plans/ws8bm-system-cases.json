@@ -1,6 +1,6 @@
 {
-  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
-  "scope": "135 behavior declarations; no pixel work; mapped Playwright equivalents except the pinned native Capybara/Selenium phone and drawer-animation bodies and helpers; not execution of whole original Ruby system files",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "scope": "137 behavior declarations; no pixel work; mapped Playwright equivalents except the pinned native Capybara/Selenium phone and drawer-animation bodies and helpers; not execution of whole original Ruby system files",
   "excluded_file_owners": {
     "test/system/keyboard_shortcuts_test.rb": "WS8b-r (14)",
     "test/system/content_security_policy_test.rb": "WS8b-r (5)",
@@ -71,12 +71,17 @@
     },
     {
       "file": "test/system/sending_messages_test.rb",
-      "source_sha256": "4c637558cc041e470c6378f43e67d9d5b5b483ed0aae746c50eb64221027d116",
+      "source_sha256": "4acc5a273fd08dd9a61a957b771723597c530c40bd23b8c12ceef27171d75934",
       "cases": [
         {
           "name": "sending messages between two users",
           "status": "passed",
           "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
+        },
+        {
+          "name": "uploading a fresh video in the thread composer",
+          "status": "deferred",
+          "remaining_reason": "Added since the previous reference pin; a paired Rails/Rust browser execution has not been recorded for this declaration."
         },
         {
           "name": "editing messages",
@@ -92,7 +97,7 @@
     },
     {
       "file": "test/system/threads_test.rb",
-      "source_sha256": "e927613f9e78905aa072e0530339678b8443166b6f6d3c052d22cb3b797faafc",
+      "source_sha256": "f8fed193c6250fac292270817066559a44c8a88760be770029ca78377dd5971b",
       "cases": [
         {
           "name": "creates a thread from a channel message and keeps the channel draft separate",
@@ -175,7 +180,7 @@
     },
     {
       "file": "test/system/workspace_markdown_test.rb",
-      "source_sha256": "b7b47897db51c2603fb733e90ecc7d2bf611a0f6d600926550ac80732e7b61fd",
+      "source_sha256": "2b161117e767cca6d1eff36942eecb15879d5ab59038424aa5b8896608ceb817",
       "cases": [
         {
           "name": "Markdown messages reach other users and editing preserves the original source",
@@ -208,6 +213,11 @@
           }
         },
         {
+          "name": "late upload progress preserves a delivered attachment and reply preview",
+          "status": "deferred",
+          "remaining_reason": "Added since the previous reference pin; a paired Rails/Rust browser execution has not been recorded for this declaration."
+        },
+        {
           "name": "mention suggestions select a room member without sending the unfinished message",
           "status": "passed",
           "evidence": "Fresh source clone 629d98dd2f88ae2a206e477d03c3c2b6a44b4c61: .scratch/ws8bm-category-review/fresh-final-all-paired.log; mapped Rails/Rust behaviour and persisted rows PASS with pinned action/text/deadline scopes. Retained failures and full per-call audit in ws8bm-report.md. No new declaration credit."
@@ -232,7 +242,7 @@
     },
     {
       "file": "test/system/composer_test.rb",
-      "source_sha256": "3e0e8d3ec17deb224bb32e04551a2d740e56e020082db2f8072af9318e7878ca",
+      "source_sha256": "1a0f4fe134c5d4c920fc4dc45c51352aaef7a58f1f451060d954037731cf3173",
       "cases": [
         {
           "name": "blurring an open autocomplete does not leave a zombie that swallows Enter",

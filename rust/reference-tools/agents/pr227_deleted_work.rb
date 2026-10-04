@@ -5,7 +5,7 @@ extend ActiveSupport::Testing::TimeHelpers
 Rails.logger = ActiveSupport::Logger.new($stderr)
 ApplicationJob.queue_adapter = :test
 input = JSON.parse(File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/agents/pr227-deleted-work-inputs.json")), symbolize_names: true)
-raise "wrong reference pin" unless input.fetch(:reference_pin) == "d7c7de92"
+raise "wrong reference pin" unless input.fetch(:reference_pin) == ENV.fetch("PARITY_REFERENCE_SHA")[0, 8]
 secret = "ws11api-fixture-credential"
 conn = ActiveRecord::Base.connection
 tables = conn.tables.reject { |name| name.start_with?("message_search") || %w[schema_migrations ar_internal_metadata].include?(name) }
@@ -65,4 +65,4 @@ travel_to Time.utc(2026, 3, 2, 16) do
     end
   end
 end
-puts JSON.pretty_generate(reference_pin: "d7c7de92", cases: results)
+puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases: results)

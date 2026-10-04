@@ -65,5 +65,5 @@ begin
 rescue => error
   failure_class=error.class.name
 end
-puts JSON.pretty_generate({reference:'d7c7de92',names:cases,updates:updates,shows:shows,ids:ids,formats:formats,closed_json_failure_class:failure_class,stream_cases:stream_cases,integer_casts:{'true'=>ActiveRecord::Type.lookup(:integer).cast(true),'false'=>ActiveRecord::Type.lookup(:integer).cast(false)}})
-warn "Rails room coercion oracle: #{cases.size} create casts, #{updates.size} update casts, #{shows.size} direct-show callbacks, #{formats.size} partial formats, #{ids.size} ID casts, #{stream_cases.size} stream failure cases; reference d7c7de92"
+puts JSON.pretty_generate({reference: ENV.fetch('PARITY_REFERENCE_SHA'),names:cases,updates:updates,shows:shows,ids:ids,formats:formats,closed_json_failure_class:failure_class,stream_cases:stream_cases,integer_casts:{'true'=>ActiveRecord::Type.lookup(:integer).cast(true),'false'=>ActiveRecord::Type.lookup(:integer).cast(false)}})
+warn "Rails room coercion oracle: #{cases.size} create casts, #{updates.size} update casts, #{shows.size} direct-show callbacks, #{formats.size} partial formats, #{ids.size} ID casts, #{stream_cases.size} stream failure cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

@@ -42,7 +42,7 @@ class HuddleParticipationOracle
       turbo_lower:{action:'lower',actor:0,hand:true,format:'turbo_stream'}
     }.each {|name,opts|cases << scenario(name.to_s,opts)}
     rate=scenario('raise_rate_limit',{action:'raise',actor:0,requests:11})
-    puts JSON.pretty_generate({reference_pin:'d7c7de92',now:Time.current.to_i,cases:cases,rate:rate})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,cases:cases,rate:rate})
   ensure
     travel_back
   end

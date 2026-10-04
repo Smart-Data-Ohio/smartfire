@@ -54,5 +54,5 @@ end
 end
 post=Twitter::Post.create!(post_id:'424242',url:'https://x.com/jack/status/424242'); f=Twitter::PostFetcher.new(post);f.define_singleton_method(:get){|_|raise Net::ReadTimeout};f.fetch
 rows << {name:'read timeout',input_url:post.url,post_id:post.post_id,path:'/jack/status/424242',transport_error:'ReadTimeout',result:post.reload.attributes.slice(*fields)};post.destroy!
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',cases:rows})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),cases:rows})+"\n")
 puts "WS15e X fetch Rails oracle: #{rows.size} persisted cases"

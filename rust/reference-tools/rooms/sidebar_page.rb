@@ -73,4 +73,4 @@ ActiveRecord::Base.transaction do
 end
 Current.reset
 puts JSON.pretty_generate(rows)
-warn "Rails sidebar page: #{rows.size} complete frame goldens; sidebar template 2e20b24c, other files d7c7de92"
+warn "Rails sidebar page: #{rows.size} complete frame goldens; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

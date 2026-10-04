@@ -1,6 +1,6 @@
 # String#downcase from the pinned reference Ruby, including its Unicode data version.
 require "json"
-abort "wrong Rails runtime pin" unless ENV.fetch("GIT_REVISION") == ARGV.fetch(0)
+abort "wrong Rails runtime pin" unless ENV.fetch("PARITY_REFERENCE_SHA") == ARGV.fetch(0)
 mappings = (0..0x10ffff).filter_map do |codepoint|
   next if (0xd800..0xdfff).cover?(codepoint)
   character = codepoint.chr(Encoding::UTF_8)

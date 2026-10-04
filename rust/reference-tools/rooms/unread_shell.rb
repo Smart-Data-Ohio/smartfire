@@ -61,4 +61,4 @@ ActiveRecord::Base.transaction do
 end
 Current.reset
 puts JSON.pretty_generate(rows)
-warn "Rails unread shell oracle: #{rows.size} pointer and divider cases; reference d7c7de92"
+warn "Rails unread shell oracle: #{rows.size} pointer and divider cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

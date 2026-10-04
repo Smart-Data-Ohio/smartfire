@@ -37,5 +37,5 @@ rows = inputs.map do |input|
 ensure
   Current.reset
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", messages: rows) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], messages: rows) + "\n")
 puts "WS8bm fragment oracle: #{rows.size} real Rails messages; 2 viewers through one fragment cache; 0 session-bound values"

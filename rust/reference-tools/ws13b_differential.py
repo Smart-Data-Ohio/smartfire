@@ -7,6 +7,8 @@ through the actual controller. Tests write observations with
 WS13B_OBSERVED_ORACLE and WS13B_DIFFERENTIAL_OUTPUT. No delivery projection.
 shrink FAILURE OUTPUT: delta-debug a recorded mismatch, rerunning BOTH apps.
 """
+
+from status_pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import copy
 import hashlib
 import json
@@ -18,7 +20,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 CARGO = ['mise','exec','rust@1.98.1','--','cargo','test','--locked','--manifest-path','rust/Cargo.toml','--workspace','--exclude','html5ever','observed_rails_differential_','--','--test-threads=8','--nocapture']
-ENV = dict(os.environ,PARITY_NAMESPACE='ws13b',PARITY_IMAGE='ws13-reference:d7c7de92',PARITY_OWNER='ws13b',PARITY_CPUS='2',CARGO_BUILD_JOBS='2')
+ENV = dict(os.environ,PARITY_NAMESPACE='ws13b',PARITY_IMAGE=PIN_IMAGE,PARITY_OWNER='ws13b',PARITY_CPUS='2',CARGO_BUILD_JOBS='2')
 
 def banner(value, directory):
     with tempfile.NamedTemporaryFile(mode="w",suffix=".json",dir=directory) as source:
@@ -61,9 +63,9 @@ def record(count, output, specs=None, seeds=None):
     return observed
 
 def verify_sources(oracle):
-    assert oracle['reference_pin']=='d7c7de92'
+    assert oracle['reference_pin']==PIN
     for path,digest in oracle['source_sha256'].items():
-        raw=subprocess.check_output(['git','show',f'd7c7de92:{path}'],cwd=ROOT)
+        raw=subprocess.check_output(['git','show',f'{PIN_FULL}:{path}'],cwd=ROOT)
         assert hashlib.sha256(raw).hexdigest()==digest,path
 
 def compare(expected, actual):

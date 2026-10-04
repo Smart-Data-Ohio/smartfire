@@ -99,6 +99,6 @@ labels = [["One\u00a0Two"], ["Line\vBreak"], ["One\u00a0Two", "Line\vBreak"], ["
   label = members.many? ? Rooms::Direct.new.direct_display_name(members: members) : members.first.name.split(" ")[0]
   {names: names, label: label}
 end
-puts JSON.pretty_generate(reference: "d7c7de92", headers: headers,
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), headers: headers,
   setup: {group_id: group.id}, operations: operations, guards: guards, labels: labels)
-warn "Rails room directory: #{headers.size} header goldens, #{operations.sum { |op| op[:frames].size }} recipient frames; reference d7c7de92"
+warn "Rails room directory: #{headers.size} header goldens, #{operations.sum { |op| op[:frames].size }} recipient frames; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

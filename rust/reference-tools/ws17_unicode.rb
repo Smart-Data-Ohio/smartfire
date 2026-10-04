@@ -77,4 +77,4 @@ comparisons = comparison_pairs.map do |left, right|
   {left:, right:, equal: left.casecmp?(right), email_changing: controller.send(:email_change_requested?)}
 end
 
-puts JSON.generate(reference: "d7c7de92", ruby: RUBY_VERSION, unicode: RbConfig::CONFIG.fetch("UNICODE_VERSION"), maps:, word_ranges:, alpha_ranges:, matcher:, replacements:, validations:, humanized:, tags:, normalized_tags:, comparisons:)
+puts JSON.generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], ruby: RUBY_VERSION, unicode: RbConfig::CONFIG.fetch("UNICODE_VERSION"), maps:, word_ranges:, alpha_ranges:, matcher:, replacements:, validations:, humanized:, tags:, normalized_tags:, comparisons:)

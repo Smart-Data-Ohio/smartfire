@@ -47,4 +47,4 @@ admin=User.find(127326141)
   end
   Stream.where(id:40).delete_all;HuddleGrant.where(id:17).delete_all;Session.where(id:-7013).delete_all
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases})

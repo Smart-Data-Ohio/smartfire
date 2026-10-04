@@ -12,7 +12,7 @@ use tower::ServiceExt;
 async fn app() -> TestApp {
     TestApp::boot()
         .await
-        .expect("build the d7c7de92 WS19 default parity seed")
+        .expect("build the current pinned WS19 default parity seed")
 }
 
 #[tokio::test]

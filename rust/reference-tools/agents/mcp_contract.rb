@@ -71,7 +71,7 @@ travel_to Time.utc(2026, 3, 2, 16) do
   Agents::McpServer.tools.each do |tool|
     capture.call("tool_empty_#{tool.name}", rpc.call("tools/call", { name: tool.name, arguments: {} }))
   end
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", versions: versions, server_name: Agents::McpServer::SERVER_NAME,
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], versions: versions, server_name: Agents::McpServer::SERVER_NAME,
     server_version: Agents::McpServer::SERVER_VERSION, instructions: Agents::McpServer::INSTRUCTIONS,
     tools: Agents::McpServer.tools.map { |t| { name: t.name, description: t.description, inputSchema: t.input_schema, throttle: t.throttle } }, cases: cases })
 end

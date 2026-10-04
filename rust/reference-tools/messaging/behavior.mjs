@@ -1,3 +1,4 @@
+import {PIN} from './reference-pin.mjs';
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
 import {waitForVisibility,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,waitForVisibleProperty,waitForVisibleAttribute,waitForVisibleContentCount,actOnVisible,filterVisibleText,visibleText,waitForDomCount,waitForCondition} from './behavior-visibility.mjs';
@@ -388,7 +389,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       return;
     }
     if (file==='workspace_markdown') {
-      const source=execFileSync('git',['show','d7c7de92:test/system/workspace_markdown_test.rb'],{encoding:'utf8'});
+      const source=execFileSync('git',['show',`${PIN}:test/system/workspace_markdown_test.rb`],{encoding:'utf8'});
       const heredoc=(start,indent)=>source.split(start)[1].split(`${' '.repeat(indent)}MARKDOWN`)[0].split('\n').map(line=>line.slice(indent+2)).join('\n');
       if(caseName===WORKSPACE_CASE) {await workspace({author,source,submit});return;}
       if (caseName==='Markdown messages reach other users and editing preserves the original source') {
@@ -515,7 +516,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         }
       } else if(caseName==='a rejected message can be recovered corrected and sent') {
         // SOURCE_LIMIT is read from the pin, rather than the candidate's input.
-        const model=execFileSync('git',['show','d7c7de92:app/models/message/markdown.rb'],{encoding:'utf8'});
+        const model=execFileSync('git',['show',`${PIN}:app/models/message/markdown.rb`],{encoding:'utf8'});
         const limit=Number(model.match(/SOURCE_LIMIT = ([\d_]+)/)[1].replaceAll('_',''));
         const invalid='A'.repeat(limit+1);
         await author.locator('#composer textarea').evaluate((editor,value)=>{

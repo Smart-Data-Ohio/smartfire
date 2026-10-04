@@ -43,5 +43,5 @@ containers=[[],[cards[0][:attributes]],[cards[1][:attributes],cards[2][:attribut
   message.define_singleton_method(:link_embed_references) { references }
   {attributes:attributes,client_id:key,html:ApplicationController.renderer.render(partial:'link_embeds/cards',locals:{message:message})}
 end
-File.write(output,JSON.pretty_generate({reference:'d7c7de92',metadata:metadata,cards:cards,containers:containers})+"\n")
+File.write(output,JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),metadata:metadata,cards:cards,containers:containers})+"\n")
 puts "WS15e LinkEmbed Rails vectors: #{metadata.size} metadata, #{cards.size} generic cards, #{containers.size} containers"

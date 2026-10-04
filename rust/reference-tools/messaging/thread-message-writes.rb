@@ -61,6 +61,6 @@ capture.call("locked_delete", :delete, "#{base}/#{reply.id}.json")
 note = thread.messages.create!(room:, creator: user, markdown_source: "Immutable", system_note: true, client_message_id: "writes-note")
 capture.call("note_update", :patch, "#{base}/#{note.id}.json", { markdown_source: "Blocked" })
 capture.call("note_delete", :delete, "#{base}/#{note.id}.json")
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", parent_id: parent.id, thread_id: thread.id,
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], parent_id: parent.id, thread_id: thread.id,
   initial_id: initial.id, posted_id: posted.id, reply_id: reply.id, note_id: note.id, rows:) + "\n")
 puts "WS8bm thread-message write oracle: #{rows.size} actual Rails writes; #{rows.sum { |row| row[:frames].size }} publisher frames; retries, rows, Drive sets, locks and tombstones"

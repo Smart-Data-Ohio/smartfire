@@ -59,7 +59,7 @@ class HuddleJobContracts
       Huddle::Reconciler.new.reconcile_once
       {name:name,calls:calls,logs:logs}
     end
-    puts JSON.pretty_generate(reference_pin:"d7c7de92",now:Time.current.to_i,invitations:invitations,presence:presence,reconciler:phases)
+    puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,invitations:invitations,presence:presence,reconciler:phases)
   ensure
     travel_back
   end

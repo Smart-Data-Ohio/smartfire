@@ -22,5 +22,5 @@ travel_to Time.utc(2026,3,2,16) do
     stored=Message.find_by(id:locations.last&.split("/")&.last)&.client_message_id
     {input:value,statuses:statuses,replayed:locations[0] && locations[0]==locations[1],stored:stored}
   end
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",edit:edit,boosts:boosts,client_ids:client_ids)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],edit:edit,boosts:boosts,client_ids:client_ids)
 end

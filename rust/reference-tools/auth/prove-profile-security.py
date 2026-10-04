@@ -45,7 +45,7 @@ try:
         "--user", f"{os.getuid()}:{os.getgid()}", "--env-file", str(ROOT / "rust/parity/.env.reference"),
         "-e", "RAILS_LOG_LEVEL=fatal", "-e", "DATABASE_URL=sqlite3:/work/review/profile.sqlite3",
         "-v", f"{OUT}:/work/review", "-v", f"{ROOT}/rust/reference-tools/auth/profile_rollback.rb:/work/profile_rollback.rb:ro",
-        env.get("WS9_REFERENCE_IMAGE", "ws9-reference:d7c7de92"), "bin/rails", "runner", "/work/profile_rollback.rb",
+        env.get("WS9_REFERENCE_IMAGE", env.get("PARITY_IMAGE", "campfire-reference")), "bin/rails", "runner", "/work/profile_rollback.rb",
     ], cwd=ROOT, capture_output=True, text=True)
     output = result.stdout + result.stderr
     (OUT / "rails-red.log").write_text(output)

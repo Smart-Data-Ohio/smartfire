@@ -26,5 +26,5 @@ cases=%w[seed starred escaped empty].map do |name|
   end
   result
 end
-puts JSON.pretty_generate(reference:'d7c7de92',picker:cases)
-warn "Rails DM picker oracle: #{cases.size} complete picker bodies; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),picker:cases)
+warn "Rails DM picker oracle: #{cases.size} complete picker bodies; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

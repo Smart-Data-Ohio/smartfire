@@ -36,4 +36,4 @@ vectors=cases.map do |c|
  mapping=Github::PullRequestThread.first
  {**c,request_body:body,status:res.status,location:res["Location"],body:res.status<400 ? res.body : nil,threads:ChannelThread.where(room_id:815).count,mappings:Github::PullRequestThread.count,mapping_thread:mapping&.channel_thread_id,joined:mapping && ThreadMembership.exists?(thread_id:mapping.channel_thread_id,user_id:811),fetches:ActiveJob::Base.queue_adapter.enqueued_jobs.count{|j|j[:job]==Github::FetchPullRequestJob}}
 end
-File.write("/work/vectors/github_discussions_http.json",JSON.pretty_generate(vectors)+"\n");puts "GitHub discuss Rails oracle: #{vectors.size} HTTP/redirect/thread/membership/job cases; reference d7c7de92"
+File.write("/work/vectors/github_discussions_http.json",JSON.pretty_generate(vectors)+"\n");puts "GitHub discuss Rails oracle: #{vectors.size} HTTP/redirect/thread/membership/job cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

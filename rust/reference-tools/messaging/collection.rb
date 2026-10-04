@@ -44,5 +44,5 @@ quote_names = [
     { names:, error: error.message }
   end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", message_id: message.id, thread_id: thread.id, states:, quote_names:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], message_id: message.id, thread_id: thread.id, states:, quote_names:) + "\n")
 puts "WS8bm collection oracle: #{states.size} real Rails states; keys and cache-hit bytes; 0 session-bound values"

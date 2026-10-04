@@ -11,7 +11,7 @@ docker run --rm --name ws9-two-factor-rollback --network none --entrypoint "" \
   --user "$(id -u):$(id -g)" --env-file "$ROOT/parity/.env.reference" \
   -e RAILS_LOG_LEVEL=fatal -e DATABASE_URL=sqlite3:/work/rollback/rollback.sqlite3 -e WS9_ROLLBACK_DIR=/work/rollback \
   -v "$ROOT/reference-tools:/work/reference-tools:ro" -v "$WS9_ROLLBACK_DIR:/work/rollback" \
-  "${WS9_REFERENCE_IMAGE:-ws9-reference:d7c7de92}" bin/rails runner /work/reference-tools/auth/rollback.rb
+  "${WS9_REFERENCE_IMAGE:-${PARITY_IMAGE:-campfire-reference}}" bin/rails runner /work/reference-tools/auth/rollback.rb
 if [[ "${1:-}" != --prepare-only ]]; then
   cargo test --locked -j 4 -p campfire_db read_rails_rollback_changes -- --ignored --test-threads=4
 fi

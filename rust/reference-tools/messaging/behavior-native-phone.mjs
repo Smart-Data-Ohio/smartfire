@@ -8,8 +8,8 @@ import {createServer} from 'node:net';
 import {createHash} from 'node:crypto';
 import {basename,dirname} from 'node:path';
 import {nativeAssetProxy} from './behavior-native-proxy.mjs';
+import {PIN,REFERENCE_IMAGE} from './reference-pin.mjs';
 export const PHONE_CASE='keeps the thread drawer usable on a phone and preserves the channel';
-const PIN='d7c7de9264c63015be398001d7a1094e7695a6db';
 export function extractPhone(source) {
   const start=source.indexOf(`  test "${PHONE_CASE}" do\n`);
   const end=source.indexOf('\n  test ',start+1);
@@ -61,7 +61,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     if(mutation||Number(process.env.WS8BM_SETUP_DELAY||0)) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}
     // mkdtemp creates private directories. Match their owner even on Actions (UID 1001),
     // rather than relying on the Rails image's local-development UID 1000.
-    const args=['run','--name',container,'--rm','--network','host','--cpus','2','--user',`${process.getuid()}:${process.getgid()}`,...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,'-e',`WS8BM_NATIVE_DRIVER_URL=${driverUrl}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'];
+    const args=['run','--name',container,'--rm','--network','host','--cpus','2','--user',`${process.getuid()}:${process.getgid()}`,...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,'-e',`WS8BM_NATIVE_DRIVER_URL=${driverUrl}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',REFERENCE_IMAGE,'exec','ruby','/tools/behavior-native-phone.rb'];
     const result=await new Promise((resolve,reject)=>{
       const child=spawn('docker',args);let stdout='',stderr='';
       const timer=setTimeout(()=>{child.kill('SIGTERM');reject(new Error('Native browser process timeout'));},120000);

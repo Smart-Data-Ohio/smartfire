@@ -6,7 +6,7 @@
 //!
 //!   bash reference-tools/cable/record.sh
 //!
-//! Re-recording uses the current `ws7-reference:d7c7de92` image, a fresh database, port 47040, and
+//! Re-recording uses the current pinned `campfire-reference` image, a fresh database, port 47040, and
 //! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in `/home/riels/.cache/rust-port/ws7/`.
 //! The checked-in recording was produced at `fec615be`; #151 changed only the Edge install image path.
 //!

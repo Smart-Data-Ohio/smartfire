@@ -34,5 +34,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   end
   after = before.keys.to_h { |table| [table, ActiveRecord::Base.connection.select_all("SELECT * FROM #{table} ORDER BY id").to_a] }
   raise "blob proxy mutated rows or jobs" unless before == after && ApplicationJob.queue_adapter.enqueued_jobs.empty?
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", notes: ["config.ru Rack::Deflater, HTTP/1.1, no Accept-Encoding. Fixed key, mtime and nonce entropy are fixture inputs. Every header and body byte retained. Six exact Rust security additions and only Date/X-Request-Id/X-Runtime values are approved differences."], blob_id: blob.id, path: path, rows_unchanged: true, jobs: [], cases: cases })
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], notes: ["config.ru Rack::Deflater, HTTP/1.1, no Accept-Encoding. Fixed key, mtime and nonce entropy are fixture inputs. Every header and body byte retained. Six exact Rust security additions and only Date/X-Request-Id/X-Runtime values are approved differences."], blob_id: blob.id, path: path, rows_unchanged: true, jobs: [], cases: cases })
 end

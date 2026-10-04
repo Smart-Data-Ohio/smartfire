@@ -48,5 +48,5 @@ cases=[
     fetch_error:user.meeting_cache&.fetch_error,errors:user.errors.to_hash}
   {name:name,google:google,fields:fields,html:renderer.render(partial:'users/profiles/status',assigns:{user:user})}
 end
-puts JSON.pretty_generate(reference:'d7c7de92',status_reference:'2e20b24c',panels:cases)
-warn "Rails status panels oracle: #{cases.size} complete status/meeting/OOO fragments; status template 2e20b24c, model files d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),panels:cases)
+warn "Rails status panels oracle: #{cases.size} complete status/meeting/OOO fragments; plain pinned reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

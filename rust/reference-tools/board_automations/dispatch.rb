@@ -219,5 +219,5 @@ cleanup=[]
   end
 end
 cadence = Periodic::Runner.new.instance_variable_get(:@tasks).select { |t| t.name.start_with?('board ') }.map { |t| {name: t.name, seconds: t.interval.to_i} }
-puts JSON.pretty_generate(reference: 'd7c7de92 plus approved board drift', now: now.strftime('%Y-%m-%d %H:%M:%S.%6N'), models:, sla:, digests:, failures:, cleanup:, cadence:, query_counts:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), now: now.strftime('%Y-%m-%d %H:%M:%S.%6N'), models:, sla:, digests:, failures:, cleanup:, cadence:, query_counts:)
 warn "Rails board automation oracle: #{models.size} rule cases; #{sla.size} SLA cases; #{digests.size} digest cases; #{failures.size} failure cases; #{cleanup.size} cleanup cases; #{cadence.size} cadences; #{query_counts.size} query probes; 0 masks"

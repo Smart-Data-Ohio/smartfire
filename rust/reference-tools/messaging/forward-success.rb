@@ -58,5 +58,5 @@ capture.call('forward_of_forward', copies.first, {destinations: [{room_id: room.
 capture.call('file', file, {destinations: [{room_id: 699448326}]})
 capture.call('nested_html', child, {destinations: [{room_id: 699448326}]}, :html)
 raise 'forward fixture UUID count' unless ids.length == 1
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', source_id: source.id, legacy_id: legacy.id, file_id: file.id, thread_id: thread.id, child_id: child.id, recipients:, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], source_id: source.id, legacy_id: legacy.id, file_id: file.id, thread_id: thread.id, child_id: child.id, recipients:, rows:) + "\n")
 puts "WS8bm forward-success oracle: #{rows.size} positive actual requests; #{rows.sum { |r| r[:messages].size }} forwards; complete bodies/rows and #{rows.sum { |r| r[:frames].size }} rendered frames"

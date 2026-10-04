@@ -34,5 +34,5 @@ cases=queries.map.with_index do |query,index|
   {name:"query_#{index}",query:query,filters:filters,ids:entries.pluck(:id),html:html,nav:view.content_for(:nav).to_s,csv:controller.send(:audit_csv,entries)}
 end
 dates=["2026-03-02","2026-3-2","2026/03/02","02 Mar 2026","March 2, 2026","20260302","26-03-02","03/02/2026","2026-03-02T12:34:56Z","bad","2026-02-30","2026-13-01"," 2026-03-02 ","\u00a0",""] .map { |s| c=AuditLogGoldenController.new; {input:s,date:c.send(:parse_date,s)&.to_s} }
-puts JSON.pretty_generate(reference:"d7c7de92",rows:rows,cases:cases,dates:dates)
-warn "Rails audit logs oracle: #{rows.size} rows, #{cases.size} complete HTML/nav/CSV cases, #{dates.size} date parses; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),rows:rows,cases:cases,dates:dates)
+warn "Rails audit logs oracle: #{rows.size} rows, #{cases.size} complete HTML/nav/CSV cases, #{dates.size} date parses; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

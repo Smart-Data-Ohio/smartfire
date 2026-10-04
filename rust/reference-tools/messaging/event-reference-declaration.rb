@@ -15,6 +15,6 @@ input={body:"<div>see https://github.com/rails/rails/pull/512 and https://x.com/
 path="/rooms/#{room.id}/messages/#{message.id}"
 browser.patch(path,params:{message:input},headers:headers)
 message.reload
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',message_id:message.id,input:input,path:path,status:browser.response.status,location:browser.response.headers['Location'],events:message.events.map(&:id))+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],message_id:message.id,input:input,path:path,status:browser.response.status,location:browser.response.headers['Location'],events:message.events.map(&:id))+"\n")
 raise 'missing Rails event reference' unless message.events==[event]
 puts 'WS8bm event owner probe: actual legacy PATCH; Rails synchronizes the event reference (WS14e)'

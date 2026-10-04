@@ -11,5 +11,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
     results[name] = {status: code, payload: result.payload, error: result.error,
       stored: Agent.find(agent.id).working_presence, expires_at: Agent.find(agent.id).working_presence_expires_at}
   end
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", results: results }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], results: results }.as_json)
 end
