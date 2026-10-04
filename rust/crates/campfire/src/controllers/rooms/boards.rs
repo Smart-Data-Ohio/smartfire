@@ -24,6 +24,15 @@ pub async fn show(c: &mut Ctx) -> Result {
     redirect_to_room(c, room.id)
 }
 
+/// The subclass callback scopes exclude destroy, so inherited RoomsController#destroy
+/// reaches `@room.name` with nil (`app/controllers/rooms_controller.rb:29`).
+pub async fn destroy(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    Err(Error::internal(anyhow::anyhow!(
+        "undefined method 'name' for nil"
+    )))
+}
+
 pub async fn new(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     ensure_permission_to_create_rooms(c).await?;

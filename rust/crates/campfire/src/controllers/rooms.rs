@@ -853,4 +853,7 @@ mod boards_domain_tests;
 mod boards_rails_cases;
 
 #[cfg(test)]
+mod board_destroy_tests;
+
+#[cfg(test)]
 mod board_automation_tests;
