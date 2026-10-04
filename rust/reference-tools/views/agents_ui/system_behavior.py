@@ -3,14 +3,18 @@
 Build the binary and agents_ui seed first; the pinned Playwright Docker image
 supplies its committed browser dependencies. No images are captured or compared.
 """
-import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, tempfile, time, urllib.request
+import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, tempfile, threading, time, urllib.request
 root = pathlib.Path(__file__).resolve().parents[4]
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
-p.add_argument('--scenario', choices=['all','pages','budget','work'], default='all')
+p.add_argument('--scenario', choices=['all','pages','budget','work','inbox','inbox-filter'], default='all')
 p.add_argument('--inject-work-status', action='store_true', help='Discrimination probe: make the candidate writer retain planned status')
 p.add_argument('--inject-stream-finalize', action='store_true', help='Discrimination probe: make the candidate writer retain streaming state')
+p.add_argument('--test-host', type=pathlib.Path, help='Current-source campfire test binary (inbox producer runs only in cfg(test))')
+p.add_argument('--inject-inbox-handle', action='store_true')
+p.add_argument('--inject-inbox-preference', action='store_true')
 args = p.parse_args()
+if args.scenario.startswith('inbox') and not args.test_host: p.error('inbox requires --test-host')
 if args.inject_stream_finalize and args.scenario != 'pages': p.error('--inject-stream-finalize requires --scenario pages')
 if args.inject_work_status and args.scenario != 'work': p.error('--inject-work-status requires --scenario work')
 if args.scenario == 'all':
@@ -23,7 +27,7 @@ labels = json.loads((seed / 'labels.json').read_text())
 store = root / '.scratch/system-behavior'
 store.mkdir(parents=True, exist_ok=True)
 work = pathlib.Path(tempfile.mkdtemp(dir=store))
-env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11ui-system'), 'PARITY_OWNER':os.environ.get('PARITY_OWNER','ws11ui'), 'PARITY_SEED_DIR':str(work/'seeds'), 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','ws11ui-reference:d7c7de92')}
+env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11ui-system'), 'PARITY_OWNER':os.environ.get('PARITY_OWNER','ws11ui'), 'PARITY_SEED_DIR':str(work/'seeds'), 'WS11UI_INBOX_CASE':args.scenario, 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','ws11ui-reference:d7c7de92')}
 reference = root / 'rust/parity/bin/reference'
 child = None
 # Keep simultaneous worktrees' servers and teardown isolated.
@@ -48,7 +52,7 @@ try:
     # Shared rules approve exactly this post-pin status-popup layout delta.
     layout = work/'application.html.erb';layout.write_bytes(subprocess.check_output(['git','show','2e20b24c3f2be9db8a646a1352c159b4afacad0e:app/views/layouts/application.html.erb'],cwd=root))
     subprocess.run(['docker','cp',str(layout),f'{env["PARITY_NAMESPACE"]}-reference-{reference_port}:/rails/app/views/layouts/application.html.erb'],check=True)
-    fixture = subprocess.check_output([str(reference),'runner','--port',str(reference_port),'--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/({'budget':'budget_fixture.rb','work':'work_fixture.rb'}.get(args.scenario,'system_fixture.rb')))],cwd=root,env=env,text=True)
+    fixture = subprocess.check_output([str(reference),'runner','--port',str(reference_port),'--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/({'budget':'budget_fixture.rb','work':'work_fixture.rb','inbox':'inbox_browser_fixture.rb','inbox-filter':'inbox_browser_fixture.rb'}.get(args.scenario,'system_fixture.rb'))),args.scenario],cwd=root,env=env,text=True)
     labels.update(json.loads(fixture)); labels_file.write_text(json.dumps(labels))
     source_db = work/f'seeds/.instances/{reference_port}/db/production.sqlite3'
     with sqlite3.connect(source_db) as source, sqlite3.connect(candidate/'db/production.sqlite3') as target: source.backup(target)
@@ -60,18 +64,44 @@ try:
     if args.inject_stream_finalize:
         with sqlite3.connect(candidate/'db/production.sqlite3') as target:
             target.execute("CREATE TRIGGER ws11ui_broken_stream_finalize AFTER UPDATE OF streaming ON messages WHEN NEW.streaming=0 AND OLD.streaming=1 BEGIN UPDATE messages SET streaming=1 WHERE id=NEW.id; END")
+    if args.inject_inbox_handle:
+        with sqlite3.connect(candidate/'db/production.sqlite3') as target:
+            target.execute("CREATE TRIGGER ws11ui_broken_handle AFTER UPDATE OF handled_at ON activity_items BEGIN UPDATE activity_items SET handled_at=NULL,read_at=NULL WHERE id=NEW.id; END")
+    if args.inject_inbox_preference:
+        with sqlite3.connect(candidate/'db/production.sqlite3') as target:
+            target.execute("CREATE TRIGGER ws11ui_broken_preference AFTER UPDATE OF inbox_preferences ON users BEGIN UPDATE users SET inbox_preferences='{}' WHERE id=NEW.id; END")
     candidate_env = dict(os.environ)
     for line in (root/'rust/parity/.env.reference').read_text().splitlines():
         if line and not line.startswith('#') and '=' in line:
             key,value=line.split('=',1);candidate_env[key]=value.strip('"\'')
     candidate_env.update({'CAMPFIRE_STORAGE_PATH':str(candidate),'CAMPFIRE_FROZEN_TIME':frozen_time,'DISABLE_SSL':'true','HTTP_PORT':str(candidate_port),'TARGET_PORT':str(target_port),'APP_VERSION':'parity','GIT_REVISION':'parity'})
     with (work/'candidate.log').open('w') as log:
-        child=subprocess.Popen([str(args.binary.resolve())],cwd=root,env=candidate_env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
+        host_command = [str(args.binary.resolve())]
+        if args.scenario.startswith('inbox'):
+            host_command = [str(args.test_host.resolve()), 'controllers::presenters::test_support::ws8bm_browser_host_without_jobs', '--exact', '--ignored', '--nocapture']
+            candidate_env.update(WS8BM_BROWSER_HOST='1', WS11UI_ACTIVITY_CONTROL=str(work/'Rust-control'), WS11UI_ACTIVITY_USER=str(labels['users.david']), WS11UI_ACTIVITY_SOURCE=str(labels['messages.second']))
+        child=subprocess.Popen(host_command,cwd=root,env=candidate_env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
         wait_up(candidate_port)
         result_codes=[]
         for name,port,db in [('Rails',reference_port,work/f'seeds/.instances/{reference_port}/db/production.sqlite3'),('Rust',candidate_port,candidate/'db/production.sqlite3')]:
             print(f'{name} system behavior:',flush=True)
-            result=subprocess.run(['bash',str(root/'rust/reference-tools/views/agents_ui/system_browser.sh'),f'http://127.0.0.1:{port}',str(labels_file),str(db),args.scenario],cwd=root)
+            control = work/f'{name}-control'
+            stopped = threading.Event()
+            def followup():
+                while not stopped.wait(.02):
+                    if not control.with_suffix('.request').exists(): continue
+                    try:
+                        result = subprocess.check_output([str(reference),'runner','--port',str(reference_port),'--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui/inbox_browser_followup.rb')],cwd=root,env=env,text=True)
+                        control.with_suffix('.response').write_text(result)
+                    except Exception as error:
+                        control.with_suffix('.response').write_text(json.dumps({'error':str(error)}))
+                    return
+            producer = threading.Thread(target=followup) if name == 'Rails' and args.scenario=='inbox' else None
+            if producer: producer.start()
+            browser_env = dict(os.environ, WS11UI_ACTIVITY_CONTROL=str(control))
+            result=subprocess.run(['bash',str(root/'rust/reference-tools/views/agents_ui/system_browser.sh'),f'http://127.0.0.1:{port}',str(labels_file),str(db),args.scenario],cwd=root,env=browser_env)
+            stopped.set()
+            if producer: producer.join()
             result_codes.append(result.returncode)
         raise SystemExit(1 if any(result_codes) else 0)
 finally:

@@ -79,5 +79,13 @@
   "discrimination_status": {
     "DM": "passed from fresh clone at ad4ffef1",
     "inbound": "Rails setup navigation failed with net::ERR_ABORTED before the candidate mutation assertion; not retried and no timing thresholds changed; positive valid-CSRF denial probe passed"
+  },
+  "cutover_reconciliation": {
+    "date": "2026-10-04",
+    "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+    "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+    "partial": true,
+    "reason": "Configured Huddle source/header/sidebar APIs are on main; the historical unmerged-owner blocker is superseded. Exact original browser receipts remain incomplete. Muted-room delivery is still an unexecuted full browser sequence here, not proved absent.",
+    "remaining_manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-remaining.json"
   }
 }

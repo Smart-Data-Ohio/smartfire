@@ -59,7 +59,7 @@ if (Path.cwd() == root / 'rust/crates/campfire'
         for test in media:
             native_arguments.extend(['--skip', test])
         native = subprocess.run(native_arguments)
-        # Sequential: never add another worker to the native eight-thread run.
-        pinned = subprocess.run(pinned_args([*media, '--exact', '--test-threads=8']))
+        # Sequential: never add another worker to the native run.
+        pinned = subprocess.run(pinned_args([*media, '--exact', '--test-threads=4']))
         sys.exit(native.returncode or pinned.returncode)
 os.execv(str(binary), [str(binary), *arguments])

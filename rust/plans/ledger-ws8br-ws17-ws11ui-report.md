@@ -1,0 +1,136 @@
+# WS8br / WS17 / WS11-UI cutover reconciliation — partial
+
+Base: `78b9b1546bdab4c6c1c9b8ddb94512f661289112`, pinned Rails `d7c7de92`
+with the already-approved controller/layout drift. Branch:
+`rust/ledger-ws8br-ws17-ws11ui`. The read-only cutover inventory is retained unchanged.
+This is a coherent partial PR, **not a code-complete cutover receipt**.
+
+## Closed records
+
+The in-place ledgers preserve their previous record fields under `history` and
+explicitly separate historical execution counts from current reconciliation.
+[receipts](ledger-ws8br-ws17-ws11ui-receipts.json) records every credited test identity,
+its actual main-CI pass line and the original declaration it supersedes. Main CI
+[37200618245](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37200618245)
+executed **4,948 passes, 0 failures**; those are historical counts, not this branch's run.
+
+- **WS17: 14 of the 15 stale records resolved, 1 exact browser receipt remains.**
+  Twelve declarations map to enabled current tests: validated unique MeetingCache
+  creation; all four invitation-job scenarios; all seven Recorder work/preference/
+  grouping/caller-authorization clauses. The two mixed DND/group huddle declarations
+  now have new enabled regressions, pinned complete Rails payload/recipient/state
+  vectors, actual grant issuance, real invitation jobs and overdue resolution.
+  The source-issuance mutation is rejected by both new tests. No WS13 domain logic
+  is copied. The current selected total is 346/347; the earlier 332/347 checkpoint
+  remains historical in `ws17-wave4-report.md`.
+- **WS11-UI: all 3 original browser flags pass on Rails and Rust.** Both inbox
+  declarations and the work-assignment declaration run their original interacting
+  sequences on independent seed copies. Each real writer mutation is rejected at
+  its intended assertion. No browser retry, deadline change or original assertion
+  weakening is used. These are external Playwright receipts, **not ordinary CI
+  browser executions**. The native inbox/page tests cited alongside them passed
+  in main CI, and are explicitly labelled supporting evidence.
+- **WS8br: the queue-failure record is superseded by the approved transaction
+  contract.** `controllers::rooms::queue_recovery_tests::queue_decision_keeps_atomic_http_failure_and_recovers_a_rails_tombstone`
+  proves atomic HTTP rollback on durable-queue failure, recovery of an existing
+  Rails-compatible tombstone, exactly one enqueue and actual deletion. Lead decision
+  2 explicitly changes the Redis after-commit failure boundary. This is recorded as
+  an approved difference, not exact Rails HTTP parity. Queue inspection now uses
+  `TestApp::without_job_runner()`.
+- **WS11 API stale prose corrected.** The public Recorder supplies the persisted
+  budget reader; REST events return real authorized JSON; Drive polling tests are
+  enabled; the standalone owning GitHub thread page is mounted and byte-tested.
+  Current source and enabled CI test citations replace the absent-owner claims in
+  `ws11api-remaining-scope.md`. Historical prose is retained as a labelled checkpoint.
+
+The three browser flags were acceptance gaps in implemented code. The work replay's
+first startup failure was caused by a seed missing the latest schema migration;
+rebuilding the same CI seed set from the pinned Rails runtime plus current schema
+resolves startup before any assertion. The new inbox filter replay initially
+compared raw JSON against `false`; Rails stores the form value `"0"` and its typed
+inbox reader returns false. The replay now uses Rails' exact false-value set, then
+checks the original effective-false assertion. A producer restoring the default
+preference is still rejected. Neither issue warrants a production timing patch.
+
+New Rust test names:
+
+- `tests::huddle_cutover_test::huddle_push_honors_dnd_with_a_starred_caller_exception`
+- `tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls`
+
+These two tests are enabled in the ordinary workspace nextest gate; they were not
+in historical main CI 37200618245. The ignored tools-only HTTP host was already
+present; its optional test-only followup producer now records an actual activity
+through the writer rather than inventing a response. No production endpoint or
+asset changes are introduced.
+
+## Exact remaining scope
+
+[ledger-ws8br-ws17-ws11ui-remaining.json](ledger-ws8br-ws17-ws11ui-remaining.json)
+enumerates every original name, source line and cutover P identifier. Counts below
+overlap; narrower criteria/browser entries must not be added to the broad ledger
+as unique behaviours. No stale “owner API unmerged” explanation remains active.
+
+| Ledger group | Still open | Actual reason |
+| --- | ---: | --- |
+| WS8br broad original declarations | 337 | Complete file-level/named receipt reconciliation not completed in this slice; existing HTTP/component passes do not automatically credit every original clause. |
+| WS8br sidebar controller declarations | 8 | Real Huddle source/header/sidebar APIs are merged; the exact original live/quiet/Board/cache/query assertions still need fresh named receipts. |
+| WS8br2 original interaction criteria | 14 | Missing complete member-card/huddle, star-menu/phone, brand-icon/two-theme, and icon-upload/delete browser receipts. Owner domain APIs alone do not prove these interactions. |
+| WS8br muted-room browser | 1 | Original flowing-delivery control, muted noise and mention-unread sequence not executed here. Static row/push tests alone are insufficient. |
+| WS17 meeting-status browser | 1 | Real refresh/interval/broadcast implementation passes; original toggle, stubbed busy interval, injected-clock advance and cleared browser badge need an exact replay. |
+| Aggregate WS8br phone/header/member/pins mapping | Partial | Overlaps the broad originals above; interaction probes still do not establish every original declaration. |
+
+Three original mobile-layout declarations are geometry/style-only and already
+excluded by the no-pixel phase (P0340–P0342). They remain in historical totals;
+no additional behaviour is excluded. The fourteen original WS8br2 criteria are
+still emitted by `deferred_inventory.py`, which now clarifies that the old owner
+names describe historical divisions rather than absent APIs. The remaining items
+are **not all owner-blocked**: their primary blocker is incomplete named evidence.
+This PR does not claim that unknown remaining behaviours are supported.
+
+## Reproduction and discrimination
+
+With the pinned Rails/current-schema image and the default, first_run and agents_ui
+seeds (the only three seeds built by CI), run from the repository root:
+
+```sh
+PARITY_NAMESPACE=ws11ui-cutover PARITY_OWNER=ws11ui \
+PARITY_IMAGE=ws11ui-cutover-reference:current-schema \
+python3 rust/reference-tools/views/agents_ui/check_cutover_browser.py \
+  --binary rust/target/debug/campfire --test-host "$CAMPFIRE_TEST_HOST"
+python3 rust/reference-tools/check-ws17-huddle-cutover.py
+PARITY_NAMESPACE=ws11ui-cutover PARITY_OWNER=ws11ui \
+PARITY_IMAGE=ws11ui-cutover-reference:current-schema \
+rust/parity/bin/reference runner --seed default \
+  rust/reference-tools/ws17_huddle_cutover.rb > huddle-regenerated.json
+cmp rust/vectors/ws17_huddle_cutover.json huddle-regenerated.json
+```
+
+`CAMPFIRE_TEST_HOST` is the current-source campfire test executable obtained from
+Cargo's JSON build output, not an untracked fixture dependency. Build jobs remain
+2 and nextest workers remain 4; the machine-wide rustc throttle is unchanged.
+The media wrapper uses the pinned libvips/ffmpeg runtime with four libtest threads.
+
+Raw executed summaries:
+
+```text
+Cutover inbox: Rails 1 passed; Rust 1 passed; 0 failures
+Cutover inbox: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged
+Cutover inbox-filter: Rails 1 passed; Rust 1 passed; 0 failures
+Cutover inbox-filter: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged
+Cutover work: Rails 1 passed; Rust 1 passed; 0 failures
+Cutover work: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged
+Cutover browser discrimination: 3 paired sequences passed; 3 writer defects rejected; 0 invalid controls
+WS17 huddle cutover baseline: 2 passed; 0 failures
+WS17 huddle cutover discrimination: 2 missing-source failures rejected; 0 invalid controls
+Rails huddle cutover: 2 source scenarios; 0 failures
+```
+
+Vector regeneration and `cmp` exited 0; no expected response/payload normalization
+is applied. Controls restore the production source in `finally`; the actual
+HuddleGrant issuance producer is unchanged in the submitted patch.
+
+## Fresh-clone verification
+
+Results will be recorded here after running the final committed source, with only
+the three independently regenerated CI seeds. No new scratch target directory is
+needed; the fresh clone uses the existing worktree compiler cache.

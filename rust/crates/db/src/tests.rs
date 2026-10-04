@@ -76,6 +76,7 @@ mod huddle_domain_lifecycle_sequences_test;
 mod huddle_membership_creation_test;
 mod huddle_join_push_sequences_test;
 mod huddle_invitation_job_test;
+mod huddle_cutover_test;
 mod huddle_query_assertions_test;
 mod huddle_ring_policy_seam_test;
 mod huddle_ring_revocation_test;

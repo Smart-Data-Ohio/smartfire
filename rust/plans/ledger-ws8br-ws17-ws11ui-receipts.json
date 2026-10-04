@@ -1,0 +1,293 @@
+{
+  "reference": "d7c7de92",
+  "date": "2026-10-04",
+  "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+  "historical_main_ci": {
+    "run": 37200618245,
+    "url": "https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37200618245",
+    "tests_passed": 4948,
+    "tests_failed": 0,
+    "counts_are_historical": true
+  },
+  "ci_passes": [
+    {
+      "crate": "campfire_db",
+      "test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+      "line": 1539
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::recipient",
+      "line": 2106
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::off",
+      "line": 2105
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::connected",
+      "line": 2103
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::missing",
+      "line": 2104
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails",
+      "line": 3008
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+      "line": 2840
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+      "line": 2782
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+      "line": 2771
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+      "line": 2812
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::activity_items::tests::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions",
+      "line": 3421
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies",
+      "line": 3615
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::rooms::queue_recovery_tests::queue_decision_keeps_atomic_http_failure_and_recovers_a_rails_tombstone",
+      "line": 4602
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_generic_recorder_test::ws12_generic_budget_notice_uses_the_merged_owner_reader_without_an_adapter_argument",
+      "line": 2810
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_generic_recorder_test::ws12_budget_notice_batch_reader_and_recorder_reads_at_two_sizes",
+      "line": 2811
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::agent_polling_tests::agent_polling_rest_drive_bytes",
+      "line": 3490
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::agent_polling_tests::agent_polling_mcp_drive_bytes",
+      "line": 3487
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::channel_threads::page_tests::ordinary_work_and_board_posts_render_through_authorized_routes",
+      "line": 3618
+    }
+  ],
+  "ws17_closed_records": [
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "huddle push honors DND with a starred-caller exception",
+      "rust_test": "tests::huddle_cutover_test::huddle_push_honors_dnd_with_a_starred_caller_exception",
+      "evidence": "Pinned Rails vector ws17_huddle_cutover.json, actual grant issuance -> invitation job -> gated durable delivery -> overdue missed-call resolution. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py: both baseline tests pass; removing the actual issuance callback fails both invitation assertions."
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
+      "rust_test": "tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls",
+      "evidence": "Pinned Rails vector ws17_huddle_cutover.json, actual grant issuance -> invitation job -> gated durable delivery -> overdue missed-call resolution. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py: both baseline tests pass; removing the actual issuance callback fails both invitation assertions."
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "one cache per user",
+      "rust_test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+        "log_line": 1539,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "pushes the invitation to the recipient only",
+      "rust_test": "tests::huddle_invitation_job_test::recipient",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::recipient",
+        "log_line": 2106,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "an opted-out recipient gets no push subscriptions",
+      "rust_test": "tests::huddle_invitation_job_test::off",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::off",
+        "log_line": 2105,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "a connected recipient gets no push",
+      "rust_test": "tests::huddle_invitation_job_test::connected",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::connected",
+        "log_line": 2103,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "missing invitations are ignored",
+      "rust_test": "tests::huddle_invitation_job_test::missing",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::missing",
+        "log_line": 2104,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work events notify followed thread members",
+      "rust_test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+        "log_line": 2840,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a member with notifications off gets no work items but a mentions member does",
+      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
+      "rust_test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+        "log_line": 2771,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work updates for one thread collapse into a single item",
+      "rust_test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+        "log_line": 2771,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work assigned by an agent honors the recipient's agent_work switch",
+      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work assigned by a bot without an agent ignores the agent_work switch",
+      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a caller-authorized record skips the source check but keeps idempotency",
+      "rust_test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+        "log_line": 2812,
+        "result": "PASS"
+      }
+    }
+  ],
+  "ws11ui_browser_records": [
+    {
+      "file": "test/system/activity_inbox_test.rb",
+      "test": "handles an item, clears the badge, and receives a later activity",
+      "scenario": "inbox"
+    },
+    {
+      "file": "test/system/activity_inbox_test.rb",
+      "test": "filters by type and saves a notification switch",
+      "scenario": "inbox-filter"
+    },
+    {
+      "file": "test/system/agent_work_assignment_test.rb",
+      "test": "assigns an agent from the update dialog and renders its API status change after refresh",
+      "scenario": "work"
+    }
+  ],
+  "branch_validation": "See accompanying report for fresh branch execution. The two new huddle tests and external browser sequences are not claimed as executions in the historical main run."
+}

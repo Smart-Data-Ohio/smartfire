@@ -1,0 +1,110 @@
+{
+  "reference": "d7c7de92",
+  "now": "2026-09-23T12:00:00Z",
+  "rows": [
+    {
+      "name": "dnd_allowed",
+      "setup_sql": "DELETE FROM activity_items WHERE source_type='HuddleGrant'; DELETE FROM huddle_grants; DELETE FROM dnd_allowed_users; DELETE FROM push_subscriptions;\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (186869642,'2026-01-03 20:00:00',127326141,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'Rooms::Direct','2026-03-02 11:03:00');\nINSERT OR REPLACE INTO \"memberships\" (\"room_id\",\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (186869642,198590975,NULL,0,'2026-09-23 12:00:00',NULL,NULL,'everything',NULL,935962036,NULL,NULL,NULL,NULL,'2026-09-23 12:00:00',149087659);\nINSERT OR REPLACE INTO \"memberships\" (\"room_id\",\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (186869642,449028908,NULL,0,'2026-09-23 12:00:00',NULL,NULL,'everything',NULL,NULL,NULL,NULL,NULL,NULL,'2026-09-23 12:00:00',127326141);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{\"huddle_invitations\":false}',NULL,NULL,NULL,'system','default','🚀','Shipping Rust',NULL,NULL,1320,420,127326141,NULL,NULL,NULL,'2026-01-02 16:00:00',NULL,NULL,'david@37signals.com',NULL,TRUE,FALSE,FALSE,'David',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',1,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{}',NULL,NULL,NULL,'system','default',NULL,NULL,NULL,NULL,NULL,NULL,149087659,NULL,NULL,NULL,'2026-01-02 17:00:00',NULL,NULL,'jason@37signals.com',NULL,TRUE,FALSE,FALSE,'Jason',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',1,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{}',NULL,NULL,NULL,'system','default',NULL,NULL,NULL,NULL,NULL,NULL,712064548,'Programmer',NULL,NULL,'2026-01-02 19:00:00',NULL,NULL,'kevin@37signals.com',NULL,TRUE,FALSE,FALSE,'Kevin',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',0,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{}',NULL,NULL,NULL,'system','default',NULL,NULL,NULL,NULL,NULL,NULL,773523953,'Designer',NULL,NULL,'2026-01-02 18:00:00',NULL,NULL,'jz@37signals.com',NULL,TRUE,FALSE,FALSE,'JZ',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',0,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"sessions\" (\"id\",\"created_at\",\"device_id\",\"ip_address\",\"last_active_at\",\"token\",\"two_factor_verified_at\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (481019661,'2026-01-07 16:00:00',NULL,NULL,'2026-03-02 16:00:00','AxJs94fteQ5Autv2VrKsH68c','2026-03-02 16:00:00','2026-01-07 16:00:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36',127326141);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (56887440,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:00:00','https://fcm.googleapis.com/fcm/send/123','123-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:00:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',127326141);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (782661004,'firefoxAuthKeyAAAAAAAAA','2026-02-10 16:00:00','https://updates.push.services.mozilla.com/wpush/v2/parity-firefox','BFirefoxKeyRIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-02-10 16:00:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 14.3; rv:124.0) Gecko/20100101 Firefox/124.0',127326141);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (782661003,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:01:00','https://fcm.googleapis.com/fcm/send/567','456-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:01:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',149087659);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (283769004,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:03:00','https://fcm.googleapis.com/fcm/send/789','456-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:03:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',712064548);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (257765087,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:02:00','https://fcm.googleapis.com/fcm/send/456','456-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:02:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',773523953);",
+      "room": 186869642,
+      "session": 481019661,
+      "caller": 127326141,
+      "recipients": [
+        149087659
+      ],
+      "initial": [
+        [
+          149087659,
+          "huddle_started",
+          true
+        ]
+      ],
+      "first_deliveries": [],
+      "deliveries": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/186869642",
+            "tag": "huddle-186869642"
+          },
+          "users": [
+            149087659
+          ]
+        }
+      ],
+      "final": null
+    },
+    {
+      "name": "group_quiet",
+      "setup_sql": "DELETE FROM activity_items WHERE source_type='HuddleGrant'; DELETE FROM huddle_grants; DELETE FROM dnd_allowed_users; DELETE FROM push_subscriptions;\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448333,'2026-09-23 12:00:00',127326141,NULL,NULL,'dm:c8175eb2969bdcd7a558c0fc030bff532afb4c3bad1b2dcaca8e452fcb70f867',NULL,NULL,NULL,NULL,'Rooms::Direct','2026-09-23 12:00:00');\nINSERT OR REPLACE INTO \"memberships\" (\"room_id\",\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (699448333,1021579704,NULL,0,'2026-09-23 12:00:00',NULL,NULL,'everything',NULL,NULL,NULL,NULL,NULL,NULL,'2026-09-23 12:00:00',127326141);\nINSERT OR REPLACE INTO \"memberships\" (\"room_id\",\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (699448333,1021579705,NULL,0,'2026-09-23 12:00:00',NULL,NULL,'everything',NULL,NULL,NULL,NULL,NULL,NULL,'2026-09-23 12:00:00',149087659);\nINSERT OR REPLACE INTO \"memberships\" (\"room_id\",\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (699448333,1021579706,NULL,0,'2026-09-23 12:00:00',NULL,NULL,'everything',NULL,NULL,NULL,NULL,NULL,NULL,'2026-09-23 12:00:00',712064548);\nINSERT OR REPLACE INTO \"memberships\" (\"room_id\",\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (699448333,1021579707,NULL,0,'2026-09-23 12:00:00',NULL,NULL,'everything',NULL,NULL,NULL,NULL,NULL,NULL,'2026-09-23 12:00:00',773523953);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{\"huddle_invitations\":false}',NULL,NULL,NULL,'system','default','🚀','Shipping Rust',NULL,NULL,1320,420,127326141,NULL,NULL,NULL,'2026-01-02 16:00:00',NULL,NULL,'david@37signals.com',NULL,TRUE,FALSE,FALSE,'David',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',1,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{}',NULL,NULL,NULL,'system','default',NULL,NULL,NULL,NULL,NULL,NULL,149087659,NULL,NULL,NULL,'2026-01-02 17:00:00',NULL,NULL,'jason@37signals.com',NULL,TRUE,FALSE,FALSE,'Jason',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',1,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{}',NULL,NULL,NULL,'system','default',NULL,NULL,NULL,NULL,NULL,NULL,712064548,'Programmer',NULL,NULL,'2026-01-02 19:00:00',NULL,NULL,'kevin@37signals.com',NULL,TRUE,FALSE,FALSE,'Kevin',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',0,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"users\" (\"dnd_enabled\",\"quiet_hours_enabled\",\"presence_setting\",\"time_zone\",\"inbox_preferences\",\"github_login\",\"push_to_talk_key\",\"icon_name\",\"theme\",\"text_size\",\"custom_status_emoji\",\"custom_status_text\",\"ooo_note\",\"ooo_until\",\"quiet_hours_start_minute\",\"quiet_hours_end_minute\",\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_expires_at\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"google_email_link_allowed\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_notify_enabled\",\"password_digest\",\"role\",\"status\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (FALSE,FALSE,'auto','UTC','{}',NULL,NULL,NULL,'system','default',NULL,NULL,NULL,NULL,NULL,NULL,773523953,'Designer',NULL,NULL,'2026-01-02 18:00:00',NULL,NULL,'jz@37signals.com',NULL,TRUE,FALSE,FALSE,'JZ',NULL,FALSE,FALSE,'$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue',0,0,FALSE,'2026-01-01 00:00:00','2026-09-23 12:00:00',NULL);\nINSERT OR REPLACE INTO \"sessions\" (\"id\",\"created_at\",\"device_id\",\"ip_address\",\"last_active_at\",\"token\",\"two_factor_verified_at\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (481019661,'2026-01-07 16:00:00',NULL,NULL,'2026-03-02 16:00:00','AxJs94fteQ5Autv2VrKsH68c','2026-03-02 16:00:00','2026-01-07 16:00:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) HEY/1.0.4 Chrome/83.0.4103.100 Electron/9.0.3 Safari/537.36',127326141);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (56887440,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:00:00','https://fcm.googleapis.com/fcm/send/123','123-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:00:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',127326141);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (782661004,'firefoxAuthKeyAAAAAAAAA','2026-02-10 16:00:00','https://updates.push.services.mozilla.com/wpush/v2/parity-firefox','BFirefoxKeyRIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-02-10 16:00:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 14.3; rv:124.0) Gecko/20100101 Firefox/124.0',127326141);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (782661003,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:01:00','https://fcm.googleapis.com/fcm/send/567','456-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:01:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',149087659);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (283769004,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:03:00','https://fcm.googleapis.com/fcm/send/789','456-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:03:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',712064548);\nINSERT OR REPLACE INTO \"push_subscriptions\" (\"id\",\"auth_key\",\"created_at\",\"endpoint\",\"p256dh_key\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (257765087,'xxx2DtgvmLkevKRwoyahJl0efg','2026-01-06 16:02:00','https://fcm.googleapis.com/fcm/send/456','456-RIXcMgkdjhRnFZaYjjGvo00dydRQbCpQTuXFjLaCPSE7ofxi19awgGc3Doqa1RmYQqsbQDfQTifFZgc','2026-01-06 16:02:00','Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36',773523953);",
+      "room": 699448333,
+      "session": 481019661,
+      "caller": 127326141,
+      "recipients": [
+        149087659,
+        712064548,
+        773523953
+      ],
+      "initial": [
+        [
+          149087659,
+          "huddle_started",
+          true
+        ],
+        [
+          712064548,
+          "huddle_started",
+          true
+        ],
+        [
+          773523953,
+          "huddle_started",
+          true
+        ]
+      ],
+      "first_deliveries": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/699448333",
+            "tag": "huddle-699448333"
+          },
+          "users": [
+            773523953
+          ]
+        }
+      ],
+      "deliveries": [
+        {
+          "payload": {
+            "title": "David started a huddle",
+            "body": "Join from the conversation",
+            "path": "/rooms/699448333",
+            "tag": "huddle-699448333"
+          },
+          "users": [
+            773523953
+          ]
+        }
+      ],
+      "final": [
+        [
+          149087659,
+          "huddle_missed",
+          true
+        ],
+        [
+          712064548,
+          "huddle_missed",
+          true
+        ],
+        [
+          773523953,
+          "huddle_missed",
+          true
+        ]
+      ]
+    }
+  ]
+}

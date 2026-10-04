@@ -32,5 +32,19 @@
       ]
     }
   ],
-  "partial": "Existing phone/header/member/pins probes remain partial original-file mappings because the original header setup requires WS13 configured huddles. The eight WS13 controller/sidebar cases remain deferred. Other per-declaration ownership is in ws8br-rails-cases.json."
+  "partial": "Original phone/header/member/pins declaration receipts remain partial, even though real configured Huddle source APIs now exist. Eight exact controller/sidebar receipts and the muted-room sequence remain acceptance gaps; see the cutover remaining manifest. No absent-owner implementation blocker is claimed.",
+  "cutover_reconciliation": {
+    "date": "2026-10-04",
+    "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+    "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+    "partial": true,
+    "reason": "Configured Huddle source/header/sidebar APIs are on main; the historical unmerged-owner blocker is superseded. Exact original browser receipts remain incomplete. Muted-room delivery is still an unexecuted full browser sequence here, not proved absent.",
+    "remaining_manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-remaining.json"
+  },
+  "history": [
+    {
+      "date": "2026-10-04",
+      "previous_partial": "Existing phone/header/member/pins probes remain partial original-file mappings because the original header setup requires WS13 configured huddles. The eight WS13 controller/sidebar cases remain deferred. Other per-declaration ownership is in ws8br-rails-cases.json."
+    }
+  ]
 }

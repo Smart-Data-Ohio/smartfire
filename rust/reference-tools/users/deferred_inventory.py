@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Enumerate every deferred Rails test in this split from the fixed source pin."""
+"""Enumerate historical criteria without claiming whole-file browser receipts.
+
+Cutover: owner APIs mentioned below have landed. The fourteen uncredited original
+interactions are acceptance-receipt gaps, not declarations that those APIs are
+absent. See plans/ledger-ws8br-ws17-ws11ui-remaining.json for the exact current list.
+"""
 from pathlib import Path
 import re
 import subprocess

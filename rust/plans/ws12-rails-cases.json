@@ -3702,25 +3702,100 @@
       "file": "test/system/activity_inbox_test.rb",
       "line": 13,
       "test": "handles an item, clears the badge, and receives a later activity",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS11-UI",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/activity_items.rs:212; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Full original Playwright sequence: system_behavior.py --scenario inbox, on two independently copied Rails/Rust seeds. check_cutover_browser.py passes all 3 paired sequences and rejects all 3 activated writer defects at the intended assertions, with 0 invalid controls. No retries, changed original assertions, deadline widening or asset edits. External receipt; this browser runner is not invoked by ordinary CI.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/system/activity_inbox_test.rb",
+            "line": 13,
+            "test": "handles an item, clears the badge, and receives a later activity",
+            "status": "deferred",
+            "owner": "WS11-UI",
+            "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/activity_items.rs:212; existing production implementation is retained and is not itself credited as this original assertion set."
+          }
+        }
+      ],
+      "browser_scenario": "inbox",
+      "browser_receipt": "rust/reference-tools/views/agents_ui/check_cutover_browser.py",
+      "supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::activity_items::tests::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions",
+        "log_line": 3421,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/system/activity_inbox_test.rb",
       "line": 42,
       "test": "filters by type and saves a notification switch",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS11-UI",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/views/src/activity.rs:114; rust/crates/campfire/src/controllers/users/profiles.rs:189; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Full original Playwright sequence: system_behavior.py --scenario inbox-filter, on two independently copied Rails/Rust seeds. check_cutover_browser.py passes all 3 paired sequences and rejects all 3 activated writer defects at the intended assertions, with 0 invalid controls. No retries, changed original assertions, deadline widening or asset edits. External receipt; this browser runner is not invoked by ordinary CI.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/system/activity_inbox_test.rb",
+            "line": 42,
+            "test": "filters by type and saves a notification switch",
+            "status": "deferred",
+            "owner": "WS11-UI",
+            "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/views/src/activity.rs:114; rust/crates/campfire/src/controllers/users/profiles.rs:189; existing production implementation is retained and is not itself credited as this original assertion set."
+          }
+        }
+      ],
+      "browser_scenario": "inbox-filter",
+      "browser_receipt": "rust/reference-tools/views/agents_ui/check_cutover_browser.py",
+      "supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::activity_items::tests::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions",
+        "log_line": 3421,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/system/agent_work_assignment_test.rb",
       "line": 19,
       "test": "assigns an agent from the update dialog and renders its API status change after refresh",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS11-UI",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/channel_threads.rs:83; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Full original Playwright sequence: system_behavior.py --scenario work, on two independently copied Rails/Rust seeds. check_cutover_browser.py passes all 3 paired sequences and rejects all 3 activated writer defects at the intended assertions, with 0 invalid controls. No retries, changed original assertions, deadline widening or asset edits. External receipt; this browser runner is not invoked by ordinary CI.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/system/agent_work_assignment_test.rb",
+            "line": 19,
+            "test": "assigns an agent from the update dialog and renders its API status change after refresh",
+            "status": "deferred",
+            "owner": "WS11-UI",
+            "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/channel_threads.rs:83; existing production implementation is retained and is not itself credited as this original assertion set."
+          }
+        }
+      ],
+      "browser_scenario": "work",
+      "browser_receipt": "rust/reference-tools/views/agents_ui/check_cutover_browser.py",
+      "supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::channel_threads::page_tests::ordinary_work_and_board_posts_render_through_authorized_routes",
+        "log_line": 3618,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/system/board_automations_test.rb",
@@ -3906,5 +3981,14 @@
       "owner": "WS12",
       "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c230_complete_named_rails_http_sequence"
     }
-  ]
+  ],
+  "ws11ui_cutover": {
+    "date": "2026-10-04",
+    "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+    "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+    "original_browser_flags": 3,
+    "passed": 3,
+    "remaining": 0,
+    "browser_ci_gated": false
+  }
 }
