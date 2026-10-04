@@ -1,0 +1,106 @@
+{
+  "reviewed_head": "31b76775752d541e3e5d9d9cd3a7312a2761ca47",
+  "manifest": "rust/reference-tools/cutover/review243-mutations.json",
+  "before": {
+    "production_restored": true,
+    "source_hashes": {
+      "rust/crates/views/src/events/forms.rs": "5a0ae9ce29100bc93acd27870e2a8318571cf6e2768beff74cb9b94fdb9b746a",
+      "rust/crates/views/src/events.rs": "93d83d039f1a48c2074096754fc6217ce9be5f52bb24c03c439f8fb0259d2399"
+    },
+    "results": [
+      {
+        "id": "WS14e-099-action",
+        "test": "cutover_interaction_schedule_invitation_inbox_open_and_response",
+        "exit_code": 0,
+        "killed": false,
+        "summary": [
+          "     Summary [   0.905s] 1 test run: 1 passed, 5057 skipped"
+        ],
+        "panic": [],
+        "log": "WS14e-099-action.log",
+        "activation": "review243 schedule_action active: /review243-missing-action",
+        "raw_log_sha256": "1df058d81290b2e8f1f10429e1d0581a0184c39b7548a42aced2c60b5668efa4"
+      },
+      {
+        "id": "WS14e-100-action",
+        "test": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
+        "exit_code": 0,
+        "killed": false,
+        "summary": [
+          "     Summary [   0.872s] 1 test run: 1 passed, 5057 skipped"
+        ],
+        "panic": [],
+        "log": "WS14e-100-action.log",
+        "activation": "review243 schedule_action active: /review243-missing-action",
+        "raw_log_sha256": "b2a3a4c3f5bea4935cbc4d522a5de4d8b41ea8f62b24a1b00f16accf4441de8f"
+      },
+      {
+        "id": "WS14e-101-frame",
+        "test": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+        "exit_code": 0,
+        "killed": false,
+        "summary": [
+          "     Summary [   0.918s] 1 test run: 1 passed, 5057 skipped"
+        ],
+        "panic": [],
+        "log": "WS14e-101-frame.log",
+        "activation": "review243 escape_frame active: data-turbo-frame=_top",
+        "raw_log_sha256": "9055636fc8bacead07c5daffaa7a668a34e77d658ecf0ce678aa9ecb723c9489"
+      }
+    ]
+  },
+  "after": {
+    "production_restored": true,
+    "source_hashes": {
+      "rust/crates/views/src/events/forms.rs": "5a0ae9ce29100bc93acd27870e2a8318571cf6e2768beff74cb9b94fdb9b746a",
+      "rust/crates/views/src/events.rs": "93d83d039f1a48c2074096754fc6217ce9be5f52bb24c03c439f8fb0259d2399"
+    },
+    "results": [
+      {
+        "id": "WS14e-099-action",
+        "test": "cutover_interaction_schedule_invitation_inbox_open_and_response",
+        "exit_code": 100,
+        "killed": true,
+        "summary": [
+          "     Summary [   0.888s] 1 test run: 0 passed, 1 failed, 5057 skipped"
+        ],
+        "panic": [
+          "crates/campfire/src/controllers/rooms/events/tests/cutover/rendered.rs:204:5:"
+        ],
+        "log": "WS14e-099-action.log",
+        "activation": "review243 schedule_action active: /review243-missing-action",
+        "raw_log_sha256": "34214422b3102f9f2ce1ecf884039cddc73abe436a5d39f80b670ad42fb9bd63"
+      },
+      {
+        "id": "WS14e-100-action",
+        "test": "cutover_interaction_repeating_schedule_invites_once_and_copies_response",
+        "exit_code": 100,
+        "killed": true,
+        "summary": [
+          "     Summary [   0.846s] 1 test run: 0 passed, 1 failed, 5057 skipped"
+        ],
+        "panic": [
+          "crates/campfire/src/controllers/rooms/events/tests/cutover/rendered.rs:204:5:"
+        ],
+        "log": "WS14e-100-action.log",
+        "activation": "review243 schedule_action active: /review243-missing-action",
+        "raw_log_sha256": "53e4fc99230766eee9f792504aeda8771c9c2c6662be693378fdaa2708d356b8"
+      },
+      {
+        "id": "WS14e-101-frame",
+        "test": "cutover_interaction_announcement_card_response_stays_in_requested_frame",
+        "exit_code": 100,
+        "killed": true,
+        "summary": [
+          "     Summary [   0.971s] 1 test run: 0 passed, 1 failed, 5057 skipped"
+        ],
+        "panic": [
+          "crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs:162:5:"
+        ],
+        "log": "WS14e-101-frame.log",
+        "activation": "review243 escape_frame active: data-turbo-frame=_top",
+        "raw_log_sha256": "23612c1a6a4fe8b1e5262a1100d3c92e94def73aaa88a97b92c498b17f0920d8"
+      }
+    ]
+  }
+}

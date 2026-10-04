@@ -260,3 +260,66 @@ Assertion maps: 81 records; 271 original Rails assertion calls; 0 unmapped
 Acceptance ledger: 445 records checked; 86 baseline-CI passed; 182 current implementation receipts; 1 test-only outside gate; 176 explicitly open
 Full closure audit: 220 records; 555 Rails assertions/predicates; 487 mapped; 78 strengthened closures; 32 reopened
 ```
+
+
+## PR #243 rendered interaction correction
+
+Reviewed head `31b76775752d541e3e5d9d9cd3a7312a2761ca47`. This correction uses the separately checked-out `rust-ws14g-b` worktree and changes only Rust inputs. The earlier system-closure claim above is historical: the earlier interaction HTTP probe also fabricated requests and is not a current browser receipt.
+
+- **WS14e-099 — option (a):** read the rendered room Events, New event and All events links; submit the actual Schedule, inbox Open and Going forms using their action, method, hidden fields (including CSRF and `_method`), selected option values and successful submitter. Follow the server's returned Location rather than requesting a separately known page. Check all nine original Rails assertions through the real router and persisted model state.
+- **WS14e-100 — option (a):** the same real markup driver selects the rendered Weekly option and fills its recurrence-until control. All eleven original Rails assertions retain their exact scope, invitation count and three propagated responses.
+- **WS14e-101 — option (b):** reopen `test/system/events_test.rb:136` (actual browser current path) and `:137` (announcement retained in the same browser DOM after the click). A server response or a fresh room GET cannot establish those predicates. The partial HTTP regression now reads the actual lazy frame src/id, attendance form action/method/hidden fields and effective rendered submitter/form/frame target; it does not force a frame header when the markup says `_top`. Its response and persisted RSVP checks are retained as partial evidence, with the missing browser assertions clearly marked.
+
+The test-only markup driver follows the vendored Turbo target precedence and sends successful HTML controls through `Browser::send`; it does not add a separately synthesized CSRF header. No production template/controller change or browser/pixel run is needed. The system Rails test file is checked byte-for-byte against pin `78b9b1546`. Every changed assertion has a refreshed physical file/line mapping, including the real redirect-following guard that now rejects a wrong form action. The ledger verifier separately checks closed and explicitly reopened continuation records, so a partial map cannot count as a closure.
+
+Current B disposition: **80 continuation records closed; 177 explicitly open**. The 81-record/271-call map retains the historical record and now has exactly **2 unmapped browser assertions in one reopened record**. The structured receipt, original inventory and remaining list agree. Original receipts are preserved rather than rewritten as current proof.
+
+### Before/after rendering mutations
+
+[Exact substitutions](../reference-tools/cutover/review243-mutations.json) and the [compact receipt](ledger-ws14-ws15-b-review243-mutations.json) retain the reviewed head, source hashes, activation messages, raw summaries and assertion locations. Each of the three reviewed tests passes with the fault against the old assertion bodies; each fails after the markup driver correction. Both mutated production files are restored byte-for-byte and match the reviewed head. No compile/setup failure counts as a kill.
+
+```sh
+python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/review243-mutations.json rust/target/review243-fixes/before -- rust/target/review243-fixes/mutation-cargo.sh
+python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/review243-mutations.json rust/target/review243-fixes/after -- rust/target/review243-fixes/mutation-cargo.sh
+python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/review243-mutations.json rust/target/review243-fixes/after --recheck
+```
+
+The executable prefix invokes `cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast -E 'test(<name>)' --success-output immediate` in the canonical Rust/libvips environment with the unchanged shared rustc throttle. Before the aggregate command exits 1 because the three tests survive (all actual nextest processes exit 0); after it exits 0 because each actual nextest process rejects its fault at the intended assertion.
+
+```text
+BEFORE WS14e-099-action:
+     Summary [   0.905s] 1 test run: 1 passed, 5057 skipped
+BEFORE WS14e-100-action:
+     Summary [   0.872s] 1 test run: 1 passed, 5057 skipped
+BEFORE WS14e-101-frame:
+     Summary [   0.918s] 1 test run: 1 passed, 5057 skipped
+Mutation summary: 3 run; 0 killed; 3 not accepted; production restored=True
+AFTER WS14e-099-action:
+     Summary [   0.888s] 1 test run: 0 passed, 1 failed, 5057 skipped
+AFTER WS14e-100-action:
+     Summary [   0.846s] 1 test run: 0 passed, 1 failed, 5057 skipped
+AFTER WS14e-101-frame:
+     Summary [   0.971s] 1 test run: 0 passed, 1 failed, 5057 skipped
+Mutation summary: 3 run; 3 killed; 0 not accepted; production restored=True
+```
+
+The two scheduling faults fail at `cutover/rendered.rs:204` when following the real submission: the rendered wrong action returns 404 instead of the required redirect. That helper assertion is mapped alongside the original post-Schedule heading assertion. The `_top` button fault fails at `cutover/interactions.rs:162`: submitting the rendered top-level target returns 302 rather than the frame's 200. The assertion is mapped to the partial server Going-response predicate; the explicit browser-current-path claim remains open even though this wiring fault is now caught.
+
+### Corrected B checkout validation
+
+Verified native source `ea09026ba201fdfdc8bacbfa0893ec21a5b790f7` in the separate B worktree, with fresh pinned default/first_run/agents_ui seed validation (29 + 4 + 40 = 73 passed, zero failed). Canonical Rust 1.98.1/libvips, `CI=true`, two build jobs, unchanged shared compiler throttle and nextest workers 4. All 78 named native tests in the 81-record map ran; the 20 skips are the existing ignored tests. The canonical logo/PNG comparison passes. No timing failure appeared. Only ledger/report metadata follows this native source.
+
+```sh
+cargo nextest run --locked --workspace --exclude html5ever -j 4 --no-fail-fast
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+python3 rust/reference-tools/cutover/assertion-maps.py rust/plans/ledger-ws14-ws15-b-assertions.json --pass-log rust/target/review243-fixes/nextest.log
+python3 rust/reference-tools/cutover/check-ws14-ws15.py --nextest-log rust/target/review243-fixes/nextest.log
+```
+
+```text
+     Summary [1217.504s] 5038 tests run: 5038 passed (1 slow), 20 skipped
+    Finished `dev` profile [unoptimized] target(s) in 54.84s
+Assertion maps: 81 records; 271 original Rails assertion calls; 2 unmapped
+```
+
+Both Cargo commands exit 0. Compact raw logs and mutation receipts are archived in the C worktree under `rust/target/review243-fixes/` before this B worktree is removed. Generated seeds, reference inputs and test runtime output are removed with the disposable B worktree. The C integration has a separate validation receipt.

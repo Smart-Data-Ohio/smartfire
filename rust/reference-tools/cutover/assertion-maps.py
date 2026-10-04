@@ -60,12 +60,17 @@ for path in args.maps:
             assert ruby['file'] == original['rails'], rid
             assert lines[ruby['line'] - 1].strip() == ruby['text'], (rid, ruby)
             native = entry['rust']
+            assert entry['disposition'] in {'covered', 'unsupported_assertion'}, (rid, ruby)
             if entry['disposition'] == 'covered':
                 assert native, (rid, ruby)
             else:
                 assert original['disposition'] == 'unsupported_assertion', rid
+                assert not native and entry.get('reason'), (rid, ruby)
                 missing += 1
             citations = []
+            if not native:
+                assert entry.get('reason'), (rid, ruby)
+                citations.append('**Open:** ' + entry['reason'])
             for rust in native:
                 source = (root / rust['file']).read_text().splitlines()
                 quoted = '\n'.join(source[rust['line'] - 1:rust['end_line']])
