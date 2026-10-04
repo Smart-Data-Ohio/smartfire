@@ -4,9 +4,10 @@ import assert from 'node:assert/strict';
 import {spawn,spawnSync,execFileSync} from 'node:child_process';
 import {mkdirSync,writeFileSync,readFileSync,mkdtempSync,rmSync,openSync,closeSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
-import {dirname,basename} from 'node:path';
 import {createServer} from 'node:net';
 import {createHash} from 'node:crypto';
+import {basename,dirname} from 'node:path';
+import {nativeAssetProxy} from './behavior-native-proxy.mjs';
 export const PHONE_CASE='keeps the thread drawer usable on a phone and preserves the channel';
 const PIN='d7c7de9264c63015be398001d7a1094e7695a6db';
 export function extractPhone(source) {
@@ -20,7 +21,7 @@ export function extractPhone(source) {
   // and original wait is otherwise byte-for-byte from the pinned test body.
   return {body:body.replace('    save_thread_screenshot "mobile-drawer.png"\n',''),helpers:source.slice(helpers,source.lastIndexOf('\nend'))};
 }
-export async function nativePhone(base,{sourcePath='test/system/threads_test.rb',extract=extractPhone,line=293,label='phone',database}={}) {
+export async function nativePhone(base,{sourcePath='test/system/threads_test.rb',extract=extractPhone,line=293,label='phone',database,mutation,probe={}}={}) {
   const root=fileURLToPath(new URL('../../../',import.meta.url));
   const tools=fileURLToPath(new URL('./',import.meta.url));
   const scratch=root+'.scratch/ws8bm-native-phone';
@@ -30,8 +31,8 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
   // no /tmp path or another worker's files/listeners are used.
   const cache='/home/riels/.cache/rust-port/ws8bm';mkdirSync(cache,{recursive:true});
   const temp=mkdtempSync(cache+'/s-');
+  let driver,log,proxy;
   const container='ws8bm-native-'+basename(temp);
-  let driver,log;
   try {
     const source=execFileSync('git',['show',`${PIN}:${sourcePath}`],{cwd:root,encoding:'utf8'});
     const {body,helpers}=extract(source);
@@ -55,17 +56,38 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     console.log(`WS8bm native ${label} source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; ${label==='attachment'?'original behavior body; shared file path adapted':'unchanged behavior body/helpers, screenshots omitted'}`);
     const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:ro`,'-v',`${temp}:${temp}`]:[];
     if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
-    const result=spawnSync('docker',['run','--rm','--name',container,'--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'],{encoding:'utf8',timeout:120000,maxBuffer:8*1024*1024});
+    if(mutation) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}
+    const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'];
+    const result=await new Promise((resolve,reject)=>{
+      const child=spawn('docker',args);let stdout='',stderr='';
+      const timer=setTimeout(()=>{child.kill('SIGTERM');reject(new Error('Native browser process timeout'));},120000);
+      child.stdout.on('data',chunk=>stdout+=chunk);child.stderr.on('data',chunk=>stderr+=chunk);
+      child.on('error',error=>{clearTimeout(timer);reject(error);});
+      child.on('exit',(status,signal)=>{clearTimeout(timer);resolve({status,signal,stdout,stderr});});
+    });
+    if(mutation)console.log('WS8bm native transport: '+JSON.stringify(probe.transport||[]));
     process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');
     if(label==='attachment') captureUploadReferenceLog(base,database);
+    for(const match of result.stdout.matchAll(/^WS8bm native browser logs: (.+)$/gm)) {
+      for(const entry of JSON.parse(match[1])) if(/net::ERR_(?!ABORTED)/.test(entry.message)) (probe.networkFailures??=[]).push(entry.message);
+    }
+    const states=[...result.stdout.matchAll(/^WS8bm native mutation state: (.+)$/gm)].map(match=>JSON.parse(match[1]));
+    const failures=[...result.stdout.matchAll(/^WS8bm native failures: (.+)$/gm)].flatMap(match=>JSON.parse(match[1]));
+    probe.observed=states;probe.nativeFailures=failures;
+    probe.ready=states.some(state=>state.room==='/rooms/201306877'&&state.open);
     assert.equal(result.status,0,`native pinned ${label} failed: ${result.error||result.signal||result.status}`);
   } finally {
-    // Even a Ruby diagnostic exception or subprocess timeout cannot retain
-    // the native container/driver. This container is uniquely owned here.
-    try {execFileSync('docker',['rm','-f',container],{stdio:'ignore'});}catch{}
-    if(driver&&driver.exitCode===null) {const stopped=new Promise(resolve=>driver.once('exit',resolve));driver.kill('SIGTERM');await stopped;}
-    if(log!==undefined) closeSync(log);
-    rmSync(proof,{recursive:true,force:true});rmSync(temp,{recursive:true,force:true});
+    try {
+      spawnSync('docker',['rm','-f',container],{stdio:'ignore'});
+      if(proxy)await proxy.close();
+    } finally {
+      try {
+        if(driver&&driver.exitCode===null) {const stopped=new Promise(resolve=>driver.once('exit',resolve));driver.kill('SIGTERM');await stopped;}
+      } finally {
+        try {if(log!==undefined) closeSync(log);}
+        finally {rmSync(proof,{recursive:true,force:true});rmSync(temp,{recursive:true,force:true});}
+      }
+    }
   }
 }
 

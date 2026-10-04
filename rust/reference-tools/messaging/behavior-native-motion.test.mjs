@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {extractMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
 const source=execFileSync('git',['show','d7c7de92:test/system/motion_test.rb'],{encoding:'utf8'});
@@ -14,4 +15,13 @@ test('native motion executes every byte of the pinned animation body',()=>{
 test('native motion refuses a different body or missing original helpers',()=>{
   assert.throws(()=>extractMotion(source.replace(NATIVE_MOTION_CASE,'unrelated case')));
   assert.throws(()=>extractMotion(source.replace('def motion_token(','def unrelated_helper(')));
+});
+
+test('native motion setup joins the pinned HQ room and serves native negatives',()=>{
+  const harness=readFileSync(new URL('./behavior-native-phone.rb',import.meta.url),'utf8');
+  assert.ok(harness.includes('location["label"] == "motion" ? "/rooms/201306877"'));
+  assert.ok(harness.includes('Network.setBypassServiceWorker'));
+  assert.ok(harness.includes('if ENV["WS8BM_NATIVE_PROXY"]'));
+  const runner=readFileSync(new URL('./behavior.mjs',import.meta.url),'utf8');
+  assert.ok(runner.includes('await nativeMotion(base,probe,negative||!!selectedMutant)'));
 });

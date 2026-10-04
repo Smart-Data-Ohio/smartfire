@@ -42,6 +42,7 @@ for(const [index,anchor] of [
   [6,'await firstOpenCurrentFocus(page,current)'],
   [7,'await reopenedCurrentFocus(page,current)'],
 ]) add([motionCases[index]],'motion',anchor);
+D.set(motionCases[0],[{...target('native-motion','await nativePhone'),native:{source:'test/system/motion_test.rb',line:43,message:'expected the drawer to start off-canvas'}}]);
 add(['the message list is a single tab stop with a roving tabindex'],'message-list','page.waitForFunction(id=>');
 add(['arrow keys move between messages','deleting the focused message moves focus to the surviving tab stop','deleting an older focused message hands focus to its neighbour, not the newest','a late composer autofocus does not steal focus from a message'],'message-list','document.activeElement?.id===id');
 add(['a stream replacing the focused message keeps focus and the tab stop on its replacement','a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement','a direct DOM swap of the focused message keeps focus and the tab stop on its replacement'],'message-list','rows.filter(row=>row.tabIndex===0)');
@@ -219,6 +220,7 @@ variant(['transparent-device-text'],'attach-menu',"menu.locator('[role=\"menuite
 variant(['transparent-drive-text','transparent-phone-drive-text'],'attach-menu',"menu.locator('[role=\"menuitem\"]'),'From Google Drive'");
 variant(['transparent-boost-delete-text'],'boosts',"boost.locator('button'),'Delete this boost'");
 variant(['wrong-permission-status','wrong-validation-status'],'work-controllers','assert.equal(response.status,expected');
+variant(['delayed-workspace-mobile-draft','unrelated-workspace-mobile-body'],'workspace','page.locator(`.message[data-message-id=');
 variant(['slow-workspace-animation'],'workspace','await settled()');
 for(const specs of V.values()) for(const spec of specs) if(spec.module==='behavior-.mjs') spec.module='behavior.mjs';
 for(const [name,label] of [
@@ -240,8 +242,11 @@ export function mutationTarget(caseName,variant) {
 }
 export function rejectionEvidence(caseName,variant,probe,error) {
   const expected=mutationTarget(caseName,variant),frames=assertionFrames(error);
-  const matched=expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor))&&(!target.phase||frames.some(frame=>frame.module===target.phase.module&&frame.source.includes(target.phase.anchor))));
+  const nativeMotion=caseName===motionCases[0]&&variant==='default';
+  const nativeMatch=nativeMotion&&probe.nativeFailures?.some(failure=>failure.assertion&&failure.message.includes(expected[0].native.message)&&failure.backtrace.some(frame=>frame.includes(`${expected[0].native.source}:${expected[0].native.line}:`)));
+  const matched=nativeMotion?nativeMatch:expected.find(target=>frames.some(frame=>frame.module===target.module&&frame.source.includes(target.anchor))&&(!target.phase||frames.some(frame=>frame.module===target.phase.module&&frame.source.includes(target.phase.anchor))));
   const reasons=[];
+  if(nativeMotion&&!probe.observed?.some(state=>state.room==='/rooms/201306877'&&state.open&&state.duration==='0s'&&['none','matrix(1, 0, 0, 1, 0, 0)'].includes(state.transform))) reasons.push('native motion mutation not encountered');
   if(!probe.ready) reasons.push('startup failed');
   if(!probe.applied) reasons.push('mutation not served');
   if(probe.networkFailures?.length) reasons.push('network failed');

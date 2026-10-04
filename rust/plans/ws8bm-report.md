@@ -1,3 +1,7 @@
+# WS8bm #230 corrections carried into round 4
+
+Both branches merge main `566c1bd77`. Round 3 is pushed at `d2d05351d`. Current stacked round-4 inventory is **156/156 controllers; 133 passed / 2 deferred / 0 owner-blocked systems**. Scroll preservation and reopen focus remain deferred; the upload flow closes after the approved #231 shared-client fix. See [the review correction](ws8bm-review230.md). Older 134/1 and 129/6 headlines below are historical and superseded.
+
 # WS8bm -4: five closures and one exact upload follow-up
 
 Stacked branch `rust/ws8bm-messages-http-4`, based on -3 `69d9e3b9d7c8dca348df7b872a5b43427e73f4ac`; the reviewed -3 branch is untouched. The legacy Drive picker, all three Drive attachment flows, and the actual test-environment motion contract now have paired browser controls, saved-row checks and intended served-fault rejections. Inventory is **156/156 controllers; 134 passed / 1 deferred / 0 owner-blocked systems**. [The complete -4 report](ws8bm-pr4-review.md) records original scopes, failing-first evidence, command/source checkpoints and every raw target summary.
@@ -61,3 +65,8 @@ Fresh-clone workspace verification reports **2,649 passed / 6 failed / 8 ignored
 This is a coherent PR-ready continuation slice with its inherited verification failures disclosed. All controller declarations are attributed; the seventeen own system deferrals remain concrete follow-up work, and none is owner-blocked.
 
 Own scratch target cleanup: `Removed 28073 files, 34.1GiB total`. Final scratch target inventory is empty; no own browser listeners remain. Raw logs are retained.
+
+
+# WS8bm #230 correction
+
+Main `566c1bd77` is merged. Review fixes are tools/docs only: the workspace persisted-row assertion is back to 2 s; native motion opens HQ and uses a served native fault at the original off-canvas assertion; invalid scroll/reopen closures are withdrawn. Main/#231 fixes the shared upload-progress client race and the original attachment predicate/filename proof now pass. Current round-3 inventory: **156/156 controllers; 128 passed / 7 deferred / 0 owner-blocked systems**. [Full audit, before/after proofs and retained invalid attempts](ws8bm-review230.md). All older checkpoint summaries below are historical and superseded where corrected here.

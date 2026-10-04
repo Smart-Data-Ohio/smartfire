@@ -1,4 +1,8 @@
-# WS8bm -3: deferred behaviour checkpoint
+# Review #230 correction
+
+Current totals are **128 passed / 7 deferred / 0 owner-blocked systems**; controllers remain 156/156. The former scroll/reopen closures are withdrawn. The attachment flow now closes after main/#231. Workspace uses its specific persisted row and original 2 s budget; native motion uses HQ and native negatives. See [the correction and raw receipts](ws8bm-review230.md). The original checkpoint below is historical and its 129/6 headline and motion/workspace claims are superseded.
+
+# Historical WS8bm -3 checkpoint
 
 Branch `rust/ws8bm-messages-http-3`, created from merged #221/main `b6444b7a7e3e24974a68c8383f4798f5a1356f3d`. Rails stays pinned to `d7c7de9264c63015be398001d7a1094e7695a6db` plus approved drift. This is a partial continuation: eleven additional declarations are covered, giving **156/156 controllers; 129 passed / 6 deferred / 0 owner-blocked systems**. Six concrete own follow-ups remain below. Nothing here changes Rust product code, Rails client code, response goldens, masks, ignores, retry limits or machine throttling. Deadlines are retained or restored to their pinned values, never widened. The list/composer seam remains [ws8bm-integration.md](ws8bm-integration.md).
 

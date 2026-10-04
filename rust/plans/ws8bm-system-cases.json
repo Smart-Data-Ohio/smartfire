@@ -194,12 +194,18 @@
         },
         {
           "name": "Markdown replies and file attachments remain usable",
-          "status": "deferred",
-          "evidence": "",
+          "status": "passed",
+          "evidence": "Review #230 correction after main/#231: paired real browser sends and original 10 s reply-preview assertion pass; exact parent/client identity, notify flag, attachment name and bytes persist on both hosts; all four served variants reject at their intended assertions with zero invalid/escaped. See ws8bm-review230.md. Shared-client late-progress overwrite was fixed on main, not by a Rust server change.",
           "previous_evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels",
-          "diagnostic": "Round -4 restores the actual Rails test routes, runs the literal pinned Capybara/Selenium body with only the upload path adapted, and verifies the real test/local disk bytes. In three repaired-host samples Rails passes all 13 original assertions; Rust passes once and fails twice at workspace_markdown_test.rb:165 with its committed row overwritten by 100% upload progress. The one paired original success initially exposed a separate readback-path bug, fixed without dropping the byte assertion. A final paired control with exact rows and bytes passes; the observed UI failures remain unmasked.",
-          "remaining_reason": "Pinned-client late upload progress can overwrite the delivered reply: composer_controller.js:331-333 -> messages_controller.js:178-180 -> models/client_message.js:38-43 has no pending-state guard. Repaired-host Rust samples still fail the original 10 s reply-preview assertion (:165), despite correct saved parent/attachment/notify=false and 47 bytes. Client sources match the Rails pin; no shared-client drift is approved. Needs lead disposition or a deterministic original sequence, without adding waits, retries or a server delay. This is one own deferral, not an owner block.",
-          "uncredited_evidence": "All four served variants, including transparent-attachment-filename, reject at their intended assertions on both repaired hosts. The final native paired control and persisted-row/byte checks pass, but two earlier genuine Rust preview failures are retained; no closure credit from a passing retry or diagnostic wait. Detailed receipts: ws8bm-pr4-review.md."
+          "diagnostic": "Before: attachment-control3.log has 0 passed / 3 failed pairs and final-controls.log still fails at the unchanged 10 s preview. After restoring the immediate persisted-parent lookup and Message#to_key scope: attachment-final-controls.log has 3 passed / 0 failed pairs, with actual source/attachment/blob-byte rows verified. attachment-final-mutants.log has 3 paired intended rejections and 1 invalid filename variant: it fails at the earlier preview on both apps and earns no filename credit.",
+          "uncredited_evidence": "Paired controls and three served probes remain implemented, with original visibility and deadlines. Successful 8d4302d96 isolation is diagnostic only; no positive declaration credit at the final merged checkpoint.",
+          "previous_remaining_reason": "Pinned workspace_markdown_test.rb:143-173, especially :146-149 and :165-168: the exact persisted-parent lookup and client_message_id DOM scope are restored, and three fresh controls pass. The filename probe still intermittently encounters no reply preview at the unchanged 10 s deadline before its intended filename assertion. Keep this declaration deferred while tracing the actual response/broadcast/context sequence; do not add a wait or credit that invalid probe. Own unresolved harness/client behaviour, no owner block.",
+          "previous_round4_diagnostic": {
+            "previous_evidence": "reference-tools/messaging/behavior-check.py workspace_markdown: actual Rails/Rust HTTP and Cable, fresh browser contexts; source-pinned controls and assertions; saved source/attachment rows and bytes; each new check rejects its committed served mutant; no pixels",
+            "diagnostic": "Round -4 restores the actual Rails test routes, runs the literal pinned Capybara/Selenium body with only the upload path adapted, and verifies the real test/local disk bytes. In three repaired-host samples Rails passes all 13 original assertions; Rust passes once and fails twice at workspace_markdown_test.rb:165 with its committed row overwritten by 100% upload progress. The one paired original success initially exposed a separate readback-path bug, fixed without dropping the byte assertion. A final paired control with exact rows and bytes passes; the observed UI failures remain unmasked.",
+            "remaining_reason": "Pinned-client late upload progress can overwrite the delivered reply: composer_controller.js:331-333 -> messages_controller.js:178-180 -> models/client_message.js:38-43 has no pending-state guard. Repaired-host Rust samples still fail the original 10 s reply-preview assertion (:165), despite correct saved parent/attachment/notify=false and 47 bytes. Client sources match the Rails pin; no shared-client drift is approved. Needs lead disposition or a deterministic original sequence, without adding waits, retries or a server delay. This is one own deferral, not an owner block.",
+            "uncredited_evidence": "All four served variants, including transparent-attachment-filename, reject at their intended assertions on both repaired hosts. The final native paired control and persisted-row/byte checks pass, but two earlier genuine Rust preview failures are retained; no closure credit from a passing retry or diagnostic wait. Detailed receipts: ws8bm-pr4-review.md."
+          }
         },
         {
           "name": "mention suggestions select a room member without sending the unfinished message",
@@ -219,7 +225,7 @@
         {
           "name": "workspace follows the system theme and mobile navigation remains reachable",
           "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py: behavior-workspace.mjs: pinned workspace_markdown_test.rb:242-323; actual Markdown/mobile browser POSTs and exact saved rows; profile-bar geometry served mutant rejects on both apps at its intended assertion; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
+          "evidence": "Review #230: pinned workspace_markdown_test.rb:289 and system_test_helper.rb:114-115; specific committed Mobile draft row (including its original trailing newline), Selenium visible body/text, one 2 s budget. Paired real writes and exact rows pass; 3 s delay and unrelated-body mutants escape the 69d9e3b9d assertion and reject both fixed checks at the intended assertion. Existing profile and slow-animation faults still reject. See ws8bm-review230.md.",
           "previous_remaining_reason": "Own mapped sequence remains unimplemented: compact composer geometry/empty field, JZ online presence (5 s), theme background change, profile-bar containment, drawer focus trapping/current room, Escape focus return, and coarse-pointer Enter/newline/send with saved source (workspace_markdown_test.rb:242-290). These are behavior assertions, not pixel work."
         }
       ]
@@ -718,7 +724,7 @@
         {
           "name": "mobile drawer animates in, lands in place, and returns focus with motion on",
           "status": "passed",
-          "evidence": "Pinned native Capybara/Selenium motion_test.rb:26-70 and all original private helpers, executed on both apps; original test-only motion input, unchanged messages/thread rows and user/room identities. No added sidebar readiness wait, longer deadline or screenshot. Served zero-duration transition fault still uses the matching original off-canvas assertion and requires intended-assertion proof. Original scope and retained failed translated attempts in plans/ws8bm-pr3-review.md.",
+          "evidence": "Review #230: literal pinned motion_test.rb:26-70 body/helpers, HQ setup (:12), native Capybara/Selenium positives and served native zero-duration negative. Both baseline apps pass 8 assertions; both faults fail the original off-canvas assertion (:43), with actual HQ/open/0 s/identity-transform witness. Earlier setup/transport/annotation failures stay invalid. Native negative bypasses service-worker caches like the existing translated negatives; no changed assertion or added readiness wait. See ws8bm-review230.md.",
           "previous_remaining_reason": "Own transition sequence remains unported: original 30 s token override, attached transitionrun listeners, initial/mid-travel transform, live transform animation, Web Animations finish and restored focus with original 5 s polling (motion_test.rb:26-70). No screenshots are needed; do not merely assert landed geometry."
         },
         {
@@ -747,9 +753,10 @@
         },
         {
           "name": "mobile drawer keeps the room list scroll position across close and reopen",
-          "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
-          "previous_remaining_reason": "Needs 15 real Scroll rooms, focus/blur and actual >=400 px overflow, exact scrollTop=400, current room outside view, exact closed/open offset retention and visible focus after reopening (motion_test.rb:177-238). Own fixture and sequence remain unported; preserve the original 5 s polling."
+          "status": "deferred",
+          "previous_remaining_reason": "Needs 15 real Scroll rooms, focus/blur and actual >=400 px overflow, exact scrollTop=400, current room outside view, exact closed/open offset retention and visible focus after reopening (motion_test.rb:177-238). Own fixture and sequence remain unported; preserve the original 5 s polling.",
+          "previous_evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
+          "remaining_reason": "Review #230: motion_test.rb:177-238. The fresh Rust negative fails at initial scrollTop=400 (behavior-motion.mjs drawer scroll lands) before closing; no valid paired intended closed-offset proof. Restored to deferred; unchanged-path retries supply no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
         },
         {
           "name": "mobile drawer reveals a current room far down the list on first open",
@@ -759,9 +766,10 @@
         },
         {
           "name": "mobile drawer reopens on the current room when it is already in view",
-          "status": "passed",
-          "evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
-          "previous_remaining_reason": "Needs 15 Scroll rooms, original focused current link, 5 s settled-scroll/current-in-view predicate, exact closed/reopened scroll offset and focused current link (motion_test.rb:260-292). Own fixture and sequence remain unported."
+          "status": "deferred",
+          "previous_remaining_reason": "Needs 15 Scroll rooms, original focused current link, 5 s settled-scroll/current-in-view predicate, exact closed/reopened scroll offset and focused current link (motion_test.rb:260-292). Own fixture and sequence remain unported.",
+          "previous_evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
+          "remaining_reason": "Review #230: motion_test.rb:260-292. The fresh Rails negative fails at the initial current-link focus before closing/reopening; no valid paired post-reopen-focus proof. Restored to deferred; unchanged-path rerun supplies no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
         }
       ]
     },

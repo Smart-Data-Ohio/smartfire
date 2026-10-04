@@ -72,7 +72,15 @@ export async function workspace({author:page,source,submit}) {
   assert.equal(count,0,'workspace: coarse Enter creates no message');
   const written=page.waitForResponse(response=>response.request().method()==='POST'&&new URL(response.url()).pathname==='/rooms/201306877/messages',{timeout:10000});
   await actOnVisible(filterVisibleText(page.locator('#composer button'),'Send Message'),'click');
-  await waitForVisibility(filterVisibleText(page.locator('.message__body'),'Mobile draft'),{timeout:10000});
+  // workspace_markdown_test.rb:289, SystemTestHelper:114-115: the
+  // delivered persisted row itself, visible text, and the default two seconds.
+  const deadline=performance.now()+CAPYBARA_DEFAULT;
+  let messageId;
+  await waitForCondition(()=>{
+    messageId=execFileSync('python3',['-c',"import sqlite3,sys; c=sqlite3.connect('file:'+sys.argv[1]+'?mode=ro',uri=True); r=c.execute(\"SELECT id FROM messages WHERE room_id=201306877 AND creator_id=773523953 AND markdown_source=? ORDER BY id DESC LIMIT 1\",('Mobile draft'+chr(10),)).fetchone(); print(r[0] if r else ''); c.close()",db],{encoding:'utf8'}).trim();
+    return !!messageId;
+  });
+  await waitForVisibility(filterVisibleText(page.locator(`.message[data-message-id="${messageId}"] .message__body`),'Mobile draft'),{timeout:Math.max(0,deadline-performance.now())});
   // Capybara drains its app server before closing the session. Drain the real
   // browser write too: an optimistic body alone cannot supply persisted rows.
   const response=await written;assert.equal(response.status(),200);

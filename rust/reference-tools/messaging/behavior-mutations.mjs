@@ -344,6 +344,18 @@ for(const [name,variants] of literalAttributeMutations) {
 reviewMutations.set(WORKSPACE_CASE,new Map([
   ['slow-workspace-animation',['messages-','.message__quick-reaction {','@keyframes ws8bm-slow-settle { from { opacity: .99; } to { opacity: 1; } }\n.message:last-child { animation: ws8bm-slow-settle 4s linear !important; }\n.message__quick-reaction {']],
 ]));
+// Review #230 isolates the original deadline and persisted-row scope.
+for(const [variant,delay] of [['delayed-workspace-mobile-draft',true],['unrelated-workspace-mobile-body',false]]) {
+  reviewMutations.get(WORKSPACE_CASE).set(variant,[composer,'connect() {',`connect() {
+    const seen=new WeakSet();let decoy;
+    const hide=()=>{for(const node of document.querySelectorAll('.message[data-message-id] .message__body')) {
+      if(node.querySelector('[data-reply-target="body"]')?.textContent.trim()!=='Mobile draft'||seen.has(node))continue;
+      seen.add(node);node.dataset.ws8bmMobileFault='';node.style.setProperty('opacity','0','important');
+      if(${delay})setTimeout(()=>node.style.removeProperty('opacity'),3000);
+      else if(!decoy){decoy=document.createElement('div');decoy.className='message__body';decoy.textContent='Mobile draft';document.body.append(decoy);}
+    }};
+    new MutationObserver(hide).observe(document,{subtree:true,childList:true,characterData:true});hide();`]);
+}
 export const mutationNames=[...new Set([...mutations.keys(),...reviewMutations.keys()])];
 export function mutationVariants(caseName,selected=process.env.WS8BM_MUTANT) {
   const variants=[...(mutations.has(caseName)?['default']:[]),...(reviewMutations.get(caseName)?.keys()||[])];
@@ -385,7 +397,7 @@ export async function installMutation(page,caseName,probe,variant='default') {
   const slowAnimation=variant==='slow-workspace-animation';
   if(slowAnimation) probe.requiredAnimation={name:'ws8bm-slow-settle',duration:4000};
   const cssSelector=slowAnimation?'.message:last-child':asset==='messages-'&&replacement?.includes('{')?(replacement.startsWith('@media')?replacement.match(/@media[^\{]+\{\s*([^\{]+)\{/)[1].trim():replacement.split('{')[0].trim()):null;
-  const scriptedSelector=['transparent-cancelled-draft','transparent-saved-draft','transparent-newer-draft'].includes(variant)?editor:
+  const scriptedSelector=['delayed-workspace-mobile-draft','unrelated-workspace-mobile-body'].includes(variant)?'[data-ws8bm-mobile-fault]':['transparent-cancelled-draft','transparent-saved-draft','transparent-newer-draft'].includes(variant)?editor:
     ['transparent-device-text','transparent-drive-text','transparent-phone-drive-text'].includes(variant)?'.attach-menu span[style]':
     ['missing-const','missing-def'].includes(variant)?'.missing-keyword-token':
     asset==='models/code_highlighter-'&&replacement?.includes('code.dataset.highlighted = "no"')?'code[data-highlighted="no"]':
@@ -397,6 +409,7 @@ export async function installMutation(page,caseName,probe,variant='default') {
     variant==='missing-option-aria-label'?'.emoji-picker__option[aria-labelledby="ws8bm-option-label"]:not([aria-label])':null;
   const initialConversationSelector=variant==='hidden-initial-composer-conversation'?'#thread-panel [data-thread-panel-target="conversation"]':null;
   const stateSelector=cssSelector||scriptedSelector||injectedStyleSelector||attributeSelector||initialConversationSelector;
+  if(['delayed-workspace-mobile-draft','unrelated-workspace-mobile-body'].includes(variant)) probe.requiredMessageText='Mobile draft';
   if(variant==='hidden-submitted-body-visible-strong') probe.requiredMessageText='First message stays exact.';
   if(initialConversationSelector) probe.requiresHiddenState=true;
   probe.requiresHiddenState ||= !!injectedStyleSelector&&/opacity:\s*0/.test(replacement)|| !!scriptedSelector&&variant.startsWith('transparent-')||!!cssSelector&&/opacity:\s*0(?:[ ;}]|$)|visibility:\s*hidden|display:\s*none/.test(replacement);

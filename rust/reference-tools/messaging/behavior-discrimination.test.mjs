@@ -18,7 +18,7 @@ test('every registered mutant names an existing intended assertion',()=>{
     for(const spec of mutationTarget(name,variant)) for(const target of [spec,...(spec.phase?[spec.phase]:[])]) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
     count++;
   }
-  assert.equal(count,201);
+  assert.equal(count,203);
 });
 test('earlier Loading timeout earns no delayed-marker rejection credit',()=>{
   const early=failure('behavior-search-forward.mjs',"waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post')");
@@ -160,4 +160,15 @@ test('motion default fault requires removal of a real server-emitted test attrib
   assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
   assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{before:undefined,after:undefined}]},error).valid,false);
   assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{before:'off',after:undefined}]},error).valid,true);
+});
+
+test('native motion requires the original off-canvas failure and actual zero-duration HQ drawer',()=>{
+  const name='mobile drawer animates in, lands in place, and returns focus with motion on';
+  const state={room:'/rooms/201306877',open:true,duration:'0s',transform:'matrix(1, 0, 0, 1, 0, 0)'};
+  const failure={assertion:true,message:'expected the drawer to start off-canvas, got tx=0',backtrace:['test/system/motion_test.rb:43:in test_phone']};
+  const error={code:'ERR_ASSERTION',stack:''};
+  assert.equal(rejectionEvidence(name,'default',{...valid,observed:[state],nativeFailures:[failure]},error).valid,true);
+  for(const fault of [{...failure,backtrace:['test/system/motion_test.rb:38:in test_phone']},{...failure,message:'Stimulus startup'}])
+    assert.equal(rejectionEvidence(name,'default',{...valid,observed:[state],nativeFailures:[fault]},error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...valid,observed:[{...state,room:'/rooms/654632876'}],nativeFailures:[failure]},error).valid,false);
 });
