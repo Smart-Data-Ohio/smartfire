@@ -398,10 +398,21 @@ async fn event_pages_scope_members_bots_and_the_series_index() {
     let mut david = app.david();
     let shown = david.get(&path).await;
     assert_eq!(shown.status, StatusCode::OK);
+    assert!(shown.text().contains("Controller planning"));
     assert!(shown.text().contains("Part of a series: repeats weekly"));
     let indexed = david.get(&format!("/rooms/{ALL_TALK}/events")).await;
     assert_eq!(indexed.status, StatusCode::OK);
-    assert_eq!(indexed.text().matches("3 occurrences remaining").count(), 1);
+    let html = indexed.text();
+    let upcoming = html.split("id=\"past-events\"").next().unwrap();
+    assert_eq!(upcoming.matches("Controller planning").count(), 1);
+    assert_eq!(upcoming.matches("3 occurrences remaining").count(), 1);
+    assert!(upcoming.contains("Repeats weekly"));
+    let occurrences = app.db().read(move |c| head.series_events(c)).await.unwrap();
+    assert_eq!(occurrences.len(), 3);
+    assert!(upcoming.contains(&path));
+    for occurrence in occurrences.iter().skip(1) {
+        assert!(!upcoming.contains(&format!("/rooms/{ALL_TALK}/events/{}", occurrence.id)));
+    }
 }
 
 #[tokio::test]
@@ -822,5 +833,49 @@ async fn calendar_api_meet_link_is_not_a_user_parameter() {
             .meet_link
             .as_deref(),
         Some("https://meet.example.test/internal")
+    );
+}
+
+// test/controllers/rooms/events_controller_test.rb:401 uses bot-key create and
+// a bot session on index, two different authentication paths.
+#[tokio::test]
+async fn event_http_denies_bot_key_create_and_bot_session_index() {
+    let app = TestApp::boot().await.expect("default seed required");
+    let before = app
+        .db()
+        .read(|c| Ok(c.query_row("SELECT count(*) FROM events", [], |r| r.get::<_, i64>(0))?))
+        .await
+        .unwrap();
+    let response = app
+        .anonymous()
+        .send(
+            Req::new(
+                Method::POST,
+                &format!("/rooms/{ALL_TALK}/events?bot_key={BENDER_KEY}"),
+            )
+            .form(&[
+                ("event[title]", "Bot party"),
+                ("event[starts_at]", "2026-09-25T15:30"),
+                ("event[time_zone]", "UTC"),
+            ]),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        app.db()
+            .read(|c| {
+                Ok(c.query_row("SELECT count(*) FROM events", [], |r| r.get::<_, i64>(0))?)
+            })
+            .await
+            .unwrap(),
+        before
+    );
+    assert_eq!(
+        app.sign_in(BENDER)
+            .await
+            .get(&format!("/rooms/{ALL_TALK}/events"))
+            .await
+            .status,
+        StatusCode::FORBIDDEN
     );
 }

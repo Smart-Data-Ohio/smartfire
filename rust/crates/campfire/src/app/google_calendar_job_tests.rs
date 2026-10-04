@@ -497,3 +497,51 @@ async fn google_calendar_entry_sync_records_transient_failure_then_drops_unreach
 }
 
 mod sync_cases;
+
+// test/jobs/calendar/disconnect_cleanup_job_test.rb:10,58: execute the registered
+// durable job, including a generic permanent 500 rather than the separate 404 path.
+#[tokio::test]
+async fn google_cleanup_job_deletes_with_snapshot_then_revokes_without_retry_on_500() {
+    use super::google_test_support::{QueueDrain, observe_jobs};
+    use campfire_db::models::google_calendar::DisconnectCleanupJob;
+    for status in [200, 500] {
+        let (a, r) = app().await;
+        observe_jobs(&a).await;
+        let mut drain = QueueDrain::install(&a).await;
+        r.answer(status, json!({}));
+        r.answer(200, json!({}));
+        r.answer(200, json!({}));
+        let snapshot = blob(&a);
+        a.db()
+            .write(move |tx| {
+                tx.emit_after_commit(campfire_db::Event::job(&DisconnectCleanupJob((
+                    vec!["first-id".into(), "second-id".into()],
+                    json!(snapshot),
+                    None,
+                ))));
+                Ok(())
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                drain.cleanup_attempt(&a, 1)
+            )
+            .await
+            .expect("cleanup job did not commit"),
+            None
+        );
+        assert_eq!(a.db().read(|c| Ok(c.query_row("SELECT count(*) FROM ws14g_emitted_jobs WHERE job_class='Calendar::DisconnectCleanupJob'", [], |r| r.get::<_, i64>(0))?)).await.unwrap(), 1);
+        assert_eq!(
+            *r.calls.lock().unwrap(),
+            vec![
+                json!({"method":"DELETE","path":"/calendar/v3/calendars/primary/events/first-id","body":"","content_type":"application/json","access_token":"access-token"}),
+                json!({"method":"DELETE","path":"/calendar/v3/calendars/primary/events/second-id","body":"","content_type":"application/json","access_token":"access-token"}),
+                json!({"method":"POST","path":"/revoke","body":"token=refresh-token","content_type":"application/x-www-form-urlencoded","access_token":null}),
+            ],
+            "delete status {status}"
+        );
+        assert!(r.answers.lock().unwrap().is_empty());
+    }
+}

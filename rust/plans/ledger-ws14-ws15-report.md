@@ -6,10 +6,10 @@ Baseline: fresh `origin/main` at `78b9b1546bdab4c6c1c9b8ddb94512f661289112`. Bra
 
 | Ledger | Originally open | Exact baseline-CI test receipt | Newly implemented assertion | Test-only outside gate | Still open |
 |---|---:|---:|---:|---:|---:|
-| WS14e | 108 | 30 | 0 | 0 | 78 |
-| WS14g | 273 | 140 | 32 | 1 | 100 |
-| WS15g | 64 | 21 | 0 | 0 | 43 |
-| Total | 445 | 191 | 32 | 1 | 221 |
+| WS14e | 108 | 27 | 1 | 0 | 80 |
+| WS14g | 273 | 137 | 35 | 1 | 100 |
+| WS15g | 64 | 17 | 2 | 0 | 45 |
+| Total | 445 | 181 | 38 | 1 | 225 |
 
 Each original declaration is annotated **in place**, with its historical receipt retained. [The structured ledger](ledger-ws14-ws15.json) retains stable IDs, original/current ledger lines, the actual Rails declaration, exact test/source evidence and individual CI log lines. [Run 37200618245](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37200618245) is successful at exactly the baseline SHA: 4,948 distinct nextest PASS entries, zero FAIL entries. Every test used to close an old record was checked against that log, rather than inferred from the aggregate count or an owner report.
 
@@ -65,7 +65,9 @@ cargo nextest run -p campfire -p campfire_db -j 4 -E 'test(membership_calendar_c
 Summary [   0.701s] 4 tests run: 4 passed, 4233 skipped
 ```
 
-## Validation
+## Original-head validation (ca92288e)
+
+The commands and counts in this section describe the original reconciliation head. Review-correction execution is recorded below.
 
 Rust checks use `campfire-toolchain-ci-rust-speedups:latest` (Rust 1.98.1, canonical libvips/ffmpeg), `CI=true`, the existing machine-wide rustc slot locks, `CARGO_BUILD_JOBS=2`, and at most four nextest workers. The host throttle configuration is unchanged. Container children use a disposable copy of the existing throttle wrapper with container-parent detection enabled. No real Google endpoint is called.
 
@@ -144,6 +146,39 @@ test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; fini
 
 ## What remains
 
-**This PR does not clear the cutover gate.** [The remaining list](ledger-ws14-ws15-remaining.md) names all **221** exact records with both current ledger file:line and Rails file:line: 78 WS14e, 100 WS14g and 43 WS15g. There are 166 domain/HTTP/job/assertion records and 55 browser-interaction records. An open record means this reconciliation lacks a complete discriminating acceptance receipt; it does not assert that every corresponding production path is absent. Grouped model tests were not substituted for a distinct HTTP or browser assertion, and render-only query checks were not substituted for complete-request preload counts.
+**This PR does not clear the cutover gate.** [The remaining list](ledger-ws14-ws15-remaining.md) names all **225** exact records with both current ledger file:line and Rails file:line: 80 WS14e, 100 WS14g and 45 WS15g. There are 170 domain/HTTP/job/assertion records and 55 browser-interaction records. An open record means this reconciliation lacks a complete discriminating acceptance receipt; it does not assert that every corresponding production path is absent. Grouped model tests were not substituted for a distinct HTTP or browser assertion, and render-only query checks were not substituted for complete-request preload counts.
 
 Closing these remaining invitations/recurrence/venue/controller/reminder cases, Calendar deletion/sync failure paths, Drive model/picker/interactions, GitHub delivery/cache/controller/logging cases and browser interactions is larger than this coherent reconciliation PR. They remain in the gate with exact declarations, without an owner-held waiver or a new allowlist. Scratch databases/reference archives and raw CI logs created for this slice are removed after extracting the receipts; `target/` is retained as permitted.
+
+## PR #239 review correction
+
+All closures citing the six challenged test functions were rechecked: 19 structured records plus four historical mapped rows (event show/series index and PR room routing/public-private cards). Historical receipts remain intact. The series-index test now checks the head URL, title/repeat label and absence of later-occurrence URLs; the callback socket test subscribes an unrelated room and checks exactly two publications only to the referencing room/mapped thread. The six retained pusher payload receipts describe only their actual countdown/title/start-age inputs, without claiming venue or end-time coverage.
+
+Four new registered app tests close six records:
+
+- WS14e-085: bot-key POST create and bot-session GET index both return 403; no event is persisted.
+- WS14g-003: persisted Drive attachments reach authorized message HTTP show with status 200 and the complete pinned generic chip block.
+- WS14g-052 and WS14g-055: actual durable cleanup jobs compare both DELETEs and snapshot bearer tokens, refresh-token revoke form, committed drain, and no retry after a literal DELETE 500.
+- WS15g-046 and WS15g-051: actual thread GET renders two populated files with statuses/counts/more line; populated private files and the title stay hidden behind the exact lazy-frame URL.
+
+WS14g-057 now cites the real durable retry/reporting test (baseline PASS line 3004, independently read from the raw log). Supplemental assertions on this head compare preserved ids/snapshot/account arguments at every committed retry, in addition to the existing future schedules and DELETE-only calls.
+
+Four records are reopened with precise missing acceptance assertions in both the machine ledger and remaining list: WS14e-051 (venue suffix through the reminder job/pool), WS14e-057 (past end distinguished from old start through that job), WS15g-056 (mapped header replacement from the actual fetch job), and WS15g-057 (silence without references/mappings from the actual fetch job). These require additional reminder transport or fetch-job/publication fixtures; existing source-only/direct-callback tests do not supply those receipts. No production divergence is claimed for reopened records.
+
+Current totals: **445 records = 181 baseline-CI passed + 38 implemented + 1 test-only outside gate + 225 open**. The remaining list has exactly the 225 unsupported IDs, with no duplicate, omitted or closed ID. The baseline raw-log hash and all name/line receipts pass `reference-tools/cutover/check-ws14-ws15.py --ci-log`.
+
+Review-correction validation uses scoped nextest (`-j 4`) and strict workspace clippy. Default/first_run/agents_ui seeds are private copies of the current-schema Rails seeds, freshly Rails-validated here: **73 passed, 0 failed** (29 + 4 + 40). No seed-dependent test is allowed to skip (`CI=true`). The existing toolchain image and shared rustc slot locks remain in use, with two build jobs and four CPUs. Production code and CI selectors are unchanged.
+
+Exact final-source nextest selection (from `rust/`, in the existing toolchain container):
+
+```sh
+cargo nextest run --locked -p campfire -p campfire_db -j 4 --profile ci -E 'test(controllers::rooms::events::tests::) | test(controllers::messages::drive_tests::) | test(controllers::channel_threads::github_tests::) | test(app::google_calendar_job_tests::) | test(app::google_reporting_tests::) | test(integrations::github::pull_requests::tests::) | test(reminder_push_payload_and_staleness_match_rails_vectors)'
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+```
+
+```text
+Summary [  32.234s] 44 tests run: 44 passed, 4197 skipped
+Strict workspace clippy: exit 0; Finished `dev` profile [unoptimized] target(s) in 1m 55s
+```
+
+This is an affected-suite run, not a new full-workspace pass; all four new tests and the three strengthened shared tests executed. The 4,197 tests outside this selection/ignored are not counted as executed. The initial focused run had three passes and two test-expectation failures: DELETE Content-Type needed Rails' application/json, and preserved retry arguments needed the queue inspector to unwrap its metadata envelope. Both expectations were corrected using Rails source/existing queue decoding; no production change or test-policy relaxation was needed. The final 44-test run passed at the final Rust sources.

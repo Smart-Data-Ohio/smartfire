@@ -31,3 +31,93 @@ async fn github_thread_show_matches_complete_rails_public_private_and_unknown_bo
         assert!(!app.sign_in(KEVIN).await.get(&path).await.text().contains("Port the launch checklist"));
     }
 }
+
+// test/integration/github_pr_threads_test.rb:35,122: persisted files must reach the
+// public thread header, while a private header exposes only its lazy card frame.
+#[tokio::test]
+async fn github_thread_http_renders_populated_files_and_hides_private_filenames() {
+    use serde_json::{Value, json};
+    let oracle: Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/github-thread-page.json"
+    ))
+    .unwrap();
+    let app = TestApp::boot_frozen()
+        .await
+        .expect("default seed required")
+        .without_job_runner()
+        .await;
+    let (room, thread, pr) = (
+        oracle["room_id"].as_i64().unwrap(),
+        oracle["thread_id"].as_i64().unwrap(),
+        oracle["pull_request_id"].as_i64().unwrap(),
+    );
+    let files = json!({"files":[
+        {"filename":"app/models/user.rb","additions":10,"deletions":2,"status":"modified"},
+        {"filename":"app/models/new.rb","additions":5,"deletions":0,"status":"added"}
+    ],"total_count":5})
+    .to_string();
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE github_pull_requests SET private=0,title='Add shiny things',changed_files=?,changed_files_fetched_at=?,fetched_at=? WHERE id=?", (files,tx.now(),tx.now(),pr))?;
+        let mut conversation = campfire_db::ChannelThread::find(tx.conn(), thread)?;
+        conversation.post_message(tx, DAVID, campfire_db::NewMessage {
+            markdown_source: Some("first reply".into()),
+            ..Default::default()
+        })?;
+        Ok(())
+    }).await.unwrap();
+    let path = format!("/rooms/{room}/threads/{thread}");
+    let response = app.david().get(&path).await;
+    assert_eq!(response.status, 200);
+    let html = response.text();
+    // The files follow the card's nested divs; fence the whole header at its write frame.
+    let header = html
+        .split("class=\"github-pr-thread-header\"")
+        .nth(1)
+        .unwrap()
+        .split("<turbo-frame class=\"github-pr-write\"")
+        .next()
+        .unwrap();
+    assert!(header.contains("class=\"github-pr-card github-pr-card--open\""));
+    assert!(header.contains("class=\"github-pr-card__title\">Add shiny things</p>"));
+    assert!(header.contains("class=\"github-pr-files__heading\">Files changed</h2>"));
+    assert_eq!(header.matches("class=\"github-pr-files__file\"").count(), 2);
+    for text in [
+        "app/models/user.rb",
+        "app/models/new.rb",
+        ">Modified</span>",
+        ">Added</span>",
+        "+10 −2</span>",
+        "+5 −0</span>",
+        "and 3 more on GitHub",
+    ] {
+        assert!(header.contains(text), "missing {text}: {header}");
+    }
+    assert!(!header.contains("Loading files"));
+    assert!(html.contains("first reply"));
+    assert!(
+        html.find("github-pr-thread-header").unwrap()
+            < html.find("aria-label=\"Thread messages\"").unwrap()
+    );
+    assert!(html.find("github-pr-thread-header").unwrap() < html.find("first reply").unwrap());
+
+    app.db().write(move |tx| {
+        let files = json!({"files":[{"filename":"app/models/secret.rb","additions":3,"deletions":1,"status":"modified"}],"total_count":1}).to_string();
+        tx.conn().execute("UPDATE github_pull_requests SET private=1,changed_files=? WHERE id=?", (files,pr))?;
+        Ok(())
+    }).await.unwrap();
+    let response = app.david().get(&path).await;
+    assert_eq!(response.status, 200);
+    let html = response.text();
+    assert!(html.contains(&format!(
+        "src=\"/rooms/{room}/github/pull_requests/{pr}/card?thread_id={thread}\""
+    )));
+    assert!(html.contains("loading=\"lazy\""));
+    for hidden in [
+        "class=\"github-pr-card ",
+        "class=\"github-pr-files\"",
+        "Add shiny things",
+        "app/models/secret.rb",
+    ] {
+        assert!(!html.contains(hidden), "private thread leaked {hidden}");
+    }
+}

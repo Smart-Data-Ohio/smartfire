@@ -1,6 +1,6 @@
 # WS14 / WS15 cutover assertions still open
 
-**Partial slice: 221 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
+**Partial slice: 225 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
 
 The three inventories retain all historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`; it is exhaustive for this slice, not a new aggregate owner handoff. Implementing or proving these domain, HTTP, job, failure-injection and browser assertions is larger than one reconciliation PR.
 
@@ -40,6 +40,8 @@ The three inventories retain all historical receipts and current per-record disp
 | WS14e-044 | `rust/plans/ws14e-test-inventory.md:147` | `test/models/event/reference_sync_test.rb:99` | deleting the message removes its references |
 | WS14e-047 | `rust/plans/ws14e-test-inventory.md:161` | `test/models/event/reminder_dispatcher_test.rb:113` | consecutive occurrences of a series are each reminded once at their own time |
 | WS14e-048 | `rust/plans/ws14e-test-inventory.md:162` | `test/models/event/reminder_dispatcher_test.rb:141` | a series starting just before midnight still builds its occurrences |
+| WS14e-051 | `rust/plans/ws14e-test-inventory.md:174` | `test/models/event/reminder_pusher_test.rb:32` | Reopened after PR #239 review: execute the real Event::ReminderPushJob with a persisted voice venue named Lounge and assert the queued push body includes the suffix in Lounge. The cited pusher corpus never sets venue_room_id; source-only payload comparisons do not prove production job/transport assembly. |
+| WS14e-057 | `rust/plans/ws14e-test-inventory.md:180` | `test/models/event/reminder_pusher_test.rb:115` | Reopened after PR #239 review: execute the real Event::ReminderPushJob for an event started within five minutes but ended one minute ago and assert no push is queued, with a still-running control. The cited corpus has no ends_at input; start-age staleness cannot establish end-time suppression. |
 | WS14e-059 | `rust/plans/ws14e-test-inventory.md:187` | `test/models/event/venue_test.rb:11` | a venue is optional |
 | WS14e-060 | `rust/plans/ws14e-test-inventory.md:188` | `test/models/event/venue_test.rb:18` | a voice or Stage channel venue is valid |
 | WS14e-061 | `rust/plans/ws14e-test-inventory.md:189` | `test/models/event/venue_test.rb:25` | a text channel or DM venue is rejected |
@@ -221,6 +223,8 @@ The three inventories retain all historical receipts and current per-record disp
 | WS15g-048 | `rust/plans/ws15g-rails-tests.md:337` | `test/integration/github_pr_threads_test.rb:78` | a PR thread without fetched files shows a loading summary |
 | WS15g-049 | `rust/plans/ws15g-rails-tests.md:338` | `test/integration/github_pr_threads_test.rb:92` | an ordinary thread shows no PR header |
 | WS15g-050 | `rust/plans/ws15g-rails-tests.md:339` | `test/integration/github_pr_threads_test.rb:105` | file paths from the API render as text |
+| WS15g-056 | `rust/plans/ws15g-rails-tests.md:420` | `test/jobs/github/fetch_pull_request_job_test.rb:305` | Reopened after shared-receipt audit: execute the registered Github::FetchPullRequestJob through recorded API responses for a mapped PR and assert its thread stream receives the card/header replacement with the fetched title and file path. Direct PullRequest updates prove the downstream callback but omit the fetch-job producer. |
+| WS15g-057 | `rust/plans/ws15g-rails-tests.md:421` | `test/jobs/github/fetch_pull_request_job_test.rb:328` | Reopened after PR #239 review: execute the registered Github::FetchPullRequestJob for a PR with neither referencing messages nor thread mappings and observe zero card/header publications, while proving the fetch committed. The cited callback test always creates both routes and expects positive frames. |
 | WS15g-058 | `rust/plans/ws15g-rails-tests.md:427` | `test/jobs/github/perform_agent_action_job_test.rb:34` | approving a github action enqueues the job, denying does not |
 | WS15g-059 | `rust/plans/ws15g-rails-tests.md:431` | `test/jobs/github/perform_agent_action_job_test.rb:78` | approving a non-github action enqueues nothing |
 | WS15g-061 | `rust/plans/ws15g-rails-tests.md:594` | `test/models/github/write_client_test.rb:102` | network errors raise Error without logging the token |
