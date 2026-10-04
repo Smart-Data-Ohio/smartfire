@@ -13,6 +13,7 @@ class HostSourceTests(unittest.TestCase):
             root = Path(directory)
             inputs = {
                 "rust/Cargo.toml": b"workspace",
+                "rust/parity/reference.sha": b"1111111111111111111111111111111111111111\n",
                 "rust/crates/campfire/src/controllers/presenters/test_support.rs":
                     b"async fn ws8bm_browser_host_without_jobs() {}",
                 "rust/reference-tools/messaging/older_provider_callbacks.rb": b"callback",
@@ -34,6 +35,8 @@ class HostSourceTests(unittest.TestCase):
                 self.assertEqual((generated.parent / "public/500.html").read_bytes(), inputs["public/500.html"])
                 callback = generated / "reference-tools/messaging/older_provider_callbacks.rb"
                 self.assertEqual(callback.read_bytes(), b"callback")
+                pin = generated / "parity/reference.sha"
+                self.assertEqual(pin.read_bytes(), inputs["rust/parity/reference.sha"])
                 for name in ("extreme_cast_inputs.json.gz", "normalized_cast_inputs.json.gz", "render_replay_inputs.json.gz", "casting_followups_inputs.json"):
                     relative = "reference-tools/views/agents_ui/" + name
                     self.assertEqual((generated / relative).read_bytes(), inputs["rust/" + relative])
@@ -41,10 +44,12 @@ class HostSourceTests(unittest.TestCase):
                 (generated / "stale.rs").write_bytes(b"old generated source")
                 (root / "public/500.html").write_bytes(b"updated error page")
                 (root / "rust/reference-tools/messaging/older_provider_callbacks.rb").write_bytes(b"updated callback")
+                (root / "rust/parity/reference.sha").write_bytes(b"2222222222222222222222222222222222222222\n")
                 prepare_source(root)
                 self.assertFalse((generated / "stale.rs").exists())
                 self.assertEqual((generated.parent / "public/500.html").read_bytes(), b"updated error page")
                 self.assertEqual(callback.read_bytes(), b"updated callback")
+                self.assertEqual(pin.read_bytes(), b"2222222222222222222222222222222222222222\n")
 
     def test_requires_a_tracked_error_page(self):
         with tempfile.TemporaryDirectory() as directory:

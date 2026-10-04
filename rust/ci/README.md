@@ -15,7 +15,7 @@ inputs. Branch protection is managed separately by the release lead.
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
 | browsers | Pinned Playwright image and gateway `ws` lockfile, then exactly 7 WS12, 1 WS13, and 1 gateway ignored tests |
 | livekit | `bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
-| messaging | `python3 reference-tools/messaging/behavior-check.py --keep-going` (all paired Rails/Rust cases, including native Selenium cases and persisted-row assertions) |
+| messaging | Python/Node harness regression tests, then `python3 reference-tools/messaging/behavior-check.py --keep-going` (all scripted paired Rails/Rust cases, including native Selenium cases and persisted-row assertions) |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget, work against Rails and Rust) |
 
 No external harness in the requested messaging/WS11 scope lacks a scripted entry
