@@ -2,7 +2,7 @@
 // delivered replies, Cable typing and Turbo visits; no screenshot assertions.
 import assert from 'node:assert/strict';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT} from './behavior-deadlines.mjs';
-import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty,actOnVisible,filterVisibleText,waitForCondition} from './behavior-visibility.mjs';
+import {waitForVisibility,waitForVisibleCount,waitForVisibleProperty,actOnVisible,filterVisibleText,waitForCondition,visibleCount} from './behavior-visibility.mjs';
 export async function composer({author:page,recipient,base,caseName,fixture,viewer,send,text,field}) {
   const editor=page.getByRole('combobox',{name:'Write a message',exact:true});
   const root=page.locator('.message[data-message-id="607264868"]');
@@ -119,7 +119,9 @@ export async function composer({author:page,recipient,base,caseName,fixture,view
   } else if(caseName==='thread drafts persist per thread without touching the channel draft') {
     const panel=page.locator('#thread-panel');
     async function threads() {
-      await actOnVisible(page.locator('[data-thread-panel-target="browserToggle"]'),'click');await waitForVisibility(panel.locator(':scope[aria-hidden="false"]'),{timeout:DELIVERY_WAIT});
+      // The pinned open_threads helper does not toggle an already open cached drawer.
+      if(await visibleCount(page.locator('body.thread-panel-open'))===0) await actOnVisible(page.locator('[data-thread-panel-target="browserToggle"]'),'click');
+      await waitForVisibility(panel.locator(':scope[aria-hidden="false"]'),{timeout:DELIVERY_WAIT});
     }
     async function thread() {
       await threads();await actOnVisible(filterVisibleText(panel.locator('[data-thread-panel-target="browserList"] .thread-panel__thread-item'),'Composer draft thread'),'click',{});
