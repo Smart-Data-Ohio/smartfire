@@ -1,0 +1,44 @@
+{
+  "step_create": {
+    "processing_jobs": 1,
+    "preview_attached": false,
+    "token_suffix": "0",
+    "expires_in": 900,
+    "video_frames": 1,
+    "poster_present": false,
+    "http_status": 201
+  },
+  "step_update": {
+    "processing_jobs": 1,
+    "preview_attached": false,
+    "token_suffix": "0",
+    "expires_in": 900,
+    "video_frames": 1,
+    "poster_present": false,
+    "http_status": 200
+  },
+  "full_append": {
+    "processing_jobs": 1,
+    "preview_attached": false,
+    "token_suffix": "0",
+    "expires_in": 900,
+    "video_frames": 1,
+    "poster_present": false
+  },
+  "system_note": {
+    "processing_jobs": 1,
+    "preview_attached": false,
+    "token_suffix": "0",
+    "expires_in": 900,
+    "video_frames": 1,
+    "poster_present": false
+  },
+  "thread_indicator": {
+    "processing_jobs": 0,
+    "preview_attached": false,
+    "token_suffix": null,
+    "expires_in": null,
+    "video_frames": 0,
+    "poster_present": false
+  }
+}

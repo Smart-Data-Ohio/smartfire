@@ -330,6 +330,128 @@ async fn attachment_processing_quiet_stream_final_keeps_recovery_requests() {
     assert_eq!(state(&app, blob).await.2, 1);
 }
 
+fn event_oracle() -> serde_json::Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/message_attachment_processing_events.json"
+    )).unwrap()
+}
+
+async fn event_snapshot(app: &TestApp, blob: i64) -> serde_json::Value {
+    let (token, expires, count) = state(app, blob).await;
+    let preview: bool = app.db().read(move |c| Ok(c.query_row(
+        "SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='ActiveStorage::Blob' AND name='preview_image' AND record_id=?)",
+        [blob], |r| r.get(0),
+    )?)).await.unwrap();
+    let videos = app.publications().take().into_iter().filter_map(|(_, bytes)| {
+        serde_json::from_str::<String>(&bytes).ok().filter(|html| html.contains("<video"))
+    }).collect::<Vec<_>>();
+    json!({
+        "processing_jobs":count,"preview_attached":preview,
+        "token_suffix":token.and_then(|t| t.rsplit(':').next().map(str::to_owned)),
+        "expires_in":expires.map(|t| t.jiff().duration_since(SEED_NOW.parse().unwrap()).as_secs()),
+        "video_frames":videos.len(),"poster_present":videos.iter().any(|html| html.contains("poster=")),
+    })
+}
+
+async fn agent_step_video() -> (TestApp, i64, i64) {
+    let (app, _, id, blob) = setup(true).await;
+    crate::controllers::agent_http_tests::initialize(&app).await;
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE messages SET creator_id=(SELECT user_id FROM agents WHERE id=773018776),client_message_id='agent-step-recovery' WHERE id=?", [id])?;
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(state(&app, blob).await, (None, None, 0));
+    (app, id, blob)
+}
+
+#[tokio::test]
+async fn attachment_processing_step_create_retains_recovery_like_fresh_rails() {
+    let (app, id, blob) = agent_step_video().await;
+    let (_client, server) = subscribe(&app).await;
+    app.publications().take();
+    let reply = app.anonymous().send(Req::new(axum::http::Method::POST, "/agents/steps")
+        .header("authorization", &format!("Bearer {}", crate::controllers::agent_http_tests::SECRET))
+        .header("accept", "application/json").header("content-type", "application/json")
+        .body(json!({"message_id":id,"name":"Inspect video"}).to_string())).await;
+    let mut actual = event_snapshot(&app, blob).await;
+    actual["http_status"] = json!(reply.status.as_u16());
+    server.abort();
+    assert_eq!(actual, event_oracle()["step_create"], "{}", reply.text());
+}
+
+#[tokio::test]
+async fn attachment_processing_step_update_retains_recovery_like_fresh_rails() {
+    let (app, id, blob) = agent_step_video().await;
+    let step = app.db().write(move |tx| {
+        tx.conn().execute("INSERT INTO agent_steps(agent_id,message_id,name,status,position,created_at,updated_at) VALUES(773018776,?,'Inspect video','running',0,?,?)", rusqlite::params![id,tx.now(),tx.now()])?;
+        Ok(tx.conn().last_insert_rowid())
+    }).await.unwrap();
+    let (_client, server) = subscribe(&app).await;
+    app.publications().take();
+    let reply = app.anonymous().send(Req::new(axum::http::Method::PATCH, &format!("/agents/steps/{step}"))
+        .header("authorization", &format!("Bearer {}", crate::controllers::agent_http_tests::SECRET))
+        .header("accept", "application/json").header("content-type", "application/json")
+        .body(json!({"status":"done"}).to_string())).await;
+    let mut actual = event_snapshot(&app, blob).await;
+    actual["http_status"] = json!(reply.status.as_u16());
+    server.abort();
+    assert_eq!(actual, event_oracle()["step_update"], "{}", reply.text());
+}
+
+#[tokio::test]
+async fn attachment_processing_full_render_event_sweep_matches_fresh_rails() {
+    use campfire_db::{Event, broadcasts::{Broadcast, Partial}};
+    let mut actuals = serde_json::Map::new();
+    let mut expectations = serde_json::Map::new();
+    for kind in ["notifier", "digest", "system_note", "stage_note", "thread_indicator"] {
+        let (app, _, id, blob) = setup(true).await;
+        if kind == "stage_note" {
+            app.db().write(move |tx| {
+                tx.conn().execute("UPDATE rooms SET type='Rooms::Stage' WHERE id=?", [ALL_TALK])?;
+                tx.conn().execute("UPDATE messages SET system_note=1 WHERE id=?", [id])?;
+                Ok(())
+            }).await.unwrap();
+        }
+        let (_client, server) = subscribe(&app).await;
+        app.publications().take();
+        app.db().write(move |tx| {
+            let event = match kind {
+                "notifier" => Event::broadcast(&crate::integrations::github::notifier::MessageCreated {
+                    room_id:ALL_TALK, message_id:id, thread_id:None,
+                }),
+                "digest" | "system_note" => {
+                    if kind == "system_note" {
+                        tx.conn().execute("UPDATE messages SET system_note=1 WHERE id=?", [id])?;
+                    }
+                    Event::broadcast(&campfire_db::models::board_automations::DigestNotes {message_ids:vec![id]})
+                },
+                "stage_note" => Event::broadcast(&campfire_db::models::huddle_effects::StageEndedNote {message_id:id}),
+                "thread_indicator" => {
+                    let message = Message::find(tx.conn(), id)?;
+                    Event::broadcast(&Broadcast::replace(
+                        campfire_db::broadcasts::conversation_messages(tx.conn(), &message)?,
+                        campfire_db::broadcasts::message_dom_id(&message, Some("thread_indicator")),
+                        Partial::ThreadIndicator { message_id:id, reply_count:1 },
+                    ))
+                },
+                _ => unreachable!(),
+            };
+            tx.emit_after_commit(event);
+            Ok(())
+        }).await.unwrap();
+        let expected = match kind {
+            "notifier" | "digest" => "full_append",
+            "stage_note" => "system_note",
+            _ => kind,
+        };
+        let actual = event_snapshot(&app, blob).await;
+        server.abort();
+        actuals.insert(kind.into(), actual);
+        expectations.insert(kind.into(), event_oracle()[expected].clone());
+    }
+    assert_eq!(actuals, expectations, "full render events must retain recovery; component-only events must not invent it");
+}
+
 #[tokio::test]
 async fn attachment_processing_terminal_failure_never_restarts_from_views() {
     let (app, clock, id, blob) = setup(true).await;
