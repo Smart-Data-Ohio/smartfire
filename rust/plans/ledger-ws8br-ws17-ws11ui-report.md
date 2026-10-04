@@ -30,6 +30,11 @@ executed **4,948 passes, 0 failures**; those are historical counts, not this bra
   weakening is used. These are external Playwright receipts, **not ordinary CI
   browser executions**. The native inbox/page tests cited alongside them passed
   in main CI, and are explicitly labelled supporting evidence.
+- **WS8br: 9 broad original receipts superseded by current CI tests.** The four
+  first-run declarations, two welcome redirects, original QR/cache response, and
+  uploaded/unresizable avatar paths have explicit source/assertion and main-CI
+  receipts. The avatar fallback uses the same original BMP but a different viewer
+  name; that substitution is disclosed rather than called a literal Kevin replay.
 - **WS8br: the queue-failure record is superseded by the approved transaction
   contract.** `controllers::rooms::queue_recovery_tests::queue_decision_keeps_atomic_http_failure_and_recovers_a_rails_tombstone`
   proves atomic HTTP rollback on durable-queue failure, recovery of an existing
@@ -72,7 +77,7 @@ as unique behaviours. No stale “owner API unmerged” explanation remains acti
 
 | Ledger group | Still open | Actual reason |
 | --- | ---: | --- |
-| WS8br broad original declarations | 337 | Complete file-level/named receipt reconciliation not completed in this slice; existing HTTP/component passes do not automatically credit every original clause. |
+| WS8br broad original declarations | 328 | Complete file-level/named receipt reconciliation not completed in this slice; existing HTTP/component passes do not automatically credit every original clause. |
 | WS8br sidebar controller declarations | 8 | Real Huddle source/header/sidebar APIs are merged; the exact original live/quiet/Board/cache/query assertions still need fresh named receipts. |
 | WS8br2 original interaction criteria | 14 | Missing complete member-card/huddle, star-menu/phone, brand-icon/two-theme, and icon-upload/delete browser receipts. Owner domain APIs alone do not prove these interactions. |
 | WS8br muted-room browser | 1 | Original flowing-delivery control, muted noise and mention-unread sequence not executed here. Static row/push tests alone are insufficient. |

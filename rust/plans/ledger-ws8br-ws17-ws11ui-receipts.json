@@ -100,6 +100,41 @@
       "crate": "campfire::bin/campfire",
       "test": "controllers::channel_threads::page_tests::ordinary_work_and_board_posts_render_through_authorized_routes",
       "line": 3618
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+      "line": 3640
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::first_runs::tests::first_run_http_and_persisted_state_match_all_rails_cases",
+      "line": 3645
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::first_runs::tests::five_concurrent_first_runs_create_one_administrator_and_room",
+      "line": 3641
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+      "line": 5027
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::users::avatars::avatar_image_tests::uploaded_avatar_image_uses_rails_bytes_headers_and_freshness",
+      "line": 4818
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::users::avatars::avatar_image_tests::unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers",
+      "line": 4816
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::qr_code::tests::qr_http_matches_rails_bytes_cache_and_capacity_errors",
+      "line": 4353
     }
   ],
   "ws17_closed_records": [
@@ -289,5 +324,142 @@
       "scenario": "work"
     }
   ],
-  "branch_validation": "See accompanying report for fresh branch execution. The two new huddle tests and external browser sequences are not claimed as executions in the historical main run."
+  "branch_validation": "See accompanying report for fresh branch execution. The two new huddle tests and external browser sequences are not claimed as executions in the historical main run.",
+  "ws8br_broad_closed_records": [
+    {
+      "id": "P0107",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "new is permitted when no other users exit",
+      "rust_test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:27; Both empty-workspace GET success and repeat-account redirect are asserted against the pinned complete signup body.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+        "log_line": 3640,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0108",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "new is not permitted when account exist",
+      "rust_test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:27; After Account::create the GET and POST redirect without another user.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+        "log_line": 3640,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0109",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "create",
+      "rust_test": "controllers::first_runs::tests::first_run_http_and_persisted_state_match_all_rails_cases",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:65; Real POST status, redirect, account/user/room/membership/session/audit facts and authenticated cookie match pinned Rails first-run vectors.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::first_run_http_and_persisted_state_match_all_rails_cases",
+        "log_line": 3645,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0110",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "create is not vulnerable to race conditions",
+      "rust_test": "controllers::first_runs::tests::five_concurrent_first_runs_create_one_administrator_and_room",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:107; Five concurrent real first-run POSTs leave exactly one account, user and room, with administrator role.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::five_concurrent_first_runs_create_one_administrator_and_room",
+        "log_line": 3641,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0111",
+      "file": "test/controllers/welcome_controller_test.rb",
+      "test": "redirects to the first created visible room the user has access to",
+      "rust_test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+      "evidence": "rust/crates/campfire/src/controllers/welcome/tests.rs:9; Actual root redirect is compared with the Rails first-visible-room vector, and an inaccessible last-room cookie falls back to that first room.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+        "log_line": 5027,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0112",
+      "file": "test/controllers/welcome_controller_test.rb",
+      "test": "redirects to the last room visited, if we have one",
+      "rust_test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+      "evidence": "rust/crates/campfire/src/controllers/welcome/tests.rs:9; The original watercooler last_room cookie drives the actual root request; complete Location matches the Rails last-room vector.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+        "log_line": 5027,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0204",
+      "file": "test/controllers/users/avatars_controller_test.rb",
+      "test": "show image",
+      "rust_test": "controllers::users::avatars::avatar_image_tests::uploaded_avatar_image_uses_rails_bytes_headers_and_freshness",
+      "evidence": "rust/crates/campfire/src/controllers/users/avatar_image_tests.rs:115; The same moon.jpg fixture is uploaded through the real profile writer, then the real avatar token is served successfully as pinned image/webp bytes and headers.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::users::avatars::avatar_image_tests::uploaded_avatar_image_uses_rails_bytes_headers_and_freshness",
+        "log_line": 4818,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0205",
+      "file": "test/controllers/users/avatars_controller_test.rb",
+      "test": "show initials when image cannot be resized",
+      "rust_test": "controllers::users::avatars::avatar_image_tests::unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers",
+      "evidence": "rust/crates/campfire/src/controllers/users/avatar_image_tests.rs:120; The same unresizable pixel.bmp is uploaded through the real profile writer; success and complete Rails initials SVG/cache bytes are compared, including conditional GETs. The viewer fixture name differs from Kevin, but the same uploaded-image failure/fallback path is exercised.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::users::avatars::avatar_image_tests::unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers",
+        "log_line": 4816,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0277",
+      "file": "test/controllers/qr_code_controller_test.rb",
+      "test": "show renders a QR code as a cacheable SVG image",
+      "rust_test": "controllers::qr_code::tests::qr_http_matches_rails_bytes_cache_and_capacity_errors",
+      "evidence": "rust/crates/campfire/src/controllers/qr_code.rs:101; The original http://example.com URL is present in the pinned corpus. Actual SVG bytes, success, content type and public one-year cache-control are compared exactly.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::qr_code::tests::qr_http_matches_rails_bytes_cache_and_capacity_errors",
+        "log_line": 4353,
+        "result": "PASS"
+      }
+    }
+  ]
 }

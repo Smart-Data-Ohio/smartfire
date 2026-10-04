@@ -1299,7 +1299,7 @@
       "test": "one cache per user",
       "status": "ported-equivalent",
       "owner": "WS14g",
-      "evidence": "rust/crates/db/src/models/google_meeting_cache.rs; models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "evidence": "rust/crates/db/src/models/google_meeting_cache.rs:216; models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
       "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
       "history": [
         {
@@ -1716,7 +1716,7 @@
       "test": "pushes the invitation to the recipient only",
       "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:69; tests::huddle_invitation_job_test::recipient. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:56; tests::huddle_invitation_job_test::recipient. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
       "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
       "history": [
         {
@@ -1748,7 +1748,7 @@
       "test": "an opted-out recipient gets no push subscriptions",
       "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:73; tests::huddle_invitation_job_test::off. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:60; tests::huddle_invitation_job_test::off. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
       "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
       "history": [
         {
@@ -1780,7 +1780,7 @@
       "test": "a connected recipient gets no push",
       "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:77; tests::huddle_invitation_job_test::connected. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:64; tests::huddle_invitation_job_test::connected. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
       "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
       "history": [
         {
@@ -1812,7 +1812,7 @@
       "test": "missing invitations are ignored",
       "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:81; tests::huddle_invitation_job_test::missing. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:68; tests::huddle_invitation_job_test::missing. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
       "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
       "history": [
         {
@@ -2512,7 +2512,7 @@
       "test": "work events notify followed thread members",
       "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs:168; tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "evidence": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs:173; tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
       "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
       "history": [
         {
@@ -2746,7 +2746,7 @@
       "test": "a caller-authorized record skips the source check but keeps idempotency",
       "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": "rust/crates/db/src/tests/ws12_generic_recorder_test.rs; tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "evidence": "rust/crates/db/src/tests/ws12_generic_recorder_test.rs:239; tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
       "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
       "history": [
         {

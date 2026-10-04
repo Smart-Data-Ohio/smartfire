@@ -33,7 +33,9 @@ browser = [r for r in ws12['cases'] if r.get('browser_receipt')]
 assert len(browser) == 3 and all(r['status'] == 'ported' for r in browser)
 assert not ws12['ws11ui_cutover']['browser_ci_gated']
 remaining = load('ledger-ws8br-ws17-ws11ui-remaining.json')
-assert len(remaining['ws8br_broad_original_receipts']) == 337
+assert len(remaining['ws8br_broad_original_receipts']) == 328
+assert len(receipts['ws8br_broad_closed_records']) == 9
+assert len(remaining['ws8br_broad_original_receipts']) + len(receipts['ws8br_broad_closed_records']) == 337
 assert len(remaining['ws8br_sidebar_original_receipts']) == 8
 assert len(remaining['ws8br2_original_criteria']) == 14
 assert len(remaining['ws8br_muted_browser']) == 1
@@ -45,5 +47,5 @@ for group in ['ws8br_broad_original_receipts', 'ws8br_sidebar_original_receipts'
     for row in remaining[group]:
         assert (row['file'], row['test']) in original, f"remainder is not an original declaration: {row}"
 assert ws8['cutover_reconciliation']['partial'] and remaining['partial']
-print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; 14 WS17 closures; 3 external browser closures; 1 approved queue supersession; 0 inconsistent records")
-print('Cutover ledger remains partial: 337 broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')
+print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; 14 WS17 closures; 3 external browser closures; 9 broad WS8 supersessions; 1 approved queue supersession; 0 inconsistent records")
+print('Cutover ledger remains partial: 328 broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')

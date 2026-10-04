@@ -252,48 +252,6 @@
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
-      "id": "P0107",
-      "file": "test/controllers/first_runs_controller_test.rb",
-      "line": 9,
-      "test": "new is permitted when no other users exit",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0108",
-      "file": "test/controllers/first_runs_controller_test.rb",
-      "line": 14,
-      "test": "new is not permitted when account exist",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0109",
-      "file": "test/controllers/first_runs_controller_test.rb",
-      "line": 21,
-      "test": "create",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0110",
-      "file": "test/controllers/first_runs_controller_test.rb",
-      "line": 33,
-      "test": "create is not vulnerable to race conditions",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0111",
-      "file": "test/controllers/welcome_controller_test.rb",
-      "line": 7,
-      "test": "redirects to the first created visible room the user has access to",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0112",
-      "file": "test/controllers/welcome_controller_test.rb",
-      "line": 13,
-      "test": "redirects to the last room visited, if we have one",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
       "id": "P0113",
       "file": "test/controllers/users_controller_test.rb",
       "line": 7,
@@ -875,20 +833,6 @@
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
-      "id": "P0204",
-      "file": "test/controllers/users/avatars_controller_test.rb",
-      "line": 12,
-      "test": "show image",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0205",
-      "file": "test/controllers/users/avatars_controller_test.rb",
-      "line": 20,
-      "test": "show initials when image cannot be resized",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
       "id": "P0206",
       "file": "test/controllers/users/avatars_controller_test.rb",
       "line": 28,
@@ -1383,13 +1327,6 @@
       "file": "test/controllers/pwa_controller_test.rb",
       "line": 50,
       "test": "service worker fetch and notification logic",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0277",
-      "file": "test/controllers/qr_code_controller_test.rb",
-      "line": 4,
-      "test": "show renders a QR code as a cacheable SVG image",
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {

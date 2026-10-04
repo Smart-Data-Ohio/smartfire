@@ -159,7 +159,7 @@ The same cutover check resolves older events/polling/thread-page flags:
 - `rust/crates/campfire/src/controllers/agent_polling_tests.rs:17` and `:21`
   contain enabled REST/MCP Drive-byte tests, without `#[ignore]`.
 - The owning standalone thread renderer calls the real GitHub header at
-  `rust/crates/campfire/src/controllers/channel_threads.rs:144`. The enabled
+  `rust/crates/campfire/src/controllers/channel_threads.rs:144` and `:175`. The enabled
   `controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies`
   compares all three visibility states and denies non-members.
 
