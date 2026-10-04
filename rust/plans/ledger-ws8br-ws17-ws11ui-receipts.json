@@ -1879,5 +1879,40 @@
       "failed": 0
     },
     "ci_receipt": "exact-head native CI and combined-branch browser CI are pending"
+  },
+  "assertion_receipt_branch_validation": {
+    "source_head": "2963f36aafb82b178ec080f4b2fdfec50b1b16d8",
+    "fresh_clone": true,
+    "ci": true,
+    "seeds": [
+      "default",
+      "first_run",
+      "agents_ui"
+    ],
+    "nextest_threads": 4,
+    "rustc_throttle_unchanged": true,
+    "nextest_summary": "Summary [2198.109s] 4961 tests run: 4961 passed (15 slow), 20 skipped",
+    "clippy_summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 46s",
+    "clippy_exit_code": 0,
+    "release_input_summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 38s",
+    "release_input_exit_code": 0,
+    "doctests": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 2
+    },
+    "original_declarations": 120,
+    "assertion_sites": 399,
+    "enabled_passed_native_identities": 70,
+    "rails_corpora_compared": 8,
+    "rails_byte_differences": 0,
+    "node_receipt": "Original pinned Rails service-worker event harness passed on fresh Rust HTTP bytes; external receipt, not ordinary native CI execution.",
+    "ci_execution_note": "These are local fresh-clone executions. Historical main CI evidence is kept separately; newly strengthened assertions are enabled for subsequent CI.",
+    "producer_controls": {
+      "actual_defects_rejected": 5,
+      "invalid_controls": 0,
+      "source_bytes_restored": true,
+      "restored_baseline_summary": "Summary [   2.877s] 5 tests run: 5 passed, 2853 skipped"
+    }
   }
 }
