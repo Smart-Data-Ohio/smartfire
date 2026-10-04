@@ -30,21 +30,16 @@ class UnreadRoomsTest < ApplicationSystemTestCase
     hq_room = rooms(:hq)
 
     join_room designers_room
+    record_unread_events
 
     using_session("Kevin") do
       sign_in "kevin@37signals.com"
       join_room designers_room
       send_message("Here while you're here")
-      join_room hq_room
-      send_message("Over in HQ")
     end
 
-    # Both unread broadcasts share one stream, in order, so HQ going
-    # unread means the Designers broadcast has already been handled.
     assert_message_text "Here while you're here", wait: 10
-    assert_room_unread hq_room
-    assert_single_badge hq_room
-
+    assert_unread_event_handled designers_room
     assert_room_read designers_room
     assert_no_badge designers_room
   end
@@ -113,6 +108,28 @@ class UnreadRoomsTest < ApplicationSystemTestCase
       block.call
     ensure
       names.zip(original).each { |name, value| ENV[name] = value }
+    end
+
+    # Records the rows each rooms-list:unread event targets. Installed
+    # after the sidebar's own window listeners, so a recorded event has
+    # already been through workspace-navigation#updateUnreadStatus.
+    def record_unread_events
+      page.execute_script(<<~JS)
+        window.unreadEventTargets = []
+        window.addEventListener("rooms-list:unread", event => window.unreadEventTargets.push(String(event.detail.targetId)))
+      JS
+    end
+
+    # Action Cable hands each broadcast to its own worker, so another
+    # room's event arriving later proves nothing about this one: wait
+    # for this room's event itself.
+    def assert_unread_event_handled(room)
+      target = dom_id(room, :list)
+      page.document.synchronize(10) do
+        unless page.evaluate_script("window.unreadEventTargets.includes(arguments[0])", target)
+          raise Capybara::ExpectationNotMet, "no rooms-list:unread event reached #{target}"
+        end
+      end
     end
 
     def assert_single_badge(room)
