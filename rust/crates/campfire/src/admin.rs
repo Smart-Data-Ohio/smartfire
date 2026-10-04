@@ -1,4 +1,4 @@
-//! Offline ops commands. No HTTP boot, job runner, credentials, or migration on server startup.
+//! Offline ops commands. No HTTP boot, job runner, or migration on server startup.
 use campfire_db::{Connection, additive, migrations, schema};
 use std::path::Path;
 
@@ -65,8 +65,20 @@ fn twitter_backfill(database: &Path) -> anyhow::Result<String> {
         .to_vec(),
     );
     let (jobs, _ad_hoc) = crate::jobs::Jobs::new(&registry, &config)?;
+    // Selection needs the real Action Text renderer (including attachables). Its
+    // temporary signed markup is neither returned nor stored. Reuse the configured
+    // signing base when present; an offline invocation without one uses a private,
+    // ephemeral base. Signatures/local paths contain no plaintext post URLs.
+    let signing_base = std::env::var("SECRET_KEY_BASE").ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let rich_text = crate::rich_text::AppRichText::new(
+        std::sync::Arc::new(rails_compat::Secrets::new(&signing_base)),
+        std::sync::Arc::new(campfire_kit::clock::SystemClock),
+    );
     let env = campfire_db::Env {
         sink: std::sync::Arc::new(jobs),
+        rich_text: std::sync::Arc::new(rich_text),
         ..Default::default()
     };
     twitter_backfill_with_env(&conn, &env)

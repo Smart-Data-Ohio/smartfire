@@ -60,8 +60,8 @@ bounds this to one enqueue per post per 10-minute window.
 References only form when a message is created or edited, so untouched
 legacy messages keep their old OpenGraph boxes until their references
 are synced. The `BackfillTwitterPostReferences` data migration syncs
-references for every message whose Markdown source or rich-text body
-contains a post URL; it runs with the normal `bin/rails db:migrate` on
+references for every message whose Markdown source or rendered rich-text
+body contains a post URL; it runs with the normal `bin/rails db:migrate` on
 deploy and is idempotent. The migration only creates references and
 never enqueues fetch jobs, because migrations run before Redis is
 reachable (the app migrates while `redis-server` is still starting, and
@@ -76,8 +76,8 @@ The equivalent Rust operator command is:
 campfire twitter-backfill-references /path/to/storage/db/production.sqlite3
 ```
 
-It walks messages in batches of 1,000, syncs references idempotently, and
-prints the same `Backfilled N messages` summary (singular for one). Fetch
+It walks messages in batches of 1,000, selecting by Markdown source or
+rendered Action Text HTML, and syncs references idempotently. It prints the same `Backfilled N messages` summary (singular for one). Fetch
 jobs are saved durably with each message's reference changes for the
 normal job runner to process; the command starts neither the server nor
 network fetches. It requires an existing database with the current schema

@@ -1,9 +1,14 @@
-//! `Twitter::PostReferenceSync` and `PostReferenceBackfill`: writer-only, no HTTP/HTML rendering.
+//! `Twitter::PostReferenceSync` and `PostReferenceBackfill`: no HTTP or network fetches.
 use super::{post::Post, urls};
 use campfire_db::{Connection, Env, Message, Result, Tx, run_write};
 use rusqlite::params;
 pub fn sync_message(tx: &mut Tx<'_>, message: &Message, enqueue: bool) -> Result<()> {
     let html = message.body_html(tx.conn())?.unwrap_or_default();
+    // Rails reads Content#to_html, not the raw database column or sanitized rendered HTML.
+    let html = tx
+        .rich_text()
+        .try_canonicalize_html(tx.conn(), &html)
+        .map_err(campfire_db::Error::Other)?;
     let body = urls::non_code_text(&html).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
     let refs = urls::extract(&format!(
         "{}\n{}",
@@ -31,34 +36,46 @@ pub fn sync_message(tx: &mut Tx<'_>, message: &Message, enqueue: bool) -> Result
     }
     Ok(())
 }
+struct BackfillMessage {
+    id: i64,
+    markdown: Option<String>,
+    html: Option<String>,
+}
+
+impl BackfillMessage {
+    fn selected(&self, conn: &Connection, rich_text: &dyn campfire_db::RichText) -> Result<bool> {
+        // PostReferenceBackfill.call short-circuits on Markdown; otherwise it tests
+        // message.body.to_s, with Action Text's attachment rendering and sanitization.
+        Ok(self.markdown.as_deref().is_some_and(urls::is_post_url)
+            || match &self.html {
+                Some(html) => urls::is_post_url(
+                    &rich_text
+                        .try_rendered_html(conn, html)
+                        .map_err(campfire_db::Error::Other)?,
+                ),
+                None => false,
+            })
+    }
+}
+
 /// Rails find_each starts at the first primary key (including zero and negative IDs).
 /// Preload selection fields per batch, as Message.includes(:rich_text_body) does.
-fn matching_batch(conn: &Connection, last: Option<i64>) -> Result<(Option<i64>, Vec<i64>)> {
+fn backfill_batch(conn: &Connection, last: Option<i64>) -> Result<Vec<BackfillMessage>> {
     let sql = if last.is_some() {
         "SELECT m.id,m.markdown_source,r.body FROM messages m LEFT JOIN action_text_rich_texts r ON r.record_type='Message' AND r.record_id=m.id AND r.name='body' WHERE m.id>?1 ORDER BY m.id LIMIT 1000"
     } else {
         "SELECT m.id,m.markdown_source,r.body FROM messages m LEFT JOIN action_text_rich_texts r ON r.record_type='Message' AND r.record_id=m.id AND r.name='body' WHERE ?1 IS NULL ORDER BY m.id LIMIT 1000"
     };
     let mut query = conn.prepare(sql)?;
-    let rows = query.query_map([last], |row| {
-        Ok((
-            row.get::<_, i64>(0)?,
-            row.get::<_, Option<String>>(1)?,
-            row.get::<_, Option<String>>(2)?,
-        ))
-    })?;
-    let mut next = None;
-    let mut matching = Vec::new();
-    for row in rows {
-        let (id, markdown, html) = row?;
-        next = Some(id);
-        if markdown.as_deref().is_some_and(urls::is_post_url)
-            || html.as_deref().is_some_and(urls::is_post_url)
-        {
-            matching.push(id);
-        }
-    }
-    Ok((next, matching))
+    Ok(query
+        .query_map([last], |row| {
+            Ok(BackfillMessage {
+                id: row.get(0)?,
+                markdown: row.get(1)?,
+                html: row.get(2)?,
+            })
+        })?
+        .collect::<rusqlite::Result<_>>()?)
 }
 
 /// Operator walk: bounded batches and independently committed message syncs. The job sink
@@ -67,9 +84,17 @@ pub fn backfill_database(conn: &Connection, env: &Env) -> Result<usize> {
     let mut synced = 0;
     let mut last = None;
     loop {
-        let (next, matching) = matching_batch(conn, last)?;
-        let Some(next) = next else { break };
-        for id in matching {
+        let batch = backfill_batch(conn, last)?;
+        let Some(next) = batch.last().map(|message| message.id) else {
+            break;
+        };
+        for row in batch {
+            // Render and sync in primary-key order, preserving earlier progress if a
+            // later render fails, and observing references committed by previous rows.
+            if !row.selected(conn, &*env.rich_text)? {
+                continue;
+            }
+            let id = row.id;
             run_write(conn, env, |tx| {
                 let message = Message::find(tx.conn(), id)?;
                 sync_message(tx, &message, true)
@@ -90,10 +115,15 @@ pub fn backfill(tx: &mut Tx<'_>, enqueue: bool) -> Result<usize> {
     let mut synced = 0;
     let mut last = None;
     loop {
-        let (next, ids) = matching_batch(tx.conn(), last)?;
-        let Some(next) = next else { break };
-        for id in ids {
-            let message = Message::find(tx.conn(), id)?;
+        let batch = backfill_batch(tx.conn(), last)?;
+        let Some(next) = batch.last().map(|message| message.id) else {
+            break;
+        };
+        for row in batch {
+            if !row.selected(tx.conn(), tx.rich_text())? {
+                continue;
+            }
+            let message = Message::find(tx.conn(), row.id)?;
             sync_message(tx, &message, enqueue)?;
             synced += 1;
         }

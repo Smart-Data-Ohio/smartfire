@@ -157,3 +157,191 @@ fn twitter_operator_refuses_missing_or_unknown_databases_and_pluralizes_one() {
         2
     );
 }
+
+fn rendered_oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../vectors/twitter_backfill_rendered.json"
+    ))
+    .unwrap()
+}
+
+async fn arranged_rendered(scenario: &Value) -> TestApp {
+    let app = TestApp::boot_frozen()
+        .await
+        .unwrap()
+        .without_job_runner()
+        .await;
+    let conn = Connection::open(app.db().path()).unwrap();
+    for row in scenario["inputs"].as_array().unwrap() {
+        insert(
+            &conn,
+            row["id"].as_i64().unwrap(),
+            row["markdown"].as_str(),
+            row["html"].as_str(),
+            row["forward_note"].as_str(),
+        );
+    }
+    app
+}
+
+#[tokio::test]
+async fn twitter_backfill_review238_stripped_attribute_does_not_select_forward_note() {
+    let vector = rendered_oracle();
+    let case = &vector["single"];
+    let app = arranged_rendered(case).await;
+    let conn = Connection::open(app.db().path()).unwrap();
+    assert_eq!(
+        twitter_backfill_with_env(&conn, app.db().env()).unwrap(),
+        case["output"].as_str().unwrap()
+    );
+    assert_eq!(state(&conn), case["state"]);
+    let before = state(&conn);
+    assert_eq!(
+        twitter_backfill_with_env(&conn, app.db().env()).unwrap(),
+        case["repeated_output"].as_str().unwrap()
+    );
+    assert_eq!(state(&conn), before);
+}
+
+#[tokio::test]
+async fn twitter_backfill_rendered_entities_and_false_positives_match_fresh_rails() {
+    let vector = rendered_oracle();
+    let case = &vector["edges"];
+    let app = arranged_rendered(case).await;
+    let conn = Connection::open(app.db().path()).unwrap();
+    let output = twitter_backfill_with_env(&conn, app.db().env()).unwrap();
+    let actual = state(&conn);
+    for row in case["inputs"].as_array().unwrap() {
+        let references = |state: &Value| {
+            state["references"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|reference| reference[0] == row["id"])
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            references(&actual),
+            references(&case["state"]),
+            "{}: fresh Rails references",
+            row["label"]
+        );
+    }
+    assert_eq!(output, case["output"].as_str().unwrap());
+    assert_eq!(actual, case["state"]);
+    assert_eq!(
+        twitter_backfill_with_env(&conn, app.db().env()).unwrap(),
+        case["repeated_output"].as_str().unwrap()
+    );
+    assert_eq!(state(&conn), actual);
+}
+
+#[tokio::test]
+async fn twitter_backfill_extraction_canonicalizes_without_sanitizing_or_rendering_source_selected_body()
+ {
+    let vector = rendered_oracle();
+    let case = &vector["edges"];
+    let app = arranged_rendered(case).await;
+    let conn = Connection::open(app.db().path()).unwrap();
+    twitter_backfill_with_env(&conn, app.db().env()).unwrap();
+    let actual = state(&conn);
+    for label in ["canonicalized_attachment_inner", "source_selected_raw_href"] {
+        let row = case["inputs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["label"] == label)
+            .unwrap();
+        assert_eq!(row["selected_by_markdown"], true);
+        // Rails short-circuits before rendering this body. A malformed attachment would
+        // raise on render, while Content#to_html only canonicalizes its stored children.
+        assert!(row["rendered"].is_null());
+        let references = |state: &Value| {
+            state["references"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|reference| reference[0] == row["id"])
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            references(&actual),
+            references(&case["state"]),
+            "{label}: canonical extraction"
+        );
+    }
+}
+
+#[tokio::test]
+async fn twitter_backfill_rendering_and_canonical_html_match_fresh_rails() {
+    let vector = rendered_oracle();
+    let case = &vector["edges"];
+    let app = arranged_rendered(case).await;
+    let conn = Connection::open(app.db().path()).unwrap();
+    for row in case["inputs"].as_array().unwrap() {
+        let Some(html) = row["html"].as_str() else {
+            assert_eq!(row["rendered"], "");
+            assert!(row["canonical"].is_null());
+            continue;
+        };
+        let rich_text = &app.db().env().rich_text;
+        let canonical = rich_text.try_canonicalize_html(&conn, html).unwrap();
+        assert_eq!(
+            canonical,
+            row["canonical"].as_str().unwrap(),
+            "{}: canonical body",
+            row["label"]
+        );
+        let text = crate::integrations::twitter::urls::non_code_text(&canonical).unwrap();
+        assert_eq!(
+            text,
+            row["non_code_text"].as_str().unwrap(),
+            "{}: extraction text",
+            row["label"]
+        );
+        if row["selected_by_markdown"] == false {
+            let rendered = rich_text.try_rendered_html(&conn, html).unwrap();
+            assert_eq!(
+                rendered,
+                row["rendered"].as_str().unwrap(),
+                "{}: complete rendered body",
+                row["label"]
+            );
+            assert_eq!(
+                crate::integrations::twitter::urls::is_post_url(&rendered),
+                row["selected"].as_bool().unwrap(),
+                "{}: selector",
+                row["label"]
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn twitter_operator_rendered_selector_uses_the_production_command() {
+    let vector = rendered_oracle();
+    let case = &vector["edges"];
+    let app = arranged_rendered(case).await;
+    let conn = Connection::open(app.db().path()).unwrap();
+    let args = [
+        "twitter-backfill-references".into(),
+        app.db().path().to_str().unwrap().into(),
+    ];
+    assert_eq!(execute(&args).unwrap(), case["output"].as_str().unwrap());
+    let first = state(&conn);
+    // The production command uses wall-clock time; the complete frozen-clock state
+    // differential above covers every claim timestamp. References and jobs are exact here.
+    assert_eq!(first["references"], case["state"]["references"]);
+    assert_eq!(first["jobs"], case["state"]["jobs"]);
+    assert_eq!(
+        execute(&args).unwrap(),
+        case["repeated_output"].as_str().unwrap()
+    );
+    assert_eq!(
+        state(&conn),
+        first,
+        "all post/reference/job facts retain their exact values"
+    );
+}

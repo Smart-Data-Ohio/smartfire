@@ -41,6 +41,12 @@ pub trait RichText: Send + Sync {
         html.to_string()
     }
 
+    /// `ActionText::Content#to_s`: render attachments and sanitize, inside its layout.
+    /// Backfill selection uses this HTML, while reference extraction uses canonical HTML.
+    fn try_rendered_html(&self, _conn: &Connection, _html: &str) -> Result<String, String> {
+        Err("Action Text renderer is not configured".into())
+    }
+
     /// `Message::Markdown.plain_text(body)`: the plain text of a Markdown-rendered body. The
     /// default reads it like any other body.
     fn markdown_plain_text(&self, conn: &Connection, html: &str, user_names: UserNames<'_>) -> String {
