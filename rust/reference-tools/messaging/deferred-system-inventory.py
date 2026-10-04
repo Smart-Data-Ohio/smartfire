@@ -16,7 +16,12 @@ for row in inventory['files']:
     counts = dict.fromkeys(totals, 0)
     for case in row['cases']:
         assert case['status'] in totals
-        assert (case['status'] == 'passed') == bool(case['evidence'])
+        assert (case['status'] == 'passed') == bool(case.get('evidence')), \
+            f"{case['name']}: closure evidence requires passed status, and passes require closure evidence"
+        if case['status'] != 'passed':
+            reason = case.get('remaining_reason')
+            assert isinstance(reason, str) and reason.strip(), \
+                f"{case['name']}: unresolved declarations require a nonblank remaining_reason"
         counts[case['status']] += 1
         totals[case['status']] += 1
     print(f"{path}: {len(row['cases'])} named declarations; {counts['passed']} mapped behaviour passes; {counts['deferred']} deferred; {counts['blocked_ws12']} WS12 blocked", flush=True)

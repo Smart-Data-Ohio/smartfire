@@ -1,6 +1,10 @@
+# #230 ledger follow-up
+
+Release-click is deferred again, alongside scroll preservation and reopen focus. Current http-3 system counts: **127 passed / 8 deferred / 0 owner-blocked**. These are ledger corrections only; no browser or Rust suite was rerun. [Verifier regression, exact reasons and raw output](ws8bm-review230-ledger.md). Older receipts below are historical, and disputed repetitions supply no closure credit.
+
 # Review #230 correction
 
-Current totals are **128 passed / 7 deferred / 0 owner-blocked systems**; controllers remain 156/156. The former scroll/reopen closures are withdrawn. The attachment flow now closes after main/#231. Workspace uses its specific persisted row and original 2 s budget; native motion uses HQ and native negatives. See [the correction and raw receipts](ws8bm-review230.md). The original checkpoint below is historical and its 129/6 headline and motion/workspace claims are superseded.
+Current totals are **127 passed / 8 deferred / 0 owner-blocked systems**; controllers remain 156/156. The former release-click/scroll/reopen closures are withdrawn. The attachment flow now closes after main/#231. Workspace uses its specific persisted row and original 2 s budget; native motion uses HQ and native negatives. See [the correction and raw receipts](ws8bm-review230.md). The original checkpoint below is historical and its 129/6 headline and motion/workspace claims are superseded.
 
 # Historical WS8bm -3 checkpoint
 

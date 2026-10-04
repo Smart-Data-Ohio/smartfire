@@ -1,6 +1,10 @@
+# #230 ledger follow-up
+
+Current systems: **http-3 127 passed / 8 deferred; http-4 132 passed / 3 deferred; no owner-blocked cases**. Release-click is deferred again because its earlier DIV/menu hit failure has no causal resolution. All three disputed entries carry their reason without closure evidence, and the verifier accepts that schema while rejecting unsupported pass claims. [Regression tests and raw verifier output](ws8bm-review230-ledger.md). No browser or Rust suite was rerun; earlier verification receipts below remain historical.
+
 # WS8bm #230 corrections carried into round 4
 
-Both branches merge main `566c1bd77`. Round 3 is pushed at `1f3678ed5`. Current stacked round-4 inventory is **156/156 controllers; 133 passed / 2 deferred / 0 owner-blocked systems**. Scroll preservation and reopen focus remain deferred; the upload flow closes after the approved #231 shared-client fix. See [the review correction](ws8bm-review230.md). Older 134/1 and 129/6 headlines below are historical and superseded.
+Both branches merge main `566c1bd77`. Round 3 is pushed at `aef598492`. Current stacked round-4 inventory is **156/156 controllers; 132 passed / 3 deferred / 0 owner-blocked systems**. Release-click, scroll preservation and reopen focus remain deferred; the upload flow closes after the approved #231 shared-client fix. See [the review correction](ws8bm-review230.md). Older 134/1 and 129/6 headlines below are historical and superseded.
 
 Final merged round-4 affected checks: **8 paired controls / 14 intended paired rejections / 0 invalid or escaped**; helpers **65 Node / 32 Python**. Fresh-clone workspace: **4,923 passed / 0 failed / 22 existing ignores**. Strict clippy and release-input-only binary build pass. [The complete corrected round-4 report](ws8bm-pr4-review.md) contains all 59 raw workspace target lines, failing-first receipts and exact deferrals. Final owned processes, listeners, containers and scratch targets are all `[]`; 33.6 GiB of compiler output and four generated diagnostics are removed. The model server is untouched. This is the requested pushed checkpoint.
 
@@ -71,4 +75,4 @@ Own scratch target cleanup: `Removed 28073 files, 34.1GiB total`. Final scratch 
 
 # WS8bm #230 correction
 
-Main `566c1bd77` is merged. Review fixes are tools/docs only: the workspace persisted-row assertion is back to 2 s; native motion opens HQ and uses a served native fault at the original off-canvas assertion; invalid scroll/reopen closures are withdrawn. Main/#231 fixes the shared upload-progress client race and the original attachment predicate/filename proof now pass. Current round-3 inventory: **156/156 controllers; 128 passed / 7 deferred / 0 owner-blocked systems**. [Full audit, before/after proofs and retained invalid attempts](ws8bm-review230.md). All older checkpoint summaries below are historical and superseded where corrected here.
+Main `566c1bd77` is merged. Review fixes are tools/docs only: the workspace persisted-row assertion is back to 2 s; native motion opens HQ and uses a served native fault at the original off-canvas assertion; invalid scroll/reopen closures are withdrawn. Main/#231 fixes the shared upload-progress client race and the original attachment predicate/filename proof now pass. Current round-3 inventory: **156/156 controllers; 127 passed / 8 deferred / 0 owner-blocked systems**. [Full audit, before/after proofs and retained invalid attempts](ws8bm-review230.md). All older checkpoint summaries below are historical and superseded where corrected here.

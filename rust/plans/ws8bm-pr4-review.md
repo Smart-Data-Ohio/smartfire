@@ -1,11 +1,16 @@
+# #230 follow-up ledger correction
+
+Current system totals are **132 passed / 3 deferred / 0 owner-blocked**, superseding 133/2 and 134/1. Release-click, scroll preservation and reopen focus stay deferred. No behavioral proof is added or re-certified in this ledger-only correction; no browser or Rust suite is rerun. [The reason-only schema, regressions and raw verifier output](ws8bm-review230-ledger.md). The five round-4 and upload proofs remain intact and approved by the review.
+
 # WS8bm -4 after #230 review and main #231
 
-Current controller coverage is **156/156**. Current system inventory is **133 passed / 2 deferred / 0 owner-blocked**, superseding the historical 134/1 below. Both branches merge main `566c1bd77` (including approved client fix #231), and round 4 carries all round-3 review corrections. The workspace assertion targets the actual committed mobile message with visible body text within two seconds. Motion starts in HQ and its negative executes the original native off-canvas assertion. [The correction report](ws8bm-review230.md) records the original-line audit and failing-first escapes.
+Current controller coverage is **156/156**. Current system inventory is **132 passed / 3 deferred / 0 owner-blocked**, superseding the historical 134/1 below. Both branches merge main `566c1bd77` (including approved client fix #231), and round 4 carries all round-3 review corrections. The workspace assertion targets the actual committed mobile message with visible body text within two seconds. Motion starts in HQ and its negative executes the original native off-canvas assertion. [The correction report](ws8bm-review230.md) records the original-line audit and failing-first escapes.
 
-The only current deferrals are:
+The three current deferrals are:
 
 | Declaration | Exact reason retained | Pin |
 | --- | --- | --- |
+| Release-click on just-opened menu | Earlier elementFromPoint hit returned DIV instead of menu; unchanged passing repetitions and disputed mutant receipts provide no causal resolution. Restored to deferred. | message_interactions_test.rb:55-86,80 |
 | Mobile drawer keeps room-list scroll position | The earlier Rust negative failed while establishing scrollTop=400, before the intended closed-offset assertion. A new paired intended failure does not explain that setup race; it stays deferred. | motion_test.rb:177-238 |
 | Mobile drawer reopens on current room already in view | The earlier Rails negative failed initial current-link focus, before reopen. The later unchanged-path success is not a race fix or closure proof. | motion_test.rb:260-292 |
 
@@ -487,4 +492,4 @@ Removed four generated JSON diagnostics and their empty target directory
 WS8bm final owned resources: {"processes": [], "listeners": [], "containers": [], "scratch_targets": []}
 ```
 
-`python3 .scratch/ws8bm-review230/resource-check.py` enumerates owned active processes, all relevant fixed listeners, owned Docker containers/mounts and scratch target directories; its final assertion passes. Native temporary profiles, proof mounts and container instances are removed by their unconditional teardown. Logs and canonical media remain for review and later runs. The Python model server is untouched. Work stops after the requested push; the two explicit drawer deferrals remain. No current affected check or Rust verification failed. Earlier invalid setup/network attempts and historical broad failures above remain disclosed and receive no credit.
+`python3 .scratch/ws8bm-review230/resource-check.py` enumerates owned active processes, all relevant fixed listeners, owned Docker containers/mounts and scratch target directories; its final assertion passes. Native temporary profiles, proof mounts and container instances are removed by their unconditional teardown. Logs and canonical media remain for review and later runs. The Python model server is untouched. Work stops after the requested push; the three explicit release-click/drawer deferrals remain. No current affected check or Rust verification failed. Earlier invalid setup/network attempts and historical broad failures above remain disclosed and receive no credit.
