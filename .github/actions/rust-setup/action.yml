@@ -1,5 +1,9 @@
 name: Rust CI setup
 description: Restore or build the pinned Rails inputs, toolchain, and Cargo cache used by every Rust gate.
+inputs:
+  save-caches:
+    description: Only the ordinary Rust job saves trusted main caches
+    default: 'false'
 outputs:
   cargo-cache-hit:
     description: Whether the exact Cargo cache was restored
@@ -7,6 +11,10 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Make room for media, targets, and pinned browsers
+      shell: bash
+      run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+
     - name: Test parity cache identities
       shell: bash
       run: python3 -m unittest discover -s rust/parity -p test_ci_seed.py
@@ -58,14 +66,14 @@ runs:
 
     # Only pushes to main save these caches; PRs and other branches only restore.
     - name: Save reference image
-      if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.reference-cache.outputs.cache-hit != 'true' }}
+      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.reference-cache.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: rust/parity/.ci/image
         key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
 
     - name: Save parity seeds
-      if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.seed-cache.outputs.cache-hit != 'true' }}
+      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.seed-cache.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
@@ -101,7 +109,7 @@ runs:
         load: true
         push: false
         cache-from: type=gha,scope=rust-toolchain
-        cache-to: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,scope=rust-toolchain,mode=max' || '' }}
+        cache-to: ${{ inputs.save-caches == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,scope=rust-toolchain,mode=max' || '' }}
 
     - name: Restore cargo registry and target
       id: cargo-cache

@@ -65,6 +65,8 @@ jobs:
       - name: Prepare shared Rust CI inputs
         id: setup
         uses: ./.github/actions/rust-setup
+        with:
+          save-caches: 'true'
 
       - name: Clippy
         run: bash rust/ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
