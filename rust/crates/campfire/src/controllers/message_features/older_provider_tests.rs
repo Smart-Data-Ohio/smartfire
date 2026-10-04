@@ -48,7 +48,7 @@ async fn check_frames(
     client: &mut crate::channels::tests::support::Client,
     expected: &Value,
 ) {
-    super::comparison_support::frames(app, client, expected, "older_provider_tests.rs").await;
+    super::comparison_support::published_frames(app, client, expected, "older_provider_tests.rs").await;
 }
 
 #[tokio::test]

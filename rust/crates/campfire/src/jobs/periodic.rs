@@ -124,16 +124,7 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     periodic.task(Task::new("event reminders", intervals.reminders, |app: App| async move {
         event_reminders(&app.db).await
     }));
-    periodic.task(Task::new(
-        "saved item reminders",
-        intervals.reminders,
-        |app: App| async move { saved_item_reminders(&app.db).await },
-    ));
-    periodic.task(Task::new(
-        "scheduled messages",
-        intervals.reminders,
-        |app: App| async move { scheduled_messages(&app.db).await },
-    ));
+    for task in message_delivery_tasks(intervals.reminders) { periodic.task(task); }
     periodic.task(Task::new(
         "poll closing",
         intervals.reminders,
@@ -193,6 +184,14 @@ pub(crate) fn board_automation_tasks() -> [Task<App>;2] {
             campfire_db::models::board_automations::dispatch_digests(&app.db,app.db.env().now()).await?;
             Ok(())
         })
+    ]
+}
+
+/// The real registered messaging consumers, isolated for exact periodic proofs.
+pub(crate) fn message_delivery_tasks(interval: Duration) -> [Task<App>; 2] {
+    [
+        Task::new("saved item reminders", interval, |app: App| async move { saved_item_reminders(&app.db).await }),
+        Task::new("scheduled messages", interval, |app: App| async move { scheduled_messages(&app.db).await }),
     ]
 }
 

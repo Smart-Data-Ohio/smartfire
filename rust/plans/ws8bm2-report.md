@@ -1,179 +1,280 @@
-# WS8b-m2 F: CI delivery-order and observed HTTP Host review fixes
+# WS8b-m2 H: #229 review fixes
 
-Validated source: `98fe6ac796c07c065d3002d516d9ca5bd3dca93b`, branch `rust/ws8bm2-message-features-f`. Fix commit: `f0813862eefbe86fecebcf11b132d945ae2cf4bb`. Main `941a5ef4a` was merged as `23823276d`; interrupted helpers were preserved in WIP `3013bacd4`. Main advanced to `2fd002490` (#189) during the first green gates, and was merged as `98fe6ac79`. Locked metadata passed after both merges. Both sides are retained. The final report commit changes documentation only.
+Both requested P2s are fixed. Source/fixtures tested: `b7bf9c579bd504c42ac8069ddca5a3ba928ea0ff`.
+Fresh clone: `.scratch/ws8bm2-h-review229/fresh`, with all three seeds rebuilt
+from pinned Rails. The later report and producer-control script add no runtime
+or fixture changes.
 
-**Both requested review items are complete. This is a coherent PR checkpoint, partial for cutover and not owner-blocked-only.** No product ordering, sibling claim, renderer, queue, query, time parser, timeout or retry policy was changed. Final Rust harnesses use four test threads; builds use two Cargo jobs and the existing machine-wide rustc throttle. Test launches wait for shared capacity. The separate immutable legacy executable is recognized by the shared `/debug/deps/` capacity counter. Its optional sweep was parked between batches when required checks needed capacity, and stopped on its first failure. No test's executing native process was paused. No stash, deploy, model-server operation or new browser harness was used.
+Send-now carries the request's viewer zone through the scoped writer together
+with its origin. Fresh Rails captures compare real HTTP responses, full stored
+scheduled/message rows and ordered publications plus the exact receiver
+multiset in UTC, New York and Kolkata. The year-10000 draft is sent at frozen
+`2026-03-02T16:00:00Z`; New York's actual frame is `11:00:00-05:00`.
+Periodic jobs retain their existing default-zone behavior.
 
-## 1. Whose order: ordered publications versus unordered wire arrivals
+Saved batches messages, rooms, direct-room names, creators, rich-text bodies and
+plain-text attachments/mentions. Scheduled batches rooms, names, threads, sent
+message links and sendability. Dispatch retains its transactional access recheck.
+The new sendability query and reused association loaders use JSON-bound ID
+lists; bind counts are independent of visible-row counts, including direct rooms.
+Original item ordering and status/access scopes are retained.
 
-The original CI log was fetched in full, and the requested excerpt command was rerun:
+## Failing-first and integrity evidence
 
-```sh
-gh run view 37108558359 --log | grep -A40 older_embed_children_tests
-```
+The unchanged `91cb61210` runtime fails both physical read-growth assertions.
+All twelve full page sections match fresh Rails before the fix, so those failures
+are specifically query growth. The separate send-now regression fails at the
+actual New York receiver frame: Rust `2026-03-02T16:00:00Z`, Rails
+`2026-03-02T11:00:00-05:00`. Full persisted rows are captured through raw SQL,
+avoiding Ruby model-attribute type casts. Timestamp storage spelling alone is
+normalized for row comparisons.
 
-CI's Generic/private_image frame target was `...generic-16-2`, while the comparison expected `...generic-16-1`. This was an arrival-order assertion, not different metadata.
-
-**Actual local failing-first reproduction:** an immutable executable rebuilt with the original two ordered job comparators, unchanged production code and vectors, failed at numeric layout seed **136**. Generic/redirect delivered target `...generic-16-12` where the comparator expected `...generic-16-11`. The two frames have the same metadata and stale-child content; their message targets differ. The runner stopped on that failure, preserving its complete stdout. Earlier ordinary runs did not reproduce it: ten fresh uncontrolled processes, 50 one-thread-runtime layouts, 50 two-thread-runtime layouts, then loaded layouts 50–135 passed. Layout seed controls physical row insertion, group order and subscription order; it does **not** fix OS scheduling or Tokio's internal random choices. We do not claim old seed 136 fails deterministically on every run.
-
-```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2707 filtered out; finished in 9.13s
-```
-
-**Independent Rails proof:** `embed_wire_order.rb` imports the existing rows into an isolated pinned `d7c7de92` server, creates a fresh signed session and runs 20 real parents and their 20 actually queued children. The fixture network permits only its two hosts; production Rails jobs/models/renderers are unchanged. The broadcast recorder calls the original method, so every frame goes through actual Redis and Puma's authenticated Cable connection. Every publication exactly matches the existing 400-frame oracle in publication order.
-
-```text
-WS8bm2 Rails wire jobs: 20 parents; 20 actual queued children; 400 ordered publications byte-identical
-WS8bm2 Rails wire seed=0: 400/400 exact envelopes; publication order exact; arrival order DIFFERENT
-WS8bm2 Rails wire seed=1: 400/400 exact envelopes; publication order exact; arrival order identical
-WS8bm2 Rails wire seed=2: 400/400 exact envelopes; publication order exact; arrival order DIFFERENT
-WS8bm2 Rails wire seed=0: 400/400 exact envelopes; publication order exact; arrival order identical
-```
-
-The identical seed-0 subscription layout produced both ordered and unordered deliveries on separate executions. In its unordered capture, the Generic/16/success job alone arrives in relative publication-index order `43,44,45,40,41,42,46,...,71`; this is also a reorder **within one job**, not merely interleaving separate jobs. Two captures reorder frames within individual subscriptions too. Rails' exact bundled `ActionCable::Channel::Streams#worker_pool_stream_handler` dispatches each callback through `worker_pool.async_invoke`, backed by a concurrent executor. Rust's ordinary connection path merges ready subscription streams through `SelectAll`; sequence sorting in `flush` is for the disconnect cutoff, not a global arrival-order guarantee. The parent/sibling publication loops use ordered message IDs; no hash iteration determines child execution/publication order. The fixture generator's synchronous broadcast replacement records a valid publication transcript but cannot establish an arrival-order contract.
-
-**Fix:** `comparison_support::frames` receives actual socket envelopes, retains the complete stream identifier and every HTML byte, and compares sorted vectors as a multiset. Multiplicity is preserved. Existing exact expected counts and 250 ms extra-frame silence checks remain; missing frames still use the unchanged socket deadline. Helper controls reject a missing frame, duplicate replacement, changed HTML and changed stream identity.
-
-`older_embed_wire_orders.json` pins two actual legal Rails delivery permutations as indices into the unchanged publication corpus. Capture SHA256 values are provenance, not credentials. `recorded_rails_delivery_orders_preserve_all_queued_child_frames` replays these observed orders through a real Rust socket with five authorized subscriptions and the unchanged 256-frame capacity (room maximum 200). This is a transport/comparator regression; it does not replace the real network/job/state matrix. The old comparator fails this recorded seed-0 replay before the fix:
-
-```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2707 filtered out; finished in 0.57s
-WS8bm2 legacy ordered Rails delivery replay exit: 101
-```
-
-**Sweep:** the parent-only embed matrix, mapped PR callback/job frames, older GitHub/generic/LinkedIn callback frames, older Fizzy/X callback/job frames, and older Calendar callback/MeetLink frames used the same positional wire assumption. They now share the full-envelope multiset check. Direct publication-receiver/bounded-provider ordering assertions remain ordered. Final-state sibling cases have at most one frame; Calendar execution cases assert silence; OOO's badge/notice test already sorts complete observed envelopes. No expected value is substituted on the actual side.
-
-**After:** seeds 0–49 pass, then the fresh-clone source/rebuilt-seed run explicitly includes the failing layout 136 and 49 neighbors (136–185). Every process runs all four embed tests, including both real parent/child job matrices, fatal jobs and the recorded-order replay. Each cohort verifies 600 real-job frames plus 400 replay envelopes per process. These are new seeded executions, not retries of failures.
-
-```text
-WS8bm2 fixed seeds: 50/50 passed; 200 tests; 50000 exact frames/envelopes; no failures, retries or timing changes
-WS8bm2 fixed bad-seed range: 50/50 passed (136..185); 200 tests; 50000 exact frames/envelopes; fresh-clone source and rebuilt seeds
-```
-
-## 2. Observe the actual HTTP Host
-
-Both embed job matrices previously recorded the fixture destination as the observed host. They now read `Received.header("Host")`, requiring it to be present, alongside actual method/path. This corpus uses lowercase DNS authorities on default HTTPS port 443, so no normalization or fallback is needed. Cookie and Authorization absence assertions remain.
-
-`check_embed_host_mutant.py` temporarily mutates the real production `Request::transport` to emit `wrong-host.example.test` only during each original `http_error` case. DNS destination and TLS SNI stay unchanged. All production/test source bytes are restored in `finally`, and no fault selector is retained. Before fixing the observation, both complete matrices passed despite four wrong parent headers and eight wrong parent/child headers. The unmatched virtual host's fallback 404 produced the same negative-cache behavior as the intended 502. Afterward, both matrices fail specifically at `actual wire HTTP calls`; the failure witness is required by the driver, so compilation failures or unrelated assertions cannot earn rejection credit.
-
-Executed in the worker checkout, first with the legacy observation and then with the corrected one:
+Commands actually rerun before changing the runtime:
 
 ```sh
-python3 rust/reference-tools/messaging/check_embed_host_mutant.py --expect legacy -- bash .scratch/ws8bm2-f-order216/run-test.sh
-python3 rust/reference-tools/messaging/check_embed_host_mutant.py --expect reject -- bash .scratch/ws8bm2-f-order216/run-test.sh
+bash .scratch/ws8bm2-h/fresh-native.sh test --locked -p campfire review_229_tests -- --test-threads=4 --nocapture
+bash .scratch/ws8bm2-h/fresh-native.sh test --locked -p campfire send_now_preserves_viewer_zone_in_fresh_rails_frames_and_rows -- --test-threads=4 --nocapture
 ```
 
-Before:
+Logs: `failing-first-clean.log` (page growth) and `failing-first-zone.log`.
+The first capture initially exposed a Ruby boolean-versus-raw-SQL fixture shape
+mismatch; the raw-row generator was corrected before the failing zone witness.
+No runtime change was needed for that capture correction.
 
-```text
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2707 filtered out; finished in 9.91s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2706 filtered out; finished in 10.34s
-WS8bm2 HTTP Host mutant: both full matrices escaped the legacy comparison
-```
-
-After (expected failures, driver succeeds only when both requested comparisons reject):
-
-```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2707 filtered out; finished in 1.66s
-test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 2706 filtered out; finished in 1.70s
-WS8bm2 HTTP Host mutant: both full matrices rejected by received-header comparisons
-```
-
-## Changed files and read counts
-
-- `controllers/message_features/comparison_support.rs`: exact envelope multiset, four integrity controls, numeric fixture/subscription-layout seeds.
-- `older_embed_children_tests.rs`, `older_embed_job_tests.rs`: exact multiset delivery checks and physically received Host; child module also replays recorded legal Rails orders.
-- `mapped_provider_tests.rs`, `older_provider_tests.rs`, `older_owner_tests.rs`, `older_calendar_tests.rs`: remove the same invalid wire-order assumption and add stream-identity validation.
-- `reference-tools/messaging/embed_wire_order.rb`, `check_embed_wire_order.py`: actual Rails job/publication/Redis/Cable observations without replacing delivery.
-- `check_embed_host_mutant.py`: real transport fault, phase-specific rejection and byte-for-byte restoration.
-- `vectors/messaging/older_embed_wire_orders.json`: two observed delivery permutations; the original 46 deterministic corpora remain unchanged.
-
-| Consumer, both Generic and LinkedIn, all five outcomes | Rails reads 4 / 16 refs | Rust before 4 / 16 | Rust after 4 / 16 |
-| --- | --- | --- | --- |
-| Parent fetch (parent-only and dispatched-child matrices) | 14 / 26 | 10 / 10 | 10 / 10 |
-| Actually dispatched stale sibling | 10 / 22 | 10 / 10 | 10 / 10 |
-
-Representative physical-query lines from the final fresh suite:
-
-```text
-WS8bm2 older-embed job Rust generic success size=16: 10 consumer reads; Rails=26; 32 exact frames
-WS8bm2 older-embed child Rust generic success size=16: 10 consumer reads; Rails=22
-WS8bm2 older-embed job Rust generic success size=4: 10 consumer reads; Rails=14; 8 exact frames
-WS8bm2 older-embed child Rust generic success size=4: 10 consumer reads; Rails=10
-WS8bm2 older-embed job Rust linkedin success size=4: 10 consumer reads; Rails=14; 8 exact frames
-WS8bm2 older-embed child Rust linkedin success size=4: 10 consumer reads; Rails=10
-WS8bm2 older-embed job Rust linkedin success size=16: 10 consumer reads; Rails=26; 32 exact frames
-WS8bm2 older-embed child Rust linkedin success size=16: 10 consumer reads; Rails=22
-WS8bm2 older-embed job Rust generic success size=16: 10 consumer reads; Rails=26; 16 exact frames
-WS8bm2 older-embed job Rust generic success size=4: 10 consumer reads; Rails=14; 4 exact frames
-WS8bm2 older-embed job Rust linkedin success size=4: 10 consumer reads; Rails=14; 4 exact frames
-WS8bm2 older-embed job Rust linkedin success size=16: 10 consumer reads; Rails=26; 16 exact frames
-```
-
-No product SQL or new `IN` list was added. Existing bounded batches and fetch deduplication remain. No own edit touches WS12's prohibited board/work files, WS11's ledger or the read-only review evidence. Main's reviewed behavior, viewer-zone logic and real owner APIs are retained by the merge.
-
-## Final fresh-clone commands and raw receipts
-
-The first green full suite/clippy/release receipts before #189 are preserved under `.scratch/ws8bm2-f-order216/pre-pr189/`. They are superseded by the final gates below. Final source is a second `--no-hardlinks` clone at `98fe6ac79`, `.scratch/ws8bm2-f-order216/fresh-merged`; default, first_run and agents_ui were rebuilt there from tracked inputs. Its source, assets and rebuilt seeds are used for all final gates. Only the pre-existing owned Cargo dependency/compiler cache is reused. No untracked source/fixture from the worker supplies the clone.
-
-Commands were executed via the existing CI Docker bridge, its unchanged rustc throttle, two build jobs and the worker's ports. Compilation and native-target mutation tests are serialized; the optional original-comparator executable is an independent immutable copy. Compilation finishes before the capacity check that launches the final test suite.
+`check_review_229_mutants.py` changes the real Saved and Scheduled room-label
+producers, preserving every fixture and comparator. Both are rejected at their
+whole-section byte assertions; send-now remains passing. Source bytes are
+restored in `finally`. The full fresh-clone suite is then run after restoration,
+with source mtimes advanced so no mutant compiler artifact can be reused.
 
 ```sh
-rust/parity/bin/seed build default first_run agents_ui
+python3 rust/reference-tools/messaging/check_review_229_mutants.py bash .scratch/ws8bm2-h/fresh-native.sh
+```
+
+```text
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 2755 filtered out; finished in 2.37s
+WS8bm2 review229 producer mutant: rejected at real feature section differs from fresh Rails: /saved
+WS8bm2 review229 producer mutant: rejected at real feature section differs from fresh Rails: /scheduled_messages
+```
+
+The three regression names are:
+
+- `review_229_tests::send_now_preserves_viewer_zone_in_fresh_rails_frames_and_rows`
+- `review_229_tests::saved_visible_row_growth_and_complete_sections_match_fresh_rails`
+- `review_229_tests::scheduled_visible_row_growth_and_complete_sections_match_fresh_rails`
+
+## Visible-row physical reads
+
+These are actual production HTTP requests, including page construction, at
+4 / 16 new visible rows plus the two seed rows. Mixed cases include done saves,
+a thread, sent/dropped drafts and inaccessible-room drafts. Each complete
+feature section remains identical. The existing per-request hidden authenticity
+input handling is unchanged; Rails' forgery-disabled oracle omits that input.
+No expected data constructs the observed HTML, response, stored row or frame.
+
+| Page / kind | Before Rust 4 / 16 | Fixed Rust 4 / 16 | Rails 4 / 16 |
+|---|---|---|---|
+| Saved / ordinary | 33 / 69 | 19 / 19 | 19 / 31 |
+| Saved / mixed | 33 / 69 | 19 / 19 | 19 / 31 |
+| Saved / direct | 37 / 85 | 20 / 20 | 20 / 32 |
+| Scheduled / ordinary | 35 / 83 | 16 / 16 | 12 / 12 |
+| Scheduled / mixed | 33 / 81 | 18 / 18 | 17 / 17 |
+| Scheduled / direct | 39 / 99 | 17 / 17 | 13 / 13 |
+
+## Fresh-clone verification
+
+The affected suite is the complete `controllers::message_features` module plus
+scheduled-message model tests. It includes Saved/Scheduled HTTP, wide-time and
+zone comparisons, periodic tasks, callbacks, jobs and the new regressions.
+One Cargo command runs at a time, with two build jobs and the configured rustc
+throttle. Four test threads reserve shared machine capacity; no concurrency or
+timing threshold was weakened. Owned Rails generators run one at a time.
+
+```sh
+bash rust/parity/bin/seed build default first_run agents_ui
+WS8BM2_ORACLE_SCRATCH=.scratch/ws8bm2-h-review229/logs/oracle-replays python3 rust/reference-tools/messaging/verify_oracles.py
 bash rust/ci/cargo.sh metadata --locked --format-version 1
-bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j 2 --no-run
-bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j 2 -- --test-threads=4 --nocapture
-bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j 2 -- -D warnings
-bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
+bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnings
+(cd rust && bash ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins)
+bash rust/ci/cargo.sh test --locked -p campfire_db scheduled_message_test -j2 -- --test-threads=4 --nocapture
+bash rust/ci/cargo.sh test --locked -p campfire --bin campfire controllers::message_features -j2 -- --test-threads=4 --nocapture
 ```
 
-The deterministic oracle replay and source self-test also ran from the first fresh clone at fix commit `f0813862e`; #189 changes no consumed Rails oracle file, deterministic generator or owned vector. Their source check still covers the exact pinned image. Two observed wire-order pins are legal nondeterministic outcomes and are not claimed to regenerate in identical order. The 46 ordinary generated corpora do regenerate byte-identically. The existing X quote-URL corpus uses its reviewed post-pin `955af4c3781bef07b97b7aefce12c376110a812c` image; all other deterministic corpora use `d7c7de92`.
-
-```sh
-WS8BM2_ORACLE_SCRATCH="$PWD/../fresh-oracles" python3 rust/reference-tools/messaging/verify_oracles.py
-python3 rust/reference-tools/messaging/features-reference-check.py --self-test
-```
-
-Full workspace: **4760 passed, 0 failed, 14 inherited ignored**, across 61 literal summary lines. No newly ignored or silently skipped seeded case.
+The wrappers are `.scratch/ws8bm2-h-review229/reference.sh` and `gates.sh`.
+Oracle scratch is the absolute log directory in the actual replay invocation.
+Raw summaries (ANSI colors removed only):
 
 ```text
-test result: ok. 2703 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 946.02s
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 1343 filtered out; finished in 1.18s
+test result: ok. 254 passed; 0 failed; 0 ignored; 0 measured; 2504 filtered out; finished in 165.43s
+WS8bm2 oracle replay: 58/58 independently replayed fixtures byte-identical
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 58.34s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 04s
+cargo metadata --locked: exit 0
+```
+
+`origin/main` was fetched again at `b06d191142e555fa533de884ca925a2b8e4613a1`.
+`git merge-tree --write-tree HEAD origin/main` succeeds cleanly on the fixed
+source (tree `d856c54d38761fdee1c3ba347ac1c9319d6732d1`); the conditional main
+merge is unnecessary. There is no history rewrite or stash.
+Logs are under `.scratch/ws8bm2-h-review229/logs/`. No scratch target directory
+was created; the pre-existing compiler cache remains. Owned runners/containers
+are finished before handoff. No browsers, deployment or model-server operation.
+
+## Remaining and owners
+
+Both #229 P2s and the former visible-row batching flag are closed. Broader scope
+is unchanged: lead's cutover browser rerun; WS8 / WS11-UI values outside the
+existing I512 time representation; WS12's broader board/work parity. No
+WS12-owned file changed. Atomic durable enqueue rollback remains the approved
+decision-2 difference, not an owner block.
+
+---
+
+# Earlier H merge checkpoint (historical at 91cb61210)
+
+The following receipts and remaining lists are historical. The verification and
+remaining list above supersede them, including the now-closed batching flag.
+
+
+Both requested merge commits are complete, without rebase or stash:
+- `cebbd64f8`: G `b31d3d65e216fb1419589062613f99146be49f4c` into H.
+- `bfb55dc43`: main `7e35a5fd6bb64de2e14c3f0e11725f0d1bd0a22a` into H.
+
+## Conflict resolutions
+
+`controllers/saved_items.rs` and `views/src/saved_items.rs` retain H's wide
+presentation strings and viewer-zone rendering. They cover G's extended-year
+reminders as well as H's wide created/reminded fields; G's redundant closure
+adapter is unnecessary. G's microsecond arithmetic in `db/src/time.rs` and
+`slash_commands/time_parser.rs` is unchanged. All G overflow regressions and
+fresh Rails vectors are retained.
+
+`message_features/container_input_tests.rs` retains both the warm four-zone
+fragment comparison and the actual Saved-page item comparison, including G's
+new event/reminder tests. `verify_oracles.py` retains all H oracles plus both G
+overflow oracles, the named generator mode and the optional subset selector.
+Main had no textual conflict. Its newly added jobless browser fixture host
+needed G's lazy publication-capture field initialized; the compiler rejected
+the merged constructor first, then the added default preserves both paths.
+
+## Lossless overflow fixture
+
+The new overflow consumer vector uses the same recorded-baseline/changed-row
+encoding as H's relative and periodic vectors. Candidate state is still read
+in full. Expansion proves equality for all ten HTTP envelopes, complete stored
+rows, Saved-page items, read counts and ordered publication/wire bytes.
+Independent fresh Rails regeneration is byte-identical. G's existing
+per-request token handling is retained. No masks or allowlists were widened,
+and no deadlines or expected-output substitutions changed.
+
+The merged overflow HTTP reads remain flat at 4 / 16 old references:
+`/event` Rails 5 / 5, Rust 11 / 11; `/remind` Rails 26 / 26, Rust 110 / 110.
+Visible-row counts remain fixed, as in the original H proof.
+
+## Current verification
+
+Tested source: `f96f70e4e72e5f285ad3694e0a6adcd92b4be6ec`, from fresh clone
+`.scratch/ws8bm2-h-merge/fresh`. All three seeds (`default`, `first_run`,
+`agents_ui`) were rebuilt from pinned Rails. `CI=1` makes missing seeds fail.
+One Cargo build runs at a time, with two build jobs and the existing rustc
+throttle. The four-thread test invocations reserve shared capacity; no test
+concurrency or timing threshold was changed. The workspace suite ran once.
+
+Exact invocations (the native wrapper supplies the CI image and throttle):
+
+```sh
+bash rust/parity/bin/seed build default first_run agents_ui
+WS8BM2_ORACLE_SCRATCH=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm2/.scratch/ws8bm2-h-merge/logs/oracle-replays python3 rust/reference-tools/messaging/verify_oracles.py
+bash rust/ci/cargo.sh metadata --locked --format-version 1
+bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 --no-run
+bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnings
+(cd rust && bash ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins)
+bash rust/ci/cargo.sh test --locked -p campfire_db relative_overflow -j2 -- --test-threads=4 --nocapture
+```
+
+The five focused `campfire` invocations were:
+
+```sh
+for selector in controllers::message_features::container_input_tests controllers::message_features::wide_html_tests controllers::message_features::periodic_delivery_tests controllers::message_features::saved_tests controllers::message_features::relative_split_input_tests; do
+  bash rust/ci/cargo.sh test --locked -p campfire --bin campfire "$selector" -j2 -- --test-threads=4 --nocapture
+done
+```
+
+The single workspace execution was
+`bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 -- --test-threads=4 --nocapture`.
+The lossless expansion command was
+`python3 .scratch/ws8bm2-h-merge/verify-compaction.py`.
+
+Raw summaries (ANSI color removed only):
+
+```text
+focused-db:
+PR223 overflow Rust: 10^142 hours parse/render matched fresh Rails
+PR223 overflow Rust: 13 render/since/ago boundaries matched fresh Rails
+PR223 overflow Rust: 39 matched; 0 differed
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1364 filtered out; finished in 0.02s
+focused-container_input_tests:
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 2751 filtered out; finished in 58.02s
+focused-wide_html_tests:
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2753 filtered out; finished in 22.43s
+focused-periodic_delivery_tests:
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2754 filtered out; finished in 10.21s
+focused-saved_tests:
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 2737 filtered out; finished in 2.68s
+focused-relative_split_input_tests:
+PR223 overflow Rust: 13 parsed JSON renders matched fresh Rails
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 2753 filtered out; finished in 0.07s
+WS8bm2 merged workspace aggregate: 4851 passed; 0 failed; 15 ignored; 61 result groups
+clippy:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 12s
+release:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 57.23s
+WS8bm2 oracle replay: 57/57 independently replayed fixtures byte-identical
+cargo metadata --locked: exit 0
+WS8bm2 lossless relative_overflow_consumers: 2493769 -> 976831 bytes; all 10 envelopes, complete rows, read counts, Saved-page items and frame bytes identical; expanded SHA256 a55c7d1fbf132ad9802264463958e711364cd10e4af649e7c6a7b3df6f637151
+```
+
+Full workspace raw result groups:
+
+```text
+test result: ok. 2749 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 1074.60s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.98s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.06s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
 test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
-test result: ok. 1319 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 144.47s
+test result: ok. 1364 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 162.43s
 test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.50s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.01s
-test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.07s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.03s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
-test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.96s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.10s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.19s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.21s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.27s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.34s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.44s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.45s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.50s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.21s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.82s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.84s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.53s
 test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
-test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.53s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
@@ -182,10 +283,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.70s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.46s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -198,40 +299,395 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-WS8bm2 full fresh workspace exit: 0
 ```
 
-Strict clippy:
+Logs: `.scratch/ws8bm2-h-merge/logs/`. The clean-clone target and any
+release-input scratch targets are removed after verification; the pre-existing
+worktree compiler cache remains. No owned test process or container remains at
+handoff. No browser suite or deployment was run.
 
-```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 34s
-WS8bm2 fresh strict clippy exit: 0
+## Remaining and owners
+
+The requested merge checkpoint is complete. Existing broader scope remains:
+- **Lead:** the final paired browser rerun at cutover (historical 45/45 each).
+- **WS8 / WS11-UI:** values beyond the fixed-width I512 representation, outside
+  the pinned corpus. G now covers the sampled huge relative values and the
+  representable arithmetic boundary, including sub-microsecond offsets.
+- **WS8b-m2:** visible Saved/scheduled-list batching, whose scaling is still
+  unproven when visible-row or due-job counts grow. The current date matrices
+  hold those counts fixed and vary old references.
+- **WS12:** broader board/work parity and its owned query work.
+Atomic durable enqueue rollback remains an approved difference under decision 2,
+not an owner block. G's requested review fixes are merged, so that former
+follow-up flag is closed. This checkpoint adds no new owner-blocked seam.
+
+---
+
+# Previous H report (historical at 65c15089)
+
+The following receipts describe the pre-merge H checkpoint. Its older source
+SHAs, test counts and G-follow-up flag are historical; the verification and
+remaining list above supersede them for this handoff.
+
+# WS8b-m2 slice H checkpoint (partial)
+
+Stacked branch `rust/ws8bm2-message-features-h` starts at G `c4cdef6c7`.
+G was left unchanged; no pushed history was rewritten. No browser run or deploy.
+
+## Completed
+
+The #220 P3 is fixed: both Rails and Rust capture total message counts before
+and after each real built-in slash dispatch. The comparison checks those actual
+SQL counts separately from the returned message. A real extra post after a
+rejected `/remind` preserves the error and passes the former comparator. The
+new assertion rejects `[185,186]` against Rails `[185,185]`. All 35 named cases
+remain, including their actual payload, state, attachment, webhook and frame
+checks. `check_slash_count_mutant.py` reproduces both the old escape and rejection.
+
+The full 80-request relative-consumer matrix now passes, including the formerly
+flagged 24 non-UTC slash appends. UTC, New York, Lord Howe and Apia retain exact
+HTTP envelopes, complete persisted tables and actual ordered publications plus
+wire envelopes. Message day/permalink/system-note and edited datetime tags use the renderer zone;
+avatar versions use the presenter's zone. The slash writer and its pooled
+broadcast read carry the existing #179 zone guard. Detached message fragment
+keys also include their zone; matching reads have an explicit zone API and the
+retained UTC default. The same persisted message is warmed in UTC, New York,
+Lord Howe and Apia, then revisited in UTC, with complete independently captured
+Rails partial bytes and real cache hits. Ordinary scheduled JSON's viewer-zone branch is
+unchanged. Background periodic broadcasts retain Rails' UTC renderer default.
+
+The inherited root declaration fixture rendered a detached UTC meta after an
+HTTP GET and never inspected that GET's meta. Fresh real Rails responses show
+Pacific/Tokyo offsets in both the created and edited datetime attributes, with
+the edited title still UTC. The generator now captures that complete actual
+HTTP component, while every other response and persisted field stays unchanged.
+The candidate comparison also extracts its actual HTTP component. Restoring UTC
+edited datetime output is rejected at that assertion.
+
+Wide saved/scheduled HTML uses plain presentation strings from WS11's shared
+`rails_compat::datetime` renderer and calendar formatting, rather than narrowing
+through Jiff. No second date parser was built. Thirty-two row/zone cases cover
+9999, 10000, -10000 and 178956971 across all four zones, comparing all 96 whole
+saved/upcoming/history partials byte-for-byte. Forty-eight real HTML POST/GET
+pairs additionally compare raw complete time tags, datetime-local fields, flash
+spans and complete saved/scheduled tables. These HTTP date projections do not
+claim full-layout or random session-token parity; detached whole partials retain
+all bytes. No existing mask, allowlist or token gate was loosened.
+
+The periodic proof selects the real task objects from the production registry
+and executes `Periodic::tick`: 8 scenarios, 24 ticks, exact task names, full
+message/rich-text/saved/scheduled/activity tables, actual durable class/arguments,
+ordered publication bytes and receiver silence. It covers due-now, normal
+future, wide future and wide past; a same-time tick and the next interval prove
+idempotence. It enqueues the real reminder/room push consumers; physical push
+transport is not claimed by this matrix. Rails' year-10000 future draft is
+selected lexically by SQLite, then its claim is released after a real time
+comparison. Rust previously posted it. The new post-claim check matches Rails.
+
+Failing-first runtime evidence: the real New York frame contained UTC timestamp
+and avatar bytes; wide HTML panicked at `timestamp within Jiff calendar range`;
+periodic wide-future state had 270 messages against Rails' 269. All are now
+closed. Producer controls reject UTC timestamp/avatar restoration, corrupt HTML
+dates, form values and notices, omitted reminder claims, altered durable job
+arguments, skipped scheduled delivery, removal of the future recheck, changed
+publication action and missing production task registration at their intended
+output assertions. Controls are documented beside each new test. The cache-zone collapse is also
+rejected by the warmed New York whole-fragment assertion.
+
+## Approved difference
+
+The lead ruled durable enqueue rollback consistent with decisions.md decision 2.
+`ws8bm2-approved-differences.md` records it as **approved, not owner-blocked**.
+The 24 actual Rails adapter cases remain pinned. Eight real Rust first/second
+Generic/LinkedIn durable INSERT failures prove full metadata/claim/job rollback
+and empty publications at 4/16 references. Swallowing the real error is rejected.
+No adapter workaround or owner API change was installed.
+
+## Lossless fixture reduction
+
+`relative_consumers.json`: 13,417,007 → 1,266,737 bytes. The periodic fixture
+also shrank from 8,362,748 → 3,768,430 bytes. Unchanged table rows are recorded
+once; changed rows retain every column and deletions retain every ID. Only Rails
+expectations are expanded. Candidate tables are still independently selected
+and compared in full. Expansion exactly reproduces the original captures,
+including all HTTP/frame bytes and reads. Fresh independent regeneration is
+byte-identical, and the existing input producer controls still reject.
+
+## Read counts
+
+Both sizes are **4/16 old references**, with the same visible feature rows and
+scheduled/reminder candidates. These proofs do not claim constant cost when the
+number of due jobs or visible saved/scheduled rows changes. Reads include the
+production callbacks/cache-key path; arrangements and observations are outside
+the capture. No per-reference growth was introduced.
+
+| Path | Rails reads 4 / 16 | Rust reads 4 / 16 |
+| --- | --- | --- |
+| Slash reminder / posted message, all zones | 26 / 26 | 110 / 110 |
+| Slash event prefill | 5 / 5 | 11 / 11 |
+| Wide reminder create | 6 / 6 | 13 / 13 |
+| Wide schedule create, JSON | 5 / 5 | 13 / 13 |
+| 3 wide detached partials | 8 / 8 | 10 / 10 |
+| Saved HTML POST + GET | 22 / 22 | 37 / 37 |
+| Scheduled HTML POST + GET | 17 / 17 | 35 / 35 |
+| Periodic due/wide-past first tick | 35 / 35 | 114 / 114 |
+| Periodic wide-future visited tick | 4 / 4 | 10 / 10 |
+| Periodic normal future / idempotent later tick | 2 / 2 | 2 / 2 |
+| Periodic same-time tick | 0 / 0 | 0 / 0 |
+| First durable sibling refusal | 7 / 7 | 15 / 15 |
+| Second durable sibling refusal | 7 / 7 | 14 / 14 |
+
+The additional legacy cache-integrity arrangement performs five renders of one
+actual stored row, with 133 / 133 native reads across old-reference sizes. Those
+arrangement reads are outside the production HTTP count and have no claimed
+like-for-like Rails cost; their complete partial bytes match the Rails capture.
+
+The fixed render costs above exceed Rails; inherited general reader internals
+and WS12's board/work files were not changed.
+
+## Remaining and owners
+
+- **Lead:** final both-app cutover browser rerun; prior accepted inventory is
+  45/45 each. No browser or pixel check this round.
+- **WS8 / WS11-UI shared time representation:** inputs beyond the existing I512
+  Timestamp/duration range remain outside the pinned corpus. The remaining
+  boundary is `crates/db/src/time.rs:25` and `slash_commands/time_parser.rs:235`;
+  this slice does not claim exhaustive arbitrary-size Ruby Integer parity.
+- **WS8b-m2:** visible saved/scheduled-list batching is still unproven by these
+  date matrices, which hold the visible list fixed. Existing per-row associations
+  remain at `controllers/saved_items.rs:81` and `scheduled_messages.rs:130`;
+  scheduled sendability also reads per row at `scheduled_messages.rs:95`.
+  H adds no per-item query, and claims no visible-row scaling credit.
+- **WS12:** broader board/work parity and owner N+1 work. No edits to its board,
+  channel-thread board/work, board-post or work-thread files.
+- G review follow-ups remain on **G / lead** until the lead requests a merge.
+  Calendar retries, provider jobs, WS12 consumption and physical push/agent/huddle
+  integrations retain their earlier real-owner implementations and suite coverage.
+
+All three assigned H gaps are closed. This is a coherent PR-ready checkpoint,
+not an owner-blocked-only declaration: the shared out-of-range corpus remains
+unproven. Atomic enqueue failure is an approved difference, not remaining work.
+
+## Changed files
+
+| Files | Change |
+| --- | --- |
+| `controllers/rooms/slash_commands.rs`, `channels/message_features.rs`, `controllers/presenters.rs` | Carry the real request zone through the writer/pooled render; format actual avatars in the presenter zone. |
+| `views/src/messages.rs`, three message templates | Renderer-zone timestamps, UTC edited title, shared zone-aware legacy cache writer/readers. |
+| `controllers/saved_items.rs`, `controllers/scheduled_messages.rs`, corresponding view models and `views/src/time.rs` | Wide date presentation strings, real viewer-zone HTML fields and notices, no Jiff narrowing. |
+| `rails_compat/src/datetime.rs` | Shared extended-year calendar formatting, reusing the existing wide renderer; no new parser. |
+| `db/src/models/scheduled_message.rs` | Rails' post-claim future-time check and claim release. |
+| `campfire/src/jobs/periodic.rs`, `jobs/Cargo.toml`, `jobs/src/periodic.rs`, campfire dev feature | Select and execute actual production-registered tasks; isolation API only under test support. |
+| `slash_named_tests.rs`, `slash_named.rb`, vector | Independently captured before/after total message counts, retaining all 35 named comparisons. |
+| `container_input_tests.rs`, `wide_html_tests.rs`, `periodic_delivery_tests.rs`, quote row loader | Complete real HTTP/state/frame comparisons, warm cache checks, actual periodic consumers and 4/16 read proofs. |
+| `messages/declaration_tests.rs`, `root-declarations.rb`, vector | Actual HTTP meta on both sides, retaining every edit/no-op/tombstone/provider declaration. |
+| `oracle-state.rb`, `comparison_support.rs`, relative/periodic generators and vectors | Lossless baseline-plus-row-change representation; candidates still select every complete persisted row. |
+| Producer tools, reference-source guard, oracle replay tool | Restored-source negative controls, 55 independent replays and explicit approved-boundary diagnostic. |
+| `ws8bm2-approved-differences.md` | Lead-approved atomic enqueue rollback ledger. |
+
+## Verification
+
+All builds use the CI image, two build jobs and the unchanged rustc throttle.
+The workspace uses four test threads, with a capacity guard. Exact single-test
+controls retain that flag and reserve their one actual worker when sharing the
+machine. No deadlines, retries, concurrency flags or allowlists were relaxed.
+
+Fresh clone: `.scratch/ws8bm2-h/fresh-final`, created with `git clone
+--no-hardlinks --single-branch --branch rust/ws8bm2-message-features-h <this
+worktree>`. It built its own default/first-run/agents-ui seeds; CI fails on missing
+seeds. Only the existing owned compiler cache is shared, with source timestamps
+forced newer than producer-control artifacts. No fixture state or generated test
+outputs were copied into this clone.
+
+The full workspace and 55 oracles ran at production code `941b4f123c63be9fe3578f64f865927714b328ef`.
+Clippy then found the static regex inside the two-zone test loop. Commit
+`e779c2c9632ca153182d1e65dc4485ef4323807b` only hoists that test regex; it changes
+no assertion, production source or vector. This is the sole non-documentation
+change after the full suite. After fast-forwarding the same clean clone, the
+focused real HTTP comparison and its real UTC-output producer control were
+rerun, followed by strict clippy and the release-input build. The final report
+commit changes documentation only.
+
+Commands actually run, from the fresh clone (CI wrapper/environment retained):
+
+```sh
+bash rust/parity/bin/seed build default first_run agents_ui
+bash rust/ci/cargo.sh metadata --locked --format-version 1
+bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 --no-run
+bash rust/ci/cargo.sh test --locked --workspace --no-fail-fast -j2 -- --test-threads=4 --nocapture
+WS8BM2_ORACLE_SCRATCH=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8bm2/.scratch/ws8bm2-h/final-gates/oracle-replays python3 rust/reference-tools/messaging/verify_oracles.py
+bash rust/ci/cargo.sh test --locked -p campfire --bin campfire controllers::messages::declaration_tests::root_edit_markers_match_rails_for_noops_attachments_formatting_reactions_fetches_tombstones_and_zones -j2 -- --exact --test-threads=4 --nocapture
+bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnings
+cd rust
+bash ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
 ```
 
-Release-input build:
+Final raw summaries (terminal colors removed; all workspace result lines retained):
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 16s
-WS8bm2 fresh release input build exit: 0
-```
-
-```text
-WS8bm2 fresh locked metadata exit: 0
-WS8bm2 fresh workspace compile exit: 0
-WS8bm2 oracle replay: 46/46 independently replayed fixtures byte-identical
-WS8bm2 reference source check: 118 controller, model, helper and template files match d7c7de92
+seed: building default
+seed: default -> parity/.seed/default (6.1M)
+seed: building first_run
+seed: first_run -> parity/.seed/first_run (1.5M)
+seed: building agents_ui
+seed: agents_ui -> parity/.seed/agents_ui (6.1M)
+cargo metadata --locked: exit 0
+WS8bm2 full workspace aggregate: 4821 passed; 0 failed; 14 ignored; 61 result groups
+test result: ok. 2726 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 876.48s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.49s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.45s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 1357 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 122.68s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.40s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.01s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.10s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.99s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.54s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.16s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.82s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.96s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.60s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2730 filtered out; finished in 1.06s
+WS8bm2 hoisted-root producer: rejected at actual viewer-zone meta
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 09s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 03s
+WS8bm2 reference source check: 120 controller, model, helper and template files match 955af4c3781bef07b97b7aefce12c376110a812c
 WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected
+WS8bm2 oracle replay: 55/55 independently replayed fixtures byte-identical
 ```
 
-## Remaining cutover scope, with owner and reason
+The first fresh suite caught the legacy reader/writer cache-key mismatch and the
+inherited detached-UTC meta comparison. These were corrected before the final
+clone; no failure was hidden or threshold widened. Raw earlier lines:
 
-1. **WS8b-m2 / WS15e:** broader Rails enqueue-adapter rejection differentials. Existing SQLite rejection tests prove stronger atomic metadata/claim/job/frame rollback, but do not replace the wider Rails adapter matrix.
-2. **WS8b-m2 / WS14g:** InboundSync/SyncEntry transport and 429 retry/exhaustion permutations. Full ordinary/fatal entry rows, permanent 503 outcomes and dispatched children are already covered; MeetLink retry tests are not evidence for these two consumers' transient exhaustion paths.
-3. **WS8b-m2:** exceptional relative-duration overflow, leading/trailing legacy time-split input and unsampled top-level structured parameter containers. Existing absolute grammar/coercion/DST corpora pass again. Reuse the merged shared `rails_compat` parser for later work; no second parser is introduced.
-4. **Lead/system-test phase:** final both-app cutover browser run. The previously accepted 45/45 behavior inventory is retained below; browsers were not rerun in this review checkpoint and no pixel result is claimed.
-5. **WS12:** broader board/work parity stays with its owner; this slice does not alter those implementations.
+```text
+test result: FAILED. 2725 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 1111.08s
+test result: FAILED. 52 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.83s
+```
 
-The old **WS11 AgentBudgetNotice reader seam is resolved by merged main**: the real typed reader and its activity consumer are present. Physical push, agent invocation/auth and huddles already use their owners' real integrations. Remaining items 1–3 are unblocked proof/implementation work; this is **not owner-blocked-only**.
+Controlled regressions run this round, with all temporary producer bytes restored:
+
+```sh
+python3 rust/reference-tools/messaging/check_slash_count_mutant.py --expect-escape -- bash .scratch/ws8bm2-f-order216/run-test.sh
+python3 rust/reference-tools/messaging/check_slash_count_mutant.py -- bash .scratch/ws8bm2-f-order216/run-test.sh
+python3 rust/reference-tools/messaging/check_rendering_mutants.py -- bash .scratch/ws8bm2-f-order216/run-test.sh
+python3 rust/reference-tools/messaging/check_input_mutants.py -- bash .scratch/ws8bm2-f-order216/run-test.sh
+python3 rust/reference-tools/messaging/probe_adapter_rejections.py --output .scratch/ws8bm2-h/adapter-actual.json -- bash .scratch/ws8bm2-f-order216/run-test.sh
+python3 rust/reference-tools/messaging/probe_adapter_rejections.py --control --output .scratch/ws8bm2-h/adapter-control-actual.json -- bash .scratch/ws8bm2-f-order216/run-test.sh
+python3 .scratch/ws8bm2-h/verify-compaction.py
+```
+
+The old-comparator replay now requires both actual count increases, 185→186 and
+186→187. The rendering control runner requires exactly one selected test; its
+original substring filter selected 1 and 10–13 together. The final 13 receipts
+below use exact names, each with one intended assertion failure. These tooling
+errors were fixed, not treated as successful evidence.
+
+```text
+Old returned-message comparator observed actual counts: [185,186]
+Old returned-message comparator observed actual counts: [186,187]
+WS8bm2 slash count producer: escaped old comparator
+WS8bm2 slash count producer: rejected at actual total-message counts
+WS8bm2 rendering producer mutant 1: rejected at warm zone actual legacy fragment differs from Rails: America/New_York
+WS8bm2 rendering producer mutant 2: rejected at warm zone actual legacy fragment differs from Rails: America/New_York
+WS8bm2 rendering producer mutant 3: rejected at wide HTML actual saved partial differs from Rails
+WS8bm2 rendering producer mutant 4: rejected at wide HTML actual scheduled partial differs from Rails
+WS8bm2 rendering producer mutant 5: rejected at wide HTML actual HTTP notice differs from Rails
+WS8bm2 rendering producer mutant 6: rejected at periodic actual persisted rows.reminded_at
+WS8bm2 rendering producer mutant 7: rejected at periodic actual durable jobs differ from Rails
+WS8bm2 rendering producer mutant 8: rejected at periodic actual persisted row count: messages
+WS8bm2 rendering producer mutant 9: rejected at periodic actual persisted row count:
+WS8bm2 rendering producer mutant 10: rejected at periodic actual publications
+WS8bm2 rendering producer mutant 11: rejected at periodic actual registered ticks differ from Rails
+WS8bm2 rendering producer mutant 12: rejected at warm zone actual legacy fragment differs from Rails: America/New_York
+WS8bm2 rendering producer mutant 13: rejected at actual viewer-zone meta differs from Rails: Pacific Time (US & Canada)
+WS8bm2 input producer mutant 1: rejected at relative/split actual output differs from Rails
+WS8bm2 input producer mutant 2: rejected at relative/split actual output differs from Rails
+WS8bm2 input producer mutant 3: rejected at container actual HTTP envelope differs from Rails
+WS8bm2 input producer mutant 4: rejected at container persisted rows.status
+WS8bm2 input producer mutant 5: rejected at container actual HTTP envelope differs from Rails
+WS8bm2 input producer mutant 6: rejected at container actual publications UTC/slash_0
+WS8bm2 input producer mutant 8: rejected at container actual HTTP envelope differs from Rails
+WS8bm2 adapter approved-difference probe: 8/8 atomic refusal executions; complete actual rows and empty publications; flat reads; atomic rollback is an approved difference under decision 2
+WS8bm2 adapter enqueue-error producer mutant: rejected at adapter actual durable refusal
+WS8bm2 lossless relative_consumers: 13417007 -> 1266737 bytes; all envelopes, complete rows, read counts and frame bytes identical; expanded SHA256 61a3c706684d77b9ed010b3e924a06b44bf91eaa220b02aae09a9c1f54007580
+WS8bm2 lossless periodic_delivery: 8362748 -> 3768430 bytes; all envelopes, complete rows, read counts and frame bytes identical; expanded SHA256 c8cc423b2cb74345ff142d58e6e4bea563c4f2d629024af55923862e38da0657
+```
+
+Failing-first original runtime summaries, with actual differing fields described
+above; these expected failures precede the fixes:
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2728 filtered out; finished in 7.98s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2729 filtered out; finished in 0.44s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2729 filtered out; finished in 1.88s
+```
+
+Fresh positive coverage summaries:
+
+```text
+WS8bm2 warm legacy message size=4: Rust 133; complete independently captured Rails partials and actual cache hits in four zones
+WS8bm2 warm legacy message size=16: Rust 133; complete independently captured Rails partials and actual cache hits in four zones
+WS8bm2 container Rust: 80 requests; 0 envelope differences; complete persisted tables, ordered publications and flat reads
+WS8bm2 container Rust: 84 requests; 0 envelope differences; complete persisted tables, ordered publications and flat reads
+WS8bm2 periodic Rust: 24 actual registered ticks; complete rows, jobs and byte-identical ordered publications; flat reads
+WS8bm2 wide HTML Rust: 32 cases; 96 byte-identical real partials; flat reads
+WS8bm2 wide HTTP Rust: 48 actual POST/GET pairs; byte-identical date tags/fields and notices; full persisted rows; flat reads
+```
+
+Both fresh scratch `rust/target` output directories were deleted after checking.
+The pre-existing owned compiler cache was retained. All owned H native/ Rails
+coordinators and throwaway containers are stopped. No browser, deployment,
+stash, other-worktree edit or model-server operation occurred.
+
+
 
 ## Retained named Rails ports and browser inventory
 
@@ -298,6 +754,3 @@ All 35 named slash comparisons and 140 named controller behaviors remain invento
 | `search_files_test.rb` | 4/4 each |
 | `scheduled_messages_test.rb` | 4/4 each |
 | Total | 45/45 each; not rerun this checkpoint |
-
-
-Cleanup: generated scratch build-output directories and the extra immutable legacy executable are removed after verification. The pre-existing owned compiler cache remains. Logs, source-check evidence and legal Rails wire captures remain for review. No owned test, reference server, generator, forwarder or parked controller is left running.

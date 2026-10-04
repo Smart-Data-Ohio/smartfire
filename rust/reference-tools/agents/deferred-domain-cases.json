@@ -1,6 +1,6 @@
 {
   "reference_pin": "d7c7de92",
-  "status": "partial",
+  "status": "complete",
   "meaning": "Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.",
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "All named cases are mapped. Absent, blank and malformed HTTP credentials have REST/MCP boundary vectors.",
@@ -10,30 +10,13 @@
     "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
     "test/models/user/bot_test.rb": "All 15 named cases are mapped, including reply-token room binding/expiry/revocation, fixed-entropy factory/reset and actual durable queued delivery.",
     "test/models/agent_budgets_test.rb": "All 11 named cases are mapped; the activity viewer and uncapped handoff cases call the merged WS12 implementations.",
-    "test/models/channel_thread_agent_assignment_test.rb": "Thirteen WS11 ledger/history/commit/hop/deletion/root names compared. Sixteen WS12 eligibility/mutation comparisons and Recorder read-cost review remain deferred as requested for this WS8-only round. PR #215 merged to main during verification; separate fresh Rails replay and mapping remain."
+    "test/models/channel_thread_agent_assignment_test.rb": "All 29 names mapped. Sixteen WS12 eligibility/mutation comparisons freshly replayed against pinned Rails with individual producer controls. AgentBudgetNotice Recorder source integration stays WS12-owned on rust/ws12-board-automations-4."
   },
-  "files": [
-    {
-      "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
-      "owner": "WS11 agent callbacks; WS12 mutation producers",
-      "remaining_named_case_ports": [
-        "an active member agent with post_messages is an eligible work owner",
-        "a legacy agent keeps post eligibility through the fallback",
-        "a suspended agent is rejected with a validation error",
-        "a non-member agent is rejected with a validation error",
-        "an agent without post_messages is rejected with a validation error",
-        "a human outside the parent room keeps the human eligibility error",
-        "a bot without an agent row is rejected with a validation error",
-        "suspending the agent or revoking its membership reads as an unavailable owner",
-        "an agent status update records a work event with the note",
-        "an agent status update reaches the inbox through the human path",
-        "an agent tags update replaces the set without touching the status",
-        "an agent work update validates tags and run_url",
-        "an agent result update records the event with the agent as actor",
-        "an agent cannot write the result of work it does not own",
-        "an agent cannot move work it does not own",
-        "an agent status update rejects unknown statuses and long notes"
-      ]
-    }
-  ]
+  "files": [],
+  "broader_named_api_assertions": {
+    "ledger": "rust/plans/ws11api-named-api-cases.json",
+    "passed": 51,
+    "pending": 0,
+    "owner": "WS11-API; pending evidence, if any, is unblocked"
+  }
 }

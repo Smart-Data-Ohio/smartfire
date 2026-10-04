@@ -2,10 +2,9 @@
 use super::*;
 use crate::models::activity_item::{
     ActivityEventType, ActivityRecordingFacts, ActivityRecordingSource, ActivitySource,
-    AgentBudgetNoticeActivityReader, SourceAuthorization,
+    SourceAuthorization,
 };
 use crate::{ActivityItem, Connection, Error, Result, Room};
-use rusqlite::OptionalExtension;
 use serde_json::{Value, json};
 
 fn oracle() -> Value {
@@ -75,23 +74,6 @@ fn items(conn: &Connection) -> Result<Value> {
     Ok(json!(rows))
 }
 
-// Test-side consumer of WS11's narrow reader contract, using actual notice/agent/user rows.
-struct BudgetReader;
-impl AgentBudgetNoticeActivityReader for BudgetReader {
-    fn recording_recipient_ids(&self, conn: &Connection, notice: i64) -> Result<Option<Vec<i64>>> {
-        let owner: Option<Option<i64>> = conn.query_row("SELECT u.id FROM agent_budget_notices n JOIN agents a ON a.id=n.agent_id LEFT JOIN users u ON u.id=a.owner_id WHERE n.id=?", [notice], |r| r.get(0)).optional()?;
-        let Some(owner) = owner else { return Ok(None) };
-        if let Some(owner) = owner {
-            return Ok(Some(vec![owner]));
-        }
-        Ok(Some(crate::sql::query_all(
-            conn,
-            "SELECT id FROM users WHERE status=0 AND role=1 ORDER BY id",
-            [],
-            |r| r.get(0),
-        )?))
-    }
-}
 struct RoomSource(i64);
 impl ActivityRecordingSource for RoomSource {
     fn recording_facts(&self, conn: &Connection) -> Result<Option<ActivityRecordingFacts>> {
@@ -123,16 +105,7 @@ fn record(tx: &mut crate::Tx<'_>, row: &Value) -> Result<Option<ActivityItem>> {
         "Event" => ActivitySource::CalendarEvent(id),
         "HuddleGrant" => ActivitySource::HuddleGrant(id),
         "AgentApproval" => ActivitySource::AgentApproval(id),
-        "AgentBudgetNotice" => {
-            return ActivityItem::record_with_budget_notice_reader(
-                tx,
-                user,
-                ActivitySource::AgentBudgetNotice(id),
-                ActivityEventType::parse(event)?,
-                authorization,
-                &BudgetReader,
-            );
-        }
+        "AgentBudgetNotice" => ActivitySource::AgentBudgetNotice(id),
         "ScheduledMessage" => ActivitySource::ScheduledMessage(id),
         "Session" => ActivitySource::Session(id),
         "TwoFactorCredential" => ActivitySource::TwoFactorCredential(id),
@@ -302,22 +275,35 @@ fn ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotenc
 }
 
 #[test]
-fn ws12_generic_recorder_requires_the_budget_owners_reader() {
+fn ws12_generic_budget_notice_uses_the_merged_owner_reader_without_an_adapter_argument() {
     let vector = oracle();
     let t = prepare(&vector["setup"]);
-    let result = t.try_write(|tx| {
+    let item = t.write(|tx| {
         ActivityItem::record(
             tx,
             id("david"),
             ActivitySource::AgentBudgetNotice(901840003),
             "agent_budget_exceeded",
+            false,
+        )
+    });
+    assert!(
+        item.is_some(),
+        "persisted notice authorizes its connected owner"
+    );
+    let absent = t.write(|tx| {
+        ActivityItem::record(
+            tx,
+            id("david"),
+            ActivitySource::AgentBudgetNotice(-1),
+            "agent_budget_exceeded",
             true,
         )
     });
     assert!(
-        matches!(result,Err(Error::Other(message)) if message == "AgentBudgetNotice requires its owning-domain activity reader")
+        absent.is_none(),
+        "caller authorization never bypasses source persistence"
     );
-    assert_eq!(t.read(items), json!([]));
 }
 
 thread_local! { static SOURCE_READS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) }; }
@@ -352,4 +338,57 @@ fn ws12_generic_recorder_batches_source_and_human_facts_at_two_sizes() {
         });
         assert_eq!(t.read(items).as_array().unwrap().len(), size as usize);
     }
+}
+
+#[test]
+fn ws12_budget_notice_batch_reader_and_recorder_reads_at_two_sizes() {
+    let vector = oracle();
+    let rails: Value = serde_json::from_str(include_str!(
+        "../../../../vectors/ws12_budget_notice_reads.json"
+    ))
+    .unwrap();
+    let mut counts = Vec::new();
+    for row in rails["rows"].as_array().unwrap() {
+        let size = row["size"].as_i64().unwrap();
+        let t = prepare(&vector["setup"]);
+        let ids=t.write(move|tx|{
+            tx.conn().execute("UPDATE agents SET owner_id=NULL WHERE id=(SELECT agent_id FROM agent_budget_notices WHERE id=901840003)",[])?;
+            let ids=(0..size).map(|i|901870000+i).collect::<Vec<_>>();
+            for uid in &ids {tx.conn().execute("INSERT INTO users(id,name,role,status,created_at,updated_at) VALUES(?,'Budget administrator',1,0,?,?)",rusqlite::params![uid,tx.now(),tx.now()])?;}
+            Ok(ids)
+        });
+        let queries = t.db.capture_queries();
+        let records = t.write(move |tx| {
+            let notice = crate::AgentBudgetNotice::find(tx.conn(), 901840003)?;
+            ActivityItem::record_source_for_recipients(
+                tx,
+                &ids,
+                &notice,
+                ActivityEventType::parse("agent_budget_exceeded")?,
+                SourceAuthorization::SourceRecipients,
+            )
+        });
+        t.db.stop_capturing_queries();
+        let count = queries.lock().unwrap().len();
+        let facts = records
+            .iter()
+            .map(|r| json!([r.user_id, r.event_type, r.unread()]))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            json!(facts),
+            row["items"],
+            "default typed budget adapter records Rails' complete recipients and states"
+        );
+        println!(
+            "WS12_BUDGET_NOTICE_READS recipients={size} SELECTs={count} Rails={}",
+            row["reads"]
+        );
+        counts.push(count);
+    }
+    let rows = rails["rows"].as_array().unwrap();
+    assert!(
+        counts[1] - counts[0]
+            <= (rows[1]["reads"].as_u64().unwrap() - rows[0]["reads"].as_u64().unwrap()) as usize,
+        "budget notice read growth must not exceed Rails"
+    );
 }

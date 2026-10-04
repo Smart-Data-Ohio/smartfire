@@ -35,6 +35,7 @@ rows=[]
  rows << {name:name,index:index,input:input,time:Time.current.iso8601,status:browser.response.status,body:browser.response.body,
   edited_at:message.edited_at&.utc&.iso8601(3),updated_at:message.updated_at.utc.iso8601(3),saved_body:message.body.body&.to_html.to_s}
 end
+ActiveSupport::IsolatedExecutionState.clear
 Boost.create!(message:messages[0],booster:User.find(149087659),content:'👍')
 reaction_edited=messages[0].reload.edited_at
 pr=messages[6].github_pull_requests.sole
@@ -44,11 +45,13 @@ browser.delete("/rooms/#{room.id}/messages/#{messages[4].id}.turbo_stream",heade
 reply_edited=messages[5].reload.edited_at
 # No masking: compare the complete owned meta component in both real viewer time zones.
 meta=[ 'Pacific Time (US & Canada)','Tokyo' ].map do |zone|
+ ActiveSupport::IsolatedExecutionState.clear
  user.update!(time_zone:zone)
  browser.get("/rooms/#{room.id}/messages/#{messages[3].id}",headers:headers)
- html=ApplicationController.renderer.new(http_host:'campfire.test',https:false).render(partial:'messages/meta',locals:{message:messages[3]})
+ html=browser.response.body[/<div class="message__meta".*?<\/div>\n/m]
+ raise "missing real message meta for #{zone}" unless html
  {zone:zone,status:browser.response.status,html:html}
 end
 File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',inputs:inputs,message_ids:messages.map(&:id),rows:rows,
  reaction_edited:reaction_edited,fetch_edited:fetch_edited,reply_edited:reply_edited,meta:meta)+"\n")
-puts 'WS8bm root declarations: 5 actual advancing-clock saves with exact response/row fields; reaction/fetch/tombstone no-edit facts; UTC meta in two actual viewer zones'
+puts 'WS8bm root declarations: 5 actual advancing-clock saves with exact response/row fields; reaction/fetch/tombstone no-edit facts; real HTTP meta in two viewer zones'

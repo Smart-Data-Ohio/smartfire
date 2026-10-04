@@ -336,12 +336,20 @@ pub(crate) fn thread_details(p: &Presenter<'_>, record: &ChannelThread, viewer: 
     let mut value = thread(p, record, viewer, base)?;
     let room = record.room(p.conn)?;
     let (humans, agents) = ChannelThread::work_owner_candidates_for(p.conn, room.id)?;
+    let candidate_ids = humans.iter().chain(&agents).map(|user| user.id).collect::<Vec<_>>();
+    let icons = p.conn.prepare("SELECT id,icon_name FROM users WHERE id IN (SELECT value FROM json_each(?))")?
+        .query_map([serde_json::json!(candidate_ids).to_string()], |row| Ok((row.get::<_,i64>(0)?,row.get::<_,Option<String>>(1)?)))?
+        .collect::<rusqlite::Result<std::collections::HashMap<_,_>>>()?;
+    let profiles = campfire_db::Agent::for_users(p.conn, &agents.iter().map(|user| user.id).collect::<Vec<_>>())?
+        .into_iter().map(|agent| (agent.user_id,agent)).collect::<std::collections::HashMap<_,_>>();
     let choices = humans.into_iter().chain(agents).map(|owner| -> Result<Value> {
-        let mut entry = user(p, &owner, base)?;
+        let icon=icons.get(&owner.id).and_then(|name| name.as_deref());
+        let icon_url=icon.and_then(|name|p.resolve_avatar_icon(name)).and_then(image_icon_url);
+        let mut entry = user_with_icon(p, &owner, base, icon, icon_url);
         entry["active"] = true.into(); entry["human"] = (!owner.is_bot()).into(); entry["agent"] = owner.is_bot().into();
         if owner.is_bot() {
-            let agent = campfire_db::Agent::for_user(p.conn, owner.id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-            entry["provider"] = json!(agent.provider); entry["description"] = json!(agent.description);
+            let agent = profiles.get(&owner.id).ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            entry["provider"] = json!(&agent.provider); entry["description"] = json!(&agent.description);
             entry.as_object_mut().expect("user payload").retain(|_, value| !value.is_null());
         }
         Ok(entry)

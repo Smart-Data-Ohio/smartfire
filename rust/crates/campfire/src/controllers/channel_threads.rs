@@ -49,7 +49,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     }).await.map_err(db_error)?;
     let viewer = require_current_user(c)?.clone();
     let base = c.url_for("");
-    if c.format()? == Some(&format::JSON) { c.no_store(); }
+    if c.format()? == Some(&format::JSON) { c.no_store(); c.set_header("pragma", "no-cache"); }
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         let payload = messages::present(c, move |p| Ok(json!({"threads": threads.iter()
             .map(|thread| messages::payload::thread(p, thread, &viewer, &base)).collect::<campfire_db::Result<Vec<_>>>()?}))).await?;
@@ -85,7 +85,7 @@ pub async fn show(c: &mut Ctx) -> Result {
     let (room, thread) = scope(c).await?;
     let thread_id = thread.id;
     let records = c.app().db.read(move |conn| Message::last_page(conn, Timeline::Thread(thread_id))).await.map_err(db_error)?;
-    if c.format()? == Some(&format::JSON) { c.no_store(); }
+    if c.format()? == Some(&format::JSON) { c.no_store(); c.set_header("pragma", "no-cache"); }
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         let viewer = require_current_user(c)?.clone();
         let base = c.url_for("");
@@ -118,7 +118,7 @@ pub async fn content(c: &mut Ctx) -> Result {
     }).await.map_err(db_error)?;
     // Rails' explicit partial render has no JSON template and raises MissingTemplate.
     if c.format()? == Some(&format::JSON) { return Err(Error::internal(anyhow::anyhow!("Missing thread conversation JSON partial"))); }
-    c.no_store();
+    c.no_store(); c.set_header("pragma", "no-cache");
     let viewer = require_current_user(c)?.clone();
     let updated_at = room.updated_at.jiff();
     let picker_available = c.app().config.google_picker.is_some();
@@ -198,7 +198,7 @@ async fn scope(c: &mut Ctx) -> Result<(Room, ChannelThread)> {
 pub async fn join(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (room, thread) = scope(c).await?;
-    c.no_store();
+    c.no_store(); c.set_header("pragma", "no-cache");
     let involvement = match c.params.get("involvement") {
         None => None,
         Some(value) => match value.to_s().as_deref().and_then(ThreadInvolvement::from_name) {
@@ -240,7 +240,7 @@ pub async fn leave(c: &mut Ctx) -> Result {
 pub async fn read(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (_, thread) = scope(c).await?;
-    c.no_store();
+    c.no_store(); c.set_header("pragma", "no-cache");
     let (thread_id, user_id) = (thread.id, require_current_user(c)?.id);
     let member = c.app().db.write(move |tx| {
         let Some(mut member) = ThreadMembership::find_by_thread_and_user(tx.conn(), thread_id, user_id)? else { return Ok(None) };

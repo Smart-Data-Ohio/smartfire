@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Exact cache identities for the archived Rails image and its validated seeds."""
 
+import argparse
 import hashlib
+import json
 from pathlib import Path
 import re
 
 IMAGE_INPUTS = (
     "parity/reference.sha",
+    "../db/schema.rb",
+    "../db/migrate",
     "parity/docker",
     "parity/bin/reference",
     "parity/bin/ci-seed",
@@ -42,8 +46,8 @@ def cache_keys(root):
     pin = (root / "parity/reference.sha").read_text().strip()
     if not re.fullmatch(r"[0-9a-f]{40}", pin):
         raise ValueError("parity/reference.sha must contain a full Rails commit SHA")
-    # The pin covers ALL Rails inputs, including Dockerfile, .dockerignore, bundle,
-    # app code, schema and fixtures: CI archives that commit, never the checkout.
+    # The pin covers Rails behavior, fixtures and build inputs. The checkout's
+    # schema/migrations are overlaid so seeds match the generated Rust schema.
     return {
         "pin": pin,
         "image_key": "rust-parity-image-v1-" + fingerprint(root, IMAGE_INPUTS),
@@ -51,6 +55,47 @@ def cache_keys(root):
     }
 
 
+def archive_sha256(archive):
+    digest = hashlib.sha256()
+    with archive.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def archive_identity_path(archive):
+    return archive.with_name(archive.name + ".identity.json")
+
+
+def archive_matches(root, archive):
+    expected = cache_keys(root)["image_key"]
+    try:
+        identity = json.loads(archive_identity_path(archive).read_text())
+        return (isinstance(identity, dict) and identity.get("image_key") == expected
+                and identity.get("sha256") == archive_sha256(archive))
+    except (OSError, ValueError):
+        return False
+
+
+def record_archive_identity(root, archive):
+    identity = {"image_key": cache_keys(root)["image_key"], "sha256": archive_sha256(archive)}
+    receipt = archive_identity_path(archive)
+    temporary = receipt.with_suffix(".tmp")
+    temporary.write_text(json.dumps(identity, sort_keys=True) + "\n")
+    temporary.replace(receipt)
+
+
 if __name__ == "__main__":
-    for key, value in cache_keys(Path(__file__).resolve().parent.parent).items():
-        print(f"{key}={value}")
+    parser = argparse.ArgumentParser(description=__doc__)
+    action = parser.add_mutually_exclusive_group()
+    action.add_argument("--check-archive", type=Path)
+    action.add_argument("--record-archive", type=Path)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    if args.check_archive:
+        raise SystemExit(0 if archive_matches(root, args.check_archive) else 1)
+    if args.record_archive:
+        record_archive_identity(root, args.record_archive)
+    else:
+        for key, value in cache_keys(root).items():
+            print(f"{key}={value}")

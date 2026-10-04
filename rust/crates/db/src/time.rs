@@ -17,6 +17,13 @@ use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, 
 /// The timestamp expression Rails' `insert_all` uses on SQLite for `created_at`/`updated_at`.
 pub const SQLITE_NOW: &str = "STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')";
 
+/// The largest wide-instant magnitude, in microseconds. The 2^100 margin below
+/// I512::MAX exceeds the largest SignedDuration (< 2^84 microseconds), so a
+/// constructed instant can take any since/ago offset without overflowing.
+fn wide_limit() -> I512 {
+    I512::MAX - (I512::ONE << 100u32)
+}
+
 /// A UTC instant with microsecond precision, stored the way Active Record stores it.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 // A 128-byte Date._parse input needs at most 426 bits for its year and
@@ -68,16 +75,24 @@ impl Timestamp {
 
     /// `1.hour.ago`-style arithmetic.
     pub fn ago(self, duration: SignedDuration) -> Self {
-        Self(
-            (self.0 * I512::from(1000) - I512::from(duration.as_nanos()))
-                .div_euclid(I512::from(1000)),
-        )
+        self.offset_nanos(-duration.as_nanos())
     }
 
     pub fn since(self, duration: SignedDuration) -> Self {
+        self.offset_nanos(duration.as_nanos())
+    }
+
+    fn offset_nanos(self, nanos: i128) -> Self {
+        // Never scale the wide value to nanoseconds: an instant that fits I512
+        // microseconds need not fit after * 1000. floor((us * 1000 + n) / 1000)
+        // is us + floor(n / 1000), which keeps Rails' microsecond truncation for
+        // negative and sub-microsecond offsets. Wide constructors stay within
+        // wide_limit(), whose margin exceeds any SignedDuration, so this add
+        // can't leave I512 in debug or release builds.
         Self(
-            (self.0 * I512::from(1000) + I512::from(duration.as_nanos()))
-                .div_euclid(I512::from(1000)),
+            self.0
+                .checked_add(I512::from(nanos.div_euclid(1000)))
+                .expect("wide timestamps leave a SignedDuration margin"),
         )
     }
 
@@ -100,9 +115,10 @@ impl Timestamp {
         }
         let cycles = year_shift / I512::from(400);
         let shift = cycles.checked_mul(I512::from(146_097_i128 * 86_400_000_000))?;
-        Some(Self(shift.checked_add(I512::from(
-            ts.as_nanosecond().div_euclid(1000),
-        ))?))
+        let micros = shift.checked_add(I512::from(ts.as_nanosecond().div_euclid(1000)))?;
+        // Reject the sliver within wide_limit()'s margin of I512's ends, like any other
+        // unrepresentable year, so later since/ago/zone offsets cannot overflow.
+        (micros.unsigned_abs() <= wide_limit().unsigned_abs()).then_some(Self(micros))
     }
 
     /// Clamp solely for selecting a timezone's finite transition-table boundary.

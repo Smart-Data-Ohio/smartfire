@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+cd "$root"
+# Missing dependencies are errors here, rather than skipped coverage.
+command -v node >/dev/null
+docker info >/dev/null
+hash=$(cat rust/parity/Dockerfile.playwright rust/parity/package.json rust/parity/package-lock.json | sha256sum | cut -c1-12)
+image="ws12-playwright:$hash"
+if ! docker image inspect "$image" >/dev/null 2>&1; then
+  docker build -q --label parity.owner=ws12 -f rust/parity/Dockerfile.playwright -t "$image" rust/parity
+fi
+export CI=1
+# Unix socket paths must fit sockaddr_un even in deeply nested worktrees.
+export WS12_BROWSER_SCRATCH="${WS12_BROWSER_SCRATCH:-${XDG_CACHE_HOME:-$HOME/.cache}/rust-port/ws12}"
+export CABLE_TEST_PORT_RANGE="${CABLE_TEST_PORT_RANGE:-53420-53449}"
+export MAIL_TEST_PORT_RANGE="${MAIL_TEST_PORT_RANGE:-53400-53419}"
+export GITHUB_TEST_PORT_RANGE="${GITHUB_TEST_PORT_RANGE:-53450-53499}"
+# --show-output preserves both libtest pass receipts and the real-browser traces.
+cargo test --locked --manifest-path rust/Cargo.toml -p campfire \
+  controllers::ws12_browser_remaining_tests -- --ignored --show-output --test-threads=1

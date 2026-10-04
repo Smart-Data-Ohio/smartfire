@@ -1,0 +1,5278 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "key": "posts_order",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 288,
+      "rails_test": "lists the board's open posts newest activity first",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Older",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Newer",
+          "status": "in_progress",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400003,
+          "title": "Blocked",
+          "status": "blocked",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400004,
+          "title": "Finished",
+          "status": "done",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "age",
+          "id": 1901400001,
+          "hours": 3
+        },
+        {
+          "action": "age",
+          "id": 1901400002,
+          "hours": 2
+        },
+        {
+          "action": "age",
+          "id": 1901400003,
+          "hours": 1
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts"
+        }
+      ],
+      "mutation": "next6_posts_order"
+    },
+    {
+      "key": "posts_reply",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 312,
+      "rails_test": "a reply moves the post to the top of the list",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Older",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Newer",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "age",
+          "id": 1901400001,
+          "hours": 3
+        },
+        {
+          "action": "age",
+          "id": 1901400002,
+          "hours": 2
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts"
+        },
+        {
+          "action": "reply",
+          "id": 1901400001,
+          "text": "Bump"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts"
+        }
+      ],
+      "mutation": "next6_posts_reply"
+    },
+    {
+      "key": "posts_status",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 328,
+      "rails_test": "lists by single status, done, and all",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Planned",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Progressing",
+          "status": "in_progress",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400003,
+          "title": "Finished",
+          "status": "done",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?status=planned"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?status=done"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?status=all"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?status=open"
+        }
+      ],
+      "mutation": "next6_posts_status"
+    },
+    {
+      "key": "posts_owner",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 360,
+      "rails_test": "lists by owner me, agents, and id",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Mine",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Theirs",
+          "status": "planned",
+          "owner": 1901100001,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400003,
+          "title": "Humans",
+          "status": "planned",
+          "owner": 127326141,
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?owner=me"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?owner=agents"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?owner=127326141"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts?owner=999999"
+        }
+      ],
+      "mutation": "next6_posts_owner"
+    },
+    {
+      "key": "posts_cap",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 395,
+      "rails_test": "caps the list at 100 posts",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Capped 0",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Capped 1",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400003,
+          "title": "Capped 2",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400004,
+          "title": "Capped 3",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400005,
+          "title": "Capped 4",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400006,
+          "title": "Capped 5",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400007,
+          "title": "Capped 6",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400008,
+          "title": "Capped 7",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400009,
+          "title": "Capped 8",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400010,
+          "title": "Capped 9",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400011,
+          "title": "Capped 10",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400012,
+          "title": "Capped 11",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400013,
+          "title": "Capped 12",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400014,
+          "title": "Capped 13",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400015,
+          "title": "Capped 14",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400016,
+          "title": "Capped 15",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400017,
+          "title": "Capped 16",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400018,
+          "title": "Capped 17",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400019,
+          "title": "Capped 18",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400020,
+          "title": "Capped 19",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400021,
+          "title": "Capped 20",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400022,
+          "title": "Capped 21",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400023,
+          "title": "Capped 22",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400024,
+          "title": "Capped 23",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400025,
+          "title": "Capped 24",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400026,
+          "title": "Capped 25",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400027,
+          "title": "Capped 26",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400028,
+          "title": "Capped 27",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400029,
+          "title": "Capped 28",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400030,
+          "title": "Capped 29",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400031,
+          "title": "Capped 30",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400032,
+          "title": "Capped 31",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400033,
+          "title": "Capped 32",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400034,
+          "title": "Capped 33",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400035,
+          "title": "Capped 34",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400036,
+          "title": "Capped 35",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400037,
+          "title": "Capped 36",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400038,
+          "title": "Capped 37",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400039,
+          "title": "Capped 38",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400040,
+          "title": "Capped 39",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400041,
+          "title": "Capped 40",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400042,
+          "title": "Capped 41",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400043,
+          "title": "Capped 42",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400044,
+          "title": "Capped 43",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400045,
+          "title": "Capped 44",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400046,
+          "title": "Capped 45",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400047,
+          "title": "Capped 46",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400048,
+          "title": "Capped 47",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400049,
+          "title": "Capped 48",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400050,
+          "title": "Capped 49",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400051,
+          "title": "Capped 50",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400052,
+          "title": "Capped 51",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400053,
+          "title": "Capped 52",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400054,
+          "title": "Capped 53",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400055,
+          "title": "Capped 54",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400056,
+          "title": "Capped 55",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400057,
+          "title": "Capped 56",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400058,
+          "title": "Capped 57",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400059,
+          "title": "Capped 58",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400060,
+          "title": "Capped 59",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400061,
+          "title": "Capped 60",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400062,
+          "title": "Capped 61",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400063,
+          "title": "Capped 62",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400064,
+          "title": "Capped 63",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400065,
+          "title": "Capped 64",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400066,
+          "title": "Capped 65",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400067,
+          "title": "Capped 66",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400068,
+          "title": "Capped 67",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400069,
+          "title": "Capped 68",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400070,
+          "title": "Capped 69",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400071,
+          "title": "Capped 70",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400072,
+          "title": "Capped 71",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400073,
+          "title": "Capped 72",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400074,
+          "title": "Capped 73",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400075,
+          "title": "Capped 74",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400076,
+          "title": "Capped 75",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400077,
+          "title": "Capped 76",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400078,
+          "title": "Capped 77",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400079,
+          "title": "Capped 78",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400080,
+          "title": "Capped 79",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400081,
+          "title": "Capped 80",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400082,
+          "title": "Capped 81",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400083,
+          "title": "Capped 82",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400084,
+          "title": "Capped 83",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400085,
+          "title": "Capped 84",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400086,
+          "title": "Capped 85",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400087,
+          "title": "Capped 86",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400088,
+          "title": "Capped 87",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400089,
+          "title": "Capped 88",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400090,
+          "title": "Capped 89",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400091,
+          "title": "Capped 90",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400092,
+          "title": "Capped 91",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400093,
+          "title": "Capped 92",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400094,
+          "title": "Capped 93",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400095,
+          "title": "Capped 94",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400096,
+          "title": "Capped 95",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400097,
+          "title": "Capped 96",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400098,
+          "title": "Capped 97",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400099,
+          "title": "Capped 98",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400100,
+          "title": "Capped 99",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400101,
+          "title": "Capped 100",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts"
+        }
+      ],
+      "mutation": "next6_posts_cap"
+    },
+    {
+      "key": "posts_legacy",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 416,
+      "rails_test": "a legacy agent without grants can list but cannot create",
+      "setup": {
+        "hide_base": true,
+        "grant": [],
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Legacy visible",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts"
+        },
+        {
+          "method": "post",
+          "path": "/rooms/486777696/agents/posts",
+          "body": {
+            "title": "Legacy post"
+          }
+        }
+      ],
+      "mutation": "next6_posts_legacy"
+    },
+    {
+      "key": "posts_left",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 430,
+      "rails_test": "listing is 404 once the agent leaves the board",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Visible",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts"
+        },
+        {
+          "action": "leave",
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/agents/posts"
+        }
+      ],
+      "mutation": "next6_posts_left"
+    },
+    {
+      "key": "shared_payload",
+      "rails_file": "test/controllers/agents/posts_controller_test.rb",
+      "rails_line": 438,
+      "rails_test": "creation, listing, and event delivery share one work payload",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "method": "post",
+          "path": "/rooms/486777696/agents/posts",
+          "body": {
+            "title": "Shared payload",
+            "body": "The brief.",
+            "tags": "api",
+            "run_url": "https://example.com/runs/9"
+          }
+        },
+        {
+          "method": "get",
+          "path": "/agents/work"
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_shared_payload"
+    },
+    {
+      "key": "work_order",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 12,
+      "rails_test": "list shows only owned threads newest first with the work fields",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Older work",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Newer work",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400003,
+          "title": "Human work",
+          "status": "planned",
+          "owner": 127326141,
+          "room": 486777696
+        },
+        {
+          "action": "age",
+          "id": 1901400001,
+          "hours": 2
+        },
+        {
+          "action": "age",
+          "id": 1901400002,
+          "hours": 1
+        },
+        {
+          "method": "get",
+          "path": "/agents/work"
+        }
+      ],
+      "mutation": "next6_work_order"
+    },
+    {
+      "key": "work_empty",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 63,
+      "rails_test": "list is Bearer-only and empty without owned threads",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "method": "get",
+          "path": "/agents/work"
+        },
+        {
+          "method": "get",
+          "path": "/agents/work",
+          "auth": "session"
+        }
+      ],
+      "mutation": "next6_work_empty"
+    },
+    {
+      "key": "work_links_show",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 114,
+      "rails_test": "show includes links with pull request, event, and drive entries",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "links",
+          "id": 1900700020,
+          "pr": true,
+          "drive_title": "Q3 Planning"
+        },
+        {
+          "method": "get",
+          "path": "/agents/work/1900700020"
+        }
+      ],
+      "mutation": "next6_work_links_show"
+    },
+    {
+      "key": "work_links_list",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 158,
+      "rails_test": "list includes links on owned threads",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Listed links",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Unlinked work",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "links",
+          "id": 1901400001,
+          "event_only": true
+        },
+        {
+          "method": "get",
+          "path": "/agents/work"
+        }
+      ],
+      "mutation": "next6_work_links_list"
+    },
+    {
+      "key": "work_note_history",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 184,
+      "rails_test": "patch changes the status and records the note in work history",
+      "setup": {
+        "grant_room": 486777696,
+        "initial_planned": true
+      },
+      "steps": [
+        {
+          "method": "patch",
+          "path": "/agents/work/1900700020",
+          "body": {
+            "work_status": "in_progress",
+            "note": "Digging into the bug"
+          }
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/threads/1900700020.json",
+          "auth": "session",
+          "projection": "history"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/threads/1900700020",
+          "auth": "session",
+          "projection": "note"
+        }
+      ],
+      "mutation": "next6_work_note_history"
+    },
+    {
+      "key": "work_orphaned",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 228,
+      "rails_test": "list excludes rooms the agent no longer belongs to",
+      "setup": {
+        "hide_base": true,
+        "grant_room": null
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Kept work",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "action": "join",
+          "room": 201306877
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Orphaned work",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 201306877
+        },
+        {
+          "action": "leave",
+          "room": 201306877
+        },
+        {
+          "method": "get",
+          "path": "/agents/work"
+        }
+      ],
+      "mutation": "next6_work_orphaned"
+    },
+    {
+      "key": "result_permissions",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 476,
+      "rails_test": "put result requires ownership and manage_threads",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Not mine",
+          "status": "planned",
+          "owner": 127326141,
+          "room": 486777696
+        },
+        {
+          "method": "put",
+          "path": "/agents/work/1901400001/result",
+          "body": {
+            "markdown": "Hijacked"
+          }
+        },
+        {
+          "action": "revoke",
+          "cap": "manage_threads"
+        },
+        {
+          "method": "put",
+          "path": "/agents/work/1900700020/result",
+          "body": {
+            "markdown": "Hijacked"
+          }
+        }
+      ],
+      "mutation": "next6_result_permissions"
+    },
+    {
+      "key": "result_precedence",
+      "rails_file": "test/controllers/agents/work_controller_test.rb",
+      "rails_line": 522,
+      "rails_test": "put result checks ownership and grants before markdown presence",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Not mine",
+          "status": "planned",
+          "owner": 127326141,
+          "room": 486777696
+        },
+        {
+          "method": "put",
+          "path": "/agents/work/1901400001/result",
+          "body": {}
+        },
+        {
+          "action": "revoke",
+          "cap": "manage_threads"
+        },
+        {
+          "method": "put",
+          "path": "/agents/work/1900700020/result",
+          "body": {}
+        }
+      ],
+      "mutation": "next6_result_precedence"
+    },
+    {
+      "key": "assignment_poll",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 14,
+      "rails_test": "assignment appears in event polling with the work payload",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Polled work"
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_assignment_poll"
+    },
+    {
+      "key": "assignment_links",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 34,
+      "rails_test": "assignment work payload includes links",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Linked assignment"
+        },
+        {
+          "action": "links",
+          "id": 1900700020
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_assignment_links"
+    },
+    {
+      "key": "unassignment_poll",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 51,
+      "rails_test": "unassignment appears in event polling",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Unassigned work"
+        },
+        {
+          "action": "unassign",
+          "id": 1900700020
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_unassignment_poll"
+    },
+    {
+      "key": "assignment_ack",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 64,
+      "rails_test": "ack works on work rows",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Acked work"
+        },
+        {
+          "method": "post",
+          "path": "/agents/events/1901303001/ack"
+        }
+      ],
+      "mutation": "next6_assignment_ack"
+    },
+    {
+      "key": "assignment_webhook",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 75,
+      "rails_test": "assignment enqueues the webhook instead of blocking on it",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "hook"
+        },
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Hooked work"
+        },
+        {
+          "action": "deliver",
+          "agent": 773018776
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_assignment_webhook"
+    },
+    {
+      "key": "assignment_no_read",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 97,
+      "rails_test": "assignment posts no webhook without read_messages",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "hook"
+        },
+        {
+          "action": "revoke",
+          "cap": "read_messages"
+        },
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Unread work"
+        },
+        {
+          "action": "deliver",
+          "agent": 773018776
+        },
+        {
+          "method": "get",
+          "path": "/agents/work/1900700020"
+        }
+      ],
+      "mutation": "next6_assignment_no_read"
+    },
+    {
+      "key": "assignment_revoked",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 113,
+      "rails_test": "polling omits work rows for rooms the agent lost read_messages in",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Revoked work"
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        },
+        {
+          "action": "read_elsewhere"
+        },
+        {
+          "action": "revoke",
+          "cap": "read_messages",
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_assignment_revoked"
+    },
+    {
+      "key": "assignment_left",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 128,
+      "rails_test": "polling omits work rows after membership removal",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696,
+        "read_room": null
+      },
+      "steps": [
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Left work"
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        },
+        {
+          "action": "leave",
+          "room": 486777696
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        }
+      ],
+      "mutation": "next6_assignment_left"
+    },
+    {
+      "key": "work_message_rate",
+      "rails_file": "test/controllers/agents/work_delivery_test.rb",
+      "rails_line": 142,
+      "rails_test": "work events do not count toward the message rate limit",
+      "setup": {
+        "board": false,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "mention",
+          "count": 20
+        },
+        {
+          "action": "assign",
+          "id": 1900700020,
+          "title": "Rate work"
+        },
+        {
+          "action": "unassign",
+          "id": 1900700020
+        },
+        {
+          "action": "mention",
+          "count": 1,
+          "offset": 20
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1"
+        },
+        {
+          "action": "mention",
+          "count": 19,
+          "offset": 21,
+          "agent": 1901100002
+        },
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Receiver rate work",
+          "status": "planned",
+          "owner": 1901100001,
+          "room": 486777696
+        },
+        {
+          "action": "unassign",
+          "id": 1901400001
+        },
+        {
+          "action": "mention",
+          "count": 1,
+          "offset": 40,
+          "agent": 1901100002
+        },
+        {
+          "action": "mention",
+          "count": 1,
+          "offset": 41,
+          "agent": 1901100002
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1",
+          "auth": "receiver"
+        }
+      ],
+      "mutation": "next6_work_message_rate"
+    },
+    {
+      "key": "handoff_poll",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_line": 45,
+      "rails_test": "the receiver polls the handoff with its context package",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "method": "post",
+          "path": "/agents/work/1900700020/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Halfway",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1",
+          "auth": "receiver"
+        }
+      ],
+      "mutation": "next6_handoff_poll"
+    },
+    {
+      "key": "handoff_ack",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_line": 64,
+      "rails_test": "the receiver acks the handoff row",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "method": "post",
+          "path": "/agents/work/1900700020/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Halfway",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "method": "post",
+          "path": "/agents/events/1901303002/ack",
+          "auth": "receiver"
+        }
+      ],
+      "mutation": "next6_handoff_ack"
+    },
+    {
+      "key": "handoff_webhook",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_line": 76,
+      "rails_test": "the handoff enqueues the receiver webhook with the package",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "hook",
+          "agent": 1901100002
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1900700020/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Halfway",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "deliver",
+          "agent": 1901100002
+        },
+        {
+          "method": "get",
+          "path": "/agents/events?envelope=1",
+          "auth": "receiver"
+        }
+      ],
+      "mutation": "next6_handoff_webhook"
+    },
+    {
+      "key": "handoff_throttle",
+      "rails_file": "test/controllers/agents/work_handoff_test.rb",
+      "rails_line": 176,
+      "rails_test": "handoffs throttle at 60 a minute per credential",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Work 0",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400001/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400001
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Work 1",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400002/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400002
+        },
+        {
+          "action": "post",
+          "id": 1901400003,
+          "title": "Work 2",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400003/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400003
+        },
+        {
+          "action": "post",
+          "id": 1901400004,
+          "title": "Work 3",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400004/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400004
+        },
+        {
+          "action": "post",
+          "id": 1901400005,
+          "title": "Work 4",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400005/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400005
+        },
+        {
+          "action": "post",
+          "id": 1901400006,
+          "title": "Work 5",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400006/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400006
+        },
+        {
+          "action": "post",
+          "id": 1901400007,
+          "title": "Work 6",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400007/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400007
+        },
+        {
+          "action": "post",
+          "id": 1901400008,
+          "title": "Work 7",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400008/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400008
+        },
+        {
+          "action": "post",
+          "id": 1901400009,
+          "title": "Work 8",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400009/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400009
+        },
+        {
+          "action": "post",
+          "id": 1901400010,
+          "title": "Work 9",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400010/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400010
+        },
+        {
+          "action": "post",
+          "id": 1901400011,
+          "title": "Work 10",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400011/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400011
+        },
+        {
+          "action": "post",
+          "id": 1901400012,
+          "title": "Work 11",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400012/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400012
+        },
+        {
+          "action": "post",
+          "id": 1901400013,
+          "title": "Work 12",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400013/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400013
+        },
+        {
+          "action": "post",
+          "id": 1901400014,
+          "title": "Work 13",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400014/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400014
+        },
+        {
+          "action": "post",
+          "id": 1901400015,
+          "title": "Work 14",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400015/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400015
+        },
+        {
+          "action": "post",
+          "id": 1901400016,
+          "title": "Work 15",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400016/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400016
+        },
+        {
+          "action": "post",
+          "id": 1901400017,
+          "title": "Work 16",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400017/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400017
+        },
+        {
+          "action": "post",
+          "id": 1901400018,
+          "title": "Work 17",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400018/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400018
+        },
+        {
+          "action": "post",
+          "id": 1901400019,
+          "title": "Work 18",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400019/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400019
+        },
+        {
+          "action": "post",
+          "id": 1901400020,
+          "title": "Work 19",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400020/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400020
+        },
+        {
+          "action": "post",
+          "id": 1901400021,
+          "title": "Work 20",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400021/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400021
+        },
+        {
+          "action": "post",
+          "id": 1901400022,
+          "title": "Work 21",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400022/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400022
+        },
+        {
+          "action": "post",
+          "id": 1901400023,
+          "title": "Work 22",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400023/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400023
+        },
+        {
+          "action": "post",
+          "id": 1901400024,
+          "title": "Work 23",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400024/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400024
+        },
+        {
+          "action": "post",
+          "id": 1901400025,
+          "title": "Work 24",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400025/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400025
+        },
+        {
+          "action": "post",
+          "id": 1901400026,
+          "title": "Work 25",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400026/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400026
+        },
+        {
+          "action": "post",
+          "id": 1901400027,
+          "title": "Work 26",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400027/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400027
+        },
+        {
+          "action": "post",
+          "id": 1901400028,
+          "title": "Work 27",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400028/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400028
+        },
+        {
+          "action": "post",
+          "id": 1901400029,
+          "title": "Work 28",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400029/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400029
+        },
+        {
+          "action": "post",
+          "id": 1901400030,
+          "title": "Work 29",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400030/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400030
+        },
+        {
+          "action": "post",
+          "id": 1901400031,
+          "title": "Work 30",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400031/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400031
+        },
+        {
+          "action": "post",
+          "id": 1901400032,
+          "title": "Work 31",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400032/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400032
+        },
+        {
+          "action": "post",
+          "id": 1901400033,
+          "title": "Work 32",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400033/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400033
+        },
+        {
+          "action": "post",
+          "id": 1901400034,
+          "title": "Work 33",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400034/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400034
+        },
+        {
+          "action": "post",
+          "id": 1901400035,
+          "title": "Work 34",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400035/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400035
+        },
+        {
+          "action": "post",
+          "id": 1901400036,
+          "title": "Work 35",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400036/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400036
+        },
+        {
+          "action": "post",
+          "id": 1901400037,
+          "title": "Work 36",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400037/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400037
+        },
+        {
+          "action": "post",
+          "id": 1901400038,
+          "title": "Work 37",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400038/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400038
+        },
+        {
+          "action": "post",
+          "id": 1901400039,
+          "title": "Work 38",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400039/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400039
+        },
+        {
+          "action": "post",
+          "id": 1901400040,
+          "title": "Work 39",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400040/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400040
+        },
+        {
+          "action": "post",
+          "id": 1901400041,
+          "title": "Work 40",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400041/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400041
+        },
+        {
+          "action": "post",
+          "id": 1901400042,
+          "title": "Work 41",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400042/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400042
+        },
+        {
+          "action": "post",
+          "id": 1901400043,
+          "title": "Work 42",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400043/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400043
+        },
+        {
+          "action": "post",
+          "id": 1901400044,
+          "title": "Work 43",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400044/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400044
+        },
+        {
+          "action": "post",
+          "id": 1901400045,
+          "title": "Work 44",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400045/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400045
+        },
+        {
+          "action": "post",
+          "id": 1901400046,
+          "title": "Work 45",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400046/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400046
+        },
+        {
+          "action": "post",
+          "id": 1901400047,
+          "title": "Work 46",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400047/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400047
+        },
+        {
+          "action": "post",
+          "id": 1901400048,
+          "title": "Work 47",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400048/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400048
+        },
+        {
+          "action": "post",
+          "id": 1901400049,
+          "title": "Work 48",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400049/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400049
+        },
+        {
+          "action": "post",
+          "id": 1901400050,
+          "title": "Work 49",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400050/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400050
+        },
+        {
+          "action": "post",
+          "id": 1901400051,
+          "title": "Work 50",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400051/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400051
+        },
+        {
+          "action": "post",
+          "id": 1901400052,
+          "title": "Work 51",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400052/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400052
+        },
+        {
+          "action": "post",
+          "id": 1901400053,
+          "title": "Work 52",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400053/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400053
+        },
+        {
+          "action": "post",
+          "id": 1901400054,
+          "title": "Work 53",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400054/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400054
+        },
+        {
+          "action": "post",
+          "id": 1901400055,
+          "title": "Work 54",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400055/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400055
+        },
+        {
+          "action": "post",
+          "id": 1901400056,
+          "title": "Work 55",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400056/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400056
+        },
+        {
+          "action": "post",
+          "id": 1901400057,
+          "title": "Work 56",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400057/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400057
+        },
+        {
+          "action": "post",
+          "id": 1901400058,
+          "title": "Work 57",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400058/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400058
+        },
+        {
+          "action": "post",
+          "id": 1901400059,
+          "title": "Work 58",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400059/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400059
+        },
+        {
+          "action": "post",
+          "id": 1901400060,
+          "title": "Work 59",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1901400060/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Yours",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400060
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1900700020/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "One too many",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        }
+      ],
+      "mutation": "next6_handoff_throttle"
+    },
+    {
+      "key": "handoff_shared_throttle",
+      "rails_file": "test/controllers/agents/mcp_handoff_test.rb",
+      "rails_line": 100,
+      "rails_test": "handoff_work shares its throttle bucket with the rest endpoint",
+      "setup": {
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "action": "post",
+          "id": 1901400001,
+          "title": "Work 0",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400001,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400001
+        },
+        {
+          "action": "post",
+          "id": 1901400002,
+          "title": "Work 1",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400002,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400002
+        },
+        {
+          "action": "post",
+          "id": 1901400003,
+          "title": "Work 2",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400003,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400003
+        },
+        {
+          "action": "post",
+          "id": 1901400004,
+          "title": "Work 3",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400004,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400004
+        },
+        {
+          "action": "post",
+          "id": 1901400005,
+          "title": "Work 4",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400005,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400005
+        },
+        {
+          "action": "post",
+          "id": 1901400006,
+          "title": "Work 5",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400006,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400006
+        },
+        {
+          "action": "post",
+          "id": 1901400007,
+          "title": "Work 6",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400007,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400007
+        },
+        {
+          "action": "post",
+          "id": 1901400008,
+          "title": "Work 7",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400008,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400008
+        },
+        {
+          "action": "post",
+          "id": 1901400009,
+          "title": "Work 8",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400009,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400009
+        },
+        {
+          "action": "post",
+          "id": 1901400010,
+          "title": "Work 9",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400010,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400010
+        },
+        {
+          "action": "post",
+          "id": 1901400011,
+          "title": "Work 10",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 11,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400011,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400011
+        },
+        {
+          "action": "post",
+          "id": 1901400012,
+          "title": "Work 11",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400012,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400012
+        },
+        {
+          "action": "post",
+          "id": 1901400013,
+          "title": "Work 12",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 13,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400013,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400013
+        },
+        {
+          "action": "post",
+          "id": 1901400014,
+          "title": "Work 13",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 14,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400014,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400014
+        },
+        {
+          "action": "post",
+          "id": 1901400015,
+          "title": "Work 14",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 15,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400015,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400015
+        },
+        {
+          "action": "post",
+          "id": 1901400016,
+          "title": "Work 15",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 16,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400016,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400016
+        },
+        {
+          "action": "post",
+          "id": 1901400017,
+          "title": "Work 16",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 17,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400017,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400017
+        },
+        {
+          "action": "post",
+          "id": 1901400018,
+          "title": "Work 17",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 18,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400018,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400018
+        },
+        {
+          "action": "post",
+          "id": 1901400019,
+          "title": "Work 18",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 19,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400019,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400019
+        },
+        {
+          "action": "post",
+          "id": 1901400020,
+          "title": "Work 19",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 20,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400020,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400020
+        },
+        {
+          "action": "post",
+          "id": 1901400021,
+          "title": "Work 20",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 21,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400021,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400021
+        },
+        {
+          "action": "post",
+          "id": 1901400022,
+          "title": "Work 21",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 22,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400022,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400022
+        },
+        {
+          "action": "post",
+          "id": 1901400023,
+          "title": "Work 22",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 23,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400023,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400023
+        },
+        {
+          "action": "post",
+          "id": 1901400024,
+          "title": "Work 23",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 24,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400024,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400024
+        },
+        {
+          "action": "post",
+          "id": 1901400025,
+          "title": "Work 24",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 25,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400025,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400025
+        },
+        {
+          "action": "post",
+          "id": 1901400026,
+          "title": "Work 25",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 26,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400026,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400026
+        },
+        {
+          "action": "post",
+          "id": 1901400027,
+          "title": "Work 26",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 27,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400027,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400027
+        },
+        {
+          "action": "post",
+          "id": 1901400028,
+          "title": "Work 27",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 28,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400028,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400028
+        },
+        {
+          "action": "post",
+          "id": 1901400029,
+          "title": "Work 28",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 29,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400029,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400029
+        },
+        {
+          "action": "post",
+          "id": 1901400030,
+          "title": "Work 29",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 30,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400030,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400030
+        },
+        {
+          "action": "post",
+          "id": 1901400031,
+          "title": "Work 30",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 31,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400031,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400031
+        },
+        {
+          "action": "post",
+          "id": 1901400032,
+          "title": "Work 31",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 32,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400032,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400032
+        },
+        {
+          "action": "post",
+          "id": 1901400033,
+          "title": "Work 32",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 33,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400033,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400033
+        },
+        {
+          "action": "post",
+          "id": 1901400034,
+          "title": "Work 33",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 34,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400034,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400034
+        },
+        {
+          "action": "post",
+          "id": 1901400035,
+          "title": "Work 34",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 35,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400035,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400035
+        },
+        {
+          "action": "post",
+          "id": 1901400036,
+          "title": "Work 35",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 36,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400036,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400036
+        },
+        {
+          "action": "post",
+          "id": 1901400037,
+          "title": "Work 36",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 37,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400037,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400037
+        },
+        {
+          "action": "post",
+          "id": 1901400038,
+          "title": "Work 37",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 38,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400038,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400038
+        },
+        {
+          "action": "post",
+          "id": 1901400039,
+          "title": "Work 38",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 39,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400039,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400039
+        },
+        {
+          "action": "post",
+          "id": 1901400040,
+          "title": "Work 39",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 40,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400040,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400040
+        },
+        {
+          "action": "post",
+          "id": 1901400041,
+          "title": "Work 40",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 41,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400041,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400041
+        },
+        {
+          "action": "post",
+          "id": 1901400042,
+          "title": "Work 41",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 42,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400042,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400042
+        },
+        {
+          "action": "post",
+          "id": 1901400043,
+          "title": "Work 42",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 43,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400043,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400043
+        },
+        {
+          "action": "post",
+          "id": 1901400044,
+          "title": "Work 43",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 44,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400044,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400044
+        },
+        {
+          "action": "post",
+          "id": 1901400045,
+          "title": "Work 44",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 45,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400045,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400045
+        },
+        {
+          "action": "post",
+          "id": 1901400046,
+          "title": "Work 45",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 46,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400046,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400046
+        },
+        {
+          "action": "post",
+          "id": 1901400047,
+          "title": "Work 46",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 47,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400047,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400047
+        },
+        {
+          "action": "post",
+          "id": 1901400048,
+          "title": "Work 47",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 48,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400048,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400048
+        },
+        {
+          "action": "post",
+          "id": 1901400049,
+          "title": "Work 48",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 49,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400049,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400049
+        },
+        {
+          "action": "post",
+          "id": 1901400050,
+          "title": "Work 49",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 50,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400050,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400050
+        },
+        {
+          "action": "post",
+          "id": 1901400051,
+          "title": "Work 50",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 51,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400051,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400051
+        },
+        {
+          "action": "post",
+          "id": 1901400052,
+          "title": "Work 51",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 52,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400052,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400052
+        },
+        {
+          "action": "post",
+          "id": 1901400053,
+          "title": "Work 52",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 53,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400053,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400053
+        },
+        {
+          "action": "post",
+          "id": 1901400054,
+          "title": "Work 53",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 54,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400054,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400054
+        },
+        {
+          "action": "post",
+          "id": 1901400055,
+          "title": "Work 54",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 55,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400055,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400055
+        },
+        {
+          "action": "post",
+          "id": 1901400056,
+          "title": "Work 55",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 56,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400056,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400056
+        },
+        {
+          "action": "post",
+          "id": 1901400057,
+          "title": "Work 56",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 57,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400057,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400057
+        },
+        {
+          "action": "post",
+          "id": 1901400058,
+          "title": "Work 57",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 58,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400058,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400058
+        },
+        {
+          "action": "post",
+          "id": 1901400059,
+          "title": "Work 58",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 59,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400059,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400059
+        },
+        {
+          "action": "post",
+          "id": 1901400060,
+          "title": "Work 59",
+          "status": "planned",
+          "owner": 394959859,
+          "room": 486777696
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 60,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1901400060,
+                "receiver_agent_id": 1901100002,
+                "summary": "Yours"
+              }
+            }
+          }
+        },
+        {
+          "action": "reassign",
+          "id": 1901400060
+        },
+        {
+          "method": "post",
+          "path": "/agents/mcp",
+          "body": {
+            "jsonrpc": "2.0",
+            "id": 61,
+            "method": "tools/call",
+            "params": {
+              "name": "handoff_work",
+              "arguments": {
+                "work_id": 1900700020,
+                "receiver_agent_id": 1901100002,
+                "summary": "One too many"
+              }
+            }
+          }
+        },
+        {
+          "method": "post",
+          "path": "/agents/work/1900700020/handoff",
+          "body": {
+            "receiver_agent_id": 1901100002,
+            "summary": "Also throttled",
+            "links": [
+              "https://example.com/a"
+            ],
+            "open_questions": [
+              "Why?"
+            ]
+          }
+        }
+      ],
+      "mutation": "next6_handoff_shared_throttle"
+    },
+    {
+      "key": "board_flow",
+      "rails_file": "test/integration/agent_boards_test.rb",
+      "rails_line": 17,
+      "rails_test": "an agent post flows from creation through reply to result",
+      "setup": {
+        "hide_base": true,
+        "grant_room": 486777696
+      },
+      "steps": [
+        {
+          "method": "post",
+          "path": "/rooms/486777696/agents/posts",
+          "body": {
+            "title": "Ship the launch",
+            "body": "Everything goes out Friday.",
+            "tags": "launch",
+            "run_url": "https://example.com/runs/11"
+          }
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696",
+          "auth": "session",
+          "projection": "board_row"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/threads/1901300001",
+          "auth": "session",
+          "projection": "post"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/threads/1901300001.json",
+          "auth": "session",
+          "projection": "history"
+        },
+        {
+          "method": "post",
+          "path": "/rooms/486777696/threads",
+          "auth": "session",
+          "body": {
+            "thread": {
+              "name": "Follow-up fixes",
+              "first_message": "Small fixes before Friday.",
+              "work_owner_id": 394959859
+            }
+          },
+          "projection": "human_created"
+        },
+        {
+          "method": "post",
+          "path": "/rooms/486777696/agents/messages",
+          "body": {
+            "thread_id": 1901300002,
+            "message": {
+              "markdown_source": "Halfway there.",
+              "client_message_id": "next6-flow-reply"
+            }
+          }
+        },
+        {
+          "method": "put",
+          "path": "/agents/work/1901300002/result",
+          "body": {
+            "markdown": "## Shipped on Friday"
+          }
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/threads/1901300002",
+          "auth": "session",
+          "projection": "result"
+        },
+        {
+          "method": "get",
+          "path": "/rooms/486777696/threads/1901300002.json",
+          "auth": "session",
+          "projection": "history"
+        },
+        {
+          "action": "inbox"
+        }
+      ],
+      "mutation": "next6_board_flow"
+    }
+  ]
+}

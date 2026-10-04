@@ -34,7 +34,7 @@
       <% if @two_factor_devices.any? %>
         <menu id="two_factor_devices" class="flex flex-column gap margin-none pad-none">
           <% @two_factor_devices.each do |device| %>
-            <li class="flex align-center gap margin-none" id="<%= dom_id(device) %>">
+            <li class="flex flex-wrap align-center gap margin-none" id="<%= dom_id(device) %>">
               <div class="min-width flex-item-grow txt-small">
                 <div class="overflow-ellipsis"><strong><%= device.user_agent.presence || "Unknown browser" %></strong></div>
                 <div class="txt-subtle"><%= [ device.ip_address, ("last used #{time_ago_in_words(device.last_used_at)} ago" if device.last_used_at) ].compact.join(" · ") %></div>

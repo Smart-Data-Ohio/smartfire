@@ -22,7 +22,7 @@ async fn app_rows_with_job_runner(rows: Value, run_jobs: bool) -> TestApp {
 }
 pub(super) async fn insert_rows(app: &TestApp, rows: Value) {
     app.db().write(move |tx| {
-        for table in ["users", "rooms", "memberships", "webhooks", "calendar_meeting_caches", "events", "event_attendances", "event_calendar_entries", "twitter_posts", "channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "poll_votes", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references", "event_references", "twitter_post_references"] {
+        for table in ["users", "rooms", "memberships", "webhooks", "calendar_meeting_caches", "events", "event_attendances", "event_calendar_entries", "twitter_posts", "channel_threads", "github_pull_requests", "fizzy_cards", "messages", "action_text_rich_texts", "message_references", "polls", "poll_options", "poll_votes", "message_pins", "github_pull_request_references", "fizzy_card_references", "github_pull_request_threads", "link_embeds", "link_embed_references", "event_references", "twitter_post_references", "saved_items", "scheduled_messages", "activity_items"] {
             for row in rows[table].as_array().into_iter().flatten() {
                 let row = row.as_object().unwrap();
                 let columns = row.keys().map(|k| format!("\"{k}\"")).collect::<Vec<_>>().join(",");
@@ -130,6 +130,7 @@ pub(super) async fn stream(app:&TestApp) -> (crate::channels::tests::support::Cl
 pub(super) async fn stream_with_cookie(app: &TestApp, cookie: &str) -> (crate::channels::tests::support::Client, tokio::task::JoinHandle<()>) {
     use crate::channels::tests::support::{Client,bind_listener,identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    app.publications();
     let listener=bind_listener().await; let address=listener.local_addr().unwrap();
     let router=app.booted.router.clone();
     let server=tokio::spawn(async move { axum::serve(listener,router).await.unwrap() });

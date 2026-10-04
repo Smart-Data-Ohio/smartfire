@@ -286,14 +286,39 @@ fn route_paths() {
 
 // --- The upload → analyze → variant/preview pipeline -------------------------------------------
 
-const SCHEMA: &str = r#"
-CREATE TABLE active_storage_attachments (id integer PRIMARY KEY AUTOINCREMENT NOT NULL, blob_id bigint NOT NULL, created_at datetime(6) NOT NULL, name varchar NOT NULL, record_id bigint NOT NULL, record_type varchar NOT NULL);
-CREATE UNIQUE INDEX index_active_storage_attachments_uniqueness ON active_storage_attachments (record_type, record_id, name, blob_id);
-CREATE TABLE active_storage_blobs (id integer PRIMARY KEY AUTOINCREMENT NOT NULL, byte_size bigint NOT NULL, checksum varchar, content_type varchar, created_at datetime(6) NOT NULL, filename varchar NOT NULL, key varchar NOT NULL, metadata text, service_name varchar NOT NULL);
-CREATE UNIQUE INDEX index_active_storage_blobs_on_key ON active_storage_blobs (key);
-CREATE TABLE active_storage_variant_records (id integer PRIMARY KEY AUTOINCREMENT NOT NULL, blob_id bigint NOT NULL, variation_digest varchar NOT NULL);
-CREATE UNIQUE INDEX index_active_storage_variant_records_uniqueness ON active_storage_variant_records (blob_id, variation_digest);
-"#;
+const SCHEMA: &str = include_str!("../../db/src/schema.sql");
+
+#[test]
+fn blob_reads_and_metadata_writes_preserve_rails_processing_columns() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    let mut blob = campfire_storage::blob::NewBlob::unfurl(
+        b"blob schema compatibility", Filename::new("schema.txt"), Some("text/plain"), "local", false,
+    ).insert(&conn, now()).unwrap();
+    let id = blob.id;
+    let processing_state = || conn.query_row(
+        "SELECT message_processing_token, message_processing_expires_at FROM active_storage_blobs WHERE id=?",
+        [id],
+        |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, Option<String>>(1)?)),
+    ).unwrap();
+    assert_eq!(processing_state(), (None, None));
+    conn.execute(
+        "UPDATE active_storage_blobs SET message_processing_token='rails-lease', message_processing_expires_at='2026-10-03 18:00:00.000000' WHERE id=?",
+        [id],
+    ).unwrap();
+    let lease = processing_state();
+    campfire_storage::blob::insert_attachment(&conn, "attachment", "Message", 42, id, now()).unwrap();
+    assert_eq!(Blob::find(&conn, id).unwrap(), Some(blob.clone()));
+    assert_eq!(Blob::find_by_key(&conn, &blob.key).unwrap(), Some(blob.clone()));
+    assert_eq!(Blob::find_many(&conn, &[id]).unwrap()[&id], blob);
+    assert_eq!(Blob::attached(&conn, "Message", 42, "attachment").unwrap(), Some(blob.clone()));
+    assert_eq!(Blob::attached_messages(&conn, &[42]).unwrap()[&42], blob);
+    let mut metadata = blob.metadata.clone();
+    metadata.set("analyzed", Json::Bool(true));
+    blob.update_metadata(&conn, metadata).unwrap();
+    assert_eq!(Blob::find(&conn, id).unwrap(), Some(blob));
+    assert_eq!(processing_state(), lease);
+}
 
 struct Comparison {
     mismatches: Vec<String>,
