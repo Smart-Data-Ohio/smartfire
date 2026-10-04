@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {waitForCondition} from './behavior-visibility.mjs';
 export const MOTION_DEFAULT='motion is off by default in the test environment';
 export async function motionDefault(page,base,fixture) {
+  await page.setViewportSize({width:1400,height:1400});
   await page.goto(`${base}/rooms/${fixture.motion_room_id}`);
   // Original setup joins HQ and waits for all mounted cable subscriptions.
   await waitForCondition(()=>page.locator('turbo-cable-stream-source').evaluateAll(nodes=>nodes.length>=3&&nodes.every(node=>node.hasAttribute('connected'))),{timeout:15000});
