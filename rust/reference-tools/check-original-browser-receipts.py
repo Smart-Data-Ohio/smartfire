@@ -9,7 +9,7 @@ p.add_argument('--controls-dir',type=Path,required=True)
 a=p.parse_args();root=Path(__file__).resolve().parents[2]
 m=json.loads((root/'rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json').read_text())
 tests={n:v for s in json.loads(a.nextest_list.read_text())['rust-suites'].values() for n,v in s['testcases'].items()}
-log=a.browser_log.read_text();passed=set(re.findall(r'^test (\S+) \.\.\. ok$',log,re.M))
+log='\n'.join(line[4:] if line.startswith('    ') else line for line in a.browser_log.read_text().splitlines());passed=set(re.findall(r'^test (\S+) \.\.\. ok$',log,re.M))
 # --show-output is required: a pass line alone cannot prove original assertion coverage.
 sections={}
 for hit in re.finditer(r'^Original (Rails|Rust) ([\w-]+):\n',log,re.M):

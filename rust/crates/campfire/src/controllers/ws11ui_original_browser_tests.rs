@@ -16,12 +16,44 @@ fn replay(mode: &str) {
     );
     print!("{stdout}");
 }
-macro_rules! cases {($($test:ident=>$mode:literal),+$(,)?)=>{$(
- #[test]
- #[ignore="paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
- fn $test(){replay($mode);}
-)+};}
-cases!(original_people_assertions=>"people",original_picker_assertions=>"pickers",
- original_mobile_member_assertions=>"members",original_group_lifecycle_assertions=>"group",
- original_tour_assertions=>"tours",original_starred_people_assertions=>"stars",
- original_node_event_harness_assertions=>"worker");
+#[test]
+#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+fn original_people_assertions() {
+    replay("people");
+}
+
+#[test]
+#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+fn original_picker_assertions() {
+    replay("pickers");
+}
+
+#[test]
+#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+fn original_mobile_member_assertions() {
+    replay("members");
+}
+
+#[test]
+#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+fn original_group_lifecycle_assertions() {
+    replay("group");
+}
+
+#[test]
+#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+fn original_tour_assertions() {
+    replay("tours");
+}
+
+#[test]
+#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+fn original_starred_people_assertions() {
+    replay("stars");
+}
+
+#[test]
+#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+fn original_node_event_harness_assertions() {
+    replay("worker");
+}

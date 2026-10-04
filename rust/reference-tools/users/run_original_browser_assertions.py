@@ -14,7 +14,9 @@ cases={
 'members':['mobile-escape','mobile-tab'],'group':['group-lifecycle'],
 'tours':['tour-finish','tour-escape','tour-restart','tour-completed'],
 'stars':['star-card','star-menu','star-escape','star-phone'],'worker':['served-worker'],}
-ports=[int(os.environ.get('WS11UI_ORIGINAL_PORT','52710'))+i for i in range(3)]
+# Disjoint mode leases preserve the future four-worker ignored-test gate.
+base_port=int(os.environ.get('WS11UI_ORIGINAL_PORT','52710'))+3*list(cases).index(args.mode)
+ports=[base_port+i for i in range(3)]
 for port in ports:
  with socket.socket() as check:
   check.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)

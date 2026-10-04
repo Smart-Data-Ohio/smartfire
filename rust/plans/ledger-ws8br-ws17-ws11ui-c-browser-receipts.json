@@ -2,7 +2,7 @@
   "reference": "d7c7de92",
   "runtime_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "stack_base": "f05c3f2a5146a586a80149840f79f2ea52c6d87c",
-  "gate": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+  "gate": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
   "records": [
     {
       "id": "P0354",
@@ -17,7 +17,7 @@
       ],
       "browser_case": "author",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 16,
@@ -121,7 +121,7 @@
       ],
       "browser_case": "author-keyboard",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 34,
@@ -225,7 +225,7 @@
       ],
       "browser_case": "closed-escape",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 47,
@@ -278,7 +278,7 @@
       ],
       "browser_case": "sidebar-keyboard",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 68,
@@ -331,7 +331,7 @@
       ],
       "browser_case": "directory-three",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 81,
@@ -373,7 +373,7 @@
           "rust_test": "controllers::ws11ui_original_browser_tests::original_people_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_current_path room_path(room)",
-          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:81",
+          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:83",
           "assertion_anchor": "assert found==(request['room'],),(target,'original current path resolves canonical member set',found,request)",
           "assertion_scope": "directory-three",
           "additional_assertion_sources": [],
@@ -396,7 +396,7 @@
       ],
       "browser_case": "member-huddle",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 97,
@@ -455,7 +455,7 @@
           "rust_test": "controllers::ws11ui_original_browser_tests::original_people_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_current_path room_path(room, huddle: \"start\")",
-          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:81",
+          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:83",
           "assertion_anchor": "assert found==(request['room'],),(target,'original current path resolves canonical member set',found,request)",
           "assertion_scope": "member-huddle",
           "additional_assertion_sources": [
@@ -483,7 +483,7 @@
       ],
       "browser_case": "shift-range",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 121,
@@ -536,7 +536,7 @@
       ],
       "browser_case": "long-press",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 147,
@@ -606,7 +606,7 @@
       ],
       "browser_case": "agent",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 161,
@@ -676,7 +676,7 @@
       ],
       "browser_case": "mixed",
       "browser_mode": "people",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 175,
@@ -746,7 +746,7 @@
       ],
       "browser_case": "picker-filter",
       "browser_mode": "pickers",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 189,
@@ -935,7 +935,7 @@
       ],
       "browser_case": "picker-post",
       "browser_mode": "pickers",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 223,
@@ -1011,7 +1011,7 @@
           "rust_test": "controllers::ws11ui_original_browser_tests::original_picker_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_current_path room_path(room)",
-          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:81",
+          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:83",
           "assertion_anchor": "assert found==(request['room'],),(target,'original current path resolves canonical member set',found,request)",
           "assertion_scope": "picker-post",
           "additional_assertion_sources": [],
@@ -1034,7 +1034,7 @@
       ],
       "browser_case": "picker-enter",
       "browser_mode": "pickers",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 252,
@@ -1155,7 +1155,7 @@
       ],
       "browser_case": "picker-row",
       "browser_mode": "pickers",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 281,
@@ -1225,7 +1225,7 @@
       ],
       "browser_case": "picker-phone",
       "browser_mode": "pickers",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 292,
@@ -1312,7 +1312,7 @@
       ],
       "browser_case": "group-lifecycle",
       "browser_mode": "group",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 319,
@@ -1456,7 +1456,7 @@
           "rust_test": "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_not room.reload.user_ids.include?(users(:david).id)",
-          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:85",
+          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:87",
           "assertion_anchor": "assert labels['users.david'] not in actual,(target,'original leaver absent',actual)",
           "assertion_scope": "group-lifecycle",
           "additional_assertion_sources": [],
@@ -1479,7 +1479,7 @@
       ],
       "browser_case": "mobile-escape",
       "browser_mode": "members",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 368,
@@ -1600,7 +1600,7 @@
       ],
       "browser_case": "mobile-tab",
       "browser_mode": "members",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 392,
@@ -1721,7 +1721,7 @@
       ],
       "browser_case": "tour-finish",
       "browser_mode": "tours",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 12,
@@ -2012,7 +2012,7 @@
           "rust_test": "controllers::ws11ui_original_browser_tests::original_tour_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_not_nil users(:jz).reload.tour_completed_at",
-          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:88",
+          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:90",
           "assertion_anchor": "assert marker is not None,(target,'original persisted tour stamp',request)",
           "assertion_scope": "tour-finish",
           "additional_assertion_sources": [],
@@ -2056,7 +2056,7 @@
       ],
       "browser_case": "tour-escape",
       "browser_mode": "tours",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 49,
@@ -2102,7 +2102,7 @@
           "rust_test": "controllers::ws11ui_original_browser_tests::original_tour_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_not_nil users(:jz).reload.tour_completed_at",
-          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:88",
+          "assertion_source": "rust/reference-tools/users/run_original_browser_assertions.py:90",
           "assertion_anchor": "assert marker is not None,(target,'original persisted tour stamp',request)",
           "assertion_scope": "tour-escape",
           "additional_assertion_sources": [],
@@ -2146,7 +2146,7 @@
       ],
       "browser_case": "tour-restart",
       "browser_mode": "tours",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 64,
@@ -2220,7 +2220,7 @@
       ],
       "browser_case": "tour-completed",
       "browser_mode": "tours",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 79,
@@ -2273,7 +2273,7 @@
       ],
       "browser_case": "star-card",
       "browser_mode": "stars",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 21,
@@ -2606,7 +2606,7 @@
       ],
       "browser_case": "star-menu",
       "browser_mode": "stars",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 48,
@@ -3036,7 +3036,7 @@
       ],
       "browser_case": "star-escape",
       "browser_mode": "stars",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 93,
@@ -3150,7 +3150,7 @@
       ],
       "browser_case": "star-phone",
       "browser_mode": "stars",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 112,
@@ -3399,7 +3399,7 @@
       ],
       "browser_case": "served-worker",
       "browser_mode": "worker",
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
       "assertions": [
         {
           "line": 58,
