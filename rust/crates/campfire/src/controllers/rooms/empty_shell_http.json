@@ -1,6 +1,5 @@
 {
-  "reference": "d7c7de92",
-  "layout_reference": "2e20b24c",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "sources": {
     "app/controllers/rooms_controller.rb": "53c7fd8b0619e478425d492f1be3abbc11affafa1b992dea09f8cd0b413c94eb",
     "app/views/rooms/show.html.erb": "2218e078bc846e09238104d226f4f6674ef32aa4363002d438675fe48eb7e777",

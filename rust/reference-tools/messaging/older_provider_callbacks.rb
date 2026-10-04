@@ -62,5 +62,5 @@ groups = []
   groups << {privacy:privacy,size:size,rows:rows,old_ids:messages.map(&:id),steps:steps,job:{pull_request_id:pr.id,routes:routes,frames:frames.select { |f| f[:stream]=="#{room.to_gid_param}:messages" }.dup}}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:groups)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:groups)+"\n")
 puts "WS8bm2 older-provider Rails oracle: #{groups.size} groups; #{groups.sum { |g| g[:steps].size }} real updates; #{groups.size} real fetch jobs; #{groups.sum { |g| g[:steps].sum { |s| s[:frames].size }+g[:job][:frames].size }} socket frames; all roots outside 40-message windows"

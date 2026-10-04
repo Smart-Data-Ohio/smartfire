@@ -48,4 +48,4 @@ control_rows=User.order(:id).map do |u|
   html=renderer.render(partial:'accounts/users/user',locals:{user:u})
   {id:u.id,name:u.name,email:u.email_address,role:u.role,status:u.status,google_identity_email:u.google_identity&.email,untrusted:u.email_self_changed_at.present? || !u.google_email_link_allowed?,forms:html.scan(/<form\b[^>]*\baction="[^"]*\/google_link"[\s\S]*?<\/form>/)}
 end
-puts JSON.pretty_generate({reference:'d7c7de92',cases:,control_rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:,control_rows:})

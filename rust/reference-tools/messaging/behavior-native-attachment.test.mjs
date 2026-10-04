@@ -1,8 +1,9 @@
+import {PIN} from './reference-pin.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {execFileSync} from 'node:child_process';
 import {extractAttachment,ATTACHMENT_CASE} from './behavior-native-attachment.mjs';
-const source=execFileSync('git',['show','d7c7de92:test/system/workspace_markdown_test.rb'],{encoding:'utf8'});
+const source=execFileSync('git',['show',`${PIN}:test/system/workspace_markdown_test.rb`],{encoding:'utf8'});
 test('native attachment retains every pinned action/assertion with only the shared file path adapted',()=>{
   const {body,helpers}=extractAttachment(source);
   const start=source.indexOf(`  test "${ATTACHMENT_CASE}" do\n`),end=source.indexOf('\n  test ',start+1);

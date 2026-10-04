@@ -61,5 +61,5 @@ source.fetch('groups').each do |group|
   groups << group.slice('size', 'rows').merge(baseline:, cases:)
  end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', groups:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], groups:) + "\n")
 puts "WS8bm2 container Rails: #{groups.sum { |g| g[:cases].length }} actual requests; status/type/body/location, complete feature rows and scoped broadcasts"

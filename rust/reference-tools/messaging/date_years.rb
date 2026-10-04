@@ -36,6 +36,6 @@ rows = {
   "messages" => ActiveRecord::Base.connection.select_all("SELECT * FROM messages WHERE id=#{message.id}").to_a,
   "action_text_rich_texts" => ActiveRecord::Base.connection.select_all("SELECT * FROM action_text_rich_texts WHERE record_type='Message' AND record_id=#{message.id}").to_a
 }
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", cases:, rows:, requests:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases:, rows:, requests:) + "\n")
 puts "WS8bm2 signed-year Rails oracle: #{cases.size} signed/expanded-year/offset/fraction/DST cases in 4 zones"
 puts "WS8bm2 signed-year Rails HTTP oracle: #{requests.size * 2} actual reminder/scheduled responses in 4 zones"

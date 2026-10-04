@@ -25,8 +25,8 @@ if ARGV.first=="welcome"
   request.cookie_jar.signed.permanent[:session_token]={value:user.sessions.first.token,httponly:true,same_site: :lax};session.cookies["session_token"]=request.cookie_jar[:session_token]
   session.get "/";ActiveSupport::IsolatedExecutionState.clear;first={status:session.response.status,location:session.response.headers["Location"]}
   session.cookies["last_room"]="486777696";session.get "/";ActiveSupport::IsolatedExecutionState.clear;last={status:session.response.status,location:session.response.headers["Location"]}
-  puts JSON.pretty_generate(reference:"d7c7de92",page:page,first:first,last:last)
-  warn "Rails welcome oracle: 1 complete body/sidebar, 2 visible-room redirects; reference d7c7de92"
+  puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),page:page,first:first,last:last)
+  warn "Rails welcome oracle: 1 complete body/sidebar, 2 visible-room redirects; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
 else
   Current.reset
   page=render_page("first_runs/show",{user:User.new})
@@ -50,6 +50,6 @@ else
     session.post "/first_run",params:input[:params],headers:{"X-CSRF-Token"=>token};ActiveSupport::IsolatedExecutionState.clear
     {**input,status:session.response.status,location:session.response.headers["Location"],state:{account_names:Account.pluck(:name),users:User.all.map {|u|{name:u.name,email:u.email_address,role:u.role,password_present:u.password_digest.present?}},rooms:Room.pluck(:name,:type),memberships:Membership.count,sessions:Session.count,audits:AuditLog.count}}
   end
-  puts JSON.pretty_generate(reference:"d7c7de92",page:page,cases:cases)
-  warn "Rails first run oracle: 1 complete body, #{cases.size} HTTP/persisted-state cases; reference d7c7de92"
+  puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),page:page,cases:cases)
+  warn "Rails first run oracle: 1 complete body, #{cases.size} HTTP/persisted-state cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
 end

@@ -84,5 +84,5 @@ forms=[]
  end
 end
 Current.reset
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',live_regions:live_regions,live_region_id:live_region_id,fragments:fragments,poll_message_id:poll_message.id,poll_id:poll.id,poll_options:poll.poll_options.pluck(:id,:label,:position),card_id:card.id,boosted_id:boosted.id,legacy_boost_id:legacy.id,thread_id:thread.id,reply_id:reply.id,rows:rows,forms:forms)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],live_regions:live_regions,live_region_id:live_region_id,fragments:fragments,poll_message_id:poll_message.id,poll_id:poll.id,poll_options:poll.poll_options.pluck(:id,:label,:position),card_id:card.id,boosted_id:boosted.id,legacy_boost_id:legacy.id,thread_id:thread.id,reply_id:reply.id,rows:rows,forms:forms)+"\n")
 puts "WS8bm room CSRF: #{live_regions} real live region; #{forms.size} successful cached forms; missing/foreign tokens rejected with unchanged message/boost/thread/vote counts"

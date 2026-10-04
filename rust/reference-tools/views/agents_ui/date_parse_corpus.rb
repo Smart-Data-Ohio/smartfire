@@ -16,7 +16,7 @@ inputs.concat(['2030-W24-6','30W246','-W-6','--06-15','--0615','2030-166','-166'
 (2..14).each {|n| ['12345678901234','00000000000000','20300615102030'].each {|s| ['','T102030Z','.123456789',' 102030.12 [530:TEST]'].each {|endpart| inputs << s[0,n]+endpart}}}
 ['M1.1.1','T10.6.15','S20.6.15','H42.6.15','R12.6.15','2030年06月15日','２０３０-０６-１５',"June\n15, 2030",'2030-06-15 garbage','x'*128,'x'*129,'2030-06-15'+' '*118,"2030-06-15\0",'not a date',''].each {|s| inputs << s}
 inputs = inputs.uniq
-result = {reference:'d7c7de92', generator:'date_parse_corpus.rb', expiry:[], floats:[]}
+result = {reference:ENV.fetch("PARITY_REFERENCE_SHA"), generator:'date_parse_corpus.rb', expiry:[], floats:[]}
 ['UTC','America/New_York','Australia/Lord_Howe','Pacific/Apia'].each do |zone|
  Time.use_zone(zone) do
   inputs.each do |input|

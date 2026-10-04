@@ -103,5 +103,5 @@ output = cases.map do |test|
   %w[github_updated_at fetched_at changed_files_fetched_at updated_at].each { |key| expected[key] = pr.public_send(key)&.utc&.strftime("%Y-%m-%d %H:%M:%S") }
   test.merge(expected:, received:, stored_files: pr.changed_files, stored_payload: pr.attributes_before_type_cast["payload"])
 end
-File.write(ENV.fetch("GITHUB_FETCH_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: "d7c7de92", cases: output }) + "\n")
-puts "GitHub fetch Rails oracle: #{output.size} persisted fetch cases; reference d7c7de92"
+File.write(ENV.fetch("GITHUB_FETCH_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA"), cases: output }) + "\n")
+puts "GitHub fetch Rails oracle: #{output.size} persisted fetch cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

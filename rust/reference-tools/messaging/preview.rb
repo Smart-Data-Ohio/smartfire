@@ -47,7 +47,7 @@ casts = [nil, false, true, 0, 42, 1.5, "", " text "].map do |value|
   probe = Message.new(client_message_id: value, markdown_source: value)
   { value: value, client_message_id: probe.client_message_id, markdown_source: probe.markdown_source }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", room_id: room.id, previews: rows, invalid_creates: creates, scalar_casts: casts) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], room_id: room.id, previews: rows, invalid_creates: creates, scalar_casts: casts) + "\n")
 puts "WS8bm preview oracle: #{rows.size} real Rails HTTP responses; 0 messages written"
 puts "WS8bm invalid-create oracle: #{creates.size} real Rails HTTP responses; 0 messages written"
 puts "WS8bm scalar-cast oracle: #{casts.size} actual Rails model assignments"

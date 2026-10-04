@@ -1,4 +1,4 @@
-# Astra review corpus, regenerated from Rails at fec615be. Expectations are computed, never supplied by the input cases.
+# Astra review corpus, regenerated from Rails at parity/reference.sha. Expectations are computed, never supplied by the input cases.
 require "json"
 load "/tools/load_fixtures.rb"
 ActiveJob::Base.queue_adapter = :test
@@ -154,7 +154,7 @@ cases.each do |input|
   end
 end
 # Filled below, after generating Ruby's timezone vocabulary.
-output = {pin: "fec615be407f2350de9c364f78a322c4ad48a2cf", parsing: parsing, registry: registry, commands: commands, rows: rows}
+output = {pin: ENV.fetch("PARITY_REFERENCE_SHA"), parsing: parsing, registry: registry, commands: commands, rows: rows}
 File.write(ARGV.fetch(1), JSON.pretty_generate(ActiveSupport::TimeZone::MAPPING)+"\n")
 puts "WS8 slash review Rails vectors: #{parsing.size} parsing, #{registry.size} registry, #{commands.size} recognition, #{rows.size} dispatch/row/callback cases"
 

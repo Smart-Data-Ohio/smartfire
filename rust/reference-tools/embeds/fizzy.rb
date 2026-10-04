@@ -1,6 +1,7 @@
 # Contracts from our pinned Rails client, URL extractor and content-free card container.
 require 'net/http'
 require 'json'
+require File.join(ENV.fetch('PARITY_WORK'), 'reference-tools/replay_encryption_entropy')
 raise 'Wrong reference' unless Digest::SHA256.file(Rails.root.join('app/models/fizzy/client.rb')).hexdigest == ARGV.fetch(1)
 TOKEN='fixture-fizzy-token'
 module FizzyFakeHttp
@@ -44,5 +45,6 @@ containers=[[],[['z',2],['a',3],['a',1]]].map do |pairs|
   message.define_singleton_method(:fizzy_cards) { cards }
   {cards:cards.map { |c| c.attributes.slice('id','account_id','number') },html:ApplicationController.renderer.render(partial:'fizzy/cards/cards',locals:{message:message})}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',requests:requests,responses:responses,urls:urls,containers:containers,sweep:{interval:Periodic::Runner::AGENT_SWEEP_INTERVAL.to_i,age:Fizzy::PerformAgentActionJob::STUCK_CLAIM_AFTER.to_i},account:{token:TOKEN,ciphertext:ActiveRecord::Encryption.encryptor.encrypt(TOKEN),secret_key_base:Rails.application.secret_key_base}},max_nesting:false)+"\n")
+ciphertext = ReplayEncryptionEntropy.with('fizzy') { ActiveRecord::Encryption.encryptor.encrypt(TOKEN) }
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),requests:requests,responses:responses,urls:urls,containers:containers,sweep:{interval:Periodic::Runner::AGENT_SWEEP_INTERVAL.to_i,age:Fizzy::PerformAgentActionJob::STUCK_CLAIM_AFTER.to_i},account:{token:TOKEN,ciphertext:ciphertext,secret_key_base:Rails.application.secret_key_base}},max_nesting:false)+"\n")
 puts "WS15e Fizzy Rails oracle: #{requests.size} requests, #{responses.size} responses, #{urls.size} URL cases, #{containers.size} content-free containers"

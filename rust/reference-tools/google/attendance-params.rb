@@ -23,4 +23,4 @@ shapes.each do |name,value|
     cases << {name:,location:,params:,status:client.response.status,frame_id:fragment.at_css('turbo-frame')&.[]('id'),input:fragment.at_css('input[name=message_id]')&.[]('value'),frame_tag:client.response.body[/<turbo-frame\b[^>]*>/],input_tag:client.response.body[/<input\b[^>]*\bname="message_id"[^>]*>/],body:client.response.status==200 ? client.response.body : nil}
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',event_id:event.id,cases:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],event_id:event.id,cases:})

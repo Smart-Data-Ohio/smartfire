@@ -27,5 +27,5 @@ cases = inputs.map do |c|
     since: (parsed + Rational(1001, 1_000_000_000)).utc.strftime('%Y-%m-%d %H:%M:%S.%6N'),
     ago: (parsed - Rational(1001, 1_000_000_000)).utc.strftime('%Y-%m-%d %H:%M:%S.%6N'))
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', cases:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases:) + "\n")
 puts "PR223 overflow Rails: #{cases.length * 3} parser/split outcomes; #{cases.length} render/JSON/offset boundaries"

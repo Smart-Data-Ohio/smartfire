@@ -43,7 +43,7 @@ class HuddleStageViewsOracle
       # Restore the deliberately omitted memberships for the next scenario.
       members.drop(included.length).each {|m|Membership.create!(id:m.id,room:room,user:m.user,stage_role:m.stage_role)}
     end
-    puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases})
   ensure
     travel_back
   end

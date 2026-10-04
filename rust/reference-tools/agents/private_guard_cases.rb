@@ -15,4 +15,4 @@ cases=inputs.map do |row|
   {name:row.fetch("name"),kind:row.fetch("kind"),results:results}
 end
 Resolv.define_singleton_method(:getaddresses,original)
-puts JSON.pretty_generate(reference_pin:"d7c7de92",cases:cases)
+puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases)

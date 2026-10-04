@@ -12,5 +12,5 @@ cases=%w[UTC America/New_York Europe/Berlin Pacific/Apia].flat_map do |zone|
   end
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',cases:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:)+"\n")
 puts "WS8bm2 review date Rails oracle: #{cases.size} compact/offset/DST cases in 4 zones"

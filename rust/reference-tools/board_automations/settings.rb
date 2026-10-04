@@ -1,6 +1,7 @@
 # Full HTTP responses and committed rules/audits. No response masks.
 require 'json'
 require 'digest'
+require File.join(ENV.fetch('PARITY_WORK'), 'reference-tools/icon_cache_inputs')
 require 'active_support/testing/time_helpers'
 include ActiveSupport::Testing::TimeHelpers
 travel_to Time.utc(2026,3,2,16)
@@ -77,14 +78,19 @@ cases=[
   end
   cases << ["choices-#{size}",'get',base,{},david,extra]
 end
+# The inactive-assignee validation fixture exercises an expired icon cache.
+# Raw old/new SQL identifies its historical extra read as Icons' version stamp.
+ICON_CACHE_INPUTS = { 'tag-inactive' => 'expired' }.freeze
 rows=[]
-cases.each do |name,method,path,input,user_id,extra|
+cases.each_with_index do |(name,method,path,input,user_id,extra), index|
   ActiveRecord::Base.transaction do
     setup=common+extra; setup.each{|sql|conn.execute(sql)}
     user=User.find(user_id)
     request=ActionDispatch::Request.new(Rails.application.env_config.merge('HTTP_HOST'=>'campfire.test','rack.input'=>StringIO.new))
     request.cookie_jar.signed[:session_token]=user.sessions.where.not(two_factor_verified_at:nil).first!.token
     browser=ActionDispatch::Integration::Session.new(Rails.application); browser.host! 'campfire.test'
+    icon_cache_state = ICON_CACHE_INPUTS.fetch(name, index.zero? ? 'initial' : 'warm')
+    icon_cache_started, icon_cache_state = OracleIconCacheInputs.prepare(icon_cache_state)
     selects=[]
     subscriber=ActiveSupport::Notifications.subscribe('sql.active_record') do |*args|
       event=args.last
@@ -92,6 +98,10 @@ cases.each do |name,method,path,input,user_id,extra|
     end
     browser.public_send(method,path,params: method=='get' ? nil : input.to_json,headers:{'Cookie'=>"session_token=#{Rack::Utils.escape(request.cookie_jar[:session_token])}",'Content-Type'=>'application/json','User-Agent'=>'Mozilla'})
     ActiveSupport::Notifications.unsubscribe(subscriber)
+    icon_cache_elapsed = OracleIconCacheInputs.verify!(icon_cache_started, name:name)
+    if ENV["PARITY_QUERY_TRACE"]
+      File.open(ENV.fetch("PARITY_QUERY_TRACE"), "a") { |file| file.puts(JSON.generate(name:name,icon_cache:icon_cache_state,icon_cache_elapsed:icon_cache_elapsed,sql:selects)) }
+    end
     rules=BoardSlaRule.where(room_id:board).order(:work_status).pluck(:work_status,:nudge_after_minutes,:escalate_after_minutes)
     tags=BoardTagAssignment.where(room_id:board).order(:tag).pluck(:tag,:assignee_id,:created_by_id)
     audits=AuditLog.where(action:'board.automation.change').order(:id).map{|a|[a.actor_id,a.target_type,a.target_id,a.details]}

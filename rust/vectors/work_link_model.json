@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "setup": [
     "INSERT INTO channel_threads(id,room_id,creator_id,name,work_status,created_at,updated_at,last_activity_at) VALUES(900083001,486777696,127326141,'Linked work','planned','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00'),(900083002,486777696,127326141,'Other work','planned','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
     "INSERT INTO events(id,room_id,organizer_id,title,starts_at,time_zone,created_at,updated_at) VALUES(900083003,486777696,127326141,'Same room','2026-03-03 16:00:00','UTC','2026-03-02 16:00:00','2026-03-02 16:00:00'),(900083004,654632876,127326141,'Other room','2026-03-03 16:00:00','UTC','2026-03-02 16:00:00','2026-03-02 16:00:00')",

@@ -26,7 +26,7 @@ cases += [
  {name:'dirty null cap',submitted:{daily_message_cap:nil},concurrent:{daily_message_cap:99}},
  {name:'dirty runtime with clean provider',submitted:{runtime:'Request A',provider:'Original'},concurrent:{provider:'Concurrent B'}}
 ]
-result={reference:'d7c7de92',initial:,cases:[]}
+result={reference:ENV.fetch("PARITY_REFERENCE_SHA"),initial:,cases:[]}
 cases.each do |case_data|
  bot.reload.update!(name:'Bender Bot')
  bot.agent.reload.update!(initial)

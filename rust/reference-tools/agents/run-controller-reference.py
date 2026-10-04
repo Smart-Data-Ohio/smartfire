@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Run committed, pinned Rails controller files in isolated reference containers."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import os
@@ -16,7 +18,7 @@ scratch = root / '.scratch/rails-controllers'
 scratch.mkdir(parents=True, exist_ok=True)
 
 def run(file):
-    pinned = subprocess.check_output(['git', 'show', 'd7c7de92:' + file], cwd=root)
+    pinned = subprocess.check_output(['git', 'show', PIN_FULL + ':' + file], cwd=root)
     assert pinned == (root / file).read_bytes(), file
     name = file.removeprefix('test/controllers/').removesuffix('.rb').replace('/', '-')
     storage = scratch / name
@@ -29,7 +31,7 @@ def run(file):
         '--user', f'{os.getuid()}:{os.getgid()}', '--env-file', str(root / 'rust/parity/.env.reference'),
         '-e', 'RAILS_ENV=test', '-e', 'PARITY_REDIS=1', '-e', 'BUNDLE_WITHOUT=development',
         '-v', f'{root / "test"}:/rails/test:ro', '-v', f'{storage / "db"}:/rails/storage/db',
-        '-v', f'{storage / "files"}:/rails/storage/files', 'ws11api-reference:d7c7de92', 'bin/rails', 'test', file,
+        '-v', f'{storage / "files"}:/rails/storage/files', PIN_IMAGE, 'bin/rails', 'test', file,
     ], capture_output=True, text=True)
     output = result.stdout + result.stderr
     (scratch / (name + '.log')).write_text(output)

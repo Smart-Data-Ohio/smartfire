@@ -1,4 +1,4 @@
-# Independent probes for PR #176 against Rails d7c7de92; real callbacks, failure triggers and HTTP client.
+# Independent probes for PR #176 at the current Rails reference pin; real callbacks, failure triggers and HTTP client.
 require 'active_support/testing/time_helpers'
 extend ActiveSupport::Testing::TimeHelpers
 ApplicationJob.queue_adapter = :test
@@ -148,4 +148,4 @@ rescue => e
   error=e.class.name
 end
 result[:deletion_removed_agent]={error:error,thread_exists:ChannelThread.exists?(thread.id),agent_exists:Agent.exists?(agent.id),events:AgentEvent.where("json_extract(metadata,'$.thread_id')=?",thread.id).count}
-puts JSON.pretty_generate({reference:'d7c7de92',results:result}.as_json)
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:result}.as_json)

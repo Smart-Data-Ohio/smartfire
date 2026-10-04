@@ -29,5 +29,5 @@ cases = inputs.map do |name, environment|
   {name: name, environment: environment, configured: Google::SignIn.configured?, domains: Google::SignIn.allowed_domains,
     body: renderer.render(template: 'sessions/new', layout: false)}
 end
-puts JSON.pretty_generate(reference: 'd7c7de92', cases: cases)
-warn "Rails Google sign-in display oracle: #{cases.size} complete sign-in bodies and configuration cases; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), cases: cases)
+warn "Rails Google sign-in display oracle: #{cases.size} complete sign-in bodies and configuration cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

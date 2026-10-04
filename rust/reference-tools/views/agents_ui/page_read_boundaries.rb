@@ -49,6 +49,6 @@ end
 menu = session.response.body[/<menu class="flex flex-column gap margin-none pad txt-align-start">.*?<\/menu>/m]
 raise 'missing approval menu' unless menu
 expiry = {status: session.response.status, rows:, body: menu}
-puts JSON.pretty_generate(reference: 'd7c7de92', tours:, expiry:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), tours:, expiry:)
 warn "Rails page-read boundaries: #{tours.size} tour values; #{rows.size} approvals; #{rows.count { |row| row[1] == 'expired' }} expired; #{rows.sum { |row| row[2] }} unhandled items"
 travel_back

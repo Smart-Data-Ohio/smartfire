@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[3]
 SCRATCH = Path(os.environ.get("WS8BM2_ORACLE_SCRATCH", ROOT / ".scratch/continuation-oracles"))
 SCRATCH.mkdir(parents=True, exist_ok=True)
 ENV = dict(os.environ, PARITY_NAMESPACE="ws8bm2", PARITY_OWNER="ws8bm2",
-           PARITY_RUNTIME="docker", PARITY_IMAGE="ws8bm2-reference:d7c7de92")
+           PARITY_RUNTIME="docker", PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"),
+           PARITY_REFERENCE_REVISION=(ROOT / "rust/parity/reference.sha").read_text().strip())
 NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links_files",
          "reminder_push", "quote_integration", "root_cache", "panels", "date_inputs", "review_saved_race", "review_dates", "date_compact_widths", "providers", "provider_edits", "event_cards", "date_coercions", "composer", "composer_sti", "twitter_preloads", "twitter_cards", "twitter_text", "provider_callbacks", "agent_command", "user_coercions", "date_years",
          "ws12_consumers", "provider_batch", "private_provider_pages", "search_headers",
@@ -23,16 +24,10 @@ MODES = {"relative_overflow_consumers": ("relative_consumers", ["overflow"])}
 # WS8BM2_ORACLE_NAMES=a,b replays a subset, e.g. the oracles a change regenerated.
 if os.environ.get("WS8BM2_ORACLE_NAMES"):
     NAMES = [name for name in NAMES if name in os.environ["WS8BM2_ORACLE_NAMES"].split(",")]
-# Main's #213 adds a stored non-HTTP quote case. Its golden uses the exact
-# reviewed Rails template revision, while every other corpus keeps the shared pin.
-TWITTER_ENV = dict(ENV, PARITY_IMAGE="ws8bm2-reference:twitter-955af4c37",
-                   PARITY_REFERENCE_REVISION="955af4c3781bef07b97b7aefce12c376110a812c")
-if subprocess.run(["docker", "image", "inspect", TWITTER_ENV["PARITY_IMAGE"]],
-                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
-    subprocess.run([str(ROOT / "rust/reference-tools/messaging/build-twitter-reference.sh")],
-                   cwd=ROOT, env=ENV, check=True)
+# The shared pin includes the accepted Twitter quote template; use the same image
+# for source verification and every replay, without a post-pin derivative.
 subprocess.run(["python3", str(ROOT / "rust/reference-tools/messaging/features-reference-check.py")],
-               cwd=ROOT, env=TWITTER_ENV, check=True)
+               cwd=ROOT, env=ENV, check=True)
 for name in NAMES:
     storage = Path(tempfile.mkdtemp(prefix=f"{name}-", dir=SCRATCH))
     shutil.copytree(ROOT / "rust/parity/.seed/default", storage, dirs_exist_ok=True)
@@ -41,14 +36,17 @@ for name in NAMES:
                "--time", "2026-03-02T16:00:00Z", "--freeze",
                str(ROOT / f"rust/reference-tools/{'embeds' if name in ('twitter_cards','twitter_text') else 'messaging'}/{script}.rb"),
                f"/rails/storage/db/{name}.json", *arguments]
-    run = subprocess.run(command, cwd=ROOT, env=TWITTER_ENV if name == "twitter_cards" else ENV, capture_output=True, text=True)
+    run = subprocess.run(command, cwd=ROOT, env=ENV, capture_output=True, text=True)
     (storage / "runner.log").write_text(run.stdout + run.stderr)
     assert run.returncode == 0, f"{name}: see {storage}/runner.log"
     actual = (storage / f"db/{name}.json").read_bytes()
-    expected = (ROOT / (f"rust/vectors/ws15e_{name}.json" if name in ("twitter_cards", "twitter_text") else f"rust/vectors/messaging/{name}.json")).read_bytes()
-    assert actual == expected, f"{name}: committed bytes differ from independently replayed Rails oracle"
+    target = ROOT / (f"rust/vectors/ws15e_{name}.json" if name in ("twitter_cards", "twitter_text") else f"rust/vectors/messaging/{name}.json")
+    if os.environ.get("WS8BM2_REGENERATE") == "1":
+        target.write_bytes(actual)
+    assert actual == target.read_bytes(), f"{name}: committed bytes differ from independently replayed Rails oracle"
     for line in run.stdout.splitlines():
         if line.startswith("WS8bm2"):
             print(line, flush=True)
     print(f"WS8bm2 oracle replay: {name}.json byte-identical", flush=True)
-print(f"WS8bm2 oracle replay: {len(NAMES)}/{len(NAMES)} independently replayed fixtures byte-identical", flush=True)
+action = "regeneration" if os.environ.get("WS8BM2_REGENERATE") == "1" else "replay"
+print(f"WS8bm2 oracle {action}: {len(NAMES)}/{len(NAMES)} independently replayed fixtures byte-identical", flush=True)

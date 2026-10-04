@@ -93,6 +93,6 @@ groups=[]
   groups << {kind:kind,size:size,embed_id:primary.id,sibling_id:sibling.id,opposite_id:opposite.id,suppressed_id:suppressed.id,thread_id:thread.id,old_ids:messages.map(&:id),rows:rows,jobs:jobs}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:groups)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:groups)+"\n")
 puts "WS8bm2 older-embed jobs Rails: 20 real network jobs; #{groups.sum { |g| g[:jobs].sum { |j| j[:frames].size } }} exact frames; 20 deduplicated same-provider sibling jobs; 8 silent outer/savepoint rollbacks"
 puts "WS8bm2 older-embed job Rails reads: #{groups.map { |g| [g[:kind],g[:size],g[:jobs].map { |j| j[:reads] }.join('/')].join(':') }.join(', ')}"

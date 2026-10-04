@@ -38,7 +38,7 @@ references = [
   { html: body, source: source, note: note, selected: selected }
 end
 File.write(output, JSON.pretty_generate({
-  reference: "d7c7de92", normalized: normal.map { |url| { url: url, expected: LinkEmbed.normalize_url(url) } },
+  reference: ENV.fetch("PARITY_REFERENCE_SHA"), normalized: normal.map { |url| { url: url, expected: LinkEmbed.normalize_url(url) } },
   classifier: texts.map { |text| { text: text, extracted: LinkEmbed::UrlClassifier.extract(text), special: LinkEmbed::UrlClassifier.special_url?(text), github: Github::PullRequestUrl.pull_request_url?(text) } },
   suppression: { sources: sources, suppressed: LinkEmbed::UrlClassifier.suppressed_urls(*sources), extracted: LinkEmbed::UrlClassifier.extract("https://example.com/kept https://example.com/hidden https://example.com/a/", suppressed: LinkEmbed::UrlClassifier.suppressed_urls(*sources)) },
   linkedin: linkedin.map { |text| { text: text, is_post: Linkedin::PostUrl.post_url?(text), embed: Linkedin::PostUrl.embed_url_for(text), extracted: Linkedin::PostUrl.extract(text).map { |r| { url: r.url, urn: r.urn } } } },

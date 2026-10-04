@@ -2,6 +2,9 @@
 # balanced, unique 128-shape corpus. The shared producer then records full HTTP bytes
 # and committed facts, independently of this classification (including all errors).
 require 'json'
+# The nil-tag validation fixture exercises the stamp refresh; other inputs start warm.
+# This makes the observed historical cache state explicit without changing captured SQL.
+REVIEW_ICON_CACHE_INPUTS = { 'scalar-tag-2' => 'expired' }.freeze
 statuses = ChannelThread::WORK_STATUSES
 valid = { 'nudge_after_minutes'=>'61', 'escalate_after_minutes'=>'241' }
 values = [nil, false, true, 0, 60, '', '60', [], [nil], ['60'], [{}], [valid], [[valid]], {}, valid,

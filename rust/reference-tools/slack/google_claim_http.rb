@@ -219,6 +219,6 @@ main_calls=$calls.dup
 # Keep review fixtures separate from the original 30-response ownership snapshots.
 backup_index=0
 review_results=eval(File.read(File.join(WORK,'reference-tools/slack/google_claim_review.rb')),binding,'google_claim_review.rb')
-output={reference:'d7c7de92',layout_reference:'2e20b24c',sources:sources.to_h {|p|[p,Digest::SHA256.file(Rails.root.join(p)).hexdigest]},columns:COLUMNS,initial:,rows:,calls:main_calls,review:review_results}
+output={reference:ENV.fetch("PARITY_REFERENCE_SHA"),layout_reference:ENV.fetch("PARITY_REFERENCE_SHA"),sources:sources.to_h {|p|[p,Digest::SHA256.file(Rails.root.join(p)).hexdigest]},columns:COLUMNS,initial:,rows:,calls:main_calls,review:review_results}
 File.write(File.join(WORK,'vectors/slack/google_claim_http.json'),JSON.pretty_generate(output)+"\n")
 puts "Google → Slack claim Rails oracle: #{rows.size} HTTP responses; 2 Google verifications; personal preview/import completed; #{COLUMNS.size} ownership tables per stage"

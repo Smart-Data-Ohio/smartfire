@@ -67,5 +67,5 @@ start = nil
     start = nil
   end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',parsed:,partials:,empty:,clear:,dates:,sections:,sections_data:,older:,older_empty:,steps:,word_ranges:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],parsed:,partials:,empty:,clear:,dates:,sections:,sections_data:,older:,older_empty:,steps:,word_ranges:)+"\n")
 puts "WS8bm2 search Rails oracle: #{parsed.size} parsed queries; #{partials.size} chip partials; 1 empty page; 1 clear stream; #{dates.size*3} zone/date selections; 1 populated sections partial; 1 load-older control; 1 empty older stream; #{steps.size} HTTP responses; #{word_ranges.size} Unicode word ranges"

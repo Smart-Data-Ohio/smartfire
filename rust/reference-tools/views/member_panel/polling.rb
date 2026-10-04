@@ -4,6 +4,7 @@ require "action_dispatch/testing/integration"
 ActiveRecord::Base.logger = nil
 root = ENV.fetch("PARITY_WORK")
 corpus = JSON.parse(File.read("#{root}/reference-tools/views/member_panel/polling_cases.json"))
+corpus["reference"] = ENV.fetch("PARITY_REFERENCE_SHA")
 labels = JSON.parse(File.read("#{root}/parity/.seed/default/labels.json"))
 corpus.fetch("cases").each do |entry|
   ActiveRecord::Base.transaction do

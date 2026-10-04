@@ -40,5 +40,5 @@ scenario.call do
   message = Message.find_by(client_message_id: 'review-initial')
   rows << {name: 'signed_initial', responses: [response], blob_id: message&.attachment&.blob&.id, count: message&.thread&.messages&.count}
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:) + "\n")
 puts "WS8bm thread-review oracle: #{rows.sum { |r| r[:responses].size }} actual Rails requests; boolean retry, failed closed-thread media rollback, signed initial attachment"

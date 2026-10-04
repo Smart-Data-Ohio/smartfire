@@ -1,4 +1,4 @@
-# Rails oracle at fec615be. Expectations are computed, never supplied by the input cases.
+# Rails oracle at parity/reference.sha. Expectations are computed, never supplied by the input cases.
 require "json"
 load "/tools/load_fixtures.rb"
 ActiveJob::Base.queue_adapter = :test
@@ -101,6 +101,6 @@ cases.each do |input|
 
   end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate({pin: "fec615be407f2350de9c364f78a322c4ad48a2cf", parsing: parsing, registry: registry, commands: commands, rows: rows}) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate({pin: ENV.fetch("PARITY_REFERENCE_SHA"), parsing: parsing, registry: registry, commands: commands, rows: rows}) + "\n")
 File.write(ARGV.fetch(1), JSON.pretty_generate(ActiveSupport::TimeZone::MAPPING)+"\n")
 puts "WS8 slash Rails vectors: #{parsing.size} parsing, #{registry.size} registry, #{commands.size} recognition, #{rows.size} dispatch/row/callback cases"

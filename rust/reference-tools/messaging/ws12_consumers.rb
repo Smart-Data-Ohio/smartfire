@@ -69,5 +69,5 @@ pages = []
  ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") { browser.get("/activity?type=threads", headers: headers.dup) }
  pages << { size: size, sql: sql, body: JSON.parse(browser.response.body), reads: queries.size, work_reads: queries.count { |q| q.match?(/FROM\s+"?work_thread_events"?/i) } }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", setup: setup, thread_id: thread.id, message_id: message.id, steps: steps, pages: pages) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], setup: setup, thread_id: thread.id, message_id: message.id, steps: steps, pages: pages) + "\n")
 puts "WS8bm2 WS12 consumer Rails: #{steps.size} workflow steps; work inbox #{pages.map { |p| "#{p[:size]} items=#{p[:reads]} reads/#{p[:work_reads]} work reads" }.join('; ')}"

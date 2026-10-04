@@ -1,9 +1,9 @@
 {
-  "reference": "d7c7de92",
+  "reference": "parity",
   "sources": {
     "app/controllers/channel_threads_controller.rb": "3be99780463dc3033c01ac82f8df206a27e1912b8234ef172383d2a229758f2c",
     "app/views/channel_threads/show.html.erb": "ca89dbda17176587431322aa093b23497fee5cb0e97f6ee90589f5515a5e0051",
-    "app/helpers/github/pull_requests_helper.rb": "9c9c2375c5c995bd0d65da29095bed3c9337265f3622ebcb21ca891f2c8b5cd1",
+    "app/helpers/github/pull_requests_helper.rb": "e523f2efcf70b2c3a273e66619f0bfe4c795f666233da9da52af4e8b5d105162",
     "app/views/github/pull_requests/_thread_header.html.erb": "982ca0f51e30548d00a0b7ed92951377c2d3bce4e04fae8a02087e33b17c6936"
   },
   "thread_id": 8,

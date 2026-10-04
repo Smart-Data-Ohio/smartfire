@@ -1,5 +1,5 @@
 {
-  "reference_pin": "d7c7de92",
+  "reference_pin": "78b9b154",
   "notes": [
     "Each request commits in a private restored seed. Bodies and selected headers are compared as raw bytes. Ledger chains are checked for a shared UUID independently because production UUIDs are random; no response fields are masked."
   ],

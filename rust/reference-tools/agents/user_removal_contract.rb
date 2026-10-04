@@ -23,5 +23,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
     own_message:Message.exists?(own.id),other_message:Message.exists?(other.id),pins:MessagePin.where(id:[own_pin.id,other_pin.id]).count,
     boosts:Boost.where(booster_id:bot.id).count,saves:SavedItem.where(user_id:bot.id).count,thread:ChannelThread.exists?(thread.id),
     survivor_owner:survivor.reload.work_owner_id,memberships:Membership.where(user_id:bot.id).count}
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:results}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results}.as_json)
 end

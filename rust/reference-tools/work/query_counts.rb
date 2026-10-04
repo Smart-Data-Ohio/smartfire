@@ -53,5 +53,5 @@ rows = []
   measure.call('/rooms/486777696/threads/91', 'ordinary-history')
   measure.call('/rooms/699448332/threads/90', 'board-history')
 end
-puts JSON.pretty_generate({ 'reference' => 'd7c7de92 plus approved board drift', 'rows' => rows })
+puts JSON.pretty_generate({ 'reference' => ENV.fetch("PARITY_REFERENCE_SHA"), 'rows' => rows })
 rows.each { |row| warn "Rails query oracle #{row['surface']} size=#{row['size']}: #{row['queries']} SQL; #{row['cached']} cached" }
