@@ -12,6 +12,8 @@ const actions='controllers/message_actions_controller-';
 const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
+  ['uploading a fresh video in the thread composer',['native-upload']],
+  ['late upload progress preserves a delivered attachment and reply preview',['native-upload']],
   ...actionMutations,
   ['From Google Drive starts the legacy picker flow',['messages-','.message__quick-reaction {','.drive-picker__item { opacity: 0 !important; }\n.message__quick-reaction {']],
   ...['attach Drive files from the picker, send textless, and remove through edit','edit a room message in the composer and remove one of two attachments'].map(name=>[name,['messages-','.message__quick-reaction {','.drive-attachments .drive-chip__name { opacity: 0 !important; }\n.message__quick-reaction {']]),

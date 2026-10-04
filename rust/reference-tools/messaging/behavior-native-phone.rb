@@ -6,10 +6,10 @@ require "capybara/minitest"
 require "selenium-webdriver"
 require "minitest/autorun"
 location = JSON.parse(File.read("/proof/native-location.json"))
-if %w[attachment release].include?(location.fetch("label"))
+if %w[attachment release video progress].include?(location.fetch("label"))
   require "/rails/config/environment"
   require "active_support/testing/assertions"
-  ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ENV.fetch("WS8BM_NATIVE_DATABASE"), flags: SQLite3::Constants::Open::READONLY)
+  ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ENV.fetch("WS8BM_NATIVE_DATABASE"), flags: location.fetch("label") == "video" ? SQLite3::Constants::Open::READWRITE : SQLite3::Constants::Open::READONLY)
 end
 require "/proof/system_test_helper"
 raise "wrong Capybara version" unless Capybara::VERSION == "3.40.0"
@@ -38,6 +38,29 @@ class Ws8bmNativePhoneTest < Minitest::Test
     raise "unsupported native fixture" unless name == :third
     Message.find(607264868)
   end
+  BROADCAST_WAIT = File.exist?("/proof/application_system_test_case.rb") ? File.read("/proof/application_system_test_case.rb").match(/BROADCAST_WAIT = (\d+)/)[1].to_i : 15
+  def rooms(name)
+    raise "unsupported native room fixture" unless name == :designers
+    Room.find(654632876)
+  end
+  def users(name)
+    raise "unsupported native user fixture" unless name == :jz
+    User.find(773523953)
+  end
+  def room_url(room, thread:)
+    Capybara.app_host + "/rooms/#{room.id}?thread=#{thread}"
+  end
+  def file_fixture(name)
+    Pathname.new(ENV.fetch("WS8BM_NATIVE_FIXTURES")).join(name)
+  end
+  def perform_enqueued_jobs(only:)
+    raise "wrong job filter" unless only == Message::AttachmentProcessingJob
+    require "net/http"
+    response = Net::HTTP.post(URI(Capybara.app_host + "/__ws8bm__/attachment-processing"), "", "Content-Type" => "application/json")
+    raise "explicit server job execution failed: #{response.code} #{response.body}" unless response.code == "200"
+    page.execute_script "window.__ws8bmVideoJobPerformed=true"
+    puts "WS8bm native attachment jobs: #{response.body}"
+  end
   def setup
     if ENV["WS8BM_NATIVE_PROXY"]
       # Match translated served negatives: fetch the real mutated assets,
@@ -50,7 +73,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
     cookie = JSON.parse(File.read("/proof/sessions.json"))["sessions"].find { |entry| entry["user_name"] == "JZ" }["cookie_header"]
     name, value = cookie.split("=", 2)
     page.driver.browser.manage.add_cookie(name: name, value: value, path: "/")
-    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "attachment"
+    if %w[attachment video progress].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
       # Remote ChromeDriver shares the mounted file path with Ruby. Match the
       # pinned local Selenium driver's native file-input action; no /se/file
       # Grid transfer endpoint or replacement browser write is involved.
@@ -64,14 +87,14 @@ class Ws8bmNativePhoneTest < Minitest::Test
     page.document.synchronize(15) do
       raise Capybara::ExpectationNotMet, "Stimulus startup" unless page.evaluate_script('!!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById("composer"),"composer")')
     end
-    if %w[motion attachment].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
+    if %w[motion attachment video progress].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
       wait_for_cable_connection
       dismiss_pwa_install_prompt
     else
       assert_selector 'turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]', visible: :all, wait: 15
     end
     # Match Rails.env.test?'s pinned layout input; this is not server parity credit.
-    unless JSON.parse(File.read("/proof/native-location.json"))["label"] == "attachment"
+    unless %w[attachment video progress].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
       page.execute_script('document.documentElement.setAttribute("data-test-motion","off")')
     end
     page.execute_script(<<~'JS')
@@ -115,7 +138,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
       attached = parent ? Message.joins(:attachment_blob).where(reply_to_message_id: parent.id).pluck("messages.id", "messages.reply_to_message_id", "messages.reply_notify_author", "active_storage_blobs.filename", "active_storage_blobs.byte_size") : []
       puts "WS8bm native attachment blob readback: #{JSON.generate(attached)}"
       puts "WS8bm native attachment saved readback: #{JSON.generate(Message.where("id > ?", 908005739).order(:id).pluck(:id, :reply_to_message_id, :reply_notify_author))}"
-    elsif %w[motion release].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
+    elsif %w[motion release video progress].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
       begin
         begin
           driver=page.driver.browser
@@ -124,7 +147,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
         rescue StandardError => error
           puts "WS8bm native log diagnostic failure: #{error.class}: #{error.message}"
         end
-        state=page.evaluate_script('(() => { const surface=document.querySelector("#sidebar .sidebar__container"); return {room:location.pathname,open:document.querySelector("#sidebar")?.classList.contains("open"),duration:surface?getComputedStyle(surface).transitionDuration:null,transform:surface?getComputedStyle(surface).transform:null,releaseClicks:window.__ws8bmReleaseClicks,releaseGeometry:window.__ws8bmReleaseGeometry,contextScopes:[...document.querySelectorAll("[data-composer-target=context]")].map(node=>({form:node.closest("form")?.id,hidden:node.hidden}))}; })()')
+        state=page.evaluate_script('(() => { const surface=document.querySelector("#sidebar .sidebar__container"); return {room:location.pathname,open:document.querySelector("#sidebar")?.classList.contains("open"),duration:surface?getComputedStyle(surface).transitionDuration:null,transform:surface?getComputedStyle(surface).transform:null,videoJobPerformed:window.__ws8bmVideoJobPerformed,videoFaultSeen:window.__ws8bmVideoFaultSeen,progressFault:window.__ws8bmProgressFault,releaseClicks:window.__ws8bmReleaseClicks,releaseGeometry:window.__ws8bmReleaseGeometry,contextScopes:[...document.querySelectorAll("[data-composer-target=context]")].map(node=>({form:node.closest("form")?.id,hidden:node.hidden}))}; })()')
         puts "WS8bm native mutation state: #{JSON.generate(state)}"
       rescue StandardError => error
         puts "WS8bm native diagnostic failure: #{error.class}: #{error.message}"

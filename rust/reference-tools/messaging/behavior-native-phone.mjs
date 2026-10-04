@@ -37,7 +37,17 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     const source=execFileSync('git',['show',`${PIN}:${sourcePath}`],{cwd:root,encoding:'utf8'});
     const {body,helpers}=extract(source);
     writeFileSync(proof+'/phone-body.rb',body);writeFileSync(proof+'/phone-helpers.rb',helpers);
+    if(['video','progress'].includes(label)) {
+      const name=label==='video'?'uploading a fresh video in the thread composer':'late upload progress preserves a delivered attachment and reply preview';
+      line=source.split('\n').findIndex(row=>row.trim()===`test "${name}" do`)+1;
+      assert.ok(line>0,'native upload source line');
+    }
     writeFileSync(proof+'/native-location.json',JSON.stringify({sourcePath,line,label}));
+    if(['video','progress'].includes(label)) {
+      const upload=label==='video'?'alpha-centuri.mov':'moon.jpg';
+      writeFileSync(temp+'/'+upload,execFileSync('git',['show',`${PIN}:test/fixtures/files/${upload}`],{cwd:root,maxBuffer:16*1024*1024}));
+      writeFileSync(proof+'/application_system_test_case.rb',execFileSync('git',['show',`${PIN}:test/application_system_test_case.rb`],{cwd:root}));
+    }
     writeFileSync(proof+'/system_test_helper.rb',execFileSync('git',['show',`${PIN}:test/test_helpers/system_test_helper.rb`],{cwd:root}));
     writeFileSync(proof+'/sessions.json',readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url)));
     // Refuse an occupied port; never reuse or stop someone else's driver.
@@ -54,7 +64,11 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
       await new Promise(resolve=>setTimeout(resolve,50));
     }
     console.log(`WS8bm native ${label} source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; ${label==='attachment'?'original behavior body; shared file path adapted':label==='release'?"original behavior body/helpers; main's #composer scope retained":'unchanged behavior body/helpers, screenshots omitted'}`);
-    const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:ro`,'-v',`${temp}:${temp}`]:[];
+    const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:${label==='video'?'rw':'ro'}`,'-v',`${temp}:${temp}`]:[];
+    if(['video','progress'].includes(label)) {
+      const storage=database.includes('/.instances/')?dirname(dirname(database))+'/storage':dirname(dirname(database))+'/files';
+      extra.push('-v',`${storage}:/rails/storage/files`,'-v',`${storage}:/rails/tmp/storage`,'-e',`WS8BM_NATIVE_FIXTURES=${temp}`,'-e','WS8BM_TEST_JOB_ADAPTER=1');
+    }
     if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
     if(mutation||Number(process.env.WS8BM_SETUP_DELAY||0)) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}
     const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',REFERENCE_IMAGE,'exec','ruby','/tools/behavior-native-phone.rb'];
@@ -74,7 +88,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     const states=[...result.stdout.matchAll(/^WS8bm native mutation state: (.+)$/gm)].map(match=>JSON.parse(match[1]));
     const failures=[...result.stdout.matchAll(/^WS8bm native failures: (.+)$/gm)].flatMap(match=>JSON.parse(match[1]));
     probe.observed=states;probe.nativeFailures=failures;
-    probe.ready=states.some(state=>label==='release'?state.room==='/rooms/654632876'&&(state.releaseGeometry?.inMenu||state.releaseClicks?.some(click=>click.atPressPoint&&click.menuVisible)):state.room==='/rooms/201306877'&&state.open);
+    probe.ready=states.some(state=>['video','progress'].includes(label)?state.room==='/rooms/654632876'&&(label==='video'?state.videoJobPerformed:state.progressFault?.delivered):label==='release'?state.room==='/rooms/654632876'&&(state.releaseGeometry?.inMenu||state.releaseClicks?.some(click=>click.atPressPoint&&click.menuVisible)):state.room==='/rooms/201306877'&&state.open);
     assert.equal(result.status,0,`native pinned ${label} failed: ${result.error||result.signal||result.status}`);
   } finally {
     try {

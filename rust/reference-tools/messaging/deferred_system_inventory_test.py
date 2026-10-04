@@ -132,6 +132,17 @@ class DeferredSystemInventoryTest(unittest.TestCase):
                 self.assertTrue(case['closure_note'].strip())
                 self.assertGreaterEqual(case['closure_proof']['positive_runs']['Rust']['passed'], 10)
 
+    def test_new_upload_closures_require_ten_pairs(self):
+        for name in ('uploading a fresh video in the thread composer', 'late upload progress preserves a delivered attachment and reply preview'):
+            case = self.causal_pass()
+            case['name'] = name
+            self.assertIn('135 mapped behaviour passes', self.verify(case))
+            for app in ('Rails', 'Rust'):
+                wrong = copy.deepcopy(case)
+                wrong['closure_proof']['positive_runs'][app]['passed'] = 9
+                with self.subTest(name=name, app=app), self.assertRaisesRegex(AssertionError, 'requires 10'):
+                    self.verify(wrong)
+
 
 if __name__ == '__main__':
     unittest.main()

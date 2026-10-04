@@ -28,7 +28,9 @@ def prepare_source(root):
             if b"async fn ws8bm_browser_host_without_jobs()" not in content:
                 content += (source / "reference-tools/messaging/browser-host.rs").read_bytes()
             content = content.replace(b"    let front = campfire_kit::front::FrontConfig::from_env();", b"    ws8bm_install_drive_client(&app);\n    let front = campfire_kit::front::FrontConfig::from_env();")
+            content = content.replace(b"        app.booted.router.clone(),", b"        app.booted.router.clone().merge(ws8bm_attachment_job_router(&app)),")
             content += (source / "reference-tools/messaging/browser-drive-client.rs").read_bytes()
+            content += (source / "reference-tools/messaging/browser-attachment-jobs.rs").read_bytes()
         if not path.exists() or path.read_bytes() != content:
             path.write_bytes(content)
     # Main's cfg(test) modules also read tracked agents_ui cast/replay inputs

@@ -1,3 +1,4 @@
+import {nativeUpload,uploadCases} from './behavior-native-uploads.mjs';
 import {PIN} from './reference-pin.mjs';
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
@@ -44,6 +45,9 @@ const selectedMutant=process.env.WS8BM_MUTANT;
 async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
+    if(uploadCases.includes(caseName)) {
+      await nativeUpload(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],caseName,probe,negative||!!selectedMutant);return;
+    }
     if(caseName===RELEASE_CASE) {
       await nativeRelease(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],probe,negative||!!selectedMutant,variant);return;
     }
