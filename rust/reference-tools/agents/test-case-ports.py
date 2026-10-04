@@ -53,6 +53,30 @@ class Discovery(unittest.TestCase):
         self.assertNotIn('missing_test', ports.rust_ports(source))
 
 
+class CasePortReferences(unittest.TestCase):
+    def test_current_pin_overrides_mapping_reference(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            private_root = Path(scratch)
+            checker = private_root / 'rust/reference-tools/agents/check-case-ports.py'
+            checker.parent.mkdir(parents=True)
+            mapping = json.loads(Path(ports.__file__).with_name('case-ports.json').read_text())
+            mapping['reference_pin'] = 'missing-historical-pin'
+            mapping['files'] = mapping['files'][:1]
+            inputs = {Path('rust/parity/reference.sha')}
+            for group in mapping['files']:
+                inputs.update((Path(group['rails_file']), Path(group['rust_file'])))
+            for name in inputs:
+                target = private_root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(root / name, target)
+            checker.with_name('case-ports.json').write_text(json.dumps(mapping))
+            (private_root / '.git').symlink_to(root / '.git')
+            with mock.patch.object(ports, 'ROOT', private_root), \
+                    mock.patch.object(ports, '__file__', str(checker)), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                ports.check()
+
+
 class NamedApiCredits(unittest.TestCase):
     def setUp(self):
         scratch = tempfile.TemporaryDirectory()
@@ -61,6 +85,7 @@ class NamedApiCredits(unittest.TestCase):
         self.ledger_path = self.root / 'rust/plans/ws11api-named-api-cases.json'
         self.ledger = json.loads((root / self.ledger_path.relative_to(self.root)).read_text())
         inputs = {self.ledger_path.relative_to(self.root), Path(self.ledger['audit_source']),
+                  Path('rust/parity/reference.sha'),
                   Path('rust/plans/ws11api-next-5-controls.json')}
         for case in self.ledger['cases']:
             inputs.add(Path(case['rails_file']))
@@ -88,6 +113,10 @@ class NamedApiCredits(unittest.TestCase):
             named_api.check(self.log if log is None else log)
 
     def test_real_ledger_and_all_passes(self):
+        self.check()
+
+    def test_current_pin_overrides_historical_ledger_reference(self):
+        self.ledger['reference'] = 'missing-historical-pin'
         self.check()
 
     def test_redirected_test_with_only_nineteen_passes(self):

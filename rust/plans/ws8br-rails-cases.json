@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "note": "Source declarations are distinct from actual executions. Rails reference passes are recorded per file from the supplied raw log; they do not imply Rust case completion. Named Rust ports require their own cargo receipts.",
   "files": [
     {
@@ -1820,7 +1820,7 @@
       "file": "test/controllers/users/sidebars_controller_test.rb",
       "owner": "WS8br",
       "reference_file_present": true,
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "declared_cases": [
         {
           "name": "show",
@@ -1830,25 +1830,25 @@
         },
         {
           "name": "unread directs",
-          "line": 29,
+          "line": 36,
           "rust_test": "controllers::rooms::sidebars_rails_cases::unread_directs",
           "rust_result": "passed"
         },
         {
           "name": "unread other",
-          "line": 36,
+          "line": 43,
           "rust_test": "controllers::rooms::sidebars_rails_cases::unread_other",
           "rust_result": "passed"
         },
         {
           "name": "quiet rows keep the room name as their exact link text",
-          "line": 44,
+          "line": 51,
           "rust_test": "controllers::rooms::sidebars_rails_cases::quiet_rows_keep_the_room_name_as_their_exact_link_text",
           "rust_result": "passed"
         },
         {
           "name": "channel row shows the live huddle stack with names and count",
-          "line": 54,
+          "line": 61,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1868,7 +1868,7 @@
         },
         {
           "name": "board row shows the live huddle stack with names and count",
-          "line": 73,
+          "line": 80,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1888,7 +1888,7 @@
         },
         {
           "name": "direct row shows the live huddle stack when the peer is in the call",
-          "line": 92,
+          "line": 99,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1908,7 +1908,7 @@
         },
         {
           "name": "quiet rows keep an empty stack target with no visible presence",
-          "line": 106,
+          "line": 113,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1928,7 +1928,7 @@
         },
         {
           "name": "direct row re-renders when a participant joins",
-          "line": 119,
+          "line": 126,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1948,7 +1948,7 @@
         },
         {
           "name": "group direct rooms render member names and a huddle stack",
-          "line": 147,
+          "line": 154,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1968,13 +1968,13 @@
         },
         {
           "name": "direct rows keep avatar card triggers as siblings of the room link",
-          "line": 161,
+          "line": 168,
           "rust_test": "controllers::rooms::sidebars_rails_cases::direct_rows_keep_avatar_card_triggers_as_siblings_of_the_room_link",
           "rust_result": "passed"
         },
         {
           "name": "no channel or DM stacks without huddle configuration",
-          "line": 181,
+          "line": 188,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1994,7 +1994,7 @@
         },
         {
           "name": "sidebar query count does not grow with quiet channels, DMs, boards, and stages",
-          "line": 193,
+          "line": 200,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -2014,7 +2014,7 @@
         },
         {
           "name": "sidebar query count does not grow with group DMs, named or not",
-          "line": 215,
+          "line": 222,
           "rust_test": "controllers::rooms::sidebars_rails_cases::sidebar_query_count_does_not_grow_with_group_dms_named_or_not",
           "rust_result": "passed"
         }
@@ -2583,7 +2583,7 @@
       "file": "test/controllers/users/cards_controller_test.rb",
       "owner": "WS8br2",
       "reference_file_present": true,
-      "source_sha256": "3d814cf70fe76721f69cf9437ab87ed081eef99361b4d26496ec93f7c4ee845c",
+      "source_sha256": "fc4ad3fb952d1cac3601157e44715bb30c19f53f58a39b0e426bd08f370c5c94",
       "declared_cases": [
         {
           "name": "card shows identity, presence, role, and actions for a peer",
@@ -2593,37 +2593,37 @@
         },
         {
           "name": "offline peers read offline",
-          "line": 25,
+          "line": 26,
           "cutover_id": "P0208",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "card shows the presence dot and custom status badge",
-          "line": 32,
+          "line": 33,
           "cutover_id": "P0209",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "your own card offers editing your profile instead",
-          "line": 45,
+          "line": 46,
           "cutover_id": "P0210",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "agents can be messaged but not called",
-          "line": 56,
+          "line": 58,
           "cutover_id": "P0211",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "inactive users show status without message actions",
-          "line": 68,
+          "line": 70,
           "cutover_id": "P0212",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "card requires sign-in",
-          "line": 79,
+          "line": 81,
           "cutover_id": "P0213",
           "cutover_disposition": "acceptance-receipt-pending"
         }
@@ -3548,7 +3548,7 @@
       "file": "test/system/channel_members_test.rb",
       "owner": "WS8br",
       "reference_file_present": true,
-      "source_sha256": "4ec15c976acd9a9d9fcf667926fdc6fb2f2b19e9e12f80436fec7e87bf68ca9a",
+      "source_sha256": "fbf48ad6e1175b9c5ccfef62e7607796a1b25fa8e703f8a42ebe1f524f7c2d8b",
       "declared_cases": [
         {
           "name": "members are online across channels and go offline after signing out",
@@ -3685,7 +3685,7 @@
       "file": "test/system/first_run_tour_test.rb",
       "owner": "WS8br2",
       "reference_file_present": true,
-      "source_sha256": "4a553c1fccf9c3d8d93c50ed330096b7aaa875bea4c7027b28172457d94e46bf",
+      "source_sha256": "f8dc49c86b6e9130bdebcc6343074c1ad9efa92202d7a8b0de5f3d02a07ebbc7",
       "declared_cases": [
         {
           "name": "a new member is walked through the tour by keyboard and finishing persists",
@@ -3696,21 +3696,21 @@
         },
         {
           "name": "escape skips the tour and it never auto-starts again",
-          "line": 44,
+          "line": 45,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0301",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "the tour restarts from the help menu",
-          "line": 58,
+          "line": 60,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0302",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "members who completed the tour never see it auto-start",
-          "line": 72,
+          "line": 75,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0303",
           "cutover_disposition": "acceptance-receipt-pending"
@@ -4252,7 +4252,7 @@
       "file": "test/system/people_group_dms_test.rb",
       "owner": "WS8br DM/member shell; WS8br2 people/profile; WS13 configured calls; WS11 agents",
       "reference_file_present": true,
-      "source_sha256": "4e4e8311e972e3eb75eb8014d21add10f17fef1e8c6e00c51fd2baf778b8b35f",
+      "source_sha256": "fed21f01a33769d460f7b5ff760fd3e5f7aded7cc98abb39b92db913d997e00f",
       "declared_cases": [
         {
           "name": "clicking a message author opens their profile card and Message lands in the DM",
@@ -4369,21 +4369,21 @@
         },
         {
           "name": "starting a group huddle rings every other member",
-          "line": 340,
+          "line": 344,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0370",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "Esc closes only the profile card inside the mobile member panel",
-          "line": 360,
+          "line": 364,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0371",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "Tab cycles within the profile card opened from the member panel",
-          "line": 384,
+          "line": 388,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0372",
           "cutover_disposition": "acceptance-receipt-pending"
@@ -4559,7 +4559,7 @@
       "file": "test/system/service_worker_test.rb",
       "owner": "WS8br2",
       "reference_file_present": true,
-      "source_sha256": "8f16fcce87f015abd7df2040b219dfd22bd2cf159c36197061b10bba74d52482",
+      "source_sha256": "ab8ed8be3e610b3ffdbfe328536a143b127e42ff0a7f78216c10e7652fef1b8c",
       "declared_cases": [
         {
           "name": "the worker caches static assets and never authenticated responses",
@@ -4969,7 +4969,7 @@
       "file": "test/system/unread_rooms_test.rb",
       "owner": "WS8br",
       "reference_file_present": true,
-      "source_sha256": "f900f9573626e923c07d0d97be3b094862702cc77b90d0543e3f4a04689c81c5",
+      "source_sha256": "e1faebcc4d71ccb18c10d73348d36314fdc873a9f62ba1ade482dd54955adaf1",
       "declared_cases": [
         {
           "name": "sending messages between two users",
@@ -4980,7 +4980,7 @@
         },
         {
           "name": "channel and DM rows keep exactly one unread badge next to the huddle stack",
-          "line": 27,
+          "line": 46,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0412",
           "cutover_disposition": "acceptance-receipt-pending"
@@ -5160,5 +5160,24 @@
     "geometry_only_excluded": 3,
     "partial": true,
     "broad_original_receipts_superseded": 9
+  },
+  "source_pin_refresh": {
+    "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+    "generator": "rust/reference-tools/rooms/deferred_inventory.py",
+    "historical_declaration_reference": "d7c7de92",
+    "original_declarations_and_receipts_preserved": true,
+    "additional_current_pin_declarations_without_receipt_credit": [
+      {
+        "file": "test/controllers/users/sidebars_controller_test.rb",
+        "name": "your profile opens your card, falling back to the profile page",
+        "line": 29
+      },
+      {
+        "file": "test/system/unread_rooms_test.rb",
+        "name": "a live message in the current room leaves its row without a New badge",
+        "line": 27,
+        "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+      }
+    ]
   }
 }

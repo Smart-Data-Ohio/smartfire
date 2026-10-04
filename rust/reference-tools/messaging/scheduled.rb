@@ -56,5 +56,5 @@ call.call(:post, "/scheduled_messages/#{id}/send_now", {})
 call.call(:delete, "/scheduled_messages/#{draft.id}", {})
 call.call(:post, path, { scheduled_message: { markdown_source: "Hawaii", send_at: "2026-03-03T09:00" } }, "Hawaii")
 call.call(:post, path, { scheduled_message: { markdown_source: "Gap", send_at: "2026-03-08T02:30" } }, "Eastern Time (US & Canada)")
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", draft_id: draft.id, steps:, html:, empty:, composer:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], draft_id: draft.id, steps:, html:, empty:, composer:) + "\n")
 puts "WS8bm2 scheduled Rails oracle: #{steps.size} HTTP responses; #{html.size} row partials; 1 empty page; #{composer.size} composer controls"

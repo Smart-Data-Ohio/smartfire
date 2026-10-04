@@ -56,7 +56,7 @@ cases = inputs.map do |input|
 end
 urls = [nil, '', ' ', 'TFIXTURE'].map { |team| { 'team' => team, 'url' => Slack::OAuth.authorize_url(client_id: 'client +&', redirect_uri: 'https://example.invalid/slack/oauth/callback', state: 'raw +state', team_id: team) } }
 verifier = Rails.application.message_verifier('slack_oauth_state')
-result = { 'reference' => 'd7c7de9264c63015be398001d7a1094e7695a6db', 'cases' => cases, 'authorize' => urls,
+result = { 'reference' => ENV.fetch("PARITY_REFERENCE_SHA"), 'cases' => cases, 'authorize' => urls,
  'manifest' => Slack::AppManifest.to_json(base_url: 'https://example.invalid'),
  'state' => { 'raw' => 'fixture-state', 'signed' => verifier.generate('fixture-state'), 'secret_key_base' => ENV.fetch('SECRET_KEY_BASE') } }
 File.write(File.join(ENV.fetch('PARITY_WORK'), 'vectors/slack/oauth.json'), JSON.pretty_generate(result) + "\n")

@@ -71,10 +71,11 @@ FILES = [
     "app/views/users/_mention.html.erb",
     "config/icons.yml",
 ]
-image = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
+PIN = (ROOT / "rust/parity/reference.sha").read_text().strip()
+image = os.environ.get("PARITY_IMAGE", "campfire-reference")
 output = subprocess.check_output(["docker", "run", "--rm", "--name", f"ws8bm-reference-check-{os.getpid()}",
                                   "--entrypoint", "sha256sum", image, *[f"/rails/{p}" for p in FILES]], text=True)
-expected = {p: hashlib.sha256(subprocess.check_output(["git", "show", f"d7c7de92:{p}"], cwd=ROOT)).hexdigest() for p in FILES}
+expected = {p: hashlib.sha256(subprocess.check_output(["git", "show", f"{PIN}:{p}"], cwd=ROOT)).hexdigest() for p in FILES}
 
 
 def verify(rows):
@@ -98,5 +99,5 @@ for mutation in [changed, rows[:-1]]:
         pass
     else:
         raise AssertionError("Source verification accepted injected drift")
-print(f"WS8bm reference source check: {len(FILES)} controller, model, helper, template and icon files match d7c7de92")
+print(f"WS8bm reference source check: {len(FILES)} controller, model, helper, template and icon files match {PIN}")
 print("WS8bm reference check self-test: 2 injected source-byte/file-set differences rejected")

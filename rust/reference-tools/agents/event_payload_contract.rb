@@ -59,5 +59,5 @@ travel_to Time.utc(2026,3,2,16) do
       missing[kind]="#{error.class}: #{error.message}"
     end
   end
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",payloads:payloads,missing:missing)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],payloads:payloads,missing:missing)
 end

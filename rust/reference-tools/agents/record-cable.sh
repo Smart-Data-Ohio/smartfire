@@ -3,7 +3,7 @@
 set -euo pipefail
 RUST_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$RUST_ROOT"
-export PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE=triage-reference-d7c7de92
+export PARITY_NAMESPACE=ws11 PARITY_OWNER=ws11 PARITY_IMAGE="${PARITY_IMAGE:-campfire-reference}"
 export TMPDIR="$RUST_ROOT/../.scratch" CARGO_TARGET_DIR="$RUST_ROOT/target" CABLE_TEST_PORT_RANGE=52200-52239
 mkdir -p "$TMPDIR/cable"
 if docker container inspect ws11-reference-52240 >/dev/null 2>&1; then
@@ -18,4 +18,4 @@ CHANNELS_REFERENCE_PORT=52240 CHANNELS_REFERENCE_CONTAINER=ws11-reference-52240 
   mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire channels::tests::golden::record_reference -- --ignored --nocapture
 CABLE_REFERENCE_URL=ws://127.0.0.1:52240/cable CABLE_REFERENCE_FIXTURES="$TMPDIR/cable/cable-fixtures.json" \
   mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire_cable --test golden record_reference -- --ignored --nocapture
-printf '%s\n' 'WS11 cable recording: both Rails goldens regenerated (d7c7de92)'
+printf 'WS11 cable recording: both Rails goldens regenerated (%s)\n' "$(cat parity/reference.sha)"

@@ -121,6 +121,6 @@
   ],
   "sources": {
     "test/system/board_automations_test.rb": "8b837f49fbbc24f69b2d2bd7139950379882fdc3c46ac5bedf9d97e5793e8ad3",
-    "test/system/boards_test.rb": "28037897cd2ff9b20dbfe92da81c559a93fcb4dfd9d67b5c4c9052b90cca6f22"
+    "test/system/boards_test.rb": "7ffffb75f39c9fe215128730a17d0abea0887620a76c39dbcfd62ca7512f2e53"
   }
 }

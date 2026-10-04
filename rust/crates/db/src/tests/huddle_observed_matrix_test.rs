@@ -201,7 +201,7 @@ fn oracle() -> Value {
     serde_json::from_str(&input).unwrap()
 }
 fn partition(part: usize) {
-    let oracle = oracle();assert_eq!(oracle["reference_pin"],"d7c7de92");
+    let oracle = oracle();assert_eq!(oracle["reference_pin"],&include_str!("../../../../parity/reference.sha").trim()[..8]);
     assert!(!oracle["cases"].as_array().unwrap().is_empty(),"Rails corpus is required");
     let mut failures = Vec::new();let mut count = 0;let mut observations = Vec::new();
     for (index,case) in oracle["cases"].as_array().unwrap().iter().enumerate() {

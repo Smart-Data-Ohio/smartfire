@@ -37,5 +37,5 @@ rows=[]
   github:message.github_pull_requests.map{|pr|[pr.owner,pr.repo,pr.number]},twitter:message.twitter_posts.map(&:post_id),
   frames:frames.select{|frame|frame[:stream].end_with?(':messages')}}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',root_id:root.id,thread_id:thread.id,reply_id:reply.id,rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],root_id:root.id,thread_id:thread.id,reply_id:reply.id,rows:rows)+"\n")
 puts "WS8bm provider declarations: #{rows.size} actual root/thread edits; #{rows.sum{|r|r[:frames].size}} exact message publisher frames; PR/Twitter add/remove and legacy reference synchronization"

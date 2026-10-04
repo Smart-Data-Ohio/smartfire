@@ -29,7 +29,7 @@ class ActiveSupport::TestCase
 end
 %w[meeting_intervals ooo_intervals].each do |name|
   file = "test/models/calendar/#{name}_test.rb"
-  source = File.read(Rails.root.join(file))
+  source = File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/google/pinned", File.basename(file)))
   titles = source.scan(/test "([^"]+)"/).flatten.to_h { |title| ["test_#{title.gsub(/\s+/, '_')}", title] }
   eval(source.sub('require "test_helper"', ''), TOPLEVEL_BINDING, Rails.root.join(file).to_s)
   klass = name == 'meeting_intervals' ? Calendar::MeetingIntervalsTest : Calendar::OooIntervalsTest
@@ -41,7 +41,7 @@ end
   end
 end
 file = 'test/models/calendar/meeting_cache_test.rb'
-source = File.read(Rails.root.join(file))
+source = File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/google/pinned", File.basename(file)))
 eval(source.sub('require "test_helper"', ''), TOPLEVEL_BINDING, Rails.root.join(file).to_s)
 cache_uniqueness = nil
 ActiveRecord::Base.transaction do
@@ -51,6 +51,6 @@ ActiveRecord::Base.transaction do
   cache_uniqueness = {file:, source_sha256:Digest::SHA256.hexdigest(source), test:'one cache per user', assertions:result.assertions, rows:Calendar::MeetingCache.count}
   raise ActiveRecord::Rollback
 end
-puts JSON.pretty_generate(reference:'d7c7de92', rows:, cache_uniqueness:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:, cache_uniqueness:)
 warn "Pinned Rails named intervals: #{rows.size} declarations; #{rows.sum { |r| r[:assertions] }} original assertions; 0 skipped"
 warn "Pinned Rails cache uniqueness: 1 declaration; #{cache_uniqueness[:assertions]} original assertions; 0 skipped"

@@ -51,5 +51,5 @@ http = []
 ensure
   ActionController::Base.allow_forgery_protection = previous
 end
-puts JSON.pretty_generate(reference: "d7c7de92", fragments: fragments, validations: validations, http: http)
-warn "Rails stars oracle: #{fragments.size} fragments and streams, #{validations.size} validations, #{http.size} HTTP responses; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), fragments: fragments, validations: validations, http: http)
+warn "Rails stars oracle: #{fragments.size} fragments and streams, #{validations.size} validations, #{http.size} HTTP responses; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

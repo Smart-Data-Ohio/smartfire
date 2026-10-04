@@ -19,5 +19,5 @@ rows=inputs.map do |input|
  jobs=ActiveJob::Base.queue_adapter.enqueued_jobs.map{|job|job[:job].name}.tally
  {input:input,status:browser.response.status,body:browser.response.body,delivery:jobs['Agent::DeliveryJob'].to_i,legacy:jobs['Bot::WebhookJob'].to_i}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',agent_id:bot.agent.id,rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],agent_id:bot.agent.id,rows:rows)+"\n")
 puts 'WS8bm bot controller declarations: 3 actual rich-text/Markdown root POSTs; exact response bytes and agent-only durable job counts'

@@ -83,5 +83,5 @@ rows = []
     end
   end
 end
-puts JSON.pretty_generate(reference: 'd7c7de92 plus approved board drift', rows:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), rows:)
 rows.each { |row| warn "Rails R2 #{row[:surface]} size=#{row[:size]}: #{row[:queries]} SQL; #{row[:cached]} cached" }

@@ -8,8 +8,8 @@ import {createServer} from 'node:net';
 import {createHash} from 'node:crypto';
 import {basename,dirname} from 'node:path';
 import {nativeAssetProxy} from './behavior-native-proxy.mjs';
+import {PIN,REFERENCE_IMAGE} from './reference-pin.mjs';
 export const PHONE_CASE='keeps the thread drawer usable on a phone and preserves the channel';
-const PIN='d7c7de9264c63015be398001d7a1094e7695a6db';
 export function extractPhone(source) {
   const start=source.indexOf(`  test "${PHONE_CASE}" do\n`);
   const end=source.indexOf('\n  test ',start+1);
@@ -57,7 +57,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:ro`,'-v',`${temp}:${temp}`]:[];
     if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
     if(mutation) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}
-    const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'];
+    const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',REFERENCE_IMAGE,'exec','ruby','/tools/behavior-native-phone.rb'];
     const result=await new Promise((resolve,reject)=>{
       const child=spawn('docker',args);let stdout='',stderr='';
       const timer=setTimeout(()=>{child.kill('SIGTERM');reject(new Error('Native browser process timeout'));},120000);

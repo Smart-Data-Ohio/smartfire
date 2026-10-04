@@ -69,5 +69,5 @@ null_analysis = [[false,false],[true,false],[false,true]].map do |fail_analysis,
   ActiveRecord::Base.connection.execute("DROP TRIGGER ws8br2_reject_logo_audit") if fail_audit
   {fail_analysis:fail_analysis,fail_audit:fail_audit,status:client.response.status,location:client.response.location,blob_reused:attached.id==blob.id,raw_filename:blob[:filename],sanitized:blob.filename.sanitized,content_type:blob.content_type,metadata:blob.metadata,analysis_jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.count { |j| j[:job]==ActiveStorage::AnalyzeJob },audits:audits}
 end
-puts JSON.pretty_generate(reference: "d7c7de92", rows: rows, null_analysis:null_analysis)
-warn "Rails attachment endpoint oracle: #{rows.size} signed icon/logo assignments; #{null_analysis.size} after-commit NullAnalyzer responses and persisted snapshots; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), rows: rows, null_analysis:null_analysis)
+warn "Rails attachment endpoint oracle: #{rows.size} signed icon/logo assignments; #{null_analysis.size} after-commit NullAnalyzer responses and persisted snapshots; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

@@ -2,8 +2,8 @@
 # Build the accepted oracle without changing another worker's shared Docker tags.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-pin=79b453836f9e7a40f96aabb1fae7613a089d939d
-image=ws5-reference-79b45383
+pin=$(cat "$root/parity/reference.sha")
+image=${WS5_REFERENCE_IMAGE:-${PARITY_IMAGE:-campfire-reference}}
 scratch="$root/../.scratch/reference-$pin"
 mkdir -p "$scratch"
 git -C "$root/.." archive "$pin" | tar -x -C "$scratch"

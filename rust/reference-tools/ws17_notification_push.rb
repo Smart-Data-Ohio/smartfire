@@ -90,4 +90,4 @@ travel_to(Time.utc(2026,3,2,16)) do
  ["nothing","invisible","muted",nil].each { |mode|run.call("invitation_mode_#{mode||'null'}","invitation",["UPDATE memberships SET involvement=#{conn.quote(mode)} WHERE room_id=#{direct.id} AND user_id=#{recipient.id};"]) }
  run.call("invitation_connected","invitation",["UPDATE memberships SET connected_at=#{conn.quote(Time.current)} WHERE room_id=#{direct.id} AND user_id=#{recipient.id};"])
 end
-puts JSON.generate(reference:"d7c7de92",board_reference:"a6f10a25",now:"2026-03-02T16:00:00Z",rows:)
+puts JSON.generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],board_reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:"2026-03-02T16:00:00Z",rows:)

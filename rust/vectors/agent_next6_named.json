@@ -1,5 +1,5 @@
 {
-  "reference_pin": "d7c7de92",
+  "reference_pin": "78b9b154",
   "notes": [
     "Each request commits in a private restored seed. Bodies and selected headers are compared as raw bytes. Every production chain is a UUID; one handoff pair shares a chain. Raw REST/MCP bodies are unmasked. Human HTML/history projections reproduce the original declarations. Rate-case logical jobs are compared as a complete multiset, retaining duplicate class/argument facts; the original case does not specify queue execution order."
   ],

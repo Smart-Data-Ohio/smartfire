@@ -8,6 +8,10 @@ absent. See plans/ledger-ws8br-ws17-ws11ui-remaining.json for the exact current 
 from pathlib import Path
 import re
 import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from status_pin_identity import PIN_FULL
 
 root = Path(__file__).resolve().parents[2]
 files = {
@@ -155,7 +159,7 @@ covered.update({
 rows = []
 starting_count = 0
 for file, owner in files.items():
-    source = subprocess.check_output(["git", "show", f"d7c7de92:test/{file}"], cwd=root, text=True)
+    source = subprocess.check_output(["git", "show", f"{PIN_FULL}:test/{file}"], cwd=root, text=True)
     names = re.findall(r'^\s*test\s+"([^"]+)"', source, re.M)
     if file.startswith("controllers/public_pages"):
         names = [name for name in names if name.startswith("sign-in page")]

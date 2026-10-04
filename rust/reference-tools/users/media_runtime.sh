@@ -3,7 +3,9 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=${WS8BR2_MEDIA_DIR:-$ROOT/../.scratch/rails-media}
-IMAGE=${PARITY_IMAGE:-ws8br2-reference:d7c7de92}
+IMAGE=${PARITY_IMAGE:-campfire-reference}
+revision=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$IMAGE" | sed -n 's/^GIT_REVISION=//p')
+[ "$revision" = "$(cat "$ROOT/parity/reference.sha")" ] || { echo 'users media runtime requires the pinned reference image' >&2; exit 1; }
 NAMESPACE=${PARITY_NAMESPACE:-ws8br2}
 OWNER=${PARITY_OWNER:-ws8br2}
 mkdir -p "$OUT"

@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 
 SCRIPT = Path(__file__).with_name('deferred-system-inventory.py')
+PIN = (SCRIPT.resolve().parents[3] / 'rust/parity/reference.sha').read_text().strip()
 
 
 class DeferredSystemInventoryTest(unittest.TestCase):
@@ -20,7 +21,7 @@ class DeferredSystemInventoryTest(unittest.TestCase):
             for i in range(134)
         ]
         source = ''.join(f'  test "{item["name"]}" do\n  end\n' for item in cases)
-        inventory = {'files': [{
+        inventory = {'reference': PIN, 'files': [{
             'file': 'test/system/inventory_fixture_test.rb',
             'source_sha256': hashlib.sha256(source.encode()).hexdigest(),
             'cases': cases,
@@ -30,12 +31,14 @@ class DeferredSystemInventoryTest(unittest.TestCase):
     def verify(self, case):
         inventory, source = self.fixture(copy.deepcopy(case))
         output = io.StringIO()
-        with patch.object(Path, 'read_text', return_value=json.dumps(inventory)), \
+        def read_text(path, *args, **kwargs):
+            return PIN if path.name == 'reference.sha' else json.dumps(inventory)
+        with patch.object(Path, 'read_text', read_text), \
                 patch('subprocess.check_output', return_value=source) as read_pin, \
                 contextlib.redirect_stdout(output):
             runpy.run_path(str(SCRIPT), run_name='__main__')
         self.assertEqual(read_pin.call_args.args[0], [
-            'git', 'show', 'd7c7de92:test/system/inventory_fixture_test.rb',
+            'git', 'show', f'{PIN}:test/system/inventory_fixture_test.rb',
         ])
         return output.getvalue()
 

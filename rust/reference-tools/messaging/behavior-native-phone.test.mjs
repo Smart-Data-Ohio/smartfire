@@ -1,10 +1,11 @@
+import {PIN} from './reference-pin.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {extractPhone,PHONE_CASE} from './behavior-native-phone.mjs';
 test('native phone executes the pin with only the explicitly excluded screenshot removed',()=>{
-  const source=execFileSync('git',['show','d7c7de9264c63015be398001d7a1094e7695a6db:test/system/threads_test.rb'],{encoding:'utf8'});
+  const source=execFileSync('git',['show',`${PIN}:test/system/threads_test.rb`],{encoding:'utf8'});
   const {body,helpers}=extractPhone(source);
   const original=source.slice(source.indexOf(`  test "${PHONE_CASE}" do\n`),source.indexOf('\n  test "marks a joined thread'));
   assert.equal(body.replace('def test_phone',`test "${PHONE_CASE}" do`).replace('    click_button "Close threads"','    save_thread_screenshot "mobile-drawer.png"\n    click_button "Close threads"'),original);

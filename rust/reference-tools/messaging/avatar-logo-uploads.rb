@@ -53,5 +53,5 @@ rows = []
     end
   end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:) + "\n")
 puts "WS8bm avatar-logo oracle: #{rows.size} authenticated CSRF requests; avatar/bot/logo; signed/multipart; sanitized filenames and inline/durable analyzers"

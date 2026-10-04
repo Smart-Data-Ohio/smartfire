@@ -40,4 +40,4 @@ after = selects.call
 request.get("/rooms/#{room.id}")
 body = request.response.body
 raise 'Board nav not present in real response' unless body.include?(nav)
-puts JSON.pretty_generate(reference_pin:'d7c7de92', direct_sidebar:{peers_added:5,before_selects:before,after_selects:after}, board:{room_id:room.id,status:request.response.status,nav_html:nav,media_launchers:body.scan('data-controller="huddle-launcher"').size,new_posts:body.scan('aria-label="New post"').size,participant_ids:body.scan(/id="(header_voice_participants_[^"]+)"/).flatten,presence_replace:header})
+puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], direct_sidebar:{peers_added:5,before_selects:before,after_selects:after}, board:{room_id:room.id,status:request.response.status,nav_html:nav,media_launchers:body.scan('data-controller="huddle-launcher"').size,new_posts:body.scan('aria-label="New post"').size,participant_ids:body.scan(/id="(header_voice_participants_[^"]+)"/).flatten,presence_replace:header})

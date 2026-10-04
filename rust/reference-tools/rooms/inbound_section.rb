@@ -17,5 +17,5 @@ rows=[]
   rows << {name:"state_#{index}",id:id,can_administer:Current.user.can_administer?(room),emailable:room.emailable?,enabled:enabled,address:room.inbound_email_address,html:html}
 end
 Current.reset
-puts JSON.pretty_generate({reference:'d7c7de92',states:rows})
-warn "Rails inbound-email section: #{rows.size} complete partial goldens; reference d7c7de92"
+puts JSON.pretty_generate({reference: ENV.fetch('PARITY_REFERENCE_SHA'),states:rows})
+warn "Rails inbound-email section: #{rows.size} complete partial goldens; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

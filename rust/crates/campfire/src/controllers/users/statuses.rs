@@ -59,6 +59,12 @@ pub async fn update(c: &mut Ctx) -> Result {
         .read(move |conn| UserStatusSettings::find(conn, id))
         .await
         .map_err(Error::internal)?;
+    let original_status = (
+        user.presence_setting.clone(),
+        user.custom_status_emoji.clone(),
+        user.custom_status_text.clone(),
+        user.custom_status_expires_at,
+    );
     let now = c.app().db.env().now();
     let mut errors = Errors::default();
     let mut nulls = Vec::new();
@@ -133,6 +139,14 @@ pub async fn update(c: &mut Ctx) -> Result {
         return render_rejected(c, user, errors).await;
     }
     let submitted = user.clone();
+    // Users::StatusesController#broadcast_status_change checks only STATUS_ATTRIBUTES.
+    let status_changed = original_status
+        != (
+            user.presence_setting.clone(),
+            user.custom_status_emoji.clone(),
+            user.custom_status_text.clone(),
+            user.custom_status_expires_at,
+        );
     let saved = c
         .app()
         .db
@@ -141,6 +155,9 @@ pub async fn update(c: &mut Ctx) -> Result {
             for key in nulls {
                 tx.conn()
                     .execute(&format!("UPDATE users SET {key}=NULL WHERE id=?"), [id])?;
+            }
+            if status_changed {
+                user.announce_badge(tx)?;
             }
             Ok(())
         })

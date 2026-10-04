@@ -48,7 +48,7 @@ class HuddleIssuanceOracle
       "deleted_room" => { deleted: true }, "wrong_session" => { wrong_session: true }
     }
     cases = variations.map { |name, options| scenario(name, options) }
-    puts JSON.pretty_generate({ reference_pin: "d7c7de92", now: Time.utc(2026, 1, 1, 12).to_i, cases: cases })
+    puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.utc(2026, 1, 1, 12).to_i, cases: cases })
   ensure
     Huddle::RingPolicy.quiet_check = nil
     travel_back

@@ -29,7 +29,7 @@ assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode 
 if audit_mode:
     setup_env = os.environ.copy()
     setup_env.pop("LD_LIBRARY_PATH", None)
-    setup_env.update(PARITY_NAMESPACE="ws8br2-browser", PARITY_OWNER="ws8br2", PARITY_RUNTIME="docker", PARITY_IMAGE="ws8br2-reference:d7c7de92-status-2e20b24c")
+    setup_env.update(PARITY_NAMESPACE="ws8br2-browser", PARITY_OWNER="ws8br2", PARITY_RUNTIME="docker", PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"))
     subprocess.run([str(root / "parity/bin/seed"), "build", "ws8br2_browser_audit"], env=setup_env, check=True)
     seed = root / "parity/.seed/ws8br2_browser_audit"
 browser_seed = None
@@ -75,7 +75,7 @@ shutil.copytree(seed / "storage", run_dir / "files")
 oracle_env = os.environ.copy()
 # The media library overlay belongs to the Rust process, not host curl/Python forwarding.
 oracle_env.pop("LD_LIBRARY_PATH", None)
-oracle_env.update(PARITY_NAMESPACE="ws8br2-browser", PARITY_OWNER="ws8br2", PARITY_RUNTIME="docker", PARITY_IMAGE="ws8br2-reference:d7c7de92-status-2e20b24c")
+oracle_env.update(PARITY_NAMESPACE="ws8br2-browser", PARITY_OWNER="ws8br2", PARITY_RUNTIME="docker", PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"))
 reference = str(root / "parity/bin/reference")
 dockerfile = root / "parity/Dockerfile.playwright"
 digest = hashlib.sha256(b"".join((root / "parity" / name).read_bytes() for name in ("Dockerfile.playwright", "package.json", "package-lock.json"))).hexdigest()[:12]

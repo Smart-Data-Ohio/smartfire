@@ -104,5 +104,5 @@ output = cases.map do |test|
   jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.map { |job| job[:job].name }
   test.merge(expected: { status: session.response.status, body: session.response.body, content_type: session.response.headers['Content-Type'], deliveries: Github::WebhookDelivery.count, jobs:, private: pr.reload.private })
 end
-File.write(ENV.fetch("GITHUB_WEBHOOK_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: "d7c7de92", cases: output }) + "\n")
-puts "GitHub webhook Rails oracle: #{output.size} HTTP cases; reference d7c7de92"
+File.write(ENV.fetch("GITHUB_WEBHOOK_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA"), cases: output }) + "\n")
+puts "GitHub webhook Rails oracle: #{output.size} HTTP cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

@@ -42,5 +42,5 @@ groups=[]
  groups << {populated:populated,size:size,room_id:room.id,rows:rows,pins:pins,polls:poll_cases}
 end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:groups)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:groups)+"\n")
 puts "WS8bm2 pin/poll Rails scaling: #{groups.map { |g| "#{g[:populated]}:#{g[:size]} pins=#{g[:pins][:reads]} polls=#{g[:polls].map { |p| p[:reads] }.join('/')}" }.join(', ')}; 12 exact partials"

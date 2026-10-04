@@ -6,7 +6,7 @@ use rails_compat::{ar_encryption::ArEncryption, totp};
 async fn app() -> TestApp {
     TestApp::boot()
         .await
-        .expect("build the d7c7de92 WS19 default parity seed")
+        .expect("build the current pinned WS19 default parity seed")
 }
 async fn prepare(a: &TestApp) -> (i64, String, Vec<String>) {
     let enc = ArEncryption::new(&a.booted.app.secrets);

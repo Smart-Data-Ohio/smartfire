@@ -57,4 +57,4 @@ seasonal = ["2026-03-08T06:30:00Z", "2026-03-08T07:30:00Z", "2026-11-01T05:30:00
   end
 end
 sources = %w[app/controllers/concerns/set_time_zone.rb app/helpers/github/pull_requests_helper.rb app/views/messages/index.html.erb app/controllers/rooms_controller.rb].to_h { |path| [path, Digest::SHA256.file(Rails.root.join(path)).hexdigest] }
-puts JSON.generate({ reference: "d7c7de92", sources:, pairs:, seasonal: })
+puts JSON.generate({ reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], sources:, pairs:, seasonal: })

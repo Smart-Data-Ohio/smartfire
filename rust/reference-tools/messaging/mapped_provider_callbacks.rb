@@ -92,5 +92,5 @@ groups.each do |group|
  end
  raise 'old reply reached current window' if group[:windows].first[:ids].include?(group[:old_reply_id])
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:groups)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:groups)+"\n")
 puts "WS8bm2 mapped-provider Rails: #{groups.size} groups; #{groups.sum{|g|g[:initial_headers].size}} headers; #{groups.sum{|g|g[:windows].size}} reply windows; #{groups.sum{|g|g[:callback][:frames].size+g[:job][:frames].size}} callback/job frames"

@@ -3,6 +3,8 @@
 
 Generate each script into DIRECTORY/<script stem>.json using parity/bin/reference.
 """
+
+from status_pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import json
 from pathlib import Path
 import sys
@@ -22,7 +24,7 @@ corpora = [
 for script, filename, count, steps in corpora:
     expected = json.loads((ROOT / "rust/crates/db/src/tests" / f"{filename}.json").read_text())
     actual = json.loads((generated / f"{script}.json").read_text())
-    assert actual["reference_pin"] == "d7c7de92", script
+    assert actual["reference_pin"] == PIN, script
     assert len(actual["cases"]) == count, script
     if steps is not None:
         assert sum(len(case["results"]) for case in actual["cases"]) == steps, script
@@ -30,7 +32,7 @@ for script, filename, count, steps in corpora:
     print(f"{script}: {count} cases; regenerated JSON matches")
 actual = json.loads((generated / "huddle_job_contracts.json").read_text())
 expected = json.loads((ROOT / "rust/crates/campfire/src/huddle/huddle_job_contract_vectors.json").read_text())
-assert actual["reference_pin"] == "d7c7de92"
+assert actual["reference_pin"] == PIN
 assert len(actual["invitations"]) == 4
 assert len(actual["presence"]["counts"]) == 3 and actual["presence"]["missing"] == []
 assert len(actual["reconciler"]) == 5
@@ -44,7 +46,7 @@ for script, path, count in [
 ]:
     actual = json.loads((generated / f"{script}.json").read_text())
     expected = json.loads((ROOT / "rust/crates" / path).read_text())
-    assert actual["reference_pin"] == "d7c7de92", script
+    assert actual["reference_pin"] == PIN, script
     assert actual == expected, script
     if count is not None:
         assert len(actual["cases"]) == count, script
@@ -60,4 +62,4 @@ for script, path, count in [
     else:
         detail = "8 SQL/lock/cache cases"
     print(f"{script}: {detail}; regenerated JSON matches")
-print("WS13b corpora: all 12 regenerated corpora match d7c7de92")
+print(f'WS13b corpora: all 12 regenerated corpora match {PIN}')

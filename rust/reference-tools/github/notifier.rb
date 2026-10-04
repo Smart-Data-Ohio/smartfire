@@ -127,5 +127,5 @@ output=cases.map do |test|
     broadcasts:Thread.current[:notifier_broadcasts],bot_count:User.active_bots.where(name:"GitHub").count,
     thread:test[:thread] ? {closed:thread.reload.closed?,locked:thread.locked?,fresh:thread.last_activity_at == Time.current} : nil})
 end
-File.write(ENV.fetch("GITHUB_NOTIFIER_VECTOR_PATH"),JSON.pretty_generate({reference:"d7c7de92",cases:output})+"\n")
-puts "GitHub Notifier Rails oracle: #{output.size} persisted delivery cases; reference d7c7de92"
+File.write(ENV.fetch("GITHUB_NOTIFIER_VECTOR_PATH"),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),cases:output})+"\n")
+puts "GitHub Notifier Rails oracle: #{output.size} persisted delivery cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

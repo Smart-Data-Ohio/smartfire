@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "parity",
   "sources": {
     "app/controllers/concerns/set_time_zone.rb": "ead23252d99edde4a941cb415c610905c736480f670c2ff1ea1e5cc13252b05a",
     "app/controllers/messages_controller.rb": "07171c163bd54add16575a392750927af4f5818f37af54ec4d427a64e5acc856",
@@ -8,7 +8,7 @@
     "app/views/rooms/events/_card.html.erb": "54992dd118e9cb4bd258a86a5deb4bdfb4bfa6c2efb70633651b3aa1aea5fa12",
     "app/views/rooms/events/_cards.html.erb": "40a32329f1129b1a5c6a149c0def12e3f2acdcbf9c4aea87c8cab4bb3736fe8f",
     "app/views/github/pull_requests/_card.html.erb": "b431601dd7156f443be45ab99d8104cce528cd5da1b0ef85ce40551693520403",
-    "app/helpers/github/pull_requests_helper.rb": "9c9c2375c5c995bd0d65da29095bed3c9337265f3622ebcb21ca891f2c8b5cd1"
+    "app/helpers/github/pull_requests_helper.rb": "e523f2efcf70b2c3a273e66619f0bfe4c795f666233da9da52af4e8b5d105162"
   },
   "cases": [
     {

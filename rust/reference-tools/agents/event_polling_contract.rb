@@ -57,5 +57,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   AgentGrant.create!(agent: agent, granted_by: actor, capability: "read_messages", room: room)
   add.call(900_000_016, "reply", room: blocked, message_id: 136976342)
   poll.call(:event_room_denied)
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", pages: pages }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], pages: pages }.as_json)
 end

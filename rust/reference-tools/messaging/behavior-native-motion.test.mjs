@@ -1,9 +1,10 @@
+import {PIN} from './reference-pin.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {extractMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
-const source=execFileSync('git',['show','d7c7de92:test/system/motion_test.rb'],{encoding:'utf8'});
+const source=execFileSync('git',['show',`${PIN}:test/system/motion_test.rb`],{encoding:'utf8'});
 test('native motion executes every byte of the pinned animation body',()=>{
   const {body,helpers}=extractMotion(source);
   const start=source.indexOf(`  test "${NATIVE_MOTION_CASE}" do\n`),end=source.indexOf('\n  test ',start+1);

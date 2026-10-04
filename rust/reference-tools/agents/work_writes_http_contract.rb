@@ -165,4 +165,4 @@ travel_to Time.utc(2026,3,2,16) do
     end
   end
 end
-puts JSON.pretty_generate(reference_pin:"d7c7de92",notes:["Each request commits in a private restored seed. Bodies and selected headers are compared as raw bytes. Ledger chains are checked for a shared UUID independently because production UUIDs are random; no response fields are masked."],cases:results)
+puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],notes:["Each request commits in a private restored seed. Bodies and selected headers are compared as raw bytes. Ledger chains are checked for a shared UUID independently because production UUIDs are random; no response fields are masked."],cases:results)

@@ -53,6 +53,6 @@ travel_to(Time.utc(2026,3,2,16)) do
   end
   subscription_content=Ws17ProfileUiController.renderer.new(env).render(template:"users/push_subscriptions/index",layout:false,assigns:{push_subscriptions:user.push_subscriptions.to_a})
   assets=%w[check.svg notification-bell-everything.svg minus.svg].to_h { |name| [name,ApplicationController.helpers.asset_path(name)] }
-  puts JSON.generate(reference:"d7c7de92",choices:,choice_zones:,mapping:,rows:,notification_error_sounds:,subscriptions:,subscription_content:,assets:)
+  puts JSON.generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],choices:,choice_zones:,mapping:,rows:,notification_error_sounds:,subscriptions:,subscription_content:,assets:)
 end
 Current.reset

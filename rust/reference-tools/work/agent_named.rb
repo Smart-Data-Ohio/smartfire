@@ -122,5 +122,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
     rows << { key: key, rails_test: name, facts: facts }
   end
 end
-puts JSON.pretty_generate({ reference: "d7c7de92 plus approved board drift", rows: rows }.as_json)
+puts JSON.pretty_generate({ reference: ENV.fetch("PARITY_REFERENCE_SHA"), rows: rows }.as_json)
 warn "Rails WS12 agent named oracle: #{rows.size} complete owner/mutation assertion sets; 0 masks"

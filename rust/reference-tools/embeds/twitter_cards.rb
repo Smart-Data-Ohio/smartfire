@@ -20,5 +20,5 @@ containers=[[],[cards[0]],[cards[1],cards[2]],[cards[0]]].each_with_index.map do
  {cards:entries.map{|c|c[:name]},client_id:key,html:ApplicationController.renderer.render(partial:'twitter/posts/cards',locals:{message:message})}
 end
 counts=[0,1,999,1000,9999,999999,18041,124658,310826,1_200_000,1_234_567_890,-1000,-1,999_500,999_999_999,1_000_000_000_000].map{|n|{number:n,html:ApplicationController.helpers.compact_count(n)}}
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',cards:cards,containers:containers,counts:counts})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cards:cards,containers:containers,counts:counts})+"\n")
 puts "WS15e X card Rails oracle: #{cards.size} cards, #{containers.size} containers, #{counts.size} counts"

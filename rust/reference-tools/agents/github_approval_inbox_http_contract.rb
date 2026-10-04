@@ -32,5 +32,5 @@ travel_to Time.utc(2026,3,2,16) do
   result[:replay_same_id]=JSON.parse(replay.body)["id"]==approval.id
   result[:approvals_after_replay]=AgentApproval.where(external_id:external_id).count
   result[:inbox_after_replay]=ActivityItem.where(source:approval).count
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",result:result)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],result:result)
 end

@@ -13,7 +13,7 @@ class HuddleStreamLifecycleOracle
     ActionCable.server.instance_variable_set(:@ws13_frames,@frames)
     cases=[]
     %w[720p15 1080p15 1080p30 bad_quality explicit_start unique_live free_after_end repeat_end host_stop self_stop automatic_end member_without_grant user_without_grant speaker_user_without_grant last_host admin_successor earliest_successor other_host empty_stage inactive_admin].each {|name|cases << scenario(name)}
-    puts JSON.pretty_generate({reference_pin:'d7c7de92',now:Time.current.to_i,cases:cases})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,cases:cases})
   ensure
     travel_back
   end

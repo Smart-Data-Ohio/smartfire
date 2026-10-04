@@ -13,5 +13,5 @@ responses = %w[/webmanifest.json /service-worker.js /offline.html].map do |path|
   ActiveSupport::IsolatedExecutionState.clear
   { path: path, status: session.response.status, content_type: session.response.headers["Content-Type"], body: session.response.body }
 end
-puts JSON.pretty_generate(reference: "d7c7de92", responses: responses)
-warn "Rails PWA oracle: #{responses.length} endpoint bodies; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), responses: responses)
+warn "Rails PWA oracle: #{responses.length} endpoint bodies; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

@@ -86,5 +86,5 @@ cases.each do |entry|
   end
   ActiveSupport::ExecutionContext.clear
 end
-puts JSON.pretty_generate(reference: 'd7c7de92', setup:, cases:)
-warn "inbox Rails HTTP oracle: #{cases.size} responses; 11 source types; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), setup:, cases:)
+warn "inbox Rails HTTP oracle: #{cases.size} responses; 11 source types; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

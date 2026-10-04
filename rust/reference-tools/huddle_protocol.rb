@@ -118,7 +118,7 @@ class HuddleProtocolOracle
       { public_url: public_url, internal_url: internal_url, configured: Huddle.configured?, endpoint: endpoint }
     end
     result = {
-      reference_pin: "d7c7de92", now: now.to_i, jti: SecureRandom.uuid,
+      reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: now.to_i, jti: SecureRandom.uuid,
       api_key: ENV.fetch("LIVEKIT_API_KEY"), api_secret: ENV.fetch("LIVEKIT_API_SECRET"),
       room_id: 42, room_name: room_name, identity: identity, tokens: tokens, shapes: shapes, urls: urls,
       admin_remove: Huddle::RoomService.new.send(:admin_token, { roomAdmin: true, room: room_name }),

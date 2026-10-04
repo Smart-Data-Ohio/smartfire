@@ -77,5 +77,5 @@ rows = inputs.map do |name, attributes|
   raise "session value" if ([html.first] + frames.map { |frame| frame[:payload] }).any? { |body| body.include?("authenticity_token") || body.match?(/nonce="[^"]+/) }
   { name:, input: attributes.transform_values { |value| value.is_a?(Time) ? value.iso8601 : value }, id: message.id, html: html.first, frames: frames.dup }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", source_id: source.id, agent_id: agent.id, steps:, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], source_id: source.id, agent_id: agent.id, steps:, rows:) + "\n")
 puts "WS8bm message-states oracle: #{rows.size} real Rails states rendered cold/warm; #{rows.sum { |row| row[:frames].size }} actual append/replace/remove frames; 0 session-bound values"

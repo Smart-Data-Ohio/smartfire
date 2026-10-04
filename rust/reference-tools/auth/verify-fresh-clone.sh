@@ -10,7 +10,7 @@ cd "$CLONE"
 export TMPDIR="$CLONE/.scratch/tmp"
 export CARGO_TARGET_DIR="$CLONE/.scratch/cargo-target"
 export CI=1 CABLE_TEST_PORT_RANGE=51600-51699
-export PARITY_NAMESPACE=ws9-clean PARITY_OWNER=ws9 PARITY_IMAGE=${WS9_REFERENCE_IMAGE:-ws9-reference:d7c7de92}
+export PARITY_NAMESPACE=ws9-clean PARITY_OWNER=ws9 PARITY_IMAGE=${WS9_REFERENCE_IMAGE:-${PARITY_IMAGE:-campfire-reference}}
 mkdir -p "$TMPDIR" .scratch/verification
 printf 'fresh-clone: commit %s\n' "$(git rev-parse HEAD)"
 cargo metadata --manifest-path rust/Cargo.toml --locked --format-version 1 >/dev/null
