@@ -31,7 +31,8 @@ run_suite() {
   case "$suite" in
     database)
       export OUT="$repo/rust/target/ci-differential"
-      export CAMPFIRE_FIXTURES_NOW='2026-03-02 16:00:00.000000'
+      # Nonzero microseconds retain Rails' six-digit DB timestamp representation.
+      export CAMPFIRE_FIXTURES_NOW='2026-03-02 16:00:00.123456'
       bash rust/reference-tools/db/differential.sh --prepare-only
       export CAMPFIRE_RUBY_FIXTURES_DB="$OUT/fixtures_ruby.sqlite3"
       export CAMPFIRE_RUBY_SCENARIO_DB="$OUT/scenario_ruby.sqlite3"

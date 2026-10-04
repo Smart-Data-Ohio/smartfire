@@ -2,6 +2,7 @@
 """Fail closed on ignored correctness tests without an exact CI owner/selector."""
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
@@ -11,9 +12,13 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def inventory(root):
     found = {}
-    # Test attributes in source, including tools-only host copies. Never scan generated targets.
-    for directory in (root / "crates", root / "reference-tools"):
-        for path in directory.rglob("*.rs"):
+    # Every source directory, including tools-only copies; prune generated inputs/outputs.
+    for directory, children, files in os.walk(root):
+        children[:] = sorted(set(children) - {"target", "node_modules", ".cargo-home", ".scratch", ".ci", ".native", ".seed"})
+        for name in sorted(files):
+            if not name.endswith(".rs"):
+                continue
+            path = Path(directory) / name
             source = re.sub(r"/\*.*?\*/", "", path.read_text(), flags=re.S)
             source = re.sub(r"(?m)^\s*//.*$", "", source)
             for match in re.finditer(r'^\s*#\[ignore(?:\s*=\s*"([^"\n]*)")?\]', source, re.M):
