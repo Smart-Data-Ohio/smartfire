@@ -61,6 +61,76 @@ recovery and an orphaned worker claim recovered by a newly started runner.
 
 No Rails source, schema, asset or pin changes are required.
 
+## Astra review follow-up (#233)
+
+Completion now uses the fallible message publisher in an after-commit callback,
+instead of the ordinary model event sink that logs and drops rendering failures.
+The touch still commits before rendering, and a failed completion reaches the
+job's three-attempt retry handler. A missing owner is skipped; other owners still
+receive their completion. Unrelated model callbacks retain their existing rescue
+behavior.
+
+Root webhook replies now drain the presenter's recovery requests after releasing
+the reader. Both agent and legacy sync replies use that helper. The presenter
+audit also found full-message rendering in the composer's direct response
+(including duplicate submissions and warm collection caches), reply tombstone
+broadcasts, imported-mail completion, and quiet-stream completion. These paths now
+preserve recovery. Ordinary committed message/presentation broadcasts already
+recover using the committing connection, avoiding a recursive writer call.
+Room, thread, search and controller rendering use the shared draining adapters.
+Reactions, quote/thread controls, directory/board rows and other component-only
+renderers do not render an attachment or its PR-card cache key in Rails. The
+notifier, huddle and digest producers create attachment-free notes. Those paths
+retain their existing effects.
+
+The reuse regression again posts once, performs its real processing job, records
+the JPEG and WebP identities and bytes, and then posts/processes the same source
+again. Both artifacts and the existing variant record must survive unchanged.
+
+The failure controls in test-only commit `6a9964307` ran against the reviewed
+`3fd4814b6` production sources. The completion control left a generated JPEG but
+zero retry jobs and zero frames; the root webhook control left zero recovery jobs.
+Fresh pinned Rails output recorded one retry (execution 1, cleared lease) and one
+webhook recovery (token suffix 0, no preview/poster), respectively. Both Rust
+assertions failed:
+
+```text
+test result: FAILED. 19 passed; 2 failed; 0 ignored; 0 measured; 2820 filtered out; finished in 16.71s
+```
+
+Regenerate the new failure vector through the same pinned overlay harness:
+
+```sh
+bash reference-tools/messaging/attachment_processing.sh \
+  reference-tools/messaging/attachment_processing_failures.rb \
+  > vectors/message_attachment_processing_failures.json
+```
+
+The completion regression runs the real queue worker, injects a detached-render
+failure after scheduling, checks the Rails retry/lease state, restores rendering,
+advances the frozen clock to the retry and verifies the completion frame. The
+webhook regression uses the real corrupt-MOV decoder path and subscribed append.
+Additional controls cover duplicate composer responses, quiet-stream completion
+and imported-mail recovery.
+
+Follow-up validation used the canonical media image, `CI=1`, all three required
+seeds, eight test threads and an immutable test executable. The full app binary
+includes the affected message, webhook, mail, channel and reuse suites. Strict
+workspace Clippy ran with `--locked --workspace --exclude html5ever --all-targets
+-- -D warnings`, two Cargo build jobs and the unchanged rustc throttle:
+
+```text
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 2825 filtered out; finished in 4.49s
+test result: ok. 2831 passed; 0 failed; 13 ignored; 0 measured; 0 filtered out; finished in 480.34s
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 09s
+```
+
+Inherited acknowledgement window: a restart after publishing completion but
+before durable queue acknowledgement can publish completion twice. Fresh Rails
+also publishes twice when replaying the same serialized job, as Astra's probes
+confirmed. This port retains that behavior and does not claim exactly-once
+publication or add deduplication.
+
 The unchanged-assignment regression was added in `1e494524b` before fixing the
 model's early return. Fresh Rails queued one processing job for that assignment;
 the Rust control reported:

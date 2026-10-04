@@ -181,15 +181,17 @@ fn create_reply(tx: &mut campfire_db::Tx<'_>, trigger: Option<&Message>, mut att
 pub(super) async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyhow::Result<()> {
     let (app, room, message) = (app.clone(), room.clone(), message.clone());
     let db = app.db.clone();
-    db.read(move |conn| {
+    let refreshes = db.read(move |conn| {
         let presenter = Presenter::new(conn, &app, None);
         let view = presenter.message(&message)?;
         let account = campfire_db::Account::first(conn)?;
         let html = page::render_detached(&app, account.as_ref(), |ctx| views::message(ctx, &view));
         let partials = Rendered { message: Some(html), ..Rendered::default() };
-        app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
+        app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)?;
+        Ok(presenter.take_render_refreshes())
     })
     .await?;
+    crate::controllers::presenters::refresh_after_render(&db, refreshes).await;
     Ok(())
 }
 

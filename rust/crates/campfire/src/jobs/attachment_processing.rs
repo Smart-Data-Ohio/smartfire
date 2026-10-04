@@ -1,9 +1,7 @@
 //! `Message::AttachmentProcessingJob`: committed media, per-blob retries, every current owner.
 use super::Registry;
 use crate::app::App;
-use campfire_db::{
-    Event, Message, broadcasts, models::message_attachment_processing as processing,
-};
+use campfire_db::{Message, broadcasts, models::message_attachment_processing as processing};
 use campfire_jobs::{Execution, JobError, JobKind, JobResult, Outcome, RetryPolicy};
 use campfire_storage::Blob;
 
@@ -85,6 +83,7 @@ async fn perform_owned(app: App, job: AttachmentProcessingJob) -> JobResult {
     // runs after commit in its callback, before another edit can acquire the writer.
     let completion = app.db.write({
         let job = job.clone();
+        let app = app.clone();
         move |tx| {
             let ids = tx.conn().prepare("SELECT m.id FROM messages m JOIN active_storage_attachments a ON a.record_id=m.id WHERE a.record_type='Message' AND a.name='attachment' AND a.blob_id=? ORDER BY m.id")?
                 .query_map([job.blob_id], |r| r.get::<_, i64>(0))?.collect::<Result<Vec<_>, _>>()?;
@@ -92,11 +91,24 @@ async fn perform_owned(app: App, job: AttachmentProcessingJob) -> JobResult {
                 let Some(mut message) = Message::find_by_id(tx.conn(), id)? else { continue; };
                 if !processing::owns(tx.conn(), id, job.blob_id)? { continue; }
                 message.touch(tx)?;
-                tx.emit_after_commit(Event::broadcast(&broadcasts::Broadcast::replace_keeping_scroll(
+                let broadcast = broadcasts::Broadcast::replace_keeping_scroll(
                     broadcasts::conversation_messages(tx.conn(), &message)?,
                     broadcasts::message_dom_id(&message, Some("presentation")),
                     broadcasts::Partial::MessagePresentation { message_id: id },
-                )));
+                );
+                let app = app.clone();
+                // Rails calls broadcast_replace_to directly here. Ordinary model callbacks
+                // report and swallow failures, but this job must retry a failed completion.
+                tx.after_commit(move |_| {
+                    match crate::channels::sink::messaging(&app.cable, Some(&app), &broadcast) {
+                        Ok(()) => Ok(()),
+                        Err(error) if error.chain().any(|cause| matches!(
+                            cause.downcast_ref::<campfire_db::Error>(),
+                            Some(campfire_db::Error::RecordNotFound(_))
+                        )) => Ok(()), // A removed owner must not suppress the other owners.
+                        Err(error) => Err(campfire_db::Error::Other(format!("{error:#}"))),
+                    }
+                });
             }
             Ok(())
         }

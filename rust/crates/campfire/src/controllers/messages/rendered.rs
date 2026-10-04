@@ -49,7 +49,7 @@ async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given:
 
 pub async fn broadcast_tombstones(c: &Ctx, ids: Vec<i64>) -> Result<()> {
     let (app, base) = (c.app().clone(), page::renderer_base_url(c));
-    c.app().db.read(move |conn| {
+    let refreshes = c.app().db.read(move |conn| {
         let account = campfire_db::Account::first(conn)?;
         let presenter = Presenter::new(conn, &app, None);
         for id in ids {
@@ -60,8 +60,10 @@ pub async fn broadcast_tombstones(c: &Ctx, ids: Vec<i64>) -> Result<()> {
             app.broadcasts.turbo(&Stream::conversation(&room, &message), campfire_cable::turbo::Action::Replace,
                 &message_dom_id(&message, None), Some(&html), true);
         }
-        Ok(())
-    }).await.map_err(db_error)
+        Ok(presenter.take_render_refreshes())
+    }).await.map_err(db_error)?;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(())
 }
 
 pub async fn broadcast_thread_refresh(app: &App, room_id: i64, thread_id: i64) -> Result<()> {

@@ -72,7 +72,7 @@ pub(crate) async fn perform_queued(app: &TestApp, attempts: u32) -> campfire_job
     result
 }
 
-async fn setup(corrupt: bool) -> (TestApp, Arc<FrozenClock>, i64, i64) {
+pub(crate) async fn setup(corrupt: bool) -> (TestApp, Arc<FrozenClock>, i64, i64) {
     let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
     let app = TestApp::boot_with_clock(clock.clone())
         .await
@@ -298,6 +298,36 @@ async fn attachment_processing_completion_render_failure_retries_like_rails() {
     assert_eq!(app.publications().take().len(), 1, "the retry must publish completion");
     assert!(render(&app, id).await.contains("poster=\""));
     server.abort();
+}
+
+#[tokio::test]
+async fn attachment_processing_duplicate_composer_response_keeps_recovery_requests() {
+    let (app, _, _, blob) = setup(true).await;
+    // Duplicate submission skips broadcast_create: the response itself must drain intents,
+    // including intents recorded by a warm PR-card collection cache key.
+    for _ in 0..2 {
+        let response = app.david().write(Req::new(axum::http::Method::POST,
+            &format!("/rooms/{ALL_TALK}/messages"))
+            .header("accept", "text/vnd.turbo-stream.html")
+            .header("content-type", "application/json")
+            .body(json!({"message":{"client_message_id":"attachment-processing-1"}}).to_string())
+        ).await;
+        assert_eq!(response.status.as_u16(), 200, "{}", response.text());
+        assert!(response.text().contains("<video") && !response.text().contains("poster="));
+        assert_eq!(state(&app, blob).await.2, 1);
+    }
+}
+
+#[tokio::test]
+async fn attachment_processing_quiet_stream_final_keeps_recovery_requests() {
+    let (app, _, id, blob) = setup(true).await;
+    app.db().write(move |tx| {
+        tx.emit_after_commit(campfire_db::Event::broadcast(
+            &campfire_db::models::user::lifecycle::QuietStreamFinal { message_id: id }
+        ));
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(state(&app, blob).await.2, 1);
 }
 
 #[tokio::test]

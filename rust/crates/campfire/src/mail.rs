@@ -187,13 +187,14 @@ async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execut
             .await
             .map_err(|e| JobError::from(anyhow::anyhow!(e.to_string())))?;
     }
-    app.db
+    let refreshes = app.db
         .read({
             let app = app.clone();
             let message = message.clone();
             move |conn| {
                 let room = Room::find(conn, message.room_id)?;
-                let view = Presenter::new(conn, &app, None).message(&message)?;
+                let presenter = Presenter::new(conn, &app, None);
+                let view = presenter.message(&message)?;
                 let account = Account::first(conn)?;
                 let html = page::render_detached(&app, account.as_ref(), |ctx| {
                     campfire_views::messages::message(ctx, &view)
@@ -207,10 +208,12 @@ async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execut
                         ..Rendered::default()
                     },
                     &*app.db.env().rich_text,
-                )
+                )?;
+                Ok(presenter.take_render_refreshes())
             }
         })
         .await?;
+    crate::controllers::presenters::refresh_after_render(&app.db, refreshes).await;
     let fanout = app
         .mail
         .fanout
@@ -231,6 +234,20 @@ mod tests {
         http::{Request, header},
     };
     use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn attachment_processing_imported_mail_recovers_after_inline_failure() {
+        let (app, _, id, _) = crate::controllers::messages::attachment_processing_tests::setup(true).await;
+        let now = app.db().read(move |c| Ok(Message::find(c, id)?.created_at)).await.unwrap();
+        message_created(app.booted.app.clone(), MessageCreated { message_id: id }, campfire_jobs::Execution {
+            id: 0, executions: 1, enqueued_at: now, scheduled_at: now,
+        }).await.unwrap();
+        let count = app.db().read(|c| Ok(c.query_row(
+            "SELECT count(*) FROM background_jobs WHERE job_class='Message::AttachmentProcessingJob'",
+            [], |r| r.get::<_,i64>(0),
+        )?)).await.unwrap();
+        assert_eq!(count, 1, "imported mail must keep the detached presenter's recovery request");
+    }
     const PATH: &str = "/rails/action_mailbox/relay/inbound_emails";
     const RAW: &str = "Message-ID: <ws10-http@example.com>\r\nFrom: person@example.com\r\nTo: room-token@mail.test\r\n\r\nHello";
     async fn boot(domain: bool, password: bool) -> (crate::app::Booted, tempfile::TempDir) {

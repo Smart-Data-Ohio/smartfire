@@ -326,7 +326,8 @@ impl EventSink for Jobs {
                     _ => None,
                 },
                 _ => None,
-            }),
+            }).or_else(|| request.decode::<campfire_db::models::user::lifecycle::QuietStreamFinal>()
+                .and_then(Result::ok).map(|event| event.message_id)),
             _ => None,
         };
         self.emit(event);

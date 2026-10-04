@@ -129,7 +129,7 @@ async fn create_action(c: &mut Ctx) -> Result {
     let app = c.app().clone();
     let base_url = c.url_for("");
     let viewer_id = require_current_user(c)?.id;
-    let html = c
+    let (html, refreshes) = c
         .app()
         .db
         .read(move |conn| {
@@ -137,11 +137,13 @@ async fn create_action(c: &mut Ctx) -> Result {
             presenter.use_viewer_zone(viewer_id)?;
             let item = campfire_views::fragment_cache::with(&app.fragment_cache, || presenter.message_item(&message))?;
             let account = campfire_db::Account::first(conn)?;
-            page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::CreateStream { ctx, message: &item, room_kind: kind }.render())
-                .map_err(|e| campfire_db::Error::Other(e.to_string()))
+            let html = page::render_detached_in_zone(&app, account.as_ref(), &base_url, &presenter.render_zone, |ctx| views::CreateStream { ctx, message: &item, room_kind: kind }.render())
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            Ok((html, presenter.take_render_refreshes()))
         })
         .await
         .map_err(db_error)?;
+    crate::controllers::presenters::refresh_after_render(&c.app().db, refreshes).await;
     Ok(c.render(StatusCode::OK, &format::TURBO_STREAM, html))
 }
 
