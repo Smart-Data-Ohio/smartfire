@@ -120,6 +120,15 @@ impl Row {
     pub fn render_fragment(&self, ctx: &ViewContext, configured: bool) -> String {
         self.render_row(ctx, configured, true)
     }
+    // users/sidebars/show caches only the direct membership collection.
+    // Standalone rows in favorites, categories and broadcasts render afresh.
+    fn render_collection_fragment(&self, ctx: &ViewContext, configured: bool) -> String {
+        let render = || self.render_fragment(ctx, configured);
+        match self.direct_cache_key.as_ref() {
+            Some(key) => crate::fragment_cache::fetch(|| key.clone(), render),
+            None => render(),
+        }
+    }
     fn render_row(&self, ctx: &ViewContext, configured: bool, collection: bool) -> String {
         if self.kind == "voice" || self.kind == "stage" {
             let html = self.call.render(ctx);
@@ -130,12 +139,14 @@ impl Row {
             };
         }
         if self.kind == "direct" {
-            let render = || Direct { ctx, row: self, configured, collection }
-                .render().expect("direct sidebar row renders");
-            return match self.direct_cache_key.as_ref() {
-                Some(key) => crate::fragment_cache::fetch(|| key.clone(), render),
-                None => render(),
-            };
+            return Direct {
+                ctx,
+                row: self,
+                configured,
+                collection,
+            }
+            .render()
+            .expect("direct sidebar row renders");
         } else {
             Shared {
                 ctx,
@@ -210,7 +221,7 @@ impl Shell<'_> {
         self.sidebar
             .direct
             .iter()
-            .map(|row| row.render_fragment(self.ctx, self.sidebar.configured))
+            .map(|row| row.render_collection_fragment(self.ctx, self.sidebar.configured))
             .collect()
     }
 
@@ -378,5 +389,8 @@ impl Direct<'_> {
 
 #[derive(Template)]
 #[template(path = "users/sidebars/composition.html", blocks=["head","content"])]
-pub struct Show<'a> {pub ctx: &'a ViewContext<'a>,pub sidebar: &'a Sidebar}
+pub struct Show<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub sidebar: &'a Sidebar,
+}
 impl Page for Show<'_> {}
