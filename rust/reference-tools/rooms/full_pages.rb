@@ -31,5 +31,5 @@ rows=[]
  rows << {room_id:room_id,user_id:user_id,root_ids:messages.map(&:id),html:html}
 end
 Current.reset
-puts JSON.pretty_generate(reference:'d7c7de92',layout_reference:'2e20b24c',rows:rows)
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),rows:rows)
 warn "Rails full room pages: #{rows.size} complete native-page goldens; no HTML normalization"

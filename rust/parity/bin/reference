@@ -148,8 +148,12 @@ docker_build() {
 }
 
 docker_env_args() {
-  local spec; spec=$(faketime_spec)
+  local spec revision; spec=$(faketime_spec)
   printf '%s\n' --env-file "$ENV_FILE"
+  # GIT_REVISION stays "parity" for stable response headers. Producer provenance
+  # comes from the image, independently of that fixed application environment.
+  revision=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$IMAGE" | sed -n 's/^GIT_REVISION=//p')
+  printf '%s\n' -e "PARITY_REFERENCE_SHA=$revision"
   if [ -n "$spec" ]; then printf '%s\n' -e "FAKETIME=$spec"; fi
   if [ -n "$FREEZE" ]; then printf '%s\n' -e WEB_CONCURRENCY=0; fi # see freeze_note
   local seed_env="$SEEDS/${SEED:-default}/labels.json"

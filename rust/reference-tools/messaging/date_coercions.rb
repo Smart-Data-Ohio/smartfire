@@ -33,5 +33,5 @@ steps=[]
 end
 ids=message.id
 rows={'messages'=>ActiveRecord::Base.connection.select_all("SELECT * FROM messages WHERE id=#{ids}").to_a,'action_text_rich_texts'=>ActiveRecord::Base.connection.select_all("SELECT * FROM action_text_rich_texts WHERE record_type='Message' AND record_id=#{ids}").to_a}
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',coercions:,cases:,rows:,steps:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],coercions:,cases:,rows:,steps:)+"\n")
 puts "WS8bm2 broader date/coercion Rails oracle: #{cases.size} calendar cases; #{coercions.size} parameter string/presence probes; #{steps.size} reminder HTTP responses"

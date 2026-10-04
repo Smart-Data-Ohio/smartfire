@@ -11,7 +11,7 @@ class HuddleStageNoteOracle
     room=Rooms::Stage.create!(id:9001,name:'WS13 Stage',creator:user)
     note=room.messages.create!(id:1200000001,client_message_id:'ws13-stage-note-fixture',creator:user,system_note:true,body:'The stage ended because the last host left.')
     html=ApplicationController.render(partial:'messages/message',locals:{message:note})
-    puts JSON.pretty_generate({reference_pin:'d7c7de92',now:Time.current.to_i,room:room.attributes,message:note.attributes,body:note.body.to_plain_text,html:html})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,room:room.attributes,message:note.attributes,body:note.body.to_plain_text,html:html})
   ensure
     travel_back
   end

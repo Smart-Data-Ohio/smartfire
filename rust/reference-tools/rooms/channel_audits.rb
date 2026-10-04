@@ -1,6 +1,7 @@
 HASHES={'app/controllers/rooms_controller.rb' => '53c7fd8b0619e478425d492f1be3abbc11affafa1b992dea09f8cd0b413c94eb', 'app/controllers/rooms/opens_controller.rb' => '932e1cc5ab97663253f5355cd2944f69779804a549d2ec14c62806c7f2717d0c', 'app/controllers/rooms/closeds_controller.rb' => 'de11cf1268a4f84cb9d7d6b4dc972b4d6e27708404034ed4b6f133ec263973da'}
 require 'json'
 require 'digest'
+Rails.logger = ActiveSupport::Logger.new($stderr)
 HASHES.each { |path,hash|raise "reference drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest==hash }
 user=User.find(127326141)
 session=user.sessions.create!(two_factor_verified_at:Time.current)
@@ -53,5 +54,5 @@ end
 frames.clear
 client.patch("/rooms/closeds/#{room.id}",params:{room:{name:'Audit failed revision'},user_ids:[127326141,712064548]},headers:{'X-CSRF-Token'=>token})
 cases['failed_revision']=snapshot(client,room,frames)
-puts JSON.pretty_generate({reference:'d7c7de92',cases:cases})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases})
 warn "Rails room audit oracle: #{cases.size} committed HTTP transitions; reference d7c7de92"

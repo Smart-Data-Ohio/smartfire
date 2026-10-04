@@ -13,8 +13,11 @@ travel_to Time.utc(2026,3,2,16) do
   session=ActionDispatch::Integration::Session.new(Rails.application);session.host! 'campfire.test'
   body={thread_id:1900700020,message:{attachment:ActiveStorage::Blob.find(1).signed_id,client_message_id:'pr192-r2-fresh-jpeg'}}.to_json
   headers={'Accept'=>'application/json','Content-Type'=>'application/json','Authorization'=>['Bearer',secret].join(' ')}
+  tables=%w[messages channel_threads active_storage_blobs active_storage_attachments active_storage_variant_records]
+  before=tables.to_h { |table| [table,ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM #{table}").to_i] }
   session.post('/rooms/486777696/agents/messages',params:body,headers:headers)
   first={status:session.response.status,response:session.response.body,headers:session.response.headers.slice('content-type','retry-after')}
+  committed={row_deltas:tables.to_h { |table| [table,ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM #{table}").to_i-before[table]] },thread_closed_at:ChannelThread.find(1900700020).closed_at,source_file_exists:ActiveStorage::Blob.find(1).service.exist?(ActiveStorage::Blob.find(1).key),open_transactions:ActiveRecord::Base.connection.open_transactions,jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map { |job| job[:job].name }}
   queued=ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j[:job]==Message::AttachmentProcessingJob }
   raise 'processing job missing after commit' unless queued
   ActiveJob::Base.queue_adapter.enqueued_jobs.delete(queued)
@@ -35,5 +38,5 @@ travel_to Time.utc(2026,3,2,16) do
     jobs:ActiveJob::Base.queue_adapter.enqueued_jobs.map{|j|{class:j[:job].name,args:j[:job].name=='ChannelThread::PushMessageJob' ? {thread_id:j[:args].fetch(0).fetch('_aj_globalid').delete_prefix('gid://campfire/ChannelThread/').to_i,message_id:j[:args].fetch(1).fetch('_aj_globalid').delete_prefix('gid://campfire/Message/').to_i} : j[:job].name=='ActiveStorage::AnalyzeJob' ? {blob_id:j[:args][0]['_aj_globalid'].split('/').last.to_i} : j[:args]}}}
   session.post('/rooms/486777696/agents/messages',params:body,headers:headers)
   approved={status:session.response.status,response:session.response.body,headers:session.response.headers.slice('content-type','retry-after')}
-  puts JSON.pretty_generate(notes:['Fresh #226 on the pinned harness: the post commits, then its actual processing job generates the thumbnail in committed transactions.'],cases:[{name:'fresh_jpeg_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:first,approved:approved,state:state}])
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],notes:['Fresh #226 on the pinned harness: the post commits, then its actual processing job generates the thumbnail in committed transactions.'],cases:[{name:'fresh_jpeg_closed_thread',method:'POST',path:'/rooms/486777696/agents/messages',body:body,rails:first,rails_state:committed,approved:approved,state:state}])
 end

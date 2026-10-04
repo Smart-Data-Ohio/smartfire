@@ -73,6 +73,6 @@ boundaries=[]
  raise 'missing frames' unless n==count
  boundaries << {count:count,base_id:base,event_id:event.id,rows:rows,sha256:digest.hexdigest,first:first,last:last}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:groups,boundaries:boundaries)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:groups,boundaries:boundaries)+"\n")
 puts "WS8bm2 older-calendar Rails: #{groups.size} groups; #{groups.sum { |g| g[:steps].sum { |s| s[:frames].size } }} exact frames; 4 silent rollbacks; #{boundaries.sum { |b| b[:count] }} ordered boundary frames"
 puts "WS8bm2 older-calendar Rails reads: #{groups.map { |g| [g[:populated],g[:size],g[:steps].first[:reads]].join(':') }.join(', ')}"

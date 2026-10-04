@@ -35,5 +35,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   capture.call(:existing_room_scope,actor.id,attrs)
   capture.call(:scope_bot,agent.user_id)
   grant.revoke!;capture.call(:revoked,actor.id,attrs)
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:results}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results}.as_json)
 end

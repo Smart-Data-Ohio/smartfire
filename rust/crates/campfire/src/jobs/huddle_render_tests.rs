@@ -86,7 +86,7 @@ async fn quiet(socket: &mut Socket, name: &str, operation: &str) {
 async fn run(name: &str) {
     let vectors: Value =
         serde_json::from_str(include_str!("huddle_render_assertions.json")).unwrap();
-    assert_eq!(vectors["reference_pin"], "d7c7de92");
+    assert_eq!(vectors["reference_pin"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
     assert_eq!(vectors["cases"].as_array().unwrap().len(), 20);
     let case = vectors["cases"]
         .as_array()

@@ -49,5 +49,5 @@ readiness=[{}, {'LIVEKIT_URL'=>' '}, {'LIVEKIT_URL'=>'http://Gateway', 'LIVEKIT_
   previous.each{|k,v|ENV[k]=v}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',steps:,pickers:,play:,formats:,agent_id:agent.id,thread_id:thread.id,readiness:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],steps:,pickers:,play:,formats:,agent_id:agent.id,thread_id:thread.id,readiness:)+"\n")
 puts "WS8bm2 slash Rails oracle: #{steps.size} dispatch responses; #{pickers.size} picker responses; #{play.size} play presentation fragments; #{formats.size} format responses; #{readiness.size} huddle readiness cases"

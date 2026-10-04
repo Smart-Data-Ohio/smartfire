@@ -72,7 +72,7 @@ controller = Class.new(ActionController::Base) do
 end
 status, headers, body = controller.action(:show).call(Rack::MockRequest.env_for("/embeds/image/fixture"))
 File.write(output, JSON.pretty_generate({
-  "reference" => "d7c7de92", "addresses" => addresses.map { |ip| { "address" => ip, "blocked" => RestrictedHTTP::PrivateNetworkGuard.private_ip?(ip) } },
+  "reference" => ENV.fetch("PARITY_REFERENCE_SHA"), "addresses" => addresses.map { |ip| { "address" => ip, "blocked" => RestrictedHTTP::PrivateNetworkGuard.private_ip?(ip) } },
   "hosts" => host_cases, "redirects" => redirects, "signed" => signed,
   "embed_html" => embed_html, "image_response" => { "status" => status, "cache_control" => headers["cache-control"], "content_type" => headers["content-type"], "content_disposition" => headers["content-disposition"], "content_transfer_encoding" => headers["content-transfer-encoding"] }
 }) + "\n")

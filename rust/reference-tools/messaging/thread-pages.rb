@@ -84,7 +84,7 @@ capture.call("show_xml", "#{base}/#{threads.first.id}.xml", "channel_threads/sho
 parent.destroy!
 capture.call("show_deleted_parent", "#{base}/#{threads.first.id}.json", "channel_threads/show")
 capture.call("show_deleted_parent_html", "#{base}/#{threads.first.id}", "channel_threads/show")
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", parent_id: parent.id,
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], parent_id: parent.id,
   thread_ids: threads.map(&:id), message_ids: messages.map(&:id), work_event_id: event.id, rows:,
   brand_icon_names: Icons.client_icon_names,
   viewer: {theme: viewer.theme, text_size: viewer.text_size, time_zone: viewer.time_zone,

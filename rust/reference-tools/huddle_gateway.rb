@@ -66,7 +66,7 @@ class HuddleGatewayOracle
         results << result if result
       end
     end
-    puts JSON.pretty_generate({reference_pin: "d7c7de92", now: Time.current.to_i, token: token, cases: results.compact})
+    puts JSON.pretty_generate({reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.current.to_i, token: token, cases: results.compact})
   ensure
     travel_back
   end

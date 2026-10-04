@@ -178,5 +178,5 @@ coercions=inputs.map do |input|
   {input:,invalid:true}
  end
 end
-puts JSON.pretty_generate(reference:'d7c7de92 plus approved board drift',coercions:,rows:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),coercions:,rows:)
 warn "Rails board write oracle: #{rows.size} complete HTTP responses; no masks"

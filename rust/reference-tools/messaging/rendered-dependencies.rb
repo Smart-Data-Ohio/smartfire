@@ -2,6 +2,13 @@
 require "json"
 require "active_support/testing/time_helpers"
 include ActiveSupport::Testing::TimeHelpers
+# The #226 after-commit claims now persist UUIDs in this fixture. Fix only their
+# random input so independent fresh captures retain byte-identical lease rows.
+uuid_draw = 0
+SecureRandom.define_singleton_method(:uuid) do
+  uuid_draw += 1
+  format('00000000-0000-4000-8000-%012d', uuid_draw)
+end
 travel_to Time.utc(2026, 3, 2, 16)
 ApplicationController.allow_forgery_protection = false
 Rails.application.config.hosts.clear
@@ -179,5 +186,5 @@ tree = ActionView::Digestor.tree(name, view.lookup_context, true)
 walk = ->(node) { [node.name, *node.children.flat_map { |child| walk.call(child) }] }
 template_dependencies = walk.call(tree).uniq.sort
 File.write(File.join(File.dirname(ARGV.fetch(0)), "message-template-digest.txt"), digest + "\n")
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", template_digest: digest, template_dependencies:, database:, rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], template_digest: digest, template_dependencies:, database:, rows:) + "\n")
 puts "WS8bm rendered dependencies: #{rows.size} warm-room update/reload pairs from pinned Rails"

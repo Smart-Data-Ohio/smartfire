@@ -41,7 +41,7 @@ class HuddlePublicOracle
       presence_live:{action:'presence',grants:'mixed',extra_room:true},presence_empty:{action:'presence'},
       presence_deleted:{action:'presence',grants:'live',deleted:true},presence_removed:{action:'presence',grants:'live',removed:true}
     }.each {|name,opts|cases << scenario(name.to_s,opts)}
-    puts JSON.pretty_generate({reference_pin:'d7c7de92',now:Time.current.to_i,cases:cases})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,cases:cases})
   ensure
     travel_back
   end

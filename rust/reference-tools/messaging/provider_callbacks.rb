@@ -27,5 +27,5 @@ reads=[]
  browser.get(path,headers:headers.dup)
  reads << {path:,status:browser.response.status,body:browser.response.body}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:"d7c7de92",rows:base["rows"],room_id:room.id,message_id:message.id,steps:,reads:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:base["rows"],room_id:room.id,message_id:message.id,steps:,reads:)+"\n")
 puts "WS8bm2 provider callbacks: #{steps.size} changed-URL HTTP edits, #{steps.sum{|s|s[:frames].size}} socket frames; #{reads.size} actual provider card reads"

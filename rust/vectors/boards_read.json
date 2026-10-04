@@ -1,7 +1,7 @@
 {
-  "reference": "d7c7de92",
-  "board_reference": "origin/main b908ebc2 approved drift",
-  "layout_reference": "2e20b24c",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "board_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "layout_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "sources": {
     "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519",
     "app/models/thread_tag.rb": "345cd7a0672e9c251c6875476e21bfd1cc5d9f025180b53315c8b9c265c4dc78",

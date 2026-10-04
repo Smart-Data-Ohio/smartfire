@@ -57,4 +57,4 @@ layouts={}
 Current.reset;Current.user=viewer
 renderer=WS13CallViewsController.renderer.new(http_host:'campfire.test',https:false,'rack.session'=>{})
 %w[huddle huddle_invitation huddle_join_notice].each {|part|layouts[part]=renderer.render(partial:"layouts/#{part}")}
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases,layouts:layouts})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases,layouts:layouts})

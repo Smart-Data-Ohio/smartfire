@@ -21,4 +21,4 @@ cases=paths.map do |method,path|
  client.public_send(method,path,params:method=='post' ? {user_ids:[owner.id]} : nil,as: :json,headers:{'Authorization'=>"Bearer #{secret}"})
  {method:,path:,status:client.response.status,body:client.response.body,credential_used:credential.reload.last_used_at.present?,agent_seen:agent.reload.last_seen_at.present?}
 end
-puts JSON.pretty_generate({reference:'d7c7de92',cases:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:})

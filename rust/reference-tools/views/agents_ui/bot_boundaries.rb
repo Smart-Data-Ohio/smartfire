@@ -57,5 +57,5 @@ scenarios.each do |name,operation,table,event,predicate,cap_field|
  agent=bot&.reload&.agent
  rows << {name:,operation:,table:,event:,predicate:,cap_field:,status:,bot:bot && {name:bot.name,icon_name:bot.icon_name,status:bot.status,webhook_url:bot.webhook_url},agent:agent && {kind:agent.kind,owner_id:agent.owner_id,provider:agent.provider,daily_message_cap:agent.daily_message_cap,daily_board_post_cap:agent.daily_board_post_cap,daily_external_action_cap:agent.daily_external_action_cap},audits:AuditLog.where('id > ?',before).order(:id).pluck(:action)}
 end
-puts JSON.pretty_generate(reference:'d7c7de92',rows:,errors:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),rows:,errors:)
 warn "Rails bot mutation boundaries: #{rows.size} HTTP cases"

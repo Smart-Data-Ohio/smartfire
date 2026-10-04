@@ -1,4 +1,4 @@
-# Actual Rails setters/validations and legal zone names at d7c7de92.
+# Actual Rails setters/validations and legal zone names at the current reference pin.
 require "active_support/testing/time_helpers"
 include ActiveSupport::Testing::TimeHelpers
 user = User.find_by!(email_address: "david@37signals.com")
@@ -46,5 +46,5 @@ second = User.find(user.id)
 first.update!(dnd_enabled: true, presence_setting: "invisible")
 second.update!(custom_status_text: "Concurrent edit")
 dirty_write = second.reload.attributes.slice("dnd_enabled", "presence_setting", "custom_status_text")
-puts JSON.generate({reference:"d7c7de92",now:clock.iso8601,rows:,clocks:,validations:,dirty_write:,
+puts JSON.generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:clock.iso8601,rows:,clocks:,validations:,dirty_write:,
   zones:{ names:(ActiveSupport::TimeZone::MAPPING.keys+TZInfo::Timezone.all_identifiers).uniq.sort }})

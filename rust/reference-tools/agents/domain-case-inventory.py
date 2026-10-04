@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Inventory pinned WS11 domain tests; source cases are never reported as executed tests."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import json
 from pathlib import Path
 import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
-PIN = "d7c7de92"
 EXPLICIT_FILES = {
     "test/models/channel_thread_agent_assignment_test.rb",
     "test/models/message/bot_webhook_fanout_test.rb",

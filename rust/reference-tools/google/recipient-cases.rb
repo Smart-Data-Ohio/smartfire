@@ -102,5 +102,5 @@ specs.each do |spec|
     raise ActiveRecord::Rollback
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',now:NOW.iso8601,rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:NOW.iso8601,rows:})
 warn "Pinned Rails Drive recipients: #{rows.size} real request scenarios; no Google HTTP"

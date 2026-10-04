@@ -57,5 +57,5 @@ reactions = ["\u00a0👍\u00a0", "\u2003👍\u2003", "\u202f👍\u202f", "\u3000
   end
   { content:, resolved:, reaction: Boost.reaction?(resolved), counts:, stored: source.boosts.order(:id).pluck(:content) }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", source_id: source.id, reply_id: reply.id, states:, reactions:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], source_id: source.id, reply_id: reply.id, states:, reactions:) + "\n")
 puts "WS8bma review oracle: #{states.size} real room states; #{reactions.size} reaction pairs; Rails collection keys and page validators"

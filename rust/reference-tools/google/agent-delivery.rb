@@ -51,4 +51,4 @@ rows=[]
     ActiveRecord::Base.connection_pool.disconnect!;FileUtils.rm_f(["#{database}-wal","#{database}-shm"]);FileUtils.cp(snapshot,database);FileUtils.rm_f(snapshot)
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:})

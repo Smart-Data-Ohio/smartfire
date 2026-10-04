@@ -21,5 +21,5 @@ cases=[{theme:"system",text_size:"default",time_zone:nil}, {theme:"dark",text_si
 end
 Current.reset
 choices=ActiveSupport::TimeZone.all.map{|z|[z.to_s,z.tzinfo.identifier]}.uniq{|(_,identifier)|identifier}
-puts JSON.pretty_generate(reference:"d7c7de92",choices:choices,cases:cases)
-warn "Rails appearance oracle: #{cases.size} bodies, #{choices.size} zone choices; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),choices:choices,cases:cases)
+warn "Rails appearance oracle: #{cases.size} bodies, #{choices.size} zone choices; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

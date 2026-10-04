@@ -14,7 +14,7 @@ browser.host! 'campfire.test'
 headers = {'Cookie'=>"session_token=#{labels.fetch('session_cookies.david')}", 'HTTP_USER_AGENT'=>'Mozilla/5.0 Chrome/140.0.0.0', 'Accept'=>'text/html'}
 browser.post('/sudo', params:{password:'secret123456'}, headers:)
 headers.delete('Cookie')
-result = {reference: 'd7c7de92', expiry: [], github_tokens: [], errors: {}}
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA"), expiry: [], github_tokens: [], errors: {}}
 
 inputs = ['9999-12-31 00:00:00','-9999-01-01 00:00:00','9999-12-30 23:00:00','10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001-12-31 24:00:00']
 ['UTC','Asia/Tokyo'].each do |zone|

@@ -23,4 +23,4 @@ Github::PullRequestUrl::BLOCK_TAGS.each { |tag| html << "<#{tag}>https://github.
 vectors={texts:texts.map { |text| {text:, references:Github::PullRequestUrl.extract(text).map { |r| [r.owner,r.repo,r.number.to_s] }, matches:Github::PullRequestUrl.pull_request_url?(text)} },
   html:html.map { |value| {html:value,text:Github::PullRequestUrl.non_code_text(value)} }}
 File.write("/work/vectors/github_references.json",JSON.pretty_generate(vectors)+"\n")
-puts "GitHub URL Rails oracle: #{vectors[:texts].size} extraction cases, #{vectors[:html].size} HTML cases; reference d7c7de92"
+puts "GitHub URL Rails oracle: #{vectors[:texts].size} extraction cases, #{vectors[:html].size} HTML cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

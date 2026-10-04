@@ -131,5 +131,5 @@ cases.each do |row|
   rows << row.merge(expected:{status:,error:result.error,failure:result.ok? ? nil : result.failure_body,
       added_threads:ChannelThread.count-before_threads,fields:,history:,ledger:})
 end
-puts JSON.pretty_generate(reference:"d7c7de92",sources:JSON.parse(File.read(File.join(ENV.fetch("PARITY_WORK"),"reference-tools/agents/work-services-source-hashes.json"))),rows:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],sources:JSON.parse(File.read(File.join(ENV.fetch("PARITY_WORK"),"reference-tools/agents/work-services-source-hashes.json"))),rows:)
 warn "Rails agent work service oracle: #{rows.length} cases; real writes and denials; 0 masks"

@@ -1,4 +1,4 @@
-# Observe actual commit callbacks and rendered Action Cable broadcasts on Rails d7c7de92.
+# Observe actual commit callbacks and rendered Action Cable broadcasts on the current Rails reference pin.
 require 'active_support/testing/time_helpers'
 extend ActiveSupport::Testing::TimeHelpers
 ApplicationJob.queue_adapter = :test
@@ -49,4 +49,4 @@ results = {}
     }
   end
 end
-puts JSON.pretty_generate({ reference: 'd7c7de92', results: results }.as_json)
+puts JSON.pretty_generate({ reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], results: results }.as_json)

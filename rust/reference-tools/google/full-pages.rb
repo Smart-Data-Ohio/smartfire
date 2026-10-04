@@ -67,6 +67,6 @@ specs.each do |spec|
     raise ActiveRecord::Rollback
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',layout_reference:'2e20b24c',sources:%w[app/views/layouts/application.html.erb app/views/users/profiles/_status.html.erb app/views/users/profiles/show.html.erb app/views/sessions/new.html.erb].to_h { |p|[p,Digest::SHA256.file(Rails.root.join(p)).hexdigest] },vapid_public_key:Rails.configuration.x.vapid.public_key,now:now.iso8601,rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],layout_reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],sources:%w[app/views/layouts/application.html.erb app/views/users/profiles/_status.html.erb app/views/users/profiles/show.html.erb app/views/sessions/new.html.erb].to_h { |p|[p,Digest::SHA256.file(Rails.root.join(p)).hexdigest] },vapid_public_key:Rails.configuration.x.vapid.public_key,now:now.iso8601,rows:})
 
 warn "Pinned Rails Google full pages: #{rows.size} complete HTTP bodies; no Google HTTP"

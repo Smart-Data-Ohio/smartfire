@@ -1,6 +1,6 @@
 {
-  "reference": "d7c7de92",
-  "layout_reference": "2e20b24c",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "layout_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "sources": {
     "app/controllers/sessions/google_controller.rb": "55b087a9a7580300ff5f385e2465fb2362364edb1783c892ec8a0799728d256f",
     "app/controllers/concerns/google_sign_in_flow.rb": "ed3ae825d21a879f5c2411b876e07bf3af751b4f1e08d0a41e666efa1f6b3bdc",

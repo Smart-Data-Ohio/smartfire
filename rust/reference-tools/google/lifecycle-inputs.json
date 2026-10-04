@@ -1,0 +1,10 @@
+{
+  "source_artifact": "rust/vectors/google_lifecycle.json",
+  "source_git_blob": "a9e4fe32a22c0e6801dd6b71e91c22955dbd9644",
+  "source_case": "deactivate_connected stage-end system note",
+  "uuid": "5c07adb2-32cd-4902-94ed-3d1b82663c82",
+  "timestamp_milliseconds": [
+    1790839967279,
+    1790839967287
+  ]
+}

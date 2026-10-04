@@ -4,7 +4,7 @@ ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 cd "$ROOT"
 WORK=$(mktemp -d -p "${TMPDIR:-../.scratch}" page-reads.XXXXXX)
 trap 'rm -rf -- "$WORK"' EXIT
-PARITY_IMAGE=${PARITY_STATUS_IMAGE:-ws8br2-reference:d7c7de92-status-2e20b24c} bash parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze reference-tools/views/agents_ui/navigation_followups.rb > "$WORK/corpus.json"
+PARITY_IMAGE=${PARITY_IMAGE:-campfire-reference} bash parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze reference-tools/views/agents_ui/navigation_followups.rb > "$WORK/corpus.json"
 python3 -m json.tool "$WORK/corpus.json" > /dev/null
 if [[ "${1:-}" == --check ]]; then
   cmp "$WORK/corpus.json" vectors/agent-navigation-followups.json

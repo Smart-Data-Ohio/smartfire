@@ -14,7 +14,7 @@ browser.host! 'campfire.test'
 headers = {'Cookie'=>"session_token=#{labels.fetch('session_cookies.david')}", 'HTTP_USER_AGENT'=>'Mozilla/5.0 Chrome/140.0.0.0', 'Accept'=>'text/html'}
 browser.post('/sudo', params:{password:'secret123456'}, headers:)
 headers.delete('Cookie')
-result = {reference: 'd7c7de92', expiry: [], github_tokens: [], errors: {}}
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA"), expiry: [], github_tokens: [], errors: {}}
 strings = JSON.parse(File.read(File.join(__dir__, 'extended_expiry_inputs.json')))
 multiparts = [
  {'expires_at(1i)'=>'2030','expires_at(2i)'=>'6','expires_at(3i)'=>'15','expires_at(4i)'=>'10','expires_at(5i)'=>'20'},

@@ -30,4 +30,4 @@ results=[]
   end
 end
 sources=%w[app/models/event.rb app/models/event_attendance.rb].to_h {|path|[path,Digest::SHA256.hexdigest(Rails.root.join(path).read)]}
-puts JSON.pretty_generate({reference:'d7c7de92',source_sha256:sources,results:results})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],source_sha256:sources,results:results})

@@ -23,5 +23,5 @@ rows=[]
  rows << {private:private_value,status:browser.response.status,body:body}
 end
 Current.reset
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',room_id:thread.room_id,thread_id:thread.id,pull_request_id:pr.id,rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],room_id:thread.room_id,thread_id:thread.id,pull_request_id:pr.id,rows:rows)+"\n")
 puts "WS8bm GitHub thread page: #{rows.size} complete public/private/unknown show bodies; reference d7c7de92"

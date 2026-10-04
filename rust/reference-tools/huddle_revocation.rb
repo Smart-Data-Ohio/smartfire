@@ -30,7 +30,7 @@ class HuddleRevocationOracle
     Huddle::CleanupJob.define_singleton_method(:perform_later) { |*_| }
     Room::DestroyJob.define_singleton_method(:perform_later) { |*_| }
     cases = CASES.map { |name, (type, operation)| scenario(name, type, operation) }
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", now: Time.utc(2026, 1, 1, 12).to_i, cases: cases)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.utc(2026, 1, 1, 12).to_i, cases: cases)
   ensure
     travel_back
   end

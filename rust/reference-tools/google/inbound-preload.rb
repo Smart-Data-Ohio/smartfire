@@ -33,4 +33,4 @@ rows=[]
     raise ActiveRecord::Rollback
   end
 end
-puts JSON.pretty_generate({reference:'d7c7de92',rows:})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:})

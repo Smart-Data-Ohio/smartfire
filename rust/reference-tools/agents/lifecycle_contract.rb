@@ -27,5 +27,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   end
   results={first:snapshot.call(agent.kill_switch!),second:snapshot.call(agent.kill_switch!)}
   results[:quiet_again]=[root.finalize_stream_quietly!,reply.finalize_stream_quietly!]
-  puts JSON.pretty_generate({reference_pin:"d7c7de92",results:results}.as_json)
+  puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],results:results}.as_json)
 end

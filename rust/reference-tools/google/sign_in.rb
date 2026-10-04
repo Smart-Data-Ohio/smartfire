@@ -19,7 +19,7 @@ paths = [nil, "", "/rooms/1", "/rooms/1?page=2#fragment", "http://example.test/r
   "//evil.test/rooms/1", "/\\evil.test", "javascript:alert(1)", "http://example.test.evil.test/",
   "/a b", "/a%20b", "http://example.test", "/foo#bar", "http://user:pass@example.test/rooms/1"]
 puts JSON.pretty_generate({
-  reference: "d7c7de9264c63015be398001d7a1094e7695a6db",
+  reference: ENV.fetch("PARITY_REFERENCE_SHA"),
   secret_key_base: ENV.fetch("SECRET_KEY_BASE"),
   client_id: ENV.fetch("GOOGLE_CLIENT_ID"), redirect_uri:, raw_state:, signed_state:, nonce:, verifier:, challenge:,
   authorize: urls, return_paths: paths.map { |path| { input: path, output: Google::SignIn.safe_return_path(path, host: "example.test") } }

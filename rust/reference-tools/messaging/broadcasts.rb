@@ -47,6 +47,6 @@ capture.call("indicator") do
 end
 travel_to Time.utc(2026, 3, 2, 16, 0, 20)
 capture.call("destroy") { browser.delete "#{base}/#{message.id}.turbo_stream", headers: }
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", base_url: "http://campfire.test:3443",
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], base_url: "http://campfire.test:3443",
   message_id: message.id, reply_id: reply.id, thread_id: thread.id, thread_reply_id: thread_reply.id, steps:) + "\n")
 puts "WS8bm broadcast oracle: #{steps.size} real Rails writes; #{steps.sum { |step| step[:frames].size }} rendered/channel publisher frames; request port 3443"

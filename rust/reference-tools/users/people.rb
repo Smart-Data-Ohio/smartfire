@@ -66,5 +66,5 @@ directories = [false, true].map do |star|
   end
   result
 end
-puts JSON.pretty_generate(reference: "d7c7de92", status_reference: "2e20b24c", cards: cases, directories: directories)
-warn "Rails people oracle: #{cases.size} cards, #{directories.size} directories; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), cards: cases, directories: directories)
+warn "Rails people oracle: #{cases.size} cards, #{directories.size} directories; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

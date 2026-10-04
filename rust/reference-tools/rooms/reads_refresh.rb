@@ -56,5 +56,5 @@ refresh={}
   ActiveSupport::IsolatedExecutionState.clear
   refresh[accept]={status:client.response.status,body:client.response.body}
 end
-puts JSON.pretty_generate({reference:'d7c7de92',root_ids:[roots.first.id,roots[1].id,roots.last.id],cases:cases,refresh:refresh})
-warn "Rails reads/refresh oracle: #{cases.size} read cases, #{refresh.size} quiet refresh formats; reference d7c7de92"
+puts JSON.pretty_generate({reference: ENV.fetch('PARITY_REFERENCE_SHA'),root_ids:[roots.first.id,roots[1].id,roots.last.id],cases:cases,refresh:refresh})
+warn "Rails reads/refresh oracle: #{cases.size} read cases, #{refresh.size} quiet refresh formats; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

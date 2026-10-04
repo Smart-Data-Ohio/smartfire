@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Check every Rails source used by these adapters against the pinned oracle."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 import hashlib
 from pathlib import Path
 import subprocess
@@ -40,16 +42,16 @@ def main():
     assert (root / "test/fixtures/files/moon.jpg").read_bytes() == (root / "rust/vectors/users_logos/moon.jpg").read_bytes()
     lines = subprocess.check_output([
         "docker", "run", "--rm", "--name", "ws11api-source-check", "--entrypoint", "sha256sum",
-        "ws11api-reference:d7c7de92", *["/rails/" + file for file in files],
+        PIN_IMAGE, *["/rails/" + file for file in files],
     ], text=True).splitlines()
     for file, line in zip(files, lines, strict=True):
-        pinned = subprocess.check_output(["git", "show", f"d7c7de92:{file}"], cwd=root)
+        pinned = subprocess.check_output(["git", "show", f"{PIN_FULL}:{file}"], cwd=root)
         check_source(pinned, line.split()[0], (root / file).read_bytes(), file)
     named_files=["test/models/message_streaming_test.rb", "test/models/user/bot_test.rb", "test/models/channel_thread_agent_assignment_test.rb", "test/models/agent_budgets_test.rb"]
     for file in named_files:
-        assert (root/file).read_bytes()==subprocess.check_output(["git","show",f"d7c7de92:{file}"],cwd=root),file
+        assert (root/file).read_bytes()==subprocess.check_output(["git","show",f"{PIN_FULL}:{file}"],cwd=root),file
     print("WS11-api new named sources: 4 pinned test files matched checkout; test sources are not shipped in the Rails image")
-    print(f"WS11-api reference sources: {len(files)} pinned files matched; 0 image or checkout mismatches (d7c7de92)")
+    print(f"WS11-api reference sources: {len(files)} pinned files matched; 0 image or checkout mismatches ({PIN})")
 
 
 if __name__ == '__main__':
