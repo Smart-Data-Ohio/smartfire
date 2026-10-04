@@ -252,6 +252,10 @@ for line in (RUST / "parity/.env.reference").read_text().splitlines():
         env[key] = value
 env.update(CAMPFIRE_FROZEN_TIME="2026-03-02T16:00:00Z", CAMPFIRE_LOG="error", TARGET_BIND="127.0.0.1")
 target = Path(env.get("CARGO_TARGET_DIR", RUST / "target"))
+media = target / "ws8bm-browser-media"
+if any(name in new_upload_cases for name in selected_names):
+    subprocess.run(["bash", str(RUST / "reference-tools/users/media_runtime.sh")], cwd=ROOT,
+                   env=dict(env, WS8BR2_MEDIA_DIR=str(media)), check=True)
 reference = str(RUST / "parity/bin/reference")
 # Keep the historical default, while allowing a worker to choose slots outside
 # its OS ephemeral-client range. No application wait or retry is changed.
@@ -448,7 +452,13 @@ for file in files:
                         reference_up += ["-e", "WS8BM_TEST_JOB_ADAPTER=1"]
                     subprocess.run(reference_up, cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
                     host_command=[test_host,"controllers::presenters::test_support::ws8bm_browser_host_without_jobs","--exact","--ignored","--nocapture","--test-threads=1"] if paused_jobs else [str(target / "debug/campfire"), "server"]
-                    process = subprocess.Popen(host_command, cwd=ROOT, env=run_env, stdout=log, stderr=log)
+                    # Debian's media dependencies belong to the candidate,
+                    # not the host's curl/git used to start the reference.
+                    host_env = dict(run_env)
+                    if case in new_upload_cases:
+                        host_env.update(LD_LIBRARY_PATH=str(media / "native-libs"),
+                                        PATH=str(media / "usr/bin") + os.pathsep + run_env["PATH"])
+                    process = subprocess.Popen(host_command, cwd=ROOT, env=host_env, stdout=log, stderr=log)
                     if paused_jobs:
                         print("WS8bm job boundary: Rails ActiveJob::TestAdapter; Rust TestApp::without_job_runner; no selector deadline changes",flush=True)
                     deadline = time.monotonic() + 120
@@ -532,6 +542,7 @@ for file in files:
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]==seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]+2
                             elif case in new_upload_cases:
+                                storage = work / (f".instances/{ports[0]}/storage" if database == databases[0] else "files")
                                 from behavior_upload_rows import assert_upload_rows
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     assert_upload_rows(conn,seed,case,storage,ROOT,PIN)

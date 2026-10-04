@@ -78,8 +78,10 @@ class Ws8bmNativePhoneTest < Minitest::Test
       # pinned local Selenium driver's native file-input action; no /se/file
       # Grid transfer endpoint or replacement browser write is involved.
       page.driver.browser.file_detector = ->(_keys) { nil }
-      page.current_window.resize_to(1440, 1000)
-      page.driver.browser.execute_cdp "Emulation.setEmulatedMedia", features: [ { name: "prefers-color-scheme", value: "light" } ]
+      unless JSON.parse(File.read("/proof/native-location.json"))["label"] == "video"
+        page.current_window.resize_to(1440, 1000)
+        page.driver.browser.execute_cdp "Emulation.setEmulatedMedia", features: [ { name: "prefers-color-scheme", value: "light" } ]
+      end
     end
     location = JSON.parse(File.read("/proof/native-location.json"))
     visit Capybara.app_host + (location["label"] == "motion" ? "/rooms/201306877" : "/rooms/654632876")
