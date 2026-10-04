@@ -48,8 +48,8 @@ export async function nativeNetwork(temp,upstreamPorts,log) {
     forward=spawn('node',[forwardPath,socket],{stdio:['ignore',log,log]});
     await waitSocket(socket,forward);
     // PID isolation also tears down Chrome descendants when its namespace init
-    // exits. unshare forwards ordinary teardown signals and kills its child if
-    // the supervising process dies; no driver outlives a failed browser proof.
+    // exits. unshare forwards ordinary teardown signals and kills its namespace
+    // init when the unshare supervisor exits.
     driver=spawn('unshare',[...namespaceArguments,'node',wrapper,'driver',driverSocket,'9515',...upstreamPorts.map(String)],{
       stdio:['ignore',log,log],env:{...process.env,TMPDIR:temp,PARITY_UPSTREAM_SOCKET:socket,WS8BM_HOST_NETWORK:readlinkSync('/proc/self/ns/net')},
     });
