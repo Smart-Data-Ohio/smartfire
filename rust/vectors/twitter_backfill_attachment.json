@@ -1,0 +1,281 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "source_hashes": {
+    "app/models/twitter/post_reference_backfill.rb": "41410ff35a9544505b07d1e0db4977180e6fa27a47d02cd7ceb9503050b815bd",
+    "app/models/twitter/post_reference_sync.rb": "38ee493e470472b299cdcab85977a530fda163341b035b6a45c2c02103802150",
+    "app/models/twitter/post_url.rb": "9a3653ab31e1f5c1ce00e1185cd120d1024676291918a152b6dcbdc1229942cd",
+    "lib/tasks/twitter.rake": "03cc6417bc98144d907a545dbcc06c59ca18c906a2f017d0544df7a6f7c52284"
+  },
+  "notes": "Normally saved HTML content attachment. The default ApplicationController renderer raises because the nested object renderer has a nil context prefix; request rendering succeeds. No whole-run transaction: earlier syncs and fetch jobs remain, the failing message and later rows are untouched. Direct sync only canonicalizes and succeeds. Four actual rake aborts (three in-process and one real CLI) and one successful Markdown short-circuit invocation.",
+  "inputs": [
+    {
+      "id": 2120000007,
+      "markdown": "https://x.com/before/status/99112",
+      "html": "<p>https://x.com/before/status/99112</p>"
+    },
+    {
+      "id": 2120000008,
+      "markdown": null,
+      "html": "<action-text-attachment content-type=\"text/html\" content=\"&lt;p&gt;https&amp;#58;//x.com/a/status/99013&lt;/p&gt;\"></action-text-attachment>",
+      "forward_note": "https://x.com/note/status/99113"
+    },
+    {
+      "id": 2120000009,
+      "markdown": "https://x.com/after/status/99114",
+      "html": "<p>https://x.com/after/status/99114</p>"
+    }
+  ],
+  "stored": [
+    {
+      "id": 2120000007,
+      "markdown": "https://x.com/before/status/99112",
+      "html": "<p>https://x.com/before/status/99112</p>"
+    },
+    {
+      "id": 2120000008,
+      "markdown": null,
+      "html": "<action-text-attachment content-type=\"text/html\" content=\"<p>https&amp;#58;//x.com/a/status/99013</p>\"></action-text-attachment>",
+      "forward_note": "https://x.com/note/status/99113"
+    },
+    {
+      "id": 2120000009,
+      "markdown": "https://x.com/after/status/99114",
+      "html": "<p>https://x.com/after/status/99114</p>"
+    }
+  ],
+  "first": {
+    "stdout": "",
+    "error": {
+      "class": "ActionView::Template::Error",
+      "message": "undefined method 'include?' for nil"
+    },
+    "cause": {
+      "class": "NoMethodError",
+      "message": "undefined method 'include?' for nil"
+    },
+    "open_transactions": 0,
+    "state": {
+      "references": [
+        [
+          935961886,
+          "20"
+        ],
+        [
+          935961901,
+          "1750290547908952568"
+        ],
+        [
+          2120000007,
+          "99112"
+        ]
+      ],
+      "posts": [
+        [
+          "1750290547908952568",
+          "https://x.com/37signals/status/1750290547908952568",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "20",
+          "https://x.com/jack/status/20",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "266031293945503744",
+          "https://x.com/BarackObama/status/266031293945503744",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "99112",
+          "https://x.com/before/status/99112",
+          "2026-03-02T16:00:00.000000Z"
+        ]
+      ],
+      "jobs": [
+        "1750290547908952568",
+        "99112"
+      ]
+    }
+  },
+  "repeated": {
+    "stdout": "",
+    "error": {
+      "class": "ActionView::Template::Error",
+      "message": "undefined method 'include?' for nil"
+    },
+    "cause": {
+      "class": "NoMethodError",
+      "message": "undefined method 'include?' for nil"
+    },
+    "open_transactions": 0,
+    "state": {
+      "references": [
+        [
+          935961886,
+          "20"
+        ],
+        [
+          935961901,
+          "1750290547908952568"
+        ],
+        [
+          2120000007,
+          "99112"
+        ]
+      ],
+      "posts": [
+        [
+          "1750290547908952568",
+          "https://x.com/37signals/status/1750290547908952568",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "20",
+          "https://x.com/jack/status/20",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "266031293945503744",
+          "https://x.com/BarackObama/status/266031293945503744",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "99112",
+          "https://x.com/before/status/99112",
+          "2026-03-02T16:00:00.000000Z"
+        ]
+      ],
+      "jobs": [
+        "1750290547908952568",
+        "99112"
+      ]
+    }
+  },
+  "cli": {
+    "exit_status": 1,
+    "stdout": "",
+    "stderr": "bin/rails aborted!\nActionView::Template::Error: undefined method 'include?' for nil (ActionView::Template::Error)\n/rails/app/models/twitter/post_reference_backfill.rb:20:in 'block in Twitter::PostReferenceBackfill.call'\n/rails/app/models/twitter/post_reference_backfill.rb:19:in 'Twitter::PostReferenceBackfill.call'\n/rails/lib/tasks/twitter.rake:9:in 'block (2 levels) in <top (required)>'\n\nCaused by:\nNoMethodError: undefined method 'include?' for nil (NoMethodError)\n\n          if prefix.include?(?/) && object_path.include?(?/)\n                   ^^^^^^^^^\n/rails/app/models/twitter/post_reference_backfill.rb:20:in 'block in Twitter::PostReferenceBackfill.call'\n/rails/app/models/twitter/post_reference_backfill.rb:19:in 'Twitter::PostReferenceBackfill.call'\n/rails/lib/tasks/twitter.rake:9:in 'block (2 levels) in <top (required)>'\nTasks: TOP => twitter:backfill_references\n(See full trace by running task with --trace)\n"
+  },
+  "render_error": {
+    "class": "ActionView::Template::Error",
+    "message": "undefined method 'include?' for nil"
+  },
+  "request_rendered": "<div class=\"trix-content\">\n  <action-text-attachment content-type=\"text/html\" content=\"<p>https://x.com/a/status/99013</p>\"><figure class=\"attachment attachment--content\">\n  <p>https://x.com/a/status/99013</p>\n\n</figure></action-text-attachment>\n</div>\n",
+  "sync": {
+    "references": [
+      [
+        935961886,
+        "20"
+      ],
+      [
+        935961901,
+        "1750290547908952568"
+      ],
+      [
+        2120000007,
+        "99112"
+      ],
+      [
+        2120000008,
+        "99113"
+      ]
+    ],
+    "posts": [
+      [
+        "1750290547908952568",
+        "https://x.com/37signals/status/1750290547908952568",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "20",
+        "https://x.com/jack/status/20",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "266031293945503744",
+        "https://x.com/BarackObama/status/266031293945503744",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "99112",
+        "https://x.com/before/status/99112",
+        "2026-03-02T16:00:00.000000Z"
+      ],
+      [
+        "99113",
+        "https://x.com/note/status/99113",
+        "2026-03-02T16:00:00.000000Z"
+      ]
+    ],
+    "jobs": [
+      "1750290547908952568",
+      "99112",
+      "99113"
+    ]
+  },
+  "short_circuit": {
+    "stdout": "Backfilled 5 messages\n",
+    "state": {
+      "references": [
+        [
+          935961886,
+          "20"
+        ],
+        [
+          935961901,
+          "1750290547908952568"
+        ],
+        [
+          2120000007,
+          "99112"
+        ],
+        [
+          2120000008,
+          "99113"
+        ],
+        [
+          2120000009,
+          "99114"
+        ]
+      ],
+      "posts": [
+        [
+          "1750290547908952568",
+          "https://x.com/37signals/status/1750290547908952568",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "20",
+          "https://x.com/jack/status/20",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "266031293945503744",
+          "https://x.com/BarackObama/status/266031293945503744",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "99112",
+          "https://x.com/before/status/99112",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "99113",
+          "https://x.com/note/status/99113",
+          "2026-03-02T16:00:00.000000Z"
+        ],
+        [
+          "99114",
+          "https://x.com/after/status/99114",
+          "2026-03-02T16:00:00.000000Z"
+        ]
+      ],
+      "jobs": [
+        "1750290547908952568",
+        "99112",
+        "99113",
+        "99114"
+      ]
+    }
+  }
+}

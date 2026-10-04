@@ -36,6 +36,7 @@ docker run -d --rm --init --name "$name-forward" --network host --cpus 1 \
 wait_for_socket "$socket"
 docker run --rm --init --name "$name" --network none --cpus 2 --shm-size 256m \
   -u "$(id -u):$(id -g)" -e TMPDIR="$net_dir" -e TZ=UTC \
+  -e WS11UI_ACTIVITY_CONTROL="${WS11UI_ACTIVITY_CONTROL:-}" \
   -e WS11UI_HOST_NETWORK="$(readlink /proc/self/ns/net)" -e PARITY_UPSTREAM_SOCKET="$socket" \
   -v "$REFERENCE_ROOT:$REFERENCE_ROOT" -v "$net_dir:$net_dir" --tmpfs "$PARITY/node_modules" \
   -w "$REFERENCE_ROOT" "$image" node "$ROOT/reference-tools/views/agents_ui/system_cases.mjs" "$@"
