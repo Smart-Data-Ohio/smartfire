@@ -232,3 +232,20 @@ async fn ordered_capture_waits_for_actual_callback_publication_without_sleep() {
     client.assert_silent().await;
     server.abort();
 }
+
+/// Expand only recorded Rails expectations. Candidate rows are always selected
+/// independently in full; the encoding drops no row, column or deletion check.
+pub(super) fn expected_tables(group: &Value, observation: &Value) -> serde_json::Map<String, Value> {
+    let mut tables = group["baseline"].as_object().unwrap().clone();
+    for (table, changes) in observation["state"].as_object().unwrap() {
+        if group["state_encoding"] != "rows_by_id_v1" {
+            tables.insert(table.clone(), changes.clone());
+            continue;
+        }
+        let mut rows: std::collections::BTreeMap<_, _> = tables[table].as_array().unwrap().iter().map(|row| (row["id"].as_i64().unwrap(), row.clone())).collect();
+        for id in changes["deleted_ids"].as_array().unwrap() { assert!(rows.remove(&id.as_i64().unwrap()).is_some(), "recorded Rails deletion exists"); }
+        for row in changes["rows"].as_array().unwrap() { rows.insert(row["id"].as_i64().unwrap(), row.clone()); }
+        tables.insert(table.clone(), json!(rows.into_values().collect::<Vec<_>>()));
+    }
+    tables
+}

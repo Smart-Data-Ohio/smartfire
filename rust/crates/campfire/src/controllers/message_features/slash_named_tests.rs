@@ -1,4 +1,6 @@
 //! One named port for every built-in DispatcherTest case, through the app adapter.
+//! Producer control: check_slash_count_mutant.py inserts a real message after
+//! rejected /remind while preserving the error; the total-count assertion rejects it.
 use super::quote_integration_tests::{insert_rows, stream_with_cookie};
 use crate::controllers::presenters::{Presenter, test_support::*};
 use campfire_db::{
@@ -106,6 +108,7 @@ async fn run(index: usize) {
             })
             .await
             .unwrap();
+        let count_before: i64 = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get(0))?)).await.unwrap();
         let capture = app.db().capture_queries();
         let result = app
             .db()
@@ -143,8 +146,9 @@ async fn run(index: usize) {
    }
    let message=if let Some(id)=id {let m=Message::find(conn,id)?;let plain=p.plain_text_body(&m)?;json!({"id":id,"markdown_source":m.markdown_source,"action":m.action,"streaming":m.streaming,"thread_id":m.thread_id,"sound":m.sound(conn,runtime.db.env().rich_text.as_ref())?.map(|s|s.name),"plain":plain})}else{Value::Null};
    let saved=id.map(|id|campfire_db::SavedItem::find_by_user_and_message(conn,DAVID,id)).transpose()?.flatten().map(|s|json!({"status":s.status,"remind_at":s.remind_at.map(stamp)})).unwrap_or(Value::Null);
+   let count_after:i64=conn.query_row("SELECT COUNT(*) FROM messages",[],|r|r.get(0))?;
    let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Bot::WebhookJob'",[],|r|r.get(0))?;
-   Ok(json!({"result":result,"state":state,"message":message,"saved":saved,"legacy_jobs":jobs,"attachment_calls":attachment_calls,"frames":null}))
+   Ok(json!({"message_counts":[count_before,count_after],"result":result,"state":state,"message":message,"saved":saved,"legacy_jobs":jobs,"attachment_calls":attachment_calls,"frames":null}))
   }).await.unwrap();
         if let Some((client, _)) = &mut socket {
             let mut frames = vec![];
@@ -159,6 +163,8 @@ async fn run(index: usize) {
             client.assert_silent().await;
             actual["frames"] = json!(frames);
         }
+        assert_eq!(actual["message_counts"], row["message_counts"], "slash actual total-message counts differ from Rails: {name}");
+        actual.as_object_mut().unwrap().remove("message_counts");
         let expected = json!({"result":row["result"],"state":row["state"],"message":row["message"],"saved":row["saved"],"legacy_jobs":row["legacy_jobs"],"attachment_calls":row["attachment_calls"],"frames":row["frames"]});
         assert_eq!(actual, expected, "{name}: {}", row["text"]);
     }

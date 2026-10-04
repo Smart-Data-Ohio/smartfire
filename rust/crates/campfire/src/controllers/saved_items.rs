@@ -46,17 +46,47 @@ pub async fn index(c: &mut Ctx) -> Result {
     let user_id = require_current_user(c)?.id;
     let status = filter(c);
     let status_filter = status.clone();
+    let zone = super::presenters::view_context::time_zone(c).await?;
     let app = c.app().clone();
     let items = c
         .app()
         .db
         .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
+            let mut presenter = Presenter::new(conn, &app, None);
+            presenter.render_zone = zone;
             let viewer = User::find(conn, user_id)?;
-            SavedItem::accessible_to(conn, user_id)?
+            let items = SavedItem::accessible_to(conn, user_id)?
                 .into_iter()
                 .filter(|item| status == "all" || item.status == status)
-                .map(|item| view(&presenter, conn, &viewer, &item))
+                .collect::<Vec<_>>();
+            let messages = Message::for_ids(
+                conn,
+                &items.iter().map(|item| item.message_id).collect::<Vec<_>>(),
+            )?;
+            let rooms = Room::for_ids(
+                conn,
+                &messages
+                    .iter()
+                    .map(|message| message.room_id)
+                    .collect::<Vec<_>>(),
+            )?;
+            let names = Room::display_names_for(conn, &rooms, Some(&viewer))?;
+            let presenter = presenter.preload_plain_text(&messages)?;
+            let messages = messages
+                .into_iter()
+                .map(|message| (message.id, message))
+                .collect::<std::collections::HashMap<_, _>>();
+            items
+                .iter()
+                .map(|item| {
+                    let message = messages
+                        .get(&item.message_id)
+                        .ok_or(campfire_db::Error::RecordNotFound("Message"))?;
+                    let name = names
+                        .get(&message.room_id)
+                        .ok_or(campfire_db::Error::RecordNotFound("Room"))?;
+                    view_loaded(&presenter, item, message, name.clone())
+                })
                 .collect::<campfire_db::Result<Vec<_>>>()
         })
         .await
@@ -70,16 +100,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     })
     .await
 }
-/// `/remind` and `/saved` accept years beyond Jiff's 9999; app/helpers/time_helper.rb
-/// renders them with `iso8601` all the same.
-fn instant(at: campfire_db::Timestamp) -> campfire_views::time::Instant {
-    match at.try_jiff() {
-        Some(at) => campfire_views::time::Instant::Civil(at),
-        None => campfire_views::time::Instant::Wide(Box::new(move |zone| {
-            rails_compat::datetime::render(at, zone, true)
-        })),
-    }
-}
+#[cfg(test)]
 pub(crate) fn view(
     presenter: &Presenter<'_>,
     conn: &campfire_db::Connection,
@@ -87,17 +108,27 @@ pub(crate) fn view(
     item: &SavedItem,
 ) -> campfire_db::Result<campfire_views::saved_items::Item> {
     let message = Message::find(conn, item.message_id)?;
+    let room_name =
+        presenter.room_display_name(&Room::find(conn, message.room_id)?, Some(viewer))?;
+    view_loaded(presenter, item, &message, room_name)
+}
+fn view_loaded(
+    presenter: &Presenter<'_>,
+    item: &SavedItem,
+    message: &Message,
+    room_name: String,
+) -> campfire_db::Result<campfire_views::saved_items::Item> {
+    let zone = &presenter.render_zone;
     Ok(campfire_views::saved_items::Item {
         id: item.id,
         status: item.status.clone(),
-        created_at: item.created_at.jiff(),
-        remind_at: item.remind_at.map(instant),
-        reminded_at: item.reminded_at.map(instant),
-        room_name: presenter
-            .room_display_name(&Room::find(conn, message.room_id)?, Some(viewer))?,
+        created_at: features::html_datetime(item.created_at, zone),
+        remind_at: item.remind_at.map(|at| features::html_datetime(at, zone)),
+        reminded_at: item.reminded_at.map(|at| features::html_datetime(at, zone)),
+        room_name,
         author_name: presenter.user(message.creator_id)?.name,
-        body: campfire_views::helpers::truncate(&presenter.plain_text_body(&message)?, 500, "..."),
-        message_path: campfire_db::message_pin::message_path(&message),
+        body: campfire_views::helpers::truncate(&presenter.plain_text_body(message)?, 500, "..."),
+        message_path: campfire_db::message_pin::message_path(message),
     })
 }
 pub async fn create(c: &mut Ctx) -> Result {
@@ -119,7 +150,8 @@ pub async fn create(c: &mut Ctx) -> Result {
         Some(raw) => {
             match features::parse_time_checked(&features::param_string(raw), &zone, c.now()) {
                 Ok(Some(time)) => Some(time),
-                Err(error) if !matches!(&error, campfire_db::Error::Other(message) if message.starts_with("ArgumentError:")) => {
+                Err(error) if !matches!(&error, campfire_db::Error::Other(message) if message.starts_with("ArgumentError:")) =>
+                {
                     return Err(page::db_error(error));
                 }
                 _ => {

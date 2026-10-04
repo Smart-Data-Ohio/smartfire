@@ -83,40 +83,6 @@ impl Zone {
     }
 }
 
-/// A stored instant. Years outside Jiff's civil range (`/remind in 10^140 days`)
-/// render through the database's wide renderer, given the viewer's zone.
-pub enum Instant {
-    Civil(jiff::Timestamp),
-    Wide(Box<dyn Fn(&jiff::tz::TimeZone) -> String + Send + Sync>),
-}
-
-impl Instant {
-    /// `TimeWithZone#iso8601` in the viewer's zone.
-    pub fn iso8601(&self, zone: &Zone) -> String {
-        match self {
-            Instant::Civil(instant) => zone.iso8601(*instant),
-            Instant::Wide(render) => render(zone.tz()),
-        }
-    }
-}
-
-/// `TimeHelper#local_datetime_tag` for an instant that may lie outside Jiff's range.
-pub fn local_instant_tag(
-    zone: &Zone,
-    instant: &Instant,
-    style: &str,
-    attributes: crate::helpers::Attrs,
-    content: &str,
-) -> crate::helpers::Html {
-    crate::helpers::content_tag(
-        "time",
-        attributes
-            .attr("datetime", instant.iso8601(zone))
-            .data("local_time_target", style),
-        content,
-    )
-}
-
 /// `TimeHelper#local_datetime_tag`. The supplied block content is already rendered HTML.
 pub fn local_datetime_tag(
     zone: &Zone,
@@ -125,10 +91,15 @@ pub fn local_datetime_tag(
     attributes: crate::helpers::Attrs,
     content: &str,
 ) -> crate::helpers::Html {
+    local_datetime_tag_iso(&zone.iso8601(instant), style, attributes, content)
+}
+
+/// A preformatted presentation value, including years outside Jiff's envelope.
+pub fn local_datetime_tag_iso(iso: &str, style: &str, attributes: crate::helpers::Attrs, content: &str) -> crate::helpers::Html {
     crate::helpers::content_tag(
         "time",
         attributes
-            .attr("datetime", zone.iso8601(instant))
+            .attr("datetime", iso)
             .data("local_time_target", style),
         content,
     )

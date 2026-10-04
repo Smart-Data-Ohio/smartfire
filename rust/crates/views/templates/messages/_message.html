@@ -2,7 +2,7 @@
   {% include "messages/_unrenderable.html" %}
 {%- else %}
 {{ crate::messages::message_open(ctx, message) }}
-  <h2 class="message__day-separator">{{ message.timestamp("date", false) }}</h2>
+  <h2 class="message__day-separator">{{ message.timestamp(ctx, "date", false) }}</h2>
 
 {% if message.details.system_note %}    {% include "messages/_system_note.html" %}
 {% else %}    <figure class="avatar message__avatar">
