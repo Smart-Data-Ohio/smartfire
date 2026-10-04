@@ -2,14 +2,13 @@
 use crate::helpers::filters;
 use crate::{ViewContext, helpers as h, layouts::Page};
 use askama::Template;
-use jiff::Timestamp;
 
 pub struct Item {
     pub id: i64,
     pub status: String,
-    pub created_at: Timestamp,
-    pub remind_at: Option<Timestamp>,
-    pub reminded_at: Option<Timestamp>,
+    pub created_at: String,
+    pub remind_at: Option<String>,
+    pub reminded_at: Option<String>,
     pub room_name: String,
     pub author_name: String,
     pub body: String,
@@ -22,19 +21,17 @@ impl Item {
     pub fn status_class(&self) -> String {
         self.status.replace('_', "-")
     }
-    pub fn created(&self, ctx: &ViewContext) -> h::Html {
-        crate::time::local_datetime_tag(
-            &ctx.time_zone,
-            self.created_at,
+    pub fn created(&self, _ctx: &ViewContext) -> h::Html {
+        crate::time::local_datetime_tag_iso(
+            &self.created_at,
             "time",
             h::attrs().class("saved-item__time"),
             "",
         )
     }
-    pub fn reminder(&self, ctx: &ViewContext) -> h::Html {
-        crate::time::local_datetime_tag(
-            &ctx.time_zone,
-            self.reminded_at.or(self.remind_at).expect("has reminder"),
+    pub fn reminder(&self, _ctx: &ViewContext) -> h::Html {
+        crate::time::local_datetime_tag_iso(
+            self.reminded_at.as_deref().or(self.remind_at.as_deref()).expect("has reminder"),
             "time",
             h::attrs(),
             "",

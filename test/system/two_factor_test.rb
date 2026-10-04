@@ -106,6 +106,23 @@ class TwoFactorTest < ApplicationSystemTestCase
     assert_selector "h1", text: "Enter your code", wait: 10
   end
 
+  test "a remembered device row stays readable at phone width" do
+    enroll_two_factor!(users(:jz))
+    TwoFactorRememberedDevice.create_for!(users(:jz), ip_address: "192.0.2.10",
+      user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1")
+    sign_in "jz@37signals.com"
+    page.current_window.resize_to(390, 844)
+
+    visit user_profile_url
+    row = find("#two_factor_devices li", match: :first)
+    info = row.find("div", text: "last used", match: :first)
+
+    assert_operator info.evaluate_script("this.getBoundingClientRect().width"), :>=, 200
+    assert_operator row.evaluate_script("this.scrollWidth"), :<=, row.evaluate_script("this.clientWidth")
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
   test "regenerating backup codes from the profile shows a fresh set" do
     credential = enroll_two_factor!(users(:jz))
     old_codes = TwoFactorBackupCode.regenerate_set!(credential)

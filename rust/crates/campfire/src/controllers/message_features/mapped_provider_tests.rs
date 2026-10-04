@@ -37,6 +37,7 @@ async fn subscriber(
 ) {
     use crate::channels::tests::support::{Client, bind_listener, identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    app.publications();
     let listener = bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = app.booted.router.clone();
@@ -82,7 +83,7 @@ async fn frames(
     client: &mut crate::channels::tests::support::Client,
     expected: &Value,
 ) {
-    super::comparison_support::frames(app, client, expected, "mapped_provider_tests.rs").await;
+    super::comparison_support::published_frames(app, client, expected, "mapped_provider_tests.rs").await;
     client.assert_silent().await;
 }
 

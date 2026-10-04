@@ -266,9 +266,6 @@ async fn open_database(
     db_config.readers = config.db_readers;
     db_config.environment = config.environment.clone();
     let env = campfire_db::Env {
-        // WS16 flagged, per-database entropy seam for real first-login enrollment.
-        #[cfg(test)]
-        fixture_auth_inputs: crate::test_support::auth_inputs(),
         clock: Arc::new(DbClock(clock)),
         sink: Arc::new(jobs),
         rich_text,
@@ -277,6 +274,13 @@ async fn open_database(
         message_reference_syncs: vec![crate::integrations::github::references::sync],
         user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation],
         ..Default::default()
+    };
+    #[cfg(test)]
+    let env = campfire_db::Env {
+        fixture_inputs: crate::test_support::message_inputs(),
+        // WS16 flagged, per-database entropy seam for real first-login enrollment.
+        fixture_auth_inputs: crate::test_support::auth_inputs(),
+        ..env
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }

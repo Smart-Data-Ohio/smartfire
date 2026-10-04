@@ -91,10 +91,15 @@ pub fn local_datetime_tag(
     attributes: crate::helpers::Attrs,
     content: &str,
 ) -> crate::helpers::Html {
+    local_datetime_tag_iso(&zone.iso8601(instant), style, attributes, content)
+}
+
+/// A preformatted presentation value, including years outside Jiff's envelope.
+pub fn local_datetime_tag_iso(iso: &str, style: &str, attributes: crate::helpers::Attrs, content: &str) -> crate::helpers::Html {
     crate::helpers::content_tag(
         "time",
         attributes
-            .attr("datetime", zone.iso8601(instant))
+            .attr("datetime", iso)
             .data("local_time_target", style),
         content,
     )

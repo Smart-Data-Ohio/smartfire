@@ -31,5 +31,16 @@ for group in sorted(inventory, key=lambda group: (-group['cases'], group['path']
     if names:
         remaining.append({'rails_file': group['path'], 'owner': shared.get(group['path'], 'WS11 domain'), 'remaining_named_case_ports': names})
 output = {'reference_pin': ports['reference_pin'], 'status': 'partial', 'meaning': 'Named case ports only. Consolidated Rust checks and Rails contract vectors are additional evidence, not file closure.', 'boundary_deferred': ports['boundary_deferred'], 'files': remaining}
+api_ledger = ROOT / 'rust/plans/ws11api-named-api-cases.json'
+if api_ledger.is_file():
+    api = json.loads(api_ledger.read_text())['cases']
+    output['broader_named_api_assertions'] = {
+        'ledger': api_ledger.relative_to(ROOT).as_posix(),
+        'passed': sum(row['status'] == 'passed' for row in api),
+        'pending': sum(row['status'] != 'passed' for row in api),
+        'owner': 'WS11-API; pending evidence, if any, is unblocked',
+    }
+if not remaining and output.get('broader_named_api_assertions', {}).get('pending') == 0:
+    output['status'] = 'complete'
 (Path(__file__).parent / 'deferred-domain-cases.json').write_text(json.dumps(output, indent=2) + '\n')
 print(f"WS11 deferred case inventory: {len(remaining)} pinned files; {sum(len(g['remaining_named_case_ports']) for g in remaining)} named source cases; owners recorded per file")

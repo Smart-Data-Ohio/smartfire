@@ -250,6 +250,11 @@ impl<U: Send + Sync + 'static> Server<U> {
         self.inner.hub.stream_count()
     }
 
+    #[cfg(feature = "test-support")]
+    pub fn capture_publications(&self) -> crate::pubsub::PublicationCapture {
+        self.inner.hub.capture_publications()
+    }
+
     /// `ActionCable.server.restart`: closes every connection with `server_restart`.
     pub fn restart(&self) {
         let _ = self.inner.restart.send(());

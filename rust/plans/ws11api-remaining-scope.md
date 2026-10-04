@@ -1,8 +1,8 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-4` after merging main `1d3b69b8f`, including #216 and the subsequent #215 merge.
-#206, #209, #212 and #214 are also included. #215 merged while this round was verifying. Its 16 comparisons and Recorder read-cost review remain deferred as requested for this WS8-only follow-up. The pinned Rails reference remains `d7c7de92`. This is an implementation audit
-and an exact named-case ledger, not a claim that every possible input is tested.
+Updated on `rust/ws11api-next-6`, stacked on next-5 `491b9425`, merged with main `7e35a5fd6` (merge `f61de2c57`). #215 and #216
+are merged. The pinned Rails reference remains `d7c7de92`. Domain named-case
+mapping and broader API assertion evidence are separate inventories.
 
 ## Implementation status
 
@@ -10,7 +10,7 @@ All four REST and five MCP work writes formerly returning REST500 / MCP -32603
 are installed on main via #202. They use WS12's writer, handoff and tag services;
 244 pinned response/state/job vectors and flat query-growth controls remain in place.
 No pending work-write adapter remains. No other unported WS11 API implementation
-was found in the prior audit or this round. Broader named-case evidence remains partial.
+was found in the prior audit or this round. The broader named-case evidence is complete for all 51 audited declarations.
 
 #203 (`rust/ws11api-proxy-headers`, `7ec7d26c`) is now merged through main.
 Its Content-Transfer-Encoding correction is retained for successful streams and
@@ -69,67 +69,78 @@ in ws11api-approved-differences.md. They are deliberate reviewed differences, no
 unported paths. Native media-byte/version differences still require the pinned runtime for
 exact byte comparisons; sizes/checksums are never masked.
 
-## Broader named-case evidence still partial
+## Completed named comparisons
 
-The pinned domain inventory has 378 cases in 26 files. The previous ledger was
-328 comparisons / 50 deferred. This round replays the newly merged #216 corpus:
+All **378 domain declarations in 26 pinned files** are mapped and have actual
+cargo passes. The separate broader #215 assertion audit is also complete:
+**51 passed, 0 pending**. Next-5 closed 20 declarations; this round closes the
+remaining **31**, against **182 freshly executed Rails HTTP responses and four
+real producer outputs**. Each has an individual activated producer control
+rejected at its intended assertion. An additional query-growth control is rejected
+at the flat-read assertion. No assertion or vector is mutated by a control.
 
-| Previously deferred group | Fresh evidence on main | Still deferred |
-| --- | --- | --- |
-| 34 WS8 built-in commands | All 35 built-in cases freshly executed in Rails; 63 observations byte-identical to the owner vectors; 34 newly mapped names | 0 |
-| 16 WS12 owner eligibility/work mutation cases | PR #215 merged during verification; separate fresh replay/mapping remains outside this round | 16, owner WS12 |
+REST/MCP bodies, statuses and selected headers are compared as raw bytes. Human
+history/HTML checks reproduce each original declaration's actual JSON fields,
+selectors, text and links. The agent-board integration uses real session cookies,
+CSRF, a human HTTP post, an agent reply, result update and a rendered inbox card.
+Webhook cases claim committed durable jobs and post them through the real runner;
+only DNS/TCP is routed to the local recording endpoint. Grant revocation and
+membership removal happen after a successful poll. Both 60-handoff throttle limits
+and shared REST/MCP bucket behavior are exercised. Positive fixture premises run
+in the existing CI checker, so an empty list or denied request cannot earn a credit.
 
-The ledger is now **362 comparisons, 16 deferred**. The already mapped OOO
-badge/notice case is replayed but counted only once. The 34 newly mapped names
-use #216's real app-adapter tests, including actual attachment processing and
-committed webhook hooks. The named-case checker discovers their generated test
-functions; removing the macro invocations makes its new regression fail. Runtime
-pass counts are recorded separately in ws11api-next-4-ws8-report.md. No WS11-API
-behavior difference was found. These are peer-owned named-case comparisons,
-not formerly missing API service seams.
+Complete work/history/ledger/handoff/audit facts and logical queue job class/args
+are checked, including thread/message targets, notes, acknowledgments and inbox source
+IDs where applicable. The message-rate case compares a full logical job multiset
+with duplicates preserved: Rails' test adapter and Rust's atomic queue register
+push/delivery jobs in different order, which the original declaration does not
+specify. This comparison does not claim identical queue execution order. Scheduling
+other agents' hooks for later test steps changes only test run-at inputs.
 
-Streaming uses real model callbacks, actual WebSocket frames and both human
-subscribers' unread broadcasts, activity/ledger/index projections and logical
-queued arguments. Factory/reset entropy is controlled at the generator input.
-Queued webhook comparisons run actual durable claims and handlers; only the
-external dialer is replaced, like the Rails Net::HTTP fixture. WS12's merged
-activity viewer and handoff service execute unchanged, including stranger
-redaction and exhausted message-cap handoff behavior. The original budget case
-sets all three caps but consumes the message cap; this comparison preserves that
-named case rather than claiming three separately exhausted usage buckets.
+| Original API file | Next-5 | Next-6 | Pending |
+| --- | ---: | ---: | ---: |
+| `test/controllers/agents/mcp_handoff_test.rb` | 2 | 1 | 0 |
+| `test/controllers/agents/posts_controller_test.rb` | 2 | 8 | 0 |
+| `test/controllers/agents/work_controller_test.rb` | 14 | 8 | 0 |
+| `test/controllers/agents/work_delivery_test.rb` | 0 | 9 | 0 |
+| `test/controllers/agents/work_handoff_test.rb` | 2 | 4 | 0 |
+| `test/integration/agent_boards_test.rb` | 0 | 1 | 0 |
 
-The delivery lock comparison from #205 retains its two independent writers.
-The array lookup sweep additionally fixes thread/cursor/reaction N+1 lookups,
-preserves Rails' global/scoped selection and permission order, and handles
-40,000 candidates with one JSON bind. All WS11-owned named comparisons are now
-closed. **Only peer-owned evidence remains**; none is called an unmerged service
-blocker. The remaining owner comparisons come from newly merged #215 and await a separate fresh Rails replay/mapping round. The exact remaining names follow.
+`ws11api-named-api-cases.json` records each original name, exact Rust function,
+vector, producer recipe and receipt. The checker reads each declaration's own
+receipt file and optionally requires its actual cargo pass. The domain ledger has
+**0 deferred names** and the broader API ledger has **0 pending declarations**.
+**Only the peer-owned Recorder integration below remains flagged for this scope.**
 
-### test/models/channel_thread_agent_assignment_test.rb
+### Work polling read fix
 
-Owner: WS12 eligibility/mutation named comparisons, merged PR #215; WS11 agent callbacks are complete.
+The fresh two-size comparison exposed per-event room/actor/thread/payload and
+private-link preflight reads. At 5/50 work events, REST grew from **61 to 466** and
+MCP from **62 to 467**; Rails stayed **17/17** and **19/19**. Batched event/thread
+associations and shared work payload preloads now hold Rust at **25/25** and
+**26/26**. Repository decisions remain occurrence-scoped; Accounts still owns
+permission caching, and current identity sealing/redaction remains enforced.
+The regression first failed against next-5's production implementation. All other
+measured board/work/read/write/ack paths remain flat at 5/50 rows; the exact table
+is in `ws11api-next-6-report.md`. No WS12 grant, ledger, audit or service transaction
+logic is replaced.
 
-Reason: these eight owner-eligibility/viewer and eight mutation/validation comparisons remain deferred by the requested scope. #215 merged during verification and is included through main; its new named tests are not mapped here without a separate fresh Rails replay. Recorder read-cost review stays with WS12. The four WS11 hop/deletion/root names are now compared using installed WS12 producers. These are peer-owned evidence obligations, not missing service seams.
+### Recorder review and actual peer-owned seam
 
-- an active member agent with post_messages is an eligible work owner
-- a legacy agent keeps post eligibility through the fallback
-- a suspended agent is rejected with a validation error
-- a non-member agent is rejected with a validation error
-- an agent without post_messages is rejected with a validation error
-- a human outside the parent room keeps the human eligibility error
-- a bot without an agent row is rejected with a validation error
-- suspending the agent or revoking its membership reads as an unavailable owner
-- an agent status update records a work event with the note
-- an agent status update reaches the inbox through the human path
-- an agent tags update replaces the set without touching the status
-- an agent work update validates tags and run_url
-- an agent result update records the event with the agent as actor
-- an agent cannot write the result of work it does not own
-- an agent cannot move work it does not own
-- an agent status update rejects unknown statuses and long notes
+Fresh uncached Rails and Rust run real Recorder transactions, commit callbacks,
+complete persisted items and activity frames at 10/100 recipients. Schema discovery
+is warmed before each measured Rails size; the executor surrounds `uncached`, and
+zero cache hits are required. Source and user preflight reads remain **1 + 1**.
+Create SELECTs are **22/202 in both apps**. Repeat SELECTs are **12/102 in Rust**
+and **32/302 in Rails**. Rust's per-recipient growth is no faster than Rails.
+Activated controls for per-recipient user reloads and wrong persisted event types
+fail the precise cost/fact assertions. No Recorder service implementation changed.
 
-
-
+The AgentBudgetNotice Recorder source integration is genuinely still peer-owned:
+`rust/crates/db/src/models/activity_item/recorder.rs:377` requires an explicit owner
+reader, whose public contract is in `recording_source.rs:47`. The typed WS11 reader
+and presenter consumers are installed. Wiring the source producer belongs to WS12's
+unmerged `rust/ws12-board-automations-4` round. No WS12 board-automation file is edited.
 
 ## Peer-owned fixed read costs
 
@@ -142,6 +153,6 @@ those costs are not assigned to peers. At the preceding API checkpoint, the larg
 WS12's `agent_work::{find_owned,writable,update_work,set_result,handoff_work}`,
 `ChannelThread::{create_board_post,update_work,update_result}` and their after-commit
 board rendering. They repeat thread/room/owner membership/capability reads and complete
-board render preloads per callback. WS12 owns those service/read-boundary optimizations; #215 now includes owner read-cost work. This round does not independently reassess those costs or change the transaction/policy contract.
+board render preloads per callback. WS12 owns those service/read-boundary optimizations; #215 includes owner read-cost work. This round rechecks the nine adapter paths at 5/50 rows and the generic Recorder at 10/100 recipients; it changes no service transaction or policy contract.
 `work_threads.rs` and `presenters/boards.rs` remain untouched. WS15g/WS15e retain external
 GitHub/Fizzy clients and account authorization. WS11-ui owns account/agent HTML pages.

@@ -1,0 +1,567 @@
+{
+  "sources": {
+    "test/services/activity_items/recorder_test.rb": "9dd3952ccd7c59e135ed8af7ffd46513660f8ccf607a0c2942f27296dbcf540e",
+    "test/services/activity_items/recorder_keyword_test.rb": "24443137a9dd59df6aab4e3205c744dc6d7d714b916315068d6ed12defd60db7",
+    "app/services/activity_items/recorder.rb": "cc8edf555e5e0b337e0f54e6c333a61865a38516e605dfa7387053802917fdac",
+    "app/models/notifications/policy.rb": "5ca3deceabb763a93495eef2020aaebf50c4a6d0c9ec858a6ee4891c7666808a",
+    "app/models/channel_thread.rb": "89f301160437d1d35b61df1c9a54351fd31d376389517ae6ced9bfcfa3581519"
+  },
+  "rows": [
+    {
+      "id": "c191",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "keyword",
+            "user": 127326141
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Redeploying the service"
+          },
+          "items": []
+        }
+      ]
+    },
+    {
+      "id": "c192",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "keyword",
+            "user": 773523953
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Deploy now"
+          },
+          "items": []
+        }
+      ]
+    },
+    {
+      "id": "c196",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "keyword",
+            "user": 127326141
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "involvement",
+            "involvement": "nothing",
+            "thread": true
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Deploy now",
+            "thread": true
+          },
+          "items": []
+        }
+      ]
+    },
+    {
+      "id": "c201",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "message",
+            "text": "Hey @[David]"
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650001,
+              "mention",
+              null,
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c203",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "message",
+            "text": "Original",
+            "creator": 127326141
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Hey @[David]",
+            "reply": true
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650002,
+              "mention",
+              null,
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c204",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "involvement",
+            "involvement": "mentions",
+            "thread": true
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Quiet update",
+            "thread": true
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "involvement",
+            "involvement": "everything",
+            "thread": true
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Followed update",
+            "thread": true
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650002,
+              "thread_activity",
+              null,
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c205",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "work",
+            "status": "planned"
+          },
+          "items": [
+            [
+              127326141,
+              "WorkThreadEvent",
+              1,
+              "work_update",
+              null,
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c208",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "involvement",
+            "involvement": "nothing",
+            "thread": false
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Quiet",
+            "thread": true
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "involvement",
+            "involvement": "mentions",
+            "thread": false
+          },
+          "items": []
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Loud",
+            "thread": true
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650002,
+              "thread_activity",
+              null,
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c210",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "message",
+            "text": "Hey @[David]"
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650001,
+              "mention",
+              null,
+              null
+            ]
+          ]
+        },
+        {
+          "action": {
+            "kind": "involvement",
+            "involvement": "nothing",
+            "thread": false
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650001,
+              "mention",
+              null,
+              null
+            ]
+          ]
+        },
+        {
+          "action": {
+            "kind": "involvement",
+            "involvement": "invisible",
+            "thread": false
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650001,
+              "mention",
+              null,
+              null
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c213",
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "steps": [
+        {
+          "action": {
+            "kind": "message",
+            "text": "Original",
+            "thread": true,
+            "creator": 127326141
+          },
+          "items": [
+            [
+              773523953,
+              "Message",
+              9018650001,
+              "thread_activity",
+              null,
+              null
+            ]
+          ]
+        },
+        {
+          "action": {
+            "kind": "message",
+            "text": "Hey @[David]",
+            "thread": true,
+            "reply": true
+          },
+          "items": [
+            [
+              127326141,
+              "Message",
+              9018650002,
+              "mention",
+              null,
+              null
+            ],
+            [
+              773523953,
+              "Message",
+              9018650001,
+              "thread_activity",
+              null,
+              null
+            ]
+          ]
+        }
+      ]
+    }
+  ],
+  "extra": {
+    "c148": [
+      {
+        "ok": true,
+        "payload": {
+          "working_presence": "Thinking…"
+        }
+      },
+      {
+        "ok": true,
+        "payload": {
+          "working_presence": null
+        }
+      }
+    ],
+    "c177": {
+      "setup": [
+        "INSERT INTO messages(id,room_id,creator_id,markdown_source,client_message_id,created_at,updated_at) VALUES(9018650000,654632876,773523953,'Sequence anchor','ws12-source-identity-anchor','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "DELETE FROM sqlite_sequence WHERE name='messages'",
+        "INSERT INTO sqlite_sequence(name,seq) VALUES('messages',9018650000)",
+        "DELETE FROM activity_items",
+        "DELETE FROM keyword_alerts",
+        "UPDATE memberships SET involvement='mentions' WHERE room_id=654632876",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,created_at,updated_at,last_activity_at) VALUES(901860001,'Recorder clauses',654632876,773523953,'2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,773523953,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO thread_memberships(thread_id,user_id,involvement,joined_at,created_at,updated_at) VALUES(901860001,127326141,'everything','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO channel_threads(id,name,room_id,creator_id,work_status,created_at,updated_at,last_activity_at) VALUES(901860002,'Unassigned post',654632876,773523953,'planned','2026-03-02 16:00:00','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "UPDATE rooms SET type='Rooms::Board' WHERE id=654632876",
+        "DELETE FROM agent_grants WHERE agent_id=773018776",
+        "INSERT OR IGNORE INTO memberships(room_id,user_id,involvement,created_at,updated_at) VALUES(654632876,394959859,'mentions','2026-03-02 16:00:00','2026-03-02 16:00:00')",
+        "INSERT INTO agent_grants(agent_id,room_id,granted_by_id,capability,created_at,updated_at) VALUES(773018776,654632876,127326141,'post_messages','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "ids": [
+        901860001
+      ],
+      "human_kevin": true,
+      "agent_bender": true
+    },
+    "c143": {
+      "setup": [
+        "DELETE FROM activity_items",
+        "INSERT INTO huddle_grants(id,created_at,identity,last_issued_at,last_seen_at,membership_id,revoked_at,room_id,room_name,server_muted,session_id,stage_role,updated_at,user_id) VALUES(901862001,'2026-03-02 16:00:00','ws12-named-missed','2026-03-02 16:00:00',NULL,198590975,NULL,186869642,'ws12-named-missed',FALSE,481019663,NULL,'2026-03-02 16:00:00',149087659)",
+        "INSERT INTO activity_items(id,user_id,source_type,source_id,event_type,created_at,updated_at) VALUES(901862002,127326141,'HuddleGrant',901862001,'huddle_started','2026-03-02 16:00:00','2026-03-02 16:00:00')"
+      ],
+      "frames": [
+        {
+          "stream": "user_127326141_activity",
+          "payload": {
+            "activityItemId": 901862002,
+            "huddleInvitation": {
+              "activityItemId": 901862002,
+              "eventType": "huddle_missed",
+              "state": "unread",
+              "roomId": 186869642,
+              "roomName": "Jason",
+              "roomPath": "/rooms/186869642",
+              "callerName": "Jason",
+              "readPath": "/activity/901862002/read?state=read",
+              "handledPath": "/activity/901862002/handled?state=handled",
+              "silent": false
+            }
+          }
+        }
+      ]
+    },
+    "c199": [
+      {
+        "size": 10,
+        "items": [
+          [
+            127326141,
+            "Message",
+            9018650001,
+            "keyword_alert",
+            null,
+            null
+          ],
+          [
+            712064548,
+            "Message",
+            9018650001,
+            "keyword_alert",
+            null,
+            null
+          ]
+        ],
+        "selects": 8
+      },
+      {
+        "size": 100,
+        "items": [
+          [
+            127326141,
+            "Message",
+            9018650001,
+            "keyword_alert",
+            null,
+            null
+          ],
+          [
+            712064548,
+            "Message",
+            9018650001,
+            "keyword_alert",
+            null,
+            null
+          ]
+        ],
+        "selects": 8
+      }
+    ]
+  }
+}

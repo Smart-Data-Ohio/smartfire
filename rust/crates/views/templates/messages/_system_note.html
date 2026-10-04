@@ -2,6 +2,6 @@
   {{ h::image_tag(ctx, "messages-outlined.svg", h::attrs().size(14).class("colorize--black message__system-note-icon").aria_hidden()) }}
   <span class="message__system-note-author"><strong>{{ message.creator.name }}</strong></span>
   <span class="message__system-note-text">{{ crate::messages::presentation::message_presentation(ctx, message)|safe }}</span>
-  {{ h::link_to(&message.link_url(ctx), h::attrs().target("_top").class("message__system-note-permalink"), &message.timestamp("time", true).0) }}
+  {{ h::link_to(&message.link_url(ctx), h::attrs().target("_top").class("message__system-note-permalink"), &message.timestamp(ctx, "time", true).0) }}
 </div>
 {# Keep the final newline emitted by this Rails partial. #}

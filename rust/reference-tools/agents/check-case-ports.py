@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def rust_ports(source):
     ports = set(re.findall(r'^\s*(?:async )?fn (\w+)\(', source, re.M))
     # This committed macro emits one #[test] function for each identifier.
-    for invocation in re.findall(r'named_cases!\s*\{([^}]+)\}', source, re.S):
+    for invocation in re.findall(r'\b(?:named_cases|cases)!\s*\{([^}]+)\}', source, re.S):
         ports.update(re.findall(r'^\s*(\w+)\s*=>\s*"', invocation, re.M))
     # WS8's named!(identifier, vector_index) emits a #[tokio::test] per case.
     ports.update(re.findall(r'\bnamed!\s*\(\s*(\w+)\s*,\s*\d+\s*\)', source))
@@ -35,6 +35,9 @@ def check():
     for file, (total, mapped) in counts.items():
         print(f'WS11 named ports: {file}: {len(mapped)} mapped cases; {total-len(mapped)} unmapped case names')
     print(f'WS11 source case files: {len(counts)} pinned Git files matched; 0 checkout mismatches')
+    api_checker = Path(__file__).with_name('check-named-api-cases.py')
+    if api_checker.is_file():
+        subprocess.run(['python3', str(api_checker)], cwd=ROOT, check=True)
 
 if __name__ == "__main__":
     check()

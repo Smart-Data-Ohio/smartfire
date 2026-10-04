@@ -215,7 +215,7 @@ fn boundary_offset(zone: &jiff::tz::TimeZone, seconds: i64, local: bool) -> Opti
     None
 }
 /// Extended-year rendering uses the same pinned zone periods as the request cast.
-pub fn render<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone, suffix: bool) -> String {
+fn local_parts<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone) -> (jiff::Zoned, I512, i64, bool) {
     let (proxy, _) = at.calendar_proxy();
     let offset = boundary_offset(zone, at.transition_second(), false)
         .unwrap_or_else(|| i64::from(zone.to_offset_info(proxy).offset().seconds()));
@@ -226,16 +226,28 @@ pub fn render<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone, suffix: bool) -> S
         .calendar_proxy();
     let local = local.to_zoned(jiff::tz::TimeZone::UTC);
     let year = I512::from(local.year()) + shift;
-    let year = if year.is_negative() {
-        format!("-{:04}", year.unsigned_abs())
-    } else {
-        format!("{year:04}")
-    };
+    (local, year, offset, matches!(zone.to_offset_info(proxy).abbreviation(), "UTC" | "UCT"))
+}
+
+fn year_text(year: I512) -> String {
+    if year.is_negative() { format!("-{:04}", year.unsigned_abs()) } else { format!("{year:04}") }
+}
+
+/// Rails strftime for the existing wide UTC value, in the real target period.
+/// Calendar proxies retain weekday/leap structure; %Y retains the full year.
+pub fn format<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone, pattern: &str) -> String {
+    let (local, year, _, _) = local_parts(at, zone);
+    local.strftime(&pattern.replace("%Y", &year_text(year))).to_string()
+}
+
+pub fn render<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone, suffix: bool) -> String {
+    let (local, year, offset, is_utc) = local_parts(at, zone);
+    let year = year_text(year);
     let mut result = format!("{year}{}", local.strftime("-%m-%dT%H:%M:%S"));
     if suffix {
         // ActiveSupport::TimeWithZone initializes @is_utc from its period
         // abbreviation, not the user-supplied identifier or a zero offset.
-        if matches!(zone.to_offset_info(proxy).abbreviation(), "UTC" | "UCT") {
+        if is_utc {
             result.push('Z');
         } else {
             result.push_str(&format!(

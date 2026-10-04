@@ -1,8 +1,10 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
 mod agent_work_test;
+mod agent_recorder_cost_test;
 mod ws12_agent_named_test;
 mod ws12_generic_recorder_test;
+mod ws12_recorder_remaining_test;
 mod ws12_recorder_race_test;
 mod ws12_handoff_named_test;
 mod work_thread_link_test;

@@ -31,23 +31,23 @@
       "line": 18,
       "test": "index returns only the signed-in user's accessible activity",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 32,
       "test": "unread count is isolated by user and ignores read and handled items",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: The mapped model matrix checks multiple users and unread/read/handled subsets, but the credited HTTP count request signs in only David; the original second signed-in viewer count assertion is not executed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c001_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 57,
       "test": "index serializes a work event with its thread destination",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
@@ -55,7 +55,7 @@
       "line": 74,
       "test": "marking an item handled clears the unread count and records a read timestamp",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "ws12_handled_sequence.json: four sequential complete HTTP responses, persisted timestamps/predicates and unread counts on one fixture; mark_unhandled -> mark_unread fails at the unhandled response preserving read_at. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_handled_sequence_tests.rs::ws12_handled_unhandled_unread_http_sequence_matches_rails"
     },
     {
@@ -63,39 +63,39 @@
       "line": 95,
       "test": "revoking the room membership removes an existing item from the inbox",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 110,
       "test": "knowing another recipient's item id does not allow opening or changing it",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: The corpus checks 404 for the other recipient's read/handled URLs, but it then checks item 8400000000 rather than the foreign target 8400000099; no credited assertion checks the foreign item stayed unread or its open request."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c005_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 119,
       "test": "deleted sources are removed from the inbox and cannot be reopened",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 131,
       "test": "opening an item marks it read and redirects to the exact message",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The first rejection is read-action state (read empty-state), before the message-open redirect/read comparison. A source-specific open control or comparison is needed."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Narrow producer replay reaches and rejects the existing original assertion: crates/campfire/src/controllers/activity_items/tests.rs:104:17: assertion `left == right` failed: open JSON read Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 139,
       "test": "index serializes a huddle invitation with its DM destination",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
@@ -103,23 +103,23 @@
       "line": 154,
       "test": "opening a huddle invitation marks it read and redirects to the DM room",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 164,
       "test": "index resolves the current user's overdue invitations but no one else's",
-      "status": "deferred",
-      "owner": "WS12 named inbox assertions with WS11-UI readers",
-      "evidence": "The complete merged inbox HTTP corpus runs. This declaration still needs a clause-level projection covering its setup, expiry/recipient scope and state/assertions; an installed reader alone is not named-case proof."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c010_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 198,
       "test": "started and missed huddles render their copy in the inbox",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "ws12_huddle_copy.json regenerates actual persisted HuddleGrant helper output for Jason missed and Kevin started. The named Rust comparison asserts labels, authors and exact bodies through both HTML/JSON producers, plus the original two served inbox article assertions. Corrupting both missed-body producers fails this test. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_huddle_copy_tests.rs::ws12_started_and_missed_huddles_assert_the_original_rails_copy"
     },
     {
@@ -127,79 +127,79 @@
       "line": 214,
       "test": "event items carry their event in the JSON payload",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 228,
       "test": "index expires overdue approvals and drops the decider's badge",
-      "status": "deferred",
-      "owner": "WS12 named inbox assertions with WS11-UI readers",
-      "evidence": "The complete merged inbox HTTP corpus runs. This declaration still needs a clause-level projection covering its setup, expiry/recipient scope and state/assertions; an installed reader alone is not named-case proof."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c013_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 248,
       "test": "agent approval items carry the approval in the JSON payload",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 265,
       "test": "index orders items by recency",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: The old corpus keeps ordering timestamps aligned with IDs and does not assert an existing older row moving after touch."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c015_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 278,
       "test": "type filters return only their event types as JSON",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: The JSON filter corpus has a subset of event types and no bogus type fallback; it does not execute the original all-event-types/default/bogus assertion set."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c016_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 301,
       "test": "type filters return only their event types as HTML",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: The credited HTTP corpus requests type filters only as JSON; its HTML requests are unfiltered."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c017_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 317,
       "test": "type filter survives pagination",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: All existing pagination requests are unfiltered; no events-filter cursor, older-link type parameter or follow-up disjointness assertion runs."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c018_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 344,
       "test": "a deleted cursor serves the first page",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "inbox-http.json executes all-source JSON/HTML, read/handled/open redirects and exact source destinations, user/membership/deleted-source authorization and filtered tuple-cursor pagination; activity_domain asserts all 11 source IDs/current authorization, counts and state. Original expiry-on-index clauses are mapped separately. Executed assertion mappings: rust/crates/campfire/src/controllers/activity_items/tests.rs::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions, rust/crates/campfire/src/controllers/activity_domain_tests.rs::ws12_activity_all_eleven_sources_and_live_agent_access_match_rails"
     },
     {
       "file": "test/controllers/activity_items_controller_test.rb",
       "line": 369,
       "test": "state changes preserve the type filter",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: Existing read/handled redirects carry no type input; they cannot assert preservation of type=events or normalization of an invalid type."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_inbox_remaining_tests.rs::ws12_inbox_c020_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 24,
       "test": "handoff_work hands off through the shared service",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -207,15 +207,15 @@
       "line": 40,
       "test": "handoff_work denies a thread the agent does not own",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The MCP handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus fails by an unwrapped RecordNotFound, not the named HTTP denial assertion."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The MCP handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus fails by an unwrapped RecordNotFound, not the named HTTP denial assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:85; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 51,
       "test": "handoff_work denies a missing manage_threads grant",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -223,7 +223,7 @@
       "line": 61,
       "test": "handoff_work denies an ineligible receiver",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -231,23 +231,23 @@
       "line": 71,
       "test": "handoff_work denies a receiver missing read_messages",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 82,
       "test": "handoff_work denies a kill-switched receiver",
-      "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The first failures concern a missing/outside receiver, before the kill-switched receiver branch. No credit for the distinct suspended-receiver assertion."
+      "status": "ported",
+      "owner": "WS11-API",
+      "evidence": "Narrow producer replay reaches and rejects the existing original assertion: crates/campfire/src/controllers/agent_reads_tests.rs:139:5: assertion `left == right` failed: mcp_handoff_receiver_inactive Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff"
     },
     {
       "file": "test/controllers/agents/mcp_handoff_test.rb",
       "line": 93,
       "test": "handoff_work rejects missing arguments",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual MCP shared handoff envelope and full saved package/owner/history/ledger/audit/queue facts for each receiver/authority/argument denial. No placeholder adapter is credited. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_mcp_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_mcp"
     },
     {
@@ -255,15 +255,15 @@
       "line": 100,
       "test": "handoff_work shares its throttle bucket with the rest endpoint",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/mcp.rs:332; rust/crates/campfire/src/controllers/agents/pending.rs:679; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 14,
       "test": "creates a post with defaults and returns the work payload",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -271,7 +271,7 @@
       "line": 53,
       "test": "creates a post with tags, status, run_url, and a human owner",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -279,7 +279,7 @@
       "line": 83,
       "test": "creates a post with an array of tags",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -287,7 +287,7 @@
       "line": 96,
       "test": "creates a post owned by another agent through the assignment path",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -295,7 +295,7 @@
       "line": 115,
       "test": "owner defaults to the agent itself, like a blank owner_id",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -303,7 +303,7 @@
       "line": 139,
       "test": "a first message writes the posted ledger row and notifies the board",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/channel_threads/board_write_tests.rs::opening_message_notifies_room_followers_and_assignee_with_notifications_off"
     },
     {
@@ -311,7 +311,7 @@
       "line": 157,
       "test": "a messageless post still assigns the owner without a posted row",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/channel_threads/board_write_tests.rs::opening_message_notifies_room_followers_and_assignee_with_notifications_off"
     },
     {
@@ -319,7 +319,7 @@
       "line": 176,
       "test": "rejects invalid posts with 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -327,7 +327,7 @@
       "line": 207,
       "test": "requires post_messages and manage_threads in the board",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -335,7 +335,7 @@
       "line": 229,
       "test": "requires post_messages even with manage_threads",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -343,15 +343,15 @@
       "line": 241,
       "test": "is 404 for rooms the agent is not a member of",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: Failures concern missing work and a nonmember work update, not board POST/GET through a nonmember room."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: Failures concern missing work and a nonmember work update, not board POST/GET through a nonmember room. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 256,
       "test": "is 422 for non-board rooms",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_create, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_surface_tests.rs::agent_surface_work_rest"
     },
     {
@@ -359,39 +359,39 @@
       "line": 272,
       "test": "rejects session and bot-key requests",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 288,
       "test": "lists the board's open posts newest activity first",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: The credited board REST corpus has one planned post; its shared model cap fixture has planned/blocked posts. The mixed open/done newest-activity output is not asserted."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: The credited board REST corpus has one planned post; its shared model cap fixture has planned/blocked posts. The mixed open/done newest-activity output is not asserted. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 312,
       "test": "a reply moves the post to the top of the list",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: No credited test writes a reply and then reads a multi-post list to assert reordering."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: No credited test writes a reply and then reads a multi-post list to assert reordering. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 328,
       "test": "lists by single status, done, and all",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: The REST done-filter probe is empty because there are no done posts; the original positive done/all/open membership assertions do not run."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: The REST done-filter probe is empty because there are no done posts; the original positive done/all/open membership assertions do not run. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 350,
       "test": "rejects invalid list filters with 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_board_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -399,15 +399,15 @@
       "line": 360,
       "test": "lists by owner me, agents, and id",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: The REST fixture has one agent-owned post and no second agent or human-owned row; negative human filtering is covered, but the complete positive owner selection assertion set is not."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: The REST fixture has one agent-owned post and no second agent or human-owned row; negative human filtering is covered, but the complete positive owner selection assertion set is not. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 382,
       "test": "lists by tag",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_board_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -415,15 +415,15 @@
       "line": 395,
       "test": "caps the list at 100 posts",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: The credited wire fixture has one board post. The shared model cap assertion loads 100 work-list rows, but its board-post query filters to three rows. Neither assertion exercises the board-post 100-row cap."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: The credited wire fixture has one board post. The shared model cap assertion loads 100 work-list rows, but its board-post query filters to three rows. Neither assertion exercises the board-post 100-row cap. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 406,
       "test": "listing requires read_messages",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Pinned REST create permission/input matrix asserts the complete response and committed messages/history/ledger/audits/jobs; service corpus compares original default/array/human/agent-owner/brief/invalid variants. Read corpus asserts complete filter/sort/payload bytes; model cap and current-access filtering assertions run separately. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_board_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -431,39 +431,39 @@
       "line": 416,
       "test": "a legacy agent without grants can list but cannot create",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: No credited HTTP test couples a legacy no-grant successful list with its forbidden create request."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: No credited HTTP test couples a legacy no-grant successful list with its forbidden create request. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 430,
       "test": "listing is 404 once the agent leaves the board",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The board-list failure is malformed-object room_id (mcp_posts_room_shape_3), not revoking a real board membership."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The board-list failure is malformed-object room_id (mcp_posts_room_shape_3), not revoking a real board membership. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/posts_controller_test.rb",
       "line": 438,
       "test": "creation, listing, and event delivery share one work payload",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 12,
       "test": "list shows only owned threads newest first with the work fields",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: The wire list has one owned thread; the cap fixture orders same-timestamp rows by ID. Different timestamp newest-first ordering and the original multi-row payload are not asserted."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: The wire list has one owned thread; the cap fixture orders same-timestamp rows by ID. Different timestamp newest-first ordering and the original multi-row payload are not asserted. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 33,
       "test": "list is capped at 100 threads",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_work_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -471,7 +471,7 @@
       "line": 44,
       "test": "list only includes rooms where the agent holds read_messages",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_work_bytes, rust/crates/db/src/tests/agent_work_test.rs::work_lists_filter_current_read_access_before_the_cap_and_board_filters_before_limit, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -479,23 +479,23 @@
       "line": 63,
       "test": "list is Bearer-only and empty without owned threads",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: The wire corpus does not issue the successful no-owned-threads list and the non-Bearer list request in this declaration."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: The wire corpus does not issue the successful no-owned-threads list and the non-Bearer list request in this declaration. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 75,
       "test": "show returns one owned thread",
-      "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: Both credited HTTP tests stop at a work-list title before reaching the owned-thread show response."
+      "status": "ported",
+      "owner": "WS11-API",
+      "evidence": "Narrow producer replay reaches and rejects the existing original assertion: crates/campfire/src/controllers/agent_reads_tests.rs:139:5: assertion `left == right` failed: work_show Executed assertion mappings: rust/crates/campfire/src/controllers/agent_reads_tests.rs::agent_reads_work_bytes"
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 88,
       "test": "work links omit a private pull request's title and branches unless the owner can read it",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "ws12_private_pr_owner.json: complete disconnected redaction response, then connected-owner response with title/head/base branch visible through the real AgentRepositories reader API; hiding those positive fields fails connected response bytes. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_private_pr_owner_tests.rs::ws12_private_pr_redacts_then_exposes_title_and_branch_for_connected_owner"
     },
     {
@@ -503,55 +503,55 @@
       "line": 114,
       "test": "show includes links with pull request, event, and drive entries",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 158,
       "test": "list includes links on owned threads",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 173,
       "test": "show is 404 for threads the agent does not own",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 184,
       "test": "patch changes the status and records the note in work history",
       "status": "deferred",
-      "owner": "WS11-API named read/write assertions",
-      "evidence": "PR #215 assertion audit: The work-write corpus asserts persisted note/history facts, but does not request JSON history and served human history after the same agent mutation."
+      "owner": "WS11-API",
+      "evidence": "PR #215 assertion audit: The work-write corpus asserts persisted note/history facts, but does not request JSON history and served human history after the same agent mutation. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 216,
       "test": "patch is 404 for threads the agent does not own",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The HTTP rejection is a foreign-owner request with empty arguments, exposing field validation. The valid-status DB write stops at the later owner guard as an unwrapped error, not the declared denial/state assertion."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The HTTP rejection is a foreign-owner request with empty arguments, exposing field validation. The valid-status DB write stops at the later owner guard as an unwrapped error, not the declared denial/state assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 228,
       "test": "list excludes rooms the agent no longer belongs to",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 247,
       "test": "show and patch are 404 once the agent is no longer a room member",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -559,7 +559,7 @@
       "line": 262,
       "test": "patch is 403 without manage_threads in the thread room",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -567,15 +567,15 @@
       "line": 276,
       "test": "patch is 403 when manage_threads covers another room",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The first denial is a missing/revoked manage grant; the tests stop before the distinct other-room manage grant branch."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The first denial is a missing/revoked manage grant; the tests stop before the distinct other-room manage grant branch. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 289,
       "test": "patch rejects invalid statuses and long notes with 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -583,15 +583,15 @@
       "line": 311,
       "test": "patch cannot reassign, convert, or stop tracking",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 326,
       "test": "patch updates tags and run_url alongside the status",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -599,15 +599,15 @@
       "line": 345,
       "test": "patch updates tags alone in array and string forms",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The first failures are combined status/tags/run_url update and human-owner creation, not the tags-only update preserving status."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The first failures are combined status/tags/run_url update and human-owner creation, not the tags-only update preserving status. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 371,
       "test": "patch updates run_url alone and blank clears it",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -615,7 +615,7 @@
       "line": 390,
       "test": "patch rejects invalid tags and run_url with 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -623,31 +623,31 @@
       "line": 413,
       "test": "patch cannot stop tracking with a blank status",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: Only unknown-status validation fails; all HTTP tests pass. The missing/blank-status stop-tracking branch is not rejected by these credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: Only unknown-status validation fails; all HTTP tests pass. The missing/blank-status stop-tracking branch is not rejected by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 426,
       "test": "patch with only a note and no field is 422",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: Only an empty-field service update fails; the note-only HTTP request is absent from the credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: Only an empty-field service update fails; the note-only HTTP request is absent from the credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 438,
       "test": "patch tags without manage_threads is 403",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The first forbidden update has empty arguments; a tags-only request lacking manage_threads is not reached."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The first forbidden update has empty arguments; a tags-only request lacking manage_threads is not reached. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 451,
       "test": "put replaces the pinned result and records the event",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_result_event_agent_actor"
     },
     {
@@ -655,47 +655,47 @@
       "line": 476,
       "test": "put result requires ownership and manage_threads",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The control exposes missing-markdown validation on a foreign-owner request. The valid result write still hits the model owner guard, not the declared ownership denial/state assertion."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The control exposes missing-markdown validation on a foreign-owner request. The valid result write still hits the model owner guard, not the declared ownership denial/state assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 499,
       "test": "put result rejects missing markdown and overlong results with 422",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 522,
       "test": "put result checks ownership and grants before markdown presence",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: Only the valid-owner missing-markdown case fails. Neither the foreign-owner nor forbidden-owner precedence assertion is exercised by that failure."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: Only the valid-owner missing-markdown case fails. Neither the foreign-owner nor forbidden-owner precedence assertion is exercised by that failure. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 543,
       "test": "put result with blank markdown clears",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The rejected blank result starts with NULL. The credited fixtures do not perform the original successful set followed by clearing an existing nonempty result."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The rejected blank result starts with NULL. The credited fixtures do not perform the original successful set followed by clearing an existing nonempty result. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 560,
       "test": "put result with unchanged markdown writes nothing",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The first rejected no-op is NULL-to-NULL. The original successful nonempty PUT followed by an identical nonempty PUT is absent from the credited fixtures."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The first rejected no-op is NULL-to-NULL. The original successful nonempty PUT followed by an identical nonempty PUT is absent from the credited fixtures. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:84; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 579,
       "test": "put result reaches the human inbox as work_update",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_result_event_agent_actor"
     },
     {
@@ -703,15 +703,15 @@
       "line": 595,
       "test": "patch and put result are Bearer-only",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:80; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 613,
       "test": "a revoked read grant hides an owned thread from show, update, and result",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -719,15 +719,15 @@
       "line": 637,
       "test": "a read grant for another room does not unlock an owned thread",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The first rejection is absent/revoked read access, before an other-room read grant. The show-specific other-room scope assertion lacks a rejecting control."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The first rejection is absent/revoked read access, before an other-room read grant. The show-specific other-room scope assertion lacks a rejecting control. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/reads.rs:215; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_controller_test.rb",
       "line": 647,
       "test": "a workspace-wide read grant still reads an owned thread",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
@@ -735,87 +735,87 @@
       "line": 658,
       "test": "a revoked credential is 401",
       "status": "ported",
-      "owner": "WS12 or named peer test",
-      "evidence": "Concrete REST owned-work route vectors compare complete bytes and saved history/ledger/queue facts for permissions, tags/run URL/status/result validation, clears/no-ops and privacy. Current read/membership/revoked credential scope and 100-row caps are asserted by the named linked tests, not inferred from installed routes. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
+      "owner": "WS12 using WS11-API evidence",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_update, rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_result, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services, rust/crates/campfire/src/controllers/agent_permissions_tests.rs::agent_permissions_rest_after_success"
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 14,
       "test": "assignment appears in event polling with the work payload",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 34,
       "test": "assignment work payload includes links",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 51,
       "test": "unassignment appears in event polling",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 64,
       "test": "ack works on work rows",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:182; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 75,
       "test": "assignment enqueues the webhook instead of blocking on it",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_work_events.rs:25; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 97,
       "test": "assignment posts no webhook without read_messages",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_work_events.rs:48; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 113,
       "test": "polling omits work rows for rooms the agent lost read_messages in",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 128,
       "test": "polling omits work rows after membership removal",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_delivery_test.rb",
       "line": 142,
       "test": "work events do not count toward the message rate limit",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_delivery.rs:311; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 25,
       "test": "an agent hands off its thread with a context package",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -823,39 +823,39 @@
       "line": 45,
       "test": "the receiver polls the handoff with its context package",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:125; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 64,
       "test": "the receiver acks the handoff row",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents.rs:182; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 76,
       "test": "the handoff enqueues the receiver webhook with the package",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/db/src/models/agent_work_events.rs:25; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 92,
       "test": "a thread the agent does not own is 404",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The REST handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus stops at an unwrapped owner error, not the named HTTP denial assertion."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The REST handoff requests survive the ownership-query control because the locked-row owner guard still rejects the write. The DB corpus stops at an unwrapped owner error, not the named HTTP denial assertion. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/work_writes.rs:85; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 103,
       "test": "a missing manage_threads grant is 403",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -863,15 +863,15 @@
       "line": 114,
       "test": "a human session is 403",
       "status": "deferred",
-      "owner": "WS11-API named REST/MCP comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "owner": "WS11-API",
+      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:314; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/agents/work_handoff_test.rb",
       "line": 124,
       "test": "an ineligible receiver is 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -879,7 +879,7 @@
       "line": 135,
       "test": "a receiver missing manage_threads is 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -887,7 +887,7 @@
       "line": 146,
       "test": "a receiver missing read_messages is 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -895,7 +895,7 @@
       "line": 158,
       "test": "handing off to the current owner is 422",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -903,7 +903,7 @@
       "line": 167,
       "test": "an over-capped package is 422 and keeps the owner",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12 using WS11-API evidence",
       "evidence": "Actual REST handoff response and complete committed history/handoff/ledger/audit/job snapshots; actor auth/ownership/manage, receiver posting/read/manage/membership/activity, current-owner and package-cap denials all run against pinned Rails cases. Executed assertion mappings: rust/crates/campfire/src/controllers/agent_work_writes_tests.rs::agent_work_writes_rest_handoff, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -911,8 +911,8 @@
       "line": 176,
       "test": "handoffs throttle at 60 a minute per credential",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:679; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -982,9 +982,9 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 169,
       "test": "a messageless post creates no inbox items but marks the board unread",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: Only the unread broadcast roomId fails. The original declaration asserts persisted membership unread predicates and no inbox items; its HTTP facts all pass."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c111_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1006,17 +1006,17 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 215,
       "test": "the owning agent can change the status but cannot reassign",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c112_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 232,
       "test": "the owning agent without manage_threads cannot change the status",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c113_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1062,24 +1062,24 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 334,
       "test": "members can reply in a post and join or leave it from the page",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c114_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 358,
       "test": "any member can link and unlink but non-members cannot",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c115_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 384,
       "test": "board page renders the list with rows, filters, and a new-post link",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Full pinned Rails board list/columns/row/write bodies plus actual ordered Cable frames and bounded two-size query regressions; assertions include status/owner/tag filter attributes, pagination and row actions. Executed assertion mappings: rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs::board_list_and_columns_match_complete_rails_http_responses"
     },
     {
@@ -1087,7 +1087,7 @@
       "line": 421,
       "test": "board index pages at fifty posts with a load more link",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Full pinned Rails board list/columns/row/write bodies plus actual ordered Cable frames and bounded two-size query regressions; assertions include status/owner/tag filter attributes, pagination and row actions. Executed assertion mappings: rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs::board_list_and_columns_match_complete_rails_http_responses, rust/crates/db/src/tests/board_test.rs::board_pages_are_cumulative_clamped_and_ordered_with_one_probe_row"
     },
     {
@@ -1095,24 +1095,24 @@
       "line": 445,
       "test": "board rows and containers carry filter data for live updates",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Full pinned Rails board list/columns/row/write bodies plus actual ordered Cable frames and bounded two-size query regressions; assertions include status/owner/tag filter attributes, pagination and row actions. Executed assertion mappings: rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs::board_list_and_columns_match_complete_rails_http_responses, rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs::board_rows_match_both_rails_renderings"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 465,
       "test": "rendering the board index costs no extra queries per post",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: Only standalone agent-availability helper counts fail. The original small/large served board-index query count is not the rejecting assertion."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c119_board_index_reads_are_flat_at_ten_and_a_hundred_posts"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 493,
       "test": "board rendering groups posts into read-only status columns",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The complete page test stops at list-view board-0 before the status-column board-1 request; the column grouping assertion is not reached."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c120_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
@@ -1134,16 +1134,16 @@
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 546,
       "test": "a status change replaces the list row and moves the column row",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c121_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 567,
       "test": "a new post prepends into the board list and its status column",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Full pinned Rails board list/columns/row/write bodies plus actual ordered Cable frames and bounded two-size query regressions; assertions include status/owner/tag filter attributes, pagination and row actions. Executed assertion mappings: rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs::committed_board_rows_render_on_real_cable_and_rollback_stays_silent"
     },
     {
@@ -1151,7 +1151,7 @@
       "line": 588,
       "test": "a tag change replaces the post row over the room stream",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Full pinned Rails board list/columns/row/write bodies plus actual ordered Cable frames and bounded two-size query regressions; assertions include status/owner/tag filter attributes, pagination and row actions. Executed assertion mappings: rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs::committed_board_rows_render_on_real_cable_and_rollback_stays_silent"
     },
     {
@@ -1159,24 +1159,24 @@
       "line": 601,
       "test": "deleting a post removes its rows instead of re-rendering them",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Full pinned Rails board list/columns/row/write bodies plus actual ordered Cable frames and bounded two-size query regressions; assertions include status/owner/tag filter attributes, pagination and row actions. Executed assertion mappings: rust/crates/campfire/src/controllers/rooms/boards_read_tests.rs::committed_board_rows_render_on_real_cable_and_rollback_stays_silent, rust/crates/db/src/tests/board_test.rs::deleting_a_post_removes_both_rows_without_replacing_each_dependent_tag"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 620,
       "test": "deleting a channel thread broadcasts no board row remove",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c125_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_board_test.rb",
       "line": 632,
       "test": "bot posting API returns 422 in a board",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c126_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/rooms/boards/automations_controller_test.rb",
@@ -1855,7 +1855,7 @@
       "line": 17,
       "test": "boards-only filter lists board posts with links to the post page",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "human_work_http.json work-boards/work-all JSON+HTML and channel-work rows: complete IDs, destinations and active filter markup. Executed assertion mappings: rust/crates/campfire/src/controllers/human_work_tests.rs::human_work_http_matches_complete_rails_responses"
     },
     {
@@ -1863,7 +1863,7 @@
       "line": 36,
       "test": "channel work rows keep linking to the thread panel",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "human_work_http.json work-boards/work-all JSON+HTML and channel-work rows: complete IDs, destinations and active filter markup. Executed assertion mappings: rust/crates/campfire/src/controllers/human_work_tests.rs::human_work_http_matches_complete_rails_responses"
     },
     {
@@ -1911,7 +1911,7 @@
       "line": 6,
       "test": "review request label",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete exact Rails ActivityItemsHelper output for this declaration, using persisted Event/venue and TwoFactorCredential sources; Rust invokes the shared inbox presenter and destination helper. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_activity_helper_named_tests.rs::ws12_inbox_named_review_request_label"
     },
     {
@@ -1919,7 +1919,7 @@
       "line": 12,
       "test": "event reminder body names the venue",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete exact Rails ActivityItemsHelper output for this declaration, using persisted Event/venue and TwoFactorCredential sources; Rust invokes the shared inbox presenter and destination helper. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_activity_helper_named_tests.rs::ws12_inbox_named_event_reminder_venue"
     },
     {
@@ -1927,7 +1927,7 @@
       "line": 21,
       "test": "event reminder body without a venue is unchanged",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete exact Rails ActivityItemsHelper output for this declaration, using persisted Event/venue and TwoFactorCredential sources; Rust invokes the shared inbox presenter and destination helper. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_activity_helper_named_tests.rs::ws12_inbox_named_event_reminder_without_venue"
     },
     {
@@ -1935,7 +1935,7 @@
       "line": 27,
       "test": "lockout item names the alert and links the profile",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete exact Rails ActivityItemsHelper output for this declaration, using persisted Event/venue and TwoFactorCredential sources; Rust invokes the shared inbox presenter and destination helper. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_activity_helper_named_tests.rs::ws12_inbox_named_lockout_label_body_source_and_profile"
     },
     {
@@ -1943,64 +1943,64 @@
       "line": 17,
       "test": "an agent post flows from creation through reply to result",
       "status": "deferred",
-      "owner": "WS11-API named evidence; WS12 service implementation retained",
-      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set."
+      "owner": "WS11-API",
+      "evidence": "Production REST/MCP adapters and broad pinned bytes/state/queue vectors run, but a complete projection of this original declaration has not yet been individually audited; no broad vector is credited as its complete named assertion set. Blocking named comparison/control belongs to WS11-API at rust/crates/campfire/src/controllers/agents/pending.rs:583; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
       "line": 19,
       "test": "a private pull request link shows its reference and state but never its title",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c134_complete_named_rails_http_sequence"
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
       "line": 35,
       "test": "the thread header renders each link kind with remove controls and link forms",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The mutation changes an event remove button label. The original asserts remove-form counts/kinds, which this control preserves; full response bytes reject an extra label assertion."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c135_complete_named_rails_http_sequence"
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
       "line": 57,
       "test": "the work list row renders each link kind with remove controls",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: Only link-event pane responses differ, before any list-row remove-control assertion. The named /work row controls remain unproven."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c136_complete_named_rails_http_sequence"
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
       "line": 69,
       "test": "a drive link without a cached title shows the plain url",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete human_work HTTP link panel/header/work-row bodies, private PR redaction, Drive plain-link fallbacks, ordered upcoming/unlinked event choices; real create/delete routes and no-inbox/fetch-claim facts. Executed assertion mappings: rust/crates/campfire/src/controllers/human_work_tests.rs::human_work_http_matches_complete_rails_responses"
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
       "line": 78,
       "test": "drive links fall back to the plain link without credentials",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The plain-link label mutation changes text, while the original no-credentials declaration asserts href, absent preview meta and zero drive-chip elements; this control preserves those asserted shapes."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c138_complete_named_rails_http_sequence"
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
       "line": 87,
       "test": "the event picker lists upcoming room events soonest first without linked ones",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete human_work HTTP link panel/header/work-row bodies, private PR redaction, Drive plain-link fallbacks, ordered upcoming/unlinked event choices; real create/delete routes and no-inbox/fetch-claim facts. Executed assertion mappings: rust/crates/campfire/src/controllers/human_work_tests.rs::human_work_http_matches_complete_rails_responses, rust/crates/campfire/src/controllers/human_work_tests/query_board_followup.rs::event_choices_fetch_upcoming_rows_together"
     },
     {
       "file": "test/integration/work_thread_links_test.rb",
       "line": 98,
       "test": "linking creates no inbox items",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c140_complete_named_rails_http_sequence"
     },
     {
       "file": "test/jobs/room/destroy_job_board_automations_test.rb",
@@ -2055,7 +2055,7 @@
       "line": 56,
       "test": "non-deciders never receive an inbox item",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual after-commit approval fanout returns exactly the pinned owner/admin recipient IDs, excluding other active humans. Executed assertion mappings: rust/crates/db/src/tests/agent_approval_cases_test.rs::ws11_approval_case_inbox_per_decider"
     },
     {
@@ -2119,16 +2119,16 @@
       "line": 103,
       "test": "a huddle invitation broadcast carries the banner payload",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete pinned huddle invitation Cable payloads, including banner labels/URLs/current room and unread/silent fields. Executed assertion mappings: rust/crates/db/src/tests/huddle_invitations_test.rs::issuance_invitations_match_forty_nine_rails_scenarios"
     },
     {
       "file": "test/models/activity_item_test.rb",
       "line": 127,
       "test": "converting an invitation to missed notifies the recipient's activity stream",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c143_converting_missed_invitation_broadcasts_the_exact_recipient_frame"
     },
     {
       "file": "test/models/activity_item_test.rb",
@@ -2143,7 +2143,7 @@
       "line": 8,
       "test": "sets presence with a TTL",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_presence_slash_cases_test.rs::ws11_presence_case_ttl"
     },
     {
@@ -2151,7 +2151,7 @@
       "line": 16,
       "test": "blank clears presence",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_presence_slash_cases_test.rs::ws11_presence_case_blank_clears"
     },
     {
@@ -2159,7 +2159,7 @@
       "line": 24,
       "test": "expired presence reads as cleared",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_presence_slash_cases_test.rs::ws11_presence_case_expired_reads_cleared"
     },
     {
@@ -2167,23 +2167,23 @@
       "line": 32,
       "test": "presence is capped in length",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_presence_slash_cases_test.rs::ws11_presence_case_model_limit"
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
       "line": 38,
       "test": "shared service sets and clears",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c148_shared_presence_sets_and_clears_complete_rails_payload"
     },
     {
       "file": "test/models/agent_working_presence_test.rb",
       "line": 50,
       "test": "shared service rejects overlong text",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_presence_slash_cases_test.rs::ws11_presence_case_shared_limit"
     },
     {
@@ -2191,7 +2191,7 @@
       "line": 13,
       "test": "carries the full work shape for a channel thread",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_work_payload_cases_test.rs::ws11_work_payload_case_complete_thread_shape"
     },
     {
@@ -2199,7 +2199,7 @@
       "line": 37,
       "test": "marks human owners and null owners",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_work_payload_cases_test.rs::ws11_work_payload_case_human_and_null_owners"
     },
     {
@@ -2207,7 +2207,7 @@
       "line": 52,
       "test": "carries board identity, tags, run_url, and links for a post",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_work_payload_cases_test.rs::ws11_work_payload_case_board_tags_run_and_links"
     },
     {
@@ -2607,7 +2607,7 @@
       "line": 16,
       "test": "an active member agent with post_messages is an eligible work owner",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_active_member_post_owner"
     },
     {
@@ -2631,7 +2631,7 @@
       "line": 45,
       "test": "a non-member agent is rejected with a validation error",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_nonmember_owner_validation"
     },
     {
@@ -2639,7 +2639,7 @@
       "line": 57,
       "test": "an agent without post_messages is rejected with a validation error",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_missing_post_owner_validation"
     },
     {
@@ -2647,7 +2647,7 @@
       "line": 68,
       "test": "a human outside the parent room keeps the human eligibility error",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_outside_human_owner_validation"
     },
     {
@@ -2655,7 +2655,7 @@
       "line": 77,
       "test": "a bot without an agent row is rejected with a validation error",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_bot_without_agent_validation"
     },
     {
@@ -2663,7 +2663,7 @@
       "line": 89,
       "test": "suspending the agent or revoking its membership reads as an unavailable owner",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_owner_unavailable_after_access_change"
     },
     {
@@ -2679,7 +2679,7 @@
       "line": 130,
       "test": "unassignment writes one work_unassigned row",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_assignment_cases_test.rs::ws11_next_assignment_unassignment_records_one_row"
     },
     {
@@ -2695,7 +2695,7 @@
       "line": 159,
       "test": "assignment webhooks are enqueued after the outermost transaction commits",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_assignment_cases_test.rs::ws11_next_assignment_webhook_waits_for_outer_commit"
     },
     {
@@ -2703,7 +2703,7 @@
       "line": 171,
       "test": "reassignment to a human writes work_unassigned and no work_assigned",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_assignment_cases_test.rs::ws11_next_assignment_to_human_unassigns_agent"
     },
     {
@@ -2711,7 +2711,7 @@
       "line": 182,
       "test": "reassignment between agents notifies both",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_assignment_cases_test.rs::ws11_next_assignment_between_agents_notifies_both"
     },
     {
@@ -2719,7 +2719,7 @@
       "line": 195,
       "test": "status-only changes and human-to-human assignment write no agent rows",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Exact peer named comparison in the merged WS11 manifest; its pinned vector and assertions run in the workspace suite. Executed assertion mappings: rust/crates/db/src/tests/agent_assignment_cases_test.rs::ws11_next_assignment_status_and_human_changes_emit_no_agent_rows"
     },
     {
@@ -2743,7 +2743,7 @@
       "line": 234,
       "test": "an agent status update records a work event with the note",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_status_event_with_note"
     },
     {
@@ -2751,7 +2751,7 @@
       "line": 250,
       "test": "an agent status update reaches the inbox through the human path",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_status_inbox_human_path"
     },
     {
@@ -2759,7 +2759,7 @@
       "line": 272,
       "test": "an agent tags update replaces the set without touching the status",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_tag_set_preserves_status"
     },
     {
@@ -2767,7 +2767,7 @@
       "line": 282,
       "test": "an agent work update validates tags and run_url",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_tags_run_url_missing_fields_validation"
     },
     {
@@ -2775,7 +2775,7 @@
       "line": 300,
       "test": "an agent result update records the event with the agent as actor",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_result_event_agent_actor"
     },
     {
@@ -2783,7 +2783,7 @@
       "line": 313,
       "test": "an agent cannot write the result of work it does not own",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_result_requires_ownership"
     },
     {
@@ -2791,7 +2791,7 @@
       "line": 324,
       "test": "an agent cannot move work it does not own",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_status_requires_ownership"
     },
     {
@@ -2799,7 +2799,7 @@
       "line": 335,
       "test": "an agent status update rejects unknown statuses and long notes",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Complete original owner/mutation assertions and persisted thread, event metadata and inbox facts from work/agent_named.rb; all sixteen named tests reject the production negative control. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_status_and_note_validation"
     },
     {
@@ -2807,7 +2807,7 @@
       "line": 353,
       "test": "two agents assigning posts to each other stop at the hop limit",
       "status": "ported",
-      "owner": "WS11 callback comparison merged in #210",
+      "owner": "WS12",
       "evidence": "agents_next2_models.json: hop_limit; full assignment ledger/metadata/hops and persisted threads/history; Rails next2_model_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/db/src/tests/agent_next2_cases_test.rs::ws11_next2_assignment_agent_hops_stop_at_limit"
     },
     {
@@ -2815,7 +2815,7 @@
       "line": 388,
       "test": "deleting an agent-owned thread emits work_unassigned",
       "status": "ported",
-      "owner": "WS11 callback comparison merged in #210",
+      "owner": "WS12",
       "evidence": "agents_next2_jobs.json: delete_owned; installed writer and durable queued handler; rows before/after, exact webhook body/HMAC and no request before queued execution; Rails next2_job_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs::ws11_next2_assignment_deleted_owner_snapshot_delivery"
     },
     {
@@ -2823,7 +2823,7 @@
       "line": 416,
       "test": "deleting a thread without an agent owner emits nothing",
       "status": "ported",
-      "owner": "WS11 callback comparison merged in #210",
+      "owner": "WS12",
       "evidence": "agents_next2_models.json: delete_no_owner; absent persisted thread, zero ledger rows and webhook jobs; Rails next2_model_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/db/src/tests/agent_next2_cases_test.rs::ws11_next2_assignment_delete_no_agent_emits_nothing"
     },
     {
@@ -2831,7 +2831,7 @@
       "line": 422,
       "test": "a human assignment starts a new root at hop 0",
       "status": "ported",
-      "owner": "WS11 callback comparison merged in #210",
+      "owner": "WS12",
       "evidence": "agents_next2_models.json: human_root; full human assignment ledger/metadata/hop=0 and persisted thread/history; Rails next2_model_cases.rb; inherited WS11 negative controls. Executed assertion mappings: rust/crates/db/src/tests/agent_next2_cases_test.rs::ws11_next2_assignment_human_starts_root_zero"
     },
     {
@@ -2991,7 +2991,7 @@
       "line": 173,
       "test": "run_url accepts only short https URLs",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned https/length/run URL validation, blank clears and unchanged persistence; actual model/service errors and full facts. Executed assertion mappings: rust/crates/db/src/tests/ws12_agent_named_test.rs::ws12_agent_named_tags_run_url_missing_fields_validation, rust/crates/db/src/tests/agent_work_test.rs::ws12_agent_work_writes_and_denials_match_rails_services"
     },
     {
@@ -3030,9 +3030,9 @@
       "file": "test/models/channel_thread_board_test.rb",
       "line": 274,
       "test": "agent owner filter matches update-work eligibility",
-      "status": "deferred",
-      "owner": "WS12 named inbox/owner-filter assertions",
-      "evidence": "PR #215 assertion audit: Both credited model tests assert candidates and availability; neither calls the agents owner filter that the declaration asserts."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c177_agent_owner_filter_and_update_work_eligibility_match"
     },
     {
       "file": "test/models/channel_thread_board_test.rb",
@@ -3047,7 +3047,7 @@
       "line": 16,
       "test": "hand_off! transfers ownership and records the handoff in work history",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_history"
     },
     {
@@ -3055,7 +3055,7 @@
       "line": 36,
       "test": "hand_off! writes a work_handed_off ledger row with the context snapshot",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_ledger"
     },
     {
@@ -3063,7 +3063,7 @@
       "line": 51,
       "test": "hand_off! unassigns a previous agent owner",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_unassign"
     },
     {
@@ -3071,7 +3071,7 @@
       "line": 65,
       "test": "hand_off! records work.handoff in the audit log",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_audit"
     },
     {
@@ -3079,7 +3079,7 @@
       "line": 75,
       "test": "hand_off! enqueues the receiver webhook after commit",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_webhook"
     },
     {
@@ -3087,7 +3087,7 @@
       "line": 84,
       "test": "hand_off! rejects the current owner",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_current_owner"
     },
     {
@@ -3095,7 +3095,7 @@
       "line": 93,
       "test": "hand_off! refuses an agent sender that no longer owns the thread",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_stale_agent"
     },
     {
@@ -3103,7 +3103,7 @@
       "line": 106,
       "test": "hand_off! refuses a human sender who can no longer manage the thread",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_stale_human"
     },
     {
@@ -3111,7 +3111,7 @@
       "line": 118,
       "test": "hand_off! rejects untracked threads",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_untracked"
     },
     {
@@ -3119,7 +3119,7 @@
       "line": 126,
       "test": "hand_off! rejects an over-capped package",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_package"
     },
     {
@@ -3127,7 +3127,7 @@
       "line": 134,
       "test": "hand_off! validates receiver ownership eligibility on save",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Every original assertion is projected from the real human handoff: actor/from/to metadata, package arrays, audit target, receiver webhook job/status, and all fresh-state denial/rollback facts. The pinned handoff_named.rb producer reads persisted rows after rollback, not cached associations. Executed assertion mappings: rust/crates/db/src/tests/ws12_handoff_named_test.rs::ws12_human_handoff_named_receiver_access"
     },
     {
@@ -3135,7 +3135,7 @@
       "line": 4,
       "test": "root messages are rejected in a board but thread replies are allowed",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message::create rejects a board root and accepts a board thread reply/system note, with persisted counts and validation errors; pinned Rails message-board rule. Executed assertion mappings: rust/crates/db/src/tests/message_test.rs::boards_take_no_root_messages_except_system_notes"
     },
     {
@@ -3455,31 +3455,31 @@
       "line": 10,
       "test": "a keyword match on a room message records a keyword alert",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned WS17 message_activity and notification policy cases exercise keyword word boundaries, author/visibility/priority, thread memberships and the three measured query-size controls. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 20,
       "test": "a keyword match needs a word boundary",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The first rejection is Unicode case folding (unicode_street), before the original ASCII word-boundary negative case."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c191_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 30,
       "test": "the author never matches their own keywords",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c192_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 40,
       "test": "an invisible member matches nothing but a notifications-off member matches",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned WS17 message_activity and notification policy cases exercise keyword word boundaries, author/visibility/priority, thread memberships and the three measured query-size controls. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
     },
     {
@@ -3487,7 +3487,7 @@
       "line": 56,
       "test": "a mention wins over a keyword match for the same message",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned WS17 message_activity and notification policy cases exercise keyword word boundaries, author/visibility/priority, thread memberships and the three measured query-size controls. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
     },
     {
@@ -3495,23 +3495,23 @@
       "line": 69,
       "test": "a thread keyword match reaches thread members only",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned WS17 message_activity and notification policy cases exercise keyword word boundaries, author/visibility/priority, thread memberships and the three measured query-size controls. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_keyword_thread_only_members_and_muted_follower_priority"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 84,
       "test": "a muted thread member matches no keywords",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c196_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 97,
       "test": "thread activity wins over a keyword match for a follower",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned WS17 message_activity and notification policy cases exercise keyword word boundaries, author/visibility/priority, thread memberships and the three measured query-size controls. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_keyword_thread_only_members_and_muted_follower_priority"
     },
     {
@@ -3519,71 +3519,71 @@
       "line": 111,
       "test": "a room keyword match loads only the matching members' memberships",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned WS17 message_activity and notification policy cases exercise keyword word boundaries, author/visibility/priority, thread memberships and the three measured query-size controls. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_root_candidates_load_only_keyword_holders_not_bystanders"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 125,
       "test": "a room message keeps candidate queries flat as the roster grows",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c199_room_candidates_and_fanout_stay_flat_at_two_sizes"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",
       "line": 146,
       "test": "matching queries the keyword table a constant number of times as followers grow",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Pinned WS17 message_activity and notification policy cases exercise keyword word boundaries, author/visibility/priority, thread memberships and the three measured query-size controls. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_thread_keyword_and_membership_queries_stay_flat_as_followers_grow"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 10,
       "test": "records a mention for an opted-in active human and excludes the author",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c201_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 23,
       "test": "a reply follows the reply author's current preference",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_recorder_current_preferences_and_existing_items_match_named_sequences, rust/crates/db/src/tests/message_activity_test.rs::ws17_message_activity_matches_actual_rails_callbacks_and_scoped_candidates"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 45,
       "test": "mention takes precedence when one message matches multiple activity reasons",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The first rejection is mention-versus-keyword on a root message, before the original mention-versus-reply case."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c203_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 58,
       "test": "followed thread activity uses thread preferences",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c204_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 71,
       "test": "work events notify followed thread members",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control was not exercised by these credited tests."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c205_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 83,
       "test": "a direct mention reaches a member with notifications off but not an invisible one",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_recorder_current_preferences_and_existing_items_match_named_sequences"
     },
     {
@@ -3591,39 +3591,39 @@
       "line": 101,
       "test": "a member with notifications off gets no reply but a mentions member does",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_recorder_current_preferences_and_existing_items_match_named_sequences"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 116,
       "test": "a member with notifications off gets no thread activity but a mentions member does",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The first rejection is notifications-off reply policy, before notifications-off followed-thread activity."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c208_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 130,
       "test": "a member with notifications off gets no work items but a mentions member does",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/work_mutations_test.rs::work_recipients_honor_current_room_thread_and_agent_assignment_preferences"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 145,
       "test": "changing involvement leaves existing items untouched",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The recorded producer control executed, but every credited test passed; it may be absorbed by another policy/validation guard or leave the asserted projection unchanged. A more discriminating comparison/control is required."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c210_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 162,
       "test": "ten thread replies collapse into one thread activity item that reads unread again",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_ten_thread_updates_group_unread_and_handled_starts_new_item"
     },
     {
@@ -3631,7 +3631,7 @@
       "line": 195,
       "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/work_mutations_test.rs::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item"
     },
     {
@@ -3646,16 +3646,16 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 224,
       "test": "a thread message that mentions and replies to a follower yields one mention item",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: The first rejection is a root mention-versus-keyword case, before the original followed-thread mention/reply/follower precedence case."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/db/src/tests/ws12_recorder_remaining_test.rs::ws12_recorder_c213_complete_named_rails_comparison"
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "line": 243,
       "test": "work assigned by an agent honors the recipient's agent_work switch",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/work_mutations_test.rs::work_recipients_honor_current_room_thread_and_agent_assignment_preferences"
     },
     {
@@ -3671,7 +3671,7 @@
       "line": 289,
       "test": "a caller-authorized record skips the source check but keeps idempotency",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/ws12_generic_recorder_test.rs::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency"
     },
     {
@@ -3687,7 +3687,7 @@
       "line": 321,
       "test": "recording a thread message queries memberships a constant number of times as followers grow",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_thread_keyword_and_membership_queries_stay_flat_as_followers_grow"
     },
     {
@@ -3695,7 +3695,7 @@
       "line": 339,
       "test": "a root message loads only the mentionee and reply-author memberships",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/message_activity_test.rs::ws17_root_candidates_only_load_mentionee_and_reply_author_memberships"
     },
     {
@@ -3703,72 +3703,72 @@
       "line": 13,
       "test": "handles an item, clears the badge, and receives a later activity",
       "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "owner": "WS11-UI",
+      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/activity_items.rs:212; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/system/activity_inbox_test.rb",
       "line": 42,
       "test": "filters by type and saves a notification switch",
       "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "owner": "WS11-UI",
+      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/views/src/activity.rs:114; rust/crates/campfire/src/controllers/users/profiles.rs:189; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/system/agent_work_assignment_test.rb",
       "line": 19,
       "test": "assigns an agent from the update dialog and renders its API status change after refresh",
       "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "owner": "WS11-UI",
+      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/channel_threads.rs:83; existing production implementation is retained and is not itself credited as this original assertion set."
     },
     {
       "file": "test/system/board_automations_test.rb",
       "line": 17,
       "test": "the board creator configures tag rules and sla timers",
-      "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Original browser assertions use the same pinned Chromium driver on Rails and Rust, real forms/reloads/Cable, no pixel work. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs::ws12_browser_c221_original_named_system_assertions"
     },
     {
       "file": "test/system/board_automations_test.rb",
       "line": 39,
       "test": "a plain member sees no automations link and is forbidden directly",
-      "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Original browser assertions use the same pinned Chromium driver on Rails and Rust, real forms/reloads/Cable, no pixel work. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs::ws12_browser_c222_original_named_system_assertions"
     },
     {
       "file": "test/system/board_automations_test.rb",
       "line": 51,
       "test": "a tagged post auto-assigns and the history shows it",
-      "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Original browser assertions use the same pinned Chromium driver on Rails and Rust, real forms/reloads/Cable, no pixel work. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs::ws12_browser_c223_original_named_system_assertions"
     },
     {
       "file": "test/system/board_automations_test.rb",
       "line": 64,
       "test": "a person hands a post to an agent with context",
-      "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Original browser assertions use the same pinned Chromium driver on Rails and Rust, real forms/reloads/Cable, no pixel work. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs::ws12_browser_c224_original_named_system_assertions"
     },
     {
       "file": "test/system/board_automations_test.rb",
       "line": 83,
       "test": "the stale-work digest renders on the board",
-      "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Original browser assertions use the same pinned Chromium driver on Rails and Rust, real forms/reloads/Cable, no pixel work. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs::ws12_browser_c225_original_named_system_assertions"
     },
     {
       "file": "test/system/boards_test.rb",
       "line": 12,
       "test": "boards carry posts from creation to result with live rows",
-      "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Original browser assertions use the same pinned Chromium driver on Rails and Rust, real forms/reloads/Cable, no pixel work. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs::ws12_browser_c226_original_named_system_assertions"
     },
     {
       "file": "test/system/boards_test.rb",
@@ -3782,9 +3782,9 @@
       "file": "test/system/boards_test.rb",
       "line": 86,
       "test": "a non-member cannot open the board",
-      "status": "deferred",
-      "owner": "WS12 browser assertion reconciliation (WS11-UI for activity/agent UI)",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Original browser assertions use the same pinned Chromium driver on Rails and Rust, real forms/reloads/Cable, no pixel work. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_browser_remaining_tests.rs::ws12_browser_c227_original_named_system_assertions"
     },
     {
       "file": "test/system/boards_test.rb",
@@ -3839,7 +3839,7 @@
       "line": 331,
       "test": "work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable",
       "status": "ported",
-      "owner": "WS12 or named peer test",
+      "owner": "WS12",
       "evidence": "Current active human/agent membership, revoked-owner availability/name and rejected assignment event counts, with complete unavailable-owner work HTML/JSON bytes. Executed assertion mappings: rust/crates/db/src/tests/work_read_test.rs::board_owner_availability_matches_every_owner_kind_after_access_changes, rust/crates/db/src/tests/work_mutations_test.rs::eligible_owner_validation_uses_ws11_grants_and_only_changed_assignments, rust/crates/campfire/src/controllers/human_work_tests.rs::human_work_http_matches_complete_rails_responses"
     },
     {
@@ -3886,9 +3886,9 @@
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 433,
       "test": "the owner picker lists eligible agents with profiles and excludes ineligible ones",
-      "status": "deferred",
-      "owner": "WS12 named assertion continuation",
-      "evidence": "Existing production/models and broader vectors are retained. Complete original assertion clauses still require an audited mapping or new discriminating test."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c229_complete_named_rails_http_sequence"
     },
     {
       "file": "test/controllers/channel_threads_controller_test.rb",
@@ -3902,9 +3902,9 @@
       "file": "test/controllers/channel_threads_controller_test.rb",
       "line": 496,
       "test": "ordinary thread fields remain separate from work tracking",
-      "status": "deferred",
-      "owner": "WS12 named domain/rendering/recorder comparisons",
-      "evidence": "PR #215 systematic producer audit: Only a board owner-metadata request fails. The original ordinary-thread name update separated from work tracking is not the rejecting HTTP assertion."
+      "status": "ported",
+      "owner": "WS12",
+      "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c230_complete_named_rails_http_sequence"
     }
   ]
 }

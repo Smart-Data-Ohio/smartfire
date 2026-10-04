@@ -10,7 +10,12 @@ pub(super) async fn prepare(case: &Value) -> TestApp {
     let config = case["setup"].clone();
     app.db().write(move |tx| {
         for cap in config["grant"].as_array().into_iter().flatten() {
-            tx.conn().execute("INSERT INTO agent_grants(agent_id,capability,room_id,granted_by_id,revoked_at,created_at,updated_at) VALUES(?,?,?,127326141,?,?,?)",rusqlite::params![AGENT,cap.as_str(),config["grant_room"].as_i64(),if config["revoked"]==true {Some(tx.now())} else {None},tx.now(),tx.now()])?;
+            let scope = match cap.as_str() {
+                Some("manage_threads") => config.get("manage_room").unwrap_or(&config["grant_room"]),
+                Some("read_messages") => config.get("read_room").unwrap_or(&config["grant_room"]),
+                _ => &config["grant_room"],
+            };
+            tx.conn().execute("INSERT INTO agent_grants(agent_id,capability,room_id,granted_by_id,revoked_at,created_at,updated_at) VALUES(?,?,?,127326141,?,?,?)",rusqlite::params![AGENT,cap.as_str(),scope.as_i64(),if config["revoked"]==true {Some(tx.now())} else {None},tx.now(),tx.now()])?;
         }
         tx.conn().execute("UPDATE agents SET owner_id=127326141 WHERE id=?",[AGENT])?;
         if config["bot_key"]==true {

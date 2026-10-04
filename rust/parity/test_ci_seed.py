@@ -1,9 +1,13 @@
 """Injection checks for every source the image/seed cache promises to track."""
 
 from pathlib import Path
+import hashlib
+import json
+import os
 import re
 import shlex
 import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -34,11 +38,11 @@ class SeedCoverageTests(unittest.TestCase):
                                  f"CI must restore and save the {seed} test seed")
 
 
-class CacheIdentityTests(unittest.TestCase):
+class CacheInputsTestCase(unittest.TestCase):
     def setUp(self):
         self.scratch = tempfile.TemporaryDirectory()
         self.addCleanup(self.scratch.cleanup)
-        self.root = Path(self.scratch.name)
+        self.root = Path(self.scratch.name) / "rust"
         for name in SEED_INPUTS:
             source = ROOT / name
             target = self.root / name
@@ -48,6 +52,8 @@ class CacheIdentityTests(unittest.TestCase):
             else:
                 shutil.copyfile(source, target)
 
+
+class CacheIdentityTests(CacheInputsTestCase):
     def test_every_input_changes_the_seed_key(self):
         before = cache_keys(self.root)
         for name in SEED_INPUTS:
@@ -67,6 +73,18 @@ class CacheIdentityTests(unittest.TestCase):
                     else:
                         self.assertEqual(before["image_key"], after["image_key"])
                     file.write_bytes(content)
+
+    def test_checkout_schema_and_migrations_invalidate_both_caches(self):
+        self.assertIn("../db/schema.rb", IMAGE_INPUTS)
+        self.assertIn("../db/migrate", IMAGE_INPUTS)
+        before = cache_keys(self.root)
+        migration = self.root.parent / "db/migrate/20990101000000_added_nullable_column.rb"
+        migration.write_text("# a new Rails migration\n")
+        after = cache_keys(self.root)
+        self.assertNotEqual(before["image_key"], after["image_key"])
+        self.assertNotEqual(before["seed_key"], after["seed_key"])
+        migration.unlink()
+        self.assertEqual(before, cache_keys(self.root))
 
     def test_added_and_removed_seed_files_invalidate(self):
         before = cache_keys(self.root)
@@ -100,6 +118,80 @@ class CacheIdentityTests(unittest.TestCase):
         source.symlink_to("first_run.rb")
         with self.assertRaises(ValueError):
             cache_keys(self.root)
+
+
+class LocalArchiveTests(CacheInputsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.archive = self.root / "parity/.ci/image/reference.tar"
+        self.archive.parent.mkdir(parents=True)
+        self.archive.write_bytes(b"pre-migration image archive")
+        self.trace = self.root / "docker-calls.txt"
+        reference = self.root / "parity/bin/reference"
+        reference.write_text('#!/usr/bin/env bash\nprintf "build\\n" >> "$CACHE_TEST_TRACE"\n')
+        reference.chmod(0o755)
+        mock_bin = self.root / "mock-bin"
+        mock_bin.mkdir()
+        docker = mock_bin / "docker"
+        docker.write_text('''#!/usr/bin/env python3
+import os, sys
+from pathlib import Path
+args = sys.argv[1:]
+if args[0] == "image":
+    print("GIT_REVISION=" + os.environ["CACHE_TEST_PIN"])
+elif args[0] in ("load", "save"):
+    with open(os.environ["CACHE_TEST_TRACE"], "a") as trace:
+        trace.write(args[0] + "\\n")
+    if args[0] == "save":
+        Path(args[args.index("--output") + 1]).write_bytes(b"rebuilt image archive")
+else:
+    raise SystemExit("unexpected Docker command")
+''')
+        docker.chmod(0o755)
+        self.env = {
+            **os.environ,
+            "PATH": f"{mock_bin}:{os.environ['PATH']}",
+            "CACHE_TEST_TRACE": str(self.trace),
+            "CACHE_TEST_PIN": (self.root / "parity/reference.sha").read_text().strip(),
+        }
+
+    def record_identity(self):
+        identity = {
+            "image_key": cache_keys(self.root)["image_key"],
+            "sha256": hashlib.sha256(self.archive.read_bytes()).hexdigest(),
+        }
+        self.archive.with_suffix(".tar.identity.json").write_text(json.dumps(identity))
+        return identity
+
+    def image(self):
+        result = subprocess.run(
+            ["bash", self.root / "parity/bin/ci-seed", "image"], env=self.env,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        return self.trace.read_text().splitlines()
+
+    def test_legacy_archive_without_identity_is_rebuilt(self):
+        self.assertEqual(self.image(), ["build", "save"])
+
+    def test_same_pin_archive_with_stale_schema_fingerprint_is_rebuilt(self):
+        before = self.record_identity()
+        migration = self.root.parent / "db/migrate/20990101000000_added_nullable_column.rb"
+        migration.write_text("# new schema with the same Rails behavior pin\n")
+        self.assertNotEqual(before["image_key"], cache_keys(self.root)["image_key"])
+        self.assertEqual(self.image(), ["build", "save"])
+        identity = json.loads(self.archive.with_suffix(".tar.identity.json").read_text())
+        self.assertEqual(identity["image_key"], cache_keys(self.root)["image_key"])
+        self.assertEqual(identity["sha256"], hashlib.sha256(self.archive.read_bytes()).hexdigest())
+
+    def test_matching_archive_is_restored(self):
+        self.record_identity()
+        self.assertEqual(self.image(), ["load"])
+
+    def test_replaced_archive_with_matching_fingerprint_is_rebuilt(self):
+        self.record_identity()
+        self.archive.write_bytes(b"a different retained image archive")
+        self.assertEqual(self.image(), ["build", "save"])
 
 
 if __name__ == "__main__":

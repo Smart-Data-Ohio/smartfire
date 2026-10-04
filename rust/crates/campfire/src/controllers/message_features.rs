@@ -2,6 +2,8 @@
 #[cfg(test)]
 mod search_header_tests;
 #[cfg(test)]
+mod review_229_tests;
+#[cfg(test)]
 mod private_provider_tests;
 #[cfg(test)]
 mod provider_batch_tests;
@@ -201,7 +203,17 @@ pub(crate) fn poll_view(
 
 /// Rails JSON encodes Time in UTC with millisecond precision.
 pub(crate) fn json_time(time: Timestamp) -> String {
-    time.jiff().strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+    json_time_in_zone(time, &jiff::tz::TimeZone::UTC)
+}
+pub(crate) fn json_time_in_zone(time: Timestamp, zone: &jiff::tz::TimeZone) -> String {
+    let mut encoded = rails_compat::datetime::render(time, zone, true);
+    let suffix = if encoded.ends_with('Z') {
+        encoded.len() - 1
+    } else {
+        encoded.len() - 6
+    };
+    encoded.insert_str(suffix, &format!(".{:03}", time.subsec_microsecond() / 1000));
+    encoded
 }
 
 #[cfg(test)]
@@ -259,3 +271,24 @@ mod older_embed_failure_tests;
 mod comparison_support;
 #[cfg(test)]
 mod final_state_sibling_tests;
+#[cfg(test)]
+mod calendar_retry_consumer_tests;
+#[cfg(test)]
+mod relative_split_input_tests;
+#[cfg(test)]
+mod container_input_tests;
+
+#[cfg(test)]
+mod wide_html_tests;
+
+#[cfg(test)]
+mod periodic_delivery_tests;
+
+/// Presentation strings use WS11's shared wide-time renderer; view models never
+/// narrow an accepted database timestamp through Jiff.
+pub(crate) fn html_datetime(at: campfire_db::Timestamp, zone: &campfire_views::time::Zone) -> String {
+    rails_compat::datetime::render(at, zone.tz(), true)
+}
+pub(crate) fn html_long(at: campfire_db::Timestamp, zone: &campfire_views::time::Zone) -> String {
+    rails_compat::datetime::format(at, zone.tz(), "%B %d, %Y %H:%M")
+}

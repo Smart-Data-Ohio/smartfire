@@ -40,7 +40,7 @@ impl ActivityItem {
         )
     }
 
-    /// Rails-compatible entry point. Budget notices use the explicit WS11 reader seam.
+    /// Rails-compatible entry point, including the merged WS11 budget-notice reader.
     pub fn record(
         tx: &mut Tx<'_>,
         user_id: i64,
@@ -64,7 +64,7 @@ impl ActivityItem {
         event_type: super::ActivityEventType,
         authorization: super::SourceAuthorization,
     ) -> Result<Option<Self>> {
-        let Some(facts) = source_facts(tx, source, authorization, None)? else {
+        let Some(facts) = source_facts(tx, source, authorization, Some(&PersistedBudgetNoticeReader))? else {
             return Ok(None);
         };
         Self::record_for_current_recipient(tx, user_id, &facts, event_type, authorization)
@@ -411,4 +411,27 @@ fn source_facts(
         }
     };
     Ok(Some(facts))
+}
+
+/// Default consumer of WS11's typed reader. The owning budget writer and its
+/// uniqueness/fanout callbacks remain in agent_posting; this adapter only reads.
+struct PersistedBudgetNoticeReader;
+impl super::AgentBudgetNoticeActivityReader for PersistedBudgetNoticeReader {
+    fn recording_recipient_ids(&self, conn: &crate::Connection, id: i64) -> Result<Option<Vec<i64>>> {
+        crate::AgentBudgetNotice::find_by_id(conn, id)?
+            .map(|notice| notice.activity_recipient_ids(conn)).transpose()
+    }
+}
+
+impl super::ActivityRecordingSource for crate::AgentBudgetNotice {
+    fn recording_facts(&self, conn: &crate::Connection) -> Result<Option<super::ActivityRecordingFacts>> {
+        let Some(notice) = crate::AgentBudgetNotice::find_by_id(conn, self.id)? else {
+            return Ok(None);
+        };
+        Ok(Some(super::ActivityRecordingFacts {
+            source_type: "AgentBudgetNotice", source_id: notice.id,
+            creator_id: None, thread_id: None,
+            recipient_ids: notice.activity_recipient_ids(conn)?,
+        }))
+    }
 }

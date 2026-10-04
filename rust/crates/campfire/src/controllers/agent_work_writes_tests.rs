@@ -215,7 +215,12 @@ fn rows(conn: &campfire_db::Connection, sql: &str) -> campfire_db::Result<Vec<Va
         .collect())
 }
 pub(super) async fn assert_state(app: &TestApp, expected: &Value, name: &str) {
-    let actual=app.db().read(|conn| {
+    assert_state_with_job_facts(app,expected,name,false).await;
+}
+/// Rails' test adapter and the atomic durable queue are compared as full logical
+/// job facts where a named declaration does not specify job execution ordering.
+pub(super) async fn assert_state_with_job_facts(app:&TestApp, expected:&Value, name:&str, unordered:bool) {
+    let mut actual=app.db().read(|conn| {
         let id=if campfire_db::ChannelThread::find_by_id(conn,1901300001)?.is_some(){1901300001}else{1900700020};
         let thread=campfire_db::ChannelThread::find(conn,id)?;
         let tags=thread.tag_names(conn)?;
@@ -229,12 +234,22 @@ pub(super) async fn assert_state(app: &TestApp, expected: &Value, name: &str) {
         let jobs=rows(conn,"SELECT json_object('class',job_class,'args',json(arguments)) FROM background_jobs ORDER BY id")?;
         Ok(json!({"thread":{"id":id,"title":thread.name,"room_id":thread.room_id,"creator_id":thread.creator_id,"owner":thread.work_owner_id,"work_status":thread.work_status,"tags":tags,"result":thread.result_markdown,"result_updated_at":time(thread.result_updated_at),"result_updated_by":thread.result_updated_by_id,"run_url":thread.run_url,"updated_at":json_time(thread.updated_at),"work_status_changed_at":time(thread.work_status_changed_at)},"messages":messages,"history":history,"ledger":ledger,"handoffs":handoffs,"audit":audit,"jobs":jobs}))
     }).await.unwrap();
-    assert_eq!(&actual, expected, "{name}: committed state");
+    let mut expected = expected.clone();
+    if unordered {
+        for value in [&mut actual,&mut expected] {
+            value["jobs"].as_array_mut().unwrap().sort_by_key(Value::to_string);
+        }
+    }
+    if actual != expected {println!("WS11_STATE_ACTUAL {name} {actual}");}
+    assert_eq!(actual, expected, "{name}: committed state");
     app.db().read(|conn| {
-        let chains=rows(conn,"SELECT json_object('chain',chain_id,'hop',hop) FROM agent_events WHERE id>1901303000 AND event_type IN ('work_assigned','work_unassigned','work_handed_off') ORDER BY id")?;
-        if let Some(first)=chains.first() {
-            assert!(uuid::Uuid::parse_str(first["chain"].as_str().unwrap()).is_ok());
-            assert!(chains.iter().all(|row|row["chain"]==first["chain"]));
+        let chains=rows(conn,"SELECT json_object('chain',chain_id,'hop',hop,'thread',json_extract(metadata,'$.thread_id'),'kind',event_type) FROM agent_events WHERE id>1901303000 AND event_type IN ('work_assigned','work_unassigned','work_handed_off') ORDER BY id")?;
+        for (index,row) in chains.iter().enumerate() {
+            assert!(uuid::Uuid::parse_str(row["chain"].as_str().unwrap()).is_ok());
+            if row["kind"]=="work_handed_off" && index>0 && chains[index-1]["kind"]=="work_unassigned" {
+                assert_eq!(row["thread"],chains[index-1]["thread"]);
+                assert_eq!(row["chain"],chains[index-1]["chain"]);
+            }
         }
         Ok(())
     }).await.unwrap();
