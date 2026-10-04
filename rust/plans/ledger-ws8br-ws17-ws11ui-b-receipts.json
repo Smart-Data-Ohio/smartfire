@@ -1455,11 +1455,11 @@
           "ruby": "assert_response :ok",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:363",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:384",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:363",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:384",
           "assertion_anchor": "assert_eq!(reply.status, StatusCode::OK);",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         }
@@ -1481,11 +1481,11 @@
           "ruby": "assert_response :ok",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:363",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:384",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:363",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:384",
           "assertion_anchor": "assert_eq!(reply.status, StatusCode::OK);",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
@@ -1494,12 +1494,12 @@
           "ruby": "assert_select \"button[aria-label='Message Kevin']\", 1",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:366",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:396",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector button[aria-label='Message Kevin']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:366",
-          "assertion_anchor": "html.matches(&format!(\"aria-label=\\\"Message {name}\\\"\"))",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:396",
+          "assertion_anchor": "assert_eq!(buttons, 1, \"exact Message button selector\");",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
         {
@@ -1507,12 +1507,12 @@
           "ruby": "assert_select \"button\", text: \"Ban Kevin\"",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:371",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:402",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector button",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:371",
-          "assertion_anchor": "assert!(html.contains(\"Ban Kevin\"));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:402",
+          "assertion_anchor": "&& dom.text_content(node).contains(\"Ban Kevin\"))",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
         {
@@ -1520,11 +1520,11 @@
           "ruby": "assert_select \"img[aria-label]\", 0",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:374",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:414",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector img[aria-label]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:374",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:414",
           "assertion_anchor": "assert!(!image.split('>').next().unwrap().contains(\"aria-label=\"));",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
@@ -1533,11 +1533,11 @@
           "ruby": "assert_response :ok",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:363",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:384",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:363",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:384",
           "assertion_anchor": "assert_eq!(reply.status, StatusCode::OK);",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
@@ -1546,12 +1546,12 @@
           "ruby": "assert_select \"button[aria-label='Message Bender Bot']\", 1",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:366",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:396",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector button[aria-label='Message Bender Bot']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:366",
-          "assertion_anchor": "html.matches(&format!(\"aria-label=\\\"Message {name}\\\"\"))",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:396",
+          "assertion_anchor": "assert_eq!(buttons, 1, \"exact Message button selector\");",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
         {
@@ -1559,11 +1559,11 @@
           "ruby": "assert_select \"img[aria-label]\", 0",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:374",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:414",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector img[aria-label]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:374",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:414",
           "assertion_anchor": "assert!(!image.split('>').next().unwrap().contains(\"aria-label=\"));",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         }
@@ -2464,13 +2464,13 @@
           "ruby": "assert_select \".people-directory__row\", minimum: 2",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:353",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:374",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector .people-directory__row",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:353",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:374",
           "assertion_anchor": "assert!(html.matches(\"class=\\\"people-directory__row\").count() >= 2);",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
@@ -2479,14 +2479,14 @@
           "ruby": "assert_select \"input[data-multi-select-target='checkbox'][data-user-id='#{users(:jason).id}']\", 1",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:348",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:361",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector input[data-multi-select-target='checkbox'][data-user-id='#{users(:jason).id}']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:348",
-          "assertion_anchor": "assert!(html.contains(&format!(\"id=\\\"select_user_{JASON}\\\"\")));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:361",
+          "assertion_anchor": "assert_eq!(checkboxes, expected, \"original selection selector for {id}\");",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
         {
@@ -2494,14 +2494,14 @@
           "ruby": "assert_select \"input[data-multi-select-target='checkbox'][data-user-id='#{users(:david).id}']\", 0",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:354",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:361",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector input[data-multi-select-target='checkbox'][data-user-id='#{users(:david).id}']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:354",
-          "assertion_anchor": "assert!(!html.contains(&format!(\"id=\\\"select_user_{DAVID}\\\"\")));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:361",
+          "assertion_anchor": "assert_eq!(checkboxes, expected, \"original selection selector for {id}\");",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
         {
@@ -2509,13 +2509,13 @@
           "ruby": "assert_select \".people-directory__presence\", text: \"Online\", minimum: 1",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:350",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:371",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector .people-directory__presence",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:350",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:371",
           "assertion_anchor": "assert!(html.contains(\"people-directory__presence\\\">Online\"));",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
@@ -2524,13 +2524,13 @@
           "ruby": "assert_select \".profile-card__badge\", text: \"Agent\", minimum: 1",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:351",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:372",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector .profile-card__badge",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:351",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:372",
           "assertion_anchor": "assert!(html.contains(\"profile-card__badge\\\">Agent\"));",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
@@ -2539,14 +2539,14 @@
           "ruby": "assert_select \"[data-multi-select-target='bar']\", 1",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:352",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:368",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector [data-multi-select-target='bar']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:352",
-          "assertion_anchor": "assert!(html.contains(\"data-multi-select-target=\\\"bar\\\"\"));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:368",
+          "assertion_anchor": "assert_eq!(bars, 1);",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
         {
@@ -2554,14 +2554,14 @@
           "ruby": "assert_select \"input[data-user-id='#{users(:jz).id}']\", 0",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:349",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:361",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector input[data-user-id='#{users(:jz).id}']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:349",
-          "assertion_anchor": "assert!(!html.contains(&format!(\"id=\\\"select_user_{inactive}\\\"\")));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:361",
+          "assertion_anchor": "assert_eq!(checkboxes, expected, \"original selection selector for {id}\");",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
         {
@@ -2569,13 +2569,13 @@
           "ruby": "assert_select \".people-directory__row\", text: /JZ/, count: 0",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:355",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:376",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector .people-directory__row",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:355",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:376",
           "assertion_anchor": "assert!(!html.contains(\"JZ\"));",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         }
@@ -2683,11 +2683,11 @@
           "ruby": "assert_response :no_content",
           "rust_test": "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:179",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:184",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:179",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:184",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "tour_touch_matches_rails_and_refreshes_on_repeated_completion"
         },
@@ -2696,11 +2696,11 @@
           "ruby": "assert_not_nil users(:david).reload.tour_completed_at",
           "rust_test": "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:200",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "Saved state / response value: assert_not_nil users(:david).reload.tour_completed_at",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:195",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:200",
           "assertion_anchor": "assert_eq!(timestamps.0.jiff(), expected);",
           "assertion_scope": "tour_touch_matches_rails_and_refreshes_on_repeated_completion"
         }
@@ -2722,11 +2722,11 @@
           "ruby": "assert_response :no_content",
           "rust_test": "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:179",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:184",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:179",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:184",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "tour_touch_matches_rails_and_refreshes_on_repeated_completion"
         },
@@ -2735,11 +2735,11 @@
           "ruby": "assert_operator users(:david).reload.tour_completed_at, :>, stamped",
           "rust_test": "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:200",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "Saved state / response value: assert_operator users(:david).reload.tour_completed_at, :>, stamped",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:195",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:200",
           "assertion_anchor": "assert_eq!(timestamps.0.jiff(), expected);",
           "assertion_scope": "tour_touch_matches_rails_and_refreshes_on_repeated_completion"
         }
@@ -2787,11 +2787,11 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:217",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:241",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:217",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:241",
           "assertion_anchor": "assert_eq!(before.status, StatusCode::OK);",
           "assertion_scope": "tour_stamp_controls_the_room_layout_auto_start"
         },
@@ -2800,12 +2800,12 @@
           "ruby": "assert_select '#tour[data-controller=\"tour\"][data-tour-auto-start-value=\"true\"]'",
           "rust_test": "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:221",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:219",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP DOM selector tour",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:221",
-          "assertion_anchor": ".contains(\"data-tour-auto-start-value=\\\"true\\\"\")",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:219",
+          "assertion_anchor": "assert_eq!(tours, 1, \"exact original tour shell selector\");",
           "assertion_scope": "tour_stamp_controls_the_room_layout_auto_start"
         },
         {
@@ -2813,12 +2813,12 @@
           "ruby": "assert_select \"#help-menu-button\", count: 1",
           "rust_test": "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:223",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:224",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP DOM selector #help-menu-button",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:223",
-          "assertion_anchor": "assert!(before.text().contains(\"id=\\\"help-menu-button\\\"\"));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:224",
+          "assertion_anchor": "assert_eq!(help, 1, \"exact Help control cardinality\");",
           "assertion_scope": "tour_stamp_controls_the_room_layout_auto_start"
         }
       ],
@@ -2839,11 +2839,11 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:232",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:257",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:232",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:257",
           "assertion_anchor": "assert_eq!(after.status, StatusCode::OK);",
           "assertion_scope": "tour_stamp_controls_the_room_layout_auto_start"
         },
@@ -2852,12 +2852,12 @@
           "ruby": "assert_select '#tour[data-controller=\"tour\"][data-tour-auto-start-value=\"false\"]'",
           "rust_test": "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:237",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:219",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP DOM selector tour",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:237",
-          "assertion_anchor": ".contains(\"data-tour-auto-start-value=\\\"false\\\"\")",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:219",
+          "assertion_anchor": "assert_eq!(tours, 1, \"exact original tour shell selector\");",
           "assertion_scope": "tour_stamp_controls_the_room_layout_auto_start"
         },
         {
@@ -2865,12 +2865,12 @@
           "ruby": "assert_select \"#help-menu-button\", count: 1",
           "rust_test": "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start",
           "checks": "Original tour PATCH/read and exact layout/help controls.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:233",
+          "rust_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:224",
           "oracle": "rust/vectors/users_preferences.json",
           "oracle_cases": [],
           "observation": "HTTP DOM selector #help-menu-button",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:233",
-          "assertion_anchor": "assert!(after.text().contains(\"id=\\\"help-menu-button\\\"\"));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/preferences_tests.rs:224",
+          "assertion_anchor": "assert_eq!(help, 1, \"exact Help control cardinality\");",
           "assertion_scope": "tour_stamp_controls_the_room_layout_auto_start"
         }
       ],
@@ -2891,11 +2891,11 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::profile_page_tests::profile_route_renders_owner_sections_and_ws9_security_directly",
           "checks": "Real GET succeeds; every owned section and provider connection is mounted.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:215",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:215",
           "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);",
           "assertion_scope": "profile_route_renders_owner_sections_and_ws9_security_directly"
         }
@@ -2917,11 +2917,11 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::profile_page_tests::edge_only_user_agent_gets_rails_edge_install_instructions",
           "checks": "Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:224",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:270",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:224",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:270",
           "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);",
           "assertion_scope": "edge_only_user_agent_gets_rails_edge_install_instructions"
         },
@@ -2930,12 +2930,12 @@
           "ruby": "assert_select \"details.pwa__instructions img[src*='install-edge']\"",
           "rust_test": "controllers::users::profile_page_tests::edge_only_user_agent_gets_rails_edge_install_instructions",
           "checks": "Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:225",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:289",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector details.pwa__instructions img[src*='install-edge']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:225",
-          "assertion_anchor": "assert!(page.text().contains(\"install-edge-\"));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:289",
+          "assertion_anchor": "\"Edge image is inside the original details.pwa__instructions selector\"",
           "assertion_scope": "edge_only_user_agent_gets_rails_edge_install_instructions"
         }
       ],
@@ -2956,14 +2956,14 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "core_profile"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
-          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
@@ -2971,13 +2971,13 @@
           "ruby": "assert_equal \"John Doe\", users(:david).reload.name",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "core_profile"
           ],
           "observation": "Saved state / response value: assert_equal \"John Doe\", users(:david).reload.name",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -2986,13 +2986,13 @@
           "ruby": "assert_equal \"Acrobat\", users(:david).bio",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "core_profile"
           ],
           "observation": "Saved state / response value: assert_equal \"Acrobat\", users(:david).bio",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -3001,13 +3001,13 @@
           "ruby": "assert_equal \"david@37signals.com\", users(:david).email_address",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:198",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:231",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "core_profile"
           ],
           "observation": "Saved state / response value: assert_equal \"david@37signals.com\", users(:david).email_address",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:198",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:231",
           "assertion_anchor": "assert_eq!(campfire_db::User::find(conn, DAVID)?.email_address.as_deref(), Some(\"david@37signals.com\"));",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -3029,13 +3029,13 @@
           "ruby": "assert_equal \"Jason\", users(:jason).reload.name",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "foreign_name"
           ],
           "observation": "Saved state / response value: assert_equal \"Jason\", users(:jason).reload.name",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -3057,13 +3057,13 @@
           "ruby": "assert_includes response.body, \"Google Calendar is not configured for this workspace\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Google Calendar is not configured for this workspace\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -3072,13 +3072,13 @@
           "ruby": "assert_not_includes response.body, \"Connect Google Calendar\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Connect Google Calendar\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         }
@@ -3348,13 +3348,13 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -3363,13 +3363,13 @@
           "ruby": "assert_select \"input[name='user[meeting_dnd_enabled]'][type=checkbox]\", count: 1",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP DOM selector input[name='user[meeting_dnd_enabled]'][type=checkbox]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -3378,13 +3378,13 @@
           "ruby": "assert_includes response.body, \"Do not disturb during meetings\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Do not disturb during meetings\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         }
@@ -4047,13 +4047,13 @@
           "ruby": "assert_not_includes response.body, \"Enable Drive previews\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Enable Drive previews\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -4062,13 +4062,13 @@
           "ruby": "assert_not_includes response.body, \"Drive previews enabled\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Drive previews enabled\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         }
@@ -4390,14 +4390,14 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "github"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
-          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
@@ -4405,13 +4405,13 @@
           "ruby": "assert_equal \"david-gh\", users(:david).reload.github_login",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "github"
           ],
           "observation": "Saved state / response value: assert_equal \"david-gh\", users(:david).reload.github_login",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -4433,13 +4433,13 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected",
           "checks": "Real PUT with original Rails values; exact status, location, text_size/voice_mode/raw preferences/login state and duplicate error. The raw true/false strings are preserved and typed preference semantics are checked below.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:109",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:113",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "mutations"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:109",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:113",
           "assertion_anchor": "reply.status.as_u16(),",
           "assertion_scope": "original_mutation"
         },
@@ -4448,14 +4448,14 @@
           "ruby": "assert_select \"p\", text: /already linked to another user/",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected",
           "checks": "Real PUT with original Rails values; exact status, location, text_size/voice_mode/raw preferences/login state and duplicate error. The raw true/false strings are preserved and typed preference semantics are checked below.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:128",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:139",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "mutations"
           ],
           "observation": "HTTP DOM selector p",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:128",
-          "assertion_anchor": "reply.text().contains(\"already linked to another user\"),",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:139",
+          "assertion_anchor": ".contains(\"already linked to another user\")),",
           "assertion_scope": "original_mutation"
         },
         {
@@ -4463,13 +4463,13 @@
           "ruby": "assert_nil users(:david).reload.github_login",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected",
           "checks": "Real PUT with original Rails values; exact status, location, text_size/voice_mode/raw preferences/login state and duplicate error. The raw true/false strings are preserved and typed preference semantics are checked below.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "mutations"
           ],
           "observation": "Saved state / response value: assert_nil users(:david).reload.github_login",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         }
@@ -4491,13 +4491,13 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -4506,13 +4506,13 @@
           "ruby": "assert_select \"input[name='user[inbox_preferences][#{key}]'][type=checkbox][checked]\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP DOM selector input[name='user[inbox_preferences][#{key}]'][type=checkbox][checked]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -4521,13 +4521,13 @@
           "ruby": "assert_includes response.body, \"GitHub review requests\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"GitHub review requests\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -4536,13 +4536,13 @@
           "ruby": "assert_includes response.body, \"The incoming-call banner still shows.\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"The incoming-call banner still shows.\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         }
@@ -4564,13 +4564,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:115",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:119",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_notifications"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:115",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:119",
           "assertion_anchor": "reply.location(),",
           "assertion_scope": "original_mutation"
         },
@@ -4579,13 +4579,13 @@
           "ruby": "assert_equal false, preferences.github_review_requests",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_notifications"
           ],
           "observation": "Saved state / response value: assert_equal false, preferences.github_review_requests",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         },
@@ -4594,13 +4594,13 @@
           "ruby": "assert_equal false, preferences.agent_approvals",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_notifications"
           ],
           "observation": "Saved state / response value: assert_equal false, preferences.agent_approvals",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         },
@@ -4609,13 +4609,13 @@
           "ruby": "assert_equal true, preferences.agent_work",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_notifications"
           ],
           "observation": "Saved state / response value: assert_equal true, preferences.agent_work",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         },
@@ -4624,13 +4624,13 @@
           "ruby": "assert_equal false, preferences.event_reminders",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_notifications"
           ],
           "observation": "Saved state / response value: assert_equal false, preferences.event_reminders",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         },
@@ -4639,13 +4639,13 @@
           "ruby": "assert_equal true, preferences.huddle_invitations",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_notifications"
           ],
           "observation": "Saved state / response value: assert_equal true, preferences.huddle_invitations",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         }
@@ -4667,13 +4667,13 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_notification_preserves_saved_state",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:109",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:113",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_bad_notification"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:109",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:113",
           "assertion_anchor": "reply.status.as_u16(),",
           "assertion_scope": "original_mutation"
         },
@@ -4682,13 +4682,13 @@
           "ruby": "assert_equal true, users(:david).reload.inbox_preferences.github_review_requests",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_notification_preserves_saved_state",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:138",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:149",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_bad_notification"
           ],
           "observation": "Saved state / response value: assert_equal true, users(:david).reload.inbox_preferences.github_review_requests",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:138",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:149",
           "assertion_anchor": "profile_observation(&read)[\"inbox\"],",
           "assertion_scope": "original_mutation"
         }
@@ -4710,11 +4710,11 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
           "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:246",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:246",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310",
           "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);",
           "assertion_scope": "dnd_switch_tracks_expired_and_live_timers"
         },
@@ -4723,12 +4723,12 @@
           "ruby": "assert_select \"#user_dnd_enabled[checked]\", count: 0",
           "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
           "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:255",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector #user_dnd_enabled[checked]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:255",
-          "assertion_anchor": "assert_eq!(field.contains(\"checked=\\\"checked\\\"\"), checked);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330",
+          "assertion_anchor": "assert_eq!(checked_switches, usize::from(checked));",
           "assertion_scope": "dnd_switch_tracks_expired_and_live_timers"
         }
       ],
@@ -4749,11 +4749,11 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
           "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:246",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:246",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310",
           "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);",
           "assertion_scope": "dnd_switch_tracks_expired_and_live_timers"
         },
@@ -4762,12 +4762,12 @@
           "ruby": "assert_select \"#user_dnd_enabled[checked]\", count: 1",
           "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
           "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:255",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector #user_dnd_enabled[checked]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:255",
-          "assertion_anchor": "assert_eq!(field.contains(\"checked=\\\"checked\\\"\"), checked);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330",
+          "assertion_anchor": "assert_eq!(checked_switches, usize::from(checked));",
           "assertion_scope": "dnd_switch_tracks_expired_and_live_timers"
         }
       ],
@@ -4788,13 +4788,13 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -4803,13 +4803,13 @@
           "ruby": "assert_select \"select[name='user[voice_mode]'] option[selected]\", text: \"Voice activity\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP DOM selector select[name='user[voice_mode]'] option[selected]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -4818,13 +4818,13 @@
           "ruby": "assert_select \"input[name='user[push_to_talk_key]'][value='`']\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP DOM selector input[name='user[push_to_talk_key]'][value='`']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         }
@@ -4846,14 +4846,14 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "voice"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
-          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
@@ -4861,13 +4861,13 @@
           "ruby": "assert_equal \"push_to_talk\", user.voice_mode",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "voice"
           ],
           "observation": "Saved state / response value: assert_equal \"push_to_talk\", user.voice_mode",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -4876,13 +4876,13 @@
           "ruby": "assert_equal \"CapsLock\", user.push_to_talk_key",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "voice"
           ],
           "observation": "Saved state / response value: assert_equal \"CapsLock\", user.push_to_talk_key",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -4904,13 +4904,13 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_voice_preserves_saved_state",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:109",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:113",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_bad_voice"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:109",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:113",
           "assertion_anchor": "reply.status.as_u16(),",
           "assertion_scope": "original_mutation"
         },
@@ -4919,13 +4919,13 @@
           "ruby": "assert_equal \"voice_activity\", users(:david).reload.voice_mode",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_voice_preserves_saved_state",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_bad_voice"
           ],
           "observation": "Saved state / response value: assert_equal \"voice_activity\", users(:david).reload.voice_mode",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         }
@@ -4947,14 +4947,14 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "github_clear"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
-          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
@@ -4962,13 +4962,13 @@
           "ruby": "assert_nil users(:david).reload.github_login",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "github_clear"
           ],
           "observation": "Saved state / response value: assert_nil users(:david).reload.github_login",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -5295,14 +5295,14 @@
           "ruby": "assert_select \"input[name=?][autocomplete=current-password]\", \"user[current_password]\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/profile_security.json",
           "oracle_cases": [
             "passwordless",
             "missing"
           ],
           "observation": "HTTP DOM selector input[name=?][autocomplete=current-password]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -5341,15 +5341,15 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "legacy_zone"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
-          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
@@ -5357,14 +5357,14 @@
           "ruby": "assert_equal \"dark\", users(:david).reload.theme",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "legacy_zone"
           ],
           "observation": "Saved state / response value: assert_equal \"dark\", users(:david).reload.theme",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5373,14 +5373,14 @@
           "ruby": "assert_equal \"Pacific Time (US & Canada)\", users(:david).time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "legacy_zone"
           ],
           "observation": "Saved state / response value: assert_equal \"Pacific Time (US & Canada)\", users(:david).time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -5402,13 +5402,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_text_size_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:115",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:119",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_text_size"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:115",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:119",
           "assertion_anchor": "reply.location(),",
           "assertion_scope": "original_mutation"
         },
@@ -5417,13 +5417,13 @@
           "ruby": "assert_equal \"smaller\", users(:david).reload.text_size",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_text_size_save_matches_rails",
           "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "original_text_size"
           ],
           "observation": "Saved state / response value: assert_equal \"smaller\", users(:david).reload.text_size",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:130",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "original_mutation"
         }
@@ -5460,30 +5460,30 @@
           "ruby": "assert_select \"select#user_time_zone option[selected][value='America/New_York']\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages[America/New_York]"
           ],
           "observation": "HTTP DOM selector select#user_time_zone option[selected][value='America/New_York']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
         {
           "line": 483,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:71",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages[America/New_York]"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:71",
-          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);",
-          "assertion_scope": "manual_timezone_choice_is_rendered_and_blocks_browser_detection"
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
+          "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
           "line": 484,
@@ -5505,20 +5505,21 @@
           "ruby": "assert_select \"select#user_time_zone option[selected][value='America/New_York']\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages[America/New_York]"
           ],
           "observation": "HTTP DOM selector select#user_time_zone option[selected][value='America/New_York']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         }
       ],
       "rust_tests": [
         "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
-        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
       ]
     },
     {
@@ -5534,13 +5535,13 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         },
@@ -5549,13 +5550,13 @@
           "ruby": "assert_select \"select#user_time_zone option[selected][value='America/Los_Angeles']\"",
           "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
           "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages"
           ],
           "observation": "HTTP DOM selector select#user_time_zone option[selected][value='America/Los_Angeles']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:76",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80",
           "assertion_anchor": "profile_observation(&reply),",
           "assertion_scope": "original_profile_defaults_and_zone_options_match_rails_through_http"
         }
@@ -5577,15 +5578,15 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
-          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
@@ -5593,14 +5594,14 @@
           "ruby": "assert_equal \"America/New_York\", users(:david).reload.time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Saved state / response value: assert_equal \"America/New_York\", users(:david).reload.time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5609,14 +5610,14 @@
           "ruby": "assert users(:david).time_zone_explicit?",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Exact condition: assert users(:david).time_zone_explicit?",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5625,15 +5626,15 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
-          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:224",
+          "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
         {
@@ -5641,14 +5642,14 @@
           "ruby": "assert_nil users(:david).reload.time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Saved state / response value: assert_nil users(:david).reload.time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5657,14 +5658,14 @@
           "ruby": "assert users(:david).time_zone_explicit?",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Exact condition: assert users(:david).time_zone_explicit?",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -5686,14 +5687,14 @@
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
           "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:96",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:73",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages[America/New_York]"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:96",
-          "assertion_anchor": "assert_eq!(profile.status,StatusCode::OK);",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:73",
+          "assertion_anchor": "assert_eq!(profile.status, StatusCode::OK);",
           "assertion_scope": "manual_timezone_choice_is_rendered_and_blocks_browser_detection"
         },
         {
@@ -5701,14 +5702,14 @@
           "ruby": "assert_select \"meta[name=current-user-time-zone][content='']\", count: 1",
           "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
           "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:97",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:115",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages[America/New_York]"
           ],
           "observation": "HTTP DOM selector meta[name=current-user-time-zone][content='']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:97",
-          "assertion_anchor": "assert!(profile.text().contains(\"<meta name=\\\"current-user-time-zone\\\" content=\\\"\\\"\"));",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:115",
+          "assertion_anchor": "assert_eq!(unset_zones, 1);",
           "assertion_scope": "manual_timezone_choice_is_rendered_and_blocks_browser_detection"
         }
       ],
@@ -5729,7 +5730,7 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:189",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:217",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -5737,7 +5738,7 @@
             "bad_text"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:189",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:217",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5746,7 +5747,7 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:189",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:217",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -5754,7 +5755,7 @@
             "bad_text"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:189",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:217",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5763,7 +5764,7 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:189",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:217",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -5771,7 +5772,7 @@
             "bad_text"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:189",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:217",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5780,7 +5781,7 @@
           "ruby": "assert_equal \"system\", users(:david).reload.theme",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -5788,7 +5789,7 @@
             "bad_text"
           ],
           "observation": "Saved state / response value: assert_equal \"system\", users(:david).reload.theme",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5797,7 +5798,7 @@
           "ruby": "assert_equal \"default\", users(:david).text_size",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -5805,7 +5806,7 @@
             "bad_text"
           ],
           "observation": "Saved state / response value: assert_equal \"default\", users(:david).text_size",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5814,7 +5815,7 @@
           "ruby": "assert_nil users(:david).time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -5822,7 +5823,7 @@
             "bad_text"
           ],
           "observation": "Saved state / response value: assert_nil users(:david).time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:242",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }

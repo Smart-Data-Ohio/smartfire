@@ -345,6 +345,27 @@ async fn index_lists_active_members_with_presence_and_selection() {
     let reply = app.david().get("/users").await;
     assert_eq!(reply.status, StatusCode::OK);
     let html = reply.text();
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&html).unwrap();
+    for (id, expected) in [(JASON, 1), (DAVID, 0), (inactive, 0)] {
+        let id = id.to_string();
+        let checkboxes = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|node| {
+                dom.name(*node) == "input"
+                    && dom.attr(*node, "data-multi-select-target") == Some("checkbox")
+                    && dom.attr(*node, "data-user-id") == Some(id.as_str())
+            })
+            .count();
+        assert_eq!(checkboxes, expected, "original selection selector for {id}");
+    }
+    let bars = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|node| dom.attr(*node, "data-multi-select-target") == Some("bar"))
+        .count();
+    assert_eq!(bars, 1);
     assert!(html.contains(&format!("id=\"select_user_{JASON}\"")));
     assert!(!html.contains(&format!("id=\"select_user_{inactive}\"")));
     assert!(html.contains("people-directory__presence\">Online"));
@@ -362,6 +383,25 @@ async fn profile_message_buttons_carry_the_accessible_name() {
         let reply = app.david().get(&campfire_routes::user(id)).await;
         assert_eq!(reply.status, StatusCode::OK);
         let html = reply.text();
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&html).unwrap();
+        let label = format!("Message {name}");
+        let buttons = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|node| {
+                dom.name(*node) == "button" && dom.attr(*node, "aria-label") == Some(label.as_str())
+            })
+            .count();
+        assert_eq!(buttons, 1, "exact Message button selector");
+        if id == KEVIN {
+            assert!(
+                dom.descendants(root)
+                    .into_iter()
+                    .any(|node| dom.name(node) == "button"
+                        && dom.text_content(node).contains("Ban Kevin"))
+            );
+        }
         assert_eq!(
             html.matches(&format!("aria-label=\"Message {name}\""))
                 .count(),

@@ -90,14 +90,42 @@ async fn manual_timezone_choice_is_rendered_and_blocks_browser_detection() {
         .await
         .unwrap();
     assert_eq!(zone.as_deref(), Some("America/New_York"));
-    let clear=browser.write(Req::new(Method::PATCH,"/users/me/profile").form(&[("user[time_zone]","")])).await;
-    assert_eq!(clear.status,StatusCode::FOUND);
-    let profile=browser.get("/users/me/profile").await;
-    assert_eq!(profile.status,StatusCode::OK);
-    assert!(profile.text().contains("<meta name=\"current-user-time-zone\" content=\"\""));
-    let detected=browser.write(Req::new(Method::PATCH,"/users/me/time_zone").form(&[("time_zone","Europe/London")])).await;
-    assert_eq!(detected.status,StatusCode::OK);
-    assert_eq!(app.db().read(|conn|campfire_db::User::saved_time_zone(conn,DAVID)).await.unwrap(),None);
+    let clear = browser
+        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
+        .await;
+    assert_eq!(clear.status, StatusCode::FOUND);
+    let profile = browser.get("/users/me/profile").await;
+    assert_eq!(profile.status, StatusCode::OK);
+    assert!(
+        profile
+            .text()
+            .contains("<meta name=\"current-user-time-zone\" content=\"\"")
+    );
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&profile.text()).unwrap();
+    let unset_zones = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|id| {
+            dom.name(*id) == "meta"
+                && dom.attr(*id, "name") == Some("current-user-time-zone")
+                && dom.attr(*id, "content") == Some("")
+        })
+        .count();
+    assert_eq!(unset_zones, 1);
+    let detected = browser
+        .write(
+            Req::new(Method::PATCH, "/users/me/time_zone").form(&[("time_zone", "Europe/London")]),
+        )
+        .await;
+    assert_eq!(detected.status, StatusCode::OK);
+    assert_eq!(
+        app.db()
+            .read(|conn| campfire_db::User::saved_time_zone(conn, DAVID))
+            .await
+            .unwrap(),
+        None
+    );
 }
 
 #[tokio::test]
@@ -192,7 +220,12 @@ async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
             case["name"]
         );
         if response.status == StatusCode::FOUND {
-            assert_eq!(response.location(), Some("http://campfire.test/users/me/profile"), "{}", case["name"]);
+            assert_eq!(
+                response.location(),
+                Some("http://campfire.test/users/me/profile"),
+                "{}",
+                case["name"]
+            );
         }
         let state=app.db().read(|conn| {
             assert_eq!(campfire_db::User::find(conn, DAVID)?.email_address.as_deref(), Some("david@37signals.com"));

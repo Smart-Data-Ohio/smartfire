@@ -25,7 +25,11 @@ fn profile_observation(reply: &Reply) -> Value {
         nodes
             .iter()
             .copied()
-            .filter(|id| dom.name(*id) == "select" && dom.attr(*id, "name") == Some(name))
+            .filter(|id| {
+                dom.name(*id) == "select"
+                    && dom.attr(*id, "name") == Some(name)
+                    && (name != "user[time_zone]" || dom.attr(*id, "id") == Some("user_time_zone"))
+            })
             .flat_map(|id| dom.descendants(id))
             .filter(|id| dom.name(*id) == "option" && dom.attr(*id, "selected").is_some())
             .collect::<Vec<_>>()
@@ -124,8 +128,15 @@ async fn original_mutation(name: &str) {
             })?)
         }).await.unwrap();
         assert_eq!(state, case["state"], "{}", case["name"]);
+        let mut dom = Dom::new();
+        let root = dom.parse_fragment(&reply.text()).unwrap();
         assert_eq!(
-            reply.text().contains("already linked to another user"),
+            dom.descendants(root)
+                .into_iter()
+                .any(|id| dom.name(id) == "p"
+                    && dom
+                        .text_content(id)
+                        .contains("already linked to another user")),
             case["duplicate_error"].as_bool().unwrap(),
             "{}",
             case["name"]
