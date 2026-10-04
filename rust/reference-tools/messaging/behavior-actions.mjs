@@ -81,16 +81,6 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     assert.ok(g.menu.left>=0&&g.menu.top>=0&&g.menu.right<=g.viewport.width&&g.menu.bottom<=g.viewport.height);
     page.once('dialog',dialog=>dialog.dismiss());await actOnVisible(page.getByRole('menuitem',{name:'Delete message',exact:true}),'click',{});
     await waitForVisibility(page.locator('#message-actions-menu .message__delete-action'));await waitForVisibility(row);
-  } else if(caseName.startsWith('a release click')) {
-    await page.setViewportSize({width:390,height:844});await longPress(page);
-    await assertMenuOpen(page);
-    const hit=await row.evaluate(message=>{
-      const r=message.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2,target=document.elementFromPoint(x,y);
-      if(!target?.closest('#message-actions-menu')) return target?.tagName||'none';
-      target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:x,clientY:y,view:window}));return 'menu';
-    });
-    assert.equal(hit,'menu');await assertMenuOpen(page);
-    await waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});
   } else if(caseName.startsWith('shows the message action')) {
     for(const viewport of [{width:390,height:844},{width:320,height:740}]) {
       await page.setViewportSize(viewport);await openMenu(page);bottomSheet(await menuGeometry(page,{metadata:true}));

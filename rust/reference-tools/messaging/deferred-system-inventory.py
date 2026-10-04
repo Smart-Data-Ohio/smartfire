@@ -7,6 +7,11 @@ import json
 import hashlib
 ROOT = Path(__file__).resolve().parents[3]
 inventory = json.loads((ROOT / 'rust/plans/ws8bm-system-cases.json').read_text())
+causal_deferrals = {
+    'a release click landing on the just-opened menu does not activate it',
+    'mobile drawer keeps the room list scroll position across close and reopen',
+    'mobile drawer reopens on the current room when it is already in view',
+}
 totals = {'passed': 0, 'deferred': 0, 'blocked_ws12': 0}
 for row in inventory['files']:
     path = row['file']
@@ -22,6 +27,18 @@ for row in inventory['files']:
             reason = case.get('remaining_reason')
             assert isinstance(reason, str) and reason.strip(), \
                 f"{case['name']}: unresolved declarations require a nonblank remaining_reason"
+        elif case['name'] in causal_deferrals:
+            assert isinstance(case.get('closure_note'), str) and case['closure_note'].strip(), \
+                f"{case['name']}: causal closure requires a reasoned closure_note"
+            proof = case.get('closure_proof', {})
+            assert proof.get('independent_fixtures') is True and proof.get('automatic_retries') == 0, \
+                f"{case['name']}: causal proof requires independent fixtures without automatic retries"
+            for app, minimum in [('Rails', 1), ('Rust', 10)]:
+                runs = proof.get('positive_runs', {}).get(app, {})
+                assert type(runs.get('passed')) is int and runs['passed'] >= minimum and runs.get('failed') == 0, \
+                    f"{case['name']}: causal proof requires {minimum} {app} passes and zero failures"
+            assert proof.get('negative') == {'Rails': 'intended rejection', 'Rust': 'intended rejection'}, \
+                f"{case['name']}: causal proof requires paired intended negative rejections"
         counts[case['status']] += 1
         totals[case['status']] += 1
     print(f"{path}: {len(row['cases'])} named declarations; {counts['passed']} mapped behaviour passes; {counts['deferred']} deferred; {counts['blocked_ws12']} WS12 blocked", flush=True)

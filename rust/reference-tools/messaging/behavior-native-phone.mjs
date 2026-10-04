@@ -55,7 +55,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     console.log(`WS8bm native ${label} source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; ${label==='attachment'?'original behavior body; shared file path adapted':'unchanged behavior body/helpers, screenshots omitted'}`);
     const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:ro`,'-v',`${temp}:${temp}`]:[];
     if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
-    if(mutation) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}
+    if(mutation||Number(process.env.WS8BM_SETUP_DELAY||0)) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}
     const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'--entrypoint','bundle',process.env.PARITY_IMAGE||'triage-reference-d7c7de92','exec','ruby','/tools/behavior-native-phone.rb'];
     const result=await new Promise((resolve,reject)=>{
       const child=spawn('docker',args);let stdout='',stderr='';
@@ -64,7 +64,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
       child.on('error',error=>{clearTimeout(timer);reject(error);});
       child.on('exit',(status,signal)=>{clearTimeout(timer);resolve({status,signal,stdout,stderr});});
     });
-    if(mutation)console.log('WS8bm native transport: '+JSON.stringify(probe.transport||[]));
+    if(proxy)console.log('WS8bm native transport: '+JSON.stringify(probe.transport||[]));
     process.stdout.write(result.stdout||'');process.stderr.write(result.stderr||'');
     if(label==='attachment') captureUploadReferenceLog(base,database);
     for(const match of result.stdout.matchAll(/^WS8bm native browser logs: (.+)$/gm)) {
@@ -73,7 +73,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
     const states=[...result.stdout.matchAll(/^WS8bm native mutation state: (.+)$/gm)].map(match=>JSON.parse(match[1]));
     const failures=[...result.stdout.matchAll(/^WS8bm native failures: (.+)$/gm)].flatMap(match=>JSON.parse(match[1]));
     probe.observed=states;probe.nativeFailures=failures;
-    probe.ready=states.some(state=>state.room==='/rooms/201306877'&&state.open);
+    probe.ready=states.some(state=>label==='release'?state.room==='/rooms/654632876'&&(state.releaseGeometry?.inMenu||state.releaseClicks?.some(click=>click.atPressPoint&&click.menuVisible)):state.room==='/rooms/201306877'&&state.open);
     assert.equal(result.status,0,`native pinned ${label} failed: ${result.error||result.signal||result.status}`);
   } finally {
     try {

@@ -406,7 +406,7 @@ for file in files:
             shutil.copytree(fixture / "storage", work / "files")
             database_name="test.sqlite3" if case in test_environment_cases else "production.sqlite3"
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if file in {"channel_threads_controller","drive_attachments"} or case in {"workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
+            if file in {"channel_threads_controller","drive_attachments"} or case in {"a release click landing on the just-opened menu does not activate it", "workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
                 run_env['WS8BM_WORK_DATABASES']=json.dumps({
                     f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db' / database_name),
                     f'http://127.0.0.1:{ports[1]}':str(work / 'db' / database_name),
