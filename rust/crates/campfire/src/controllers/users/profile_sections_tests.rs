@@ -121,7 +121,19 @@ async fn configured_calendar_profile_uses_real_account_metadata_and_forms() {
         } else if !calendar {
             assert!(fragment.contains("Calendar permission needed, reconnect to publish events"));
         }
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&body).unwrap();
+        let forms = dom.descendants(root).into_iter().filter(|id| dom.name(*id) == "form" && dom.attr(*id, "action") == Some("/google/connect")).collect::<Vec<_>>();
+        assert_eq!(forms.len(), usize::from(!(connected && calendar && input["drive"] == true)), "{}: exact connect form count", case["name"]);
+        for form in forms {
+            assert_eq!(dom.attr(form, "method"), Some("post"));
+            assert_eq!(dom.attr(form, "data-turbo"), Some("false"));
+            let features = dom.descendants(form).into_iter().filter(|id| dom.name(*id) == "input" && dom.attr(*id, "name") == Some("features[]")).collect::<Vec<_>>();
+            assert_eq!(features.len(), usize::from(input["drive"] == true || (connected && calendar)), "{}: exact replayed Drive feature count", case["name"]);
+            for feature in features { assert_eq!(dom.attr(feature, "value"), Some("drive")); }
+        }
         assert!(fragment.contains("name=\"authenticity_token\""));
+        if connected && calendar { assert!(body.contains("never titles or attendees")); }
         let meetings = body
             .split_once("<legend class=\"txt-large\">Meetings</legend>")
             .unwrap()

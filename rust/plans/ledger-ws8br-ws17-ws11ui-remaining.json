@@ -2,7 +2,7 @@
   "reference": "d7c7de92",
   "date": "2026-10-04",
   "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
-  "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+  "report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md",
   "partial": true,
   "counting": "Lists overlap; do not add broad declarations and narrower criteria/browser entries as unique behaviours. Receipt gaps are not automatically unsupported production code.",
   "ws8br_broad_original_receipts": [
@@ -424,405 +424,6 @@
       "file": "test/controllers/users/tours_controller_test.rb",
       "line": 43,
       "test": "room pages skip auto-start once the tour completed",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0146",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 9,
-      "test": "show",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0147",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 15,
-      "test": "show gives the Edge install instructions to a browser identifying only as Edge",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0148",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 24,
-      "test": "update",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0149",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 33,
-      "test": "updates are limited to the current user",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0150",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 39,
-      "test": "profile shows Google Calendar as not configured without credentials",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0151",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 48,
-      "test": "profile offers a connect button without an account",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0152",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 55,
-      "test": "profile links to connect for meeting status without an account",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0153",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 63,
-      "test": "profile offers the meeting toggle for a connected account",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0154",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 73,
-      "test": "profile shows the meeting fetch notice when a refresh failed",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0155",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 85,
-      "test": "profile asks to reconnect for meeting status left on after disconnect",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0156",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 94,
-      "test": "profile lists the quiet-during-meetings switch",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0157",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 102,
-      "test": "the layout sends meeting windows for the live sound gate",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0158",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 116,
-      "test": "the layout sends future meeting windows before the meeting starts",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0159",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 127,
-      "test": "the layout sends no meeting windows without cached intervals",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0160",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 137,
-      "test": "the layout sends no meeting windows when meeting status itself is off",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0161",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 148,
-      "test": "the layout sends OOO windows for the live sound gate",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0162",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 157,
-      "test": "the layout sends future calendar OOO windows before the OOO starts",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0163",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 168,
-      "test": "the layout sends no OOO windows when keeping notifications while out",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0164",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 177,
-      "test": "the layout leaves sounds alone for meetings when quiet-during-meetings is off",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0165",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 189,
-      "test": "profile shows the connected account with a disconnect button",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0166",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 198,
-      "test": "profile offers a reconnect when Google rejected the connection",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0167",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 208,
-      "test": "profile offers Drive previews for a connected account without the Drive scope",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0168",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 220,
-      "test": "profile shows Drive previews as enabled when the account has the Drive scope",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0169",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 229,
-      "test": "profile offers Drive previews again for the retired metadata grant",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0170",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 238,
-      "test": "profile shows no Drive row when Google is not configured",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0171",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 247,
-      "test": "profile asks to reconnect when the grant lacks the calendar scope",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0172",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 258,
-      "test": "profile shows Disconnect for a partial grant with Drive still active",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0173",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 269,
-      "test": "reconnect preserves a granted Drive scope",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0174",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 280,
-      "test": "reconnect without Drive requests the calendar scope only",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0175",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 290,
-      "test": "layout carries the Drive previews meta tag only with the Drive scope",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0176",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 303,
-      "test": "linking a github login strips and downcases it",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0177",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 310,
-      "test": "a github login cannot be claimed by a second user",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0178",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 320,
-      "test": "profile lists the notification switches with explanations",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0179",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 331,
-      "test": "profile saves the notification switches",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0180",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 349,
-      "test": "profile rejects non-boolean notification input",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0181",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 356,
-      "test": "DND switch reflects the effective state after a timed expiry",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0182",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 365,
-      "test": "DND switch stays on while a timer runs",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0183",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 374,
-      "test": "profile lists the call settings with their defaults",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0184",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 382,
-      "test": "profile saves the call settings",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0185",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 391,
-      "test": "profile rejects an unknown microphone mode",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0186",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 398,
-      "test": "clearing a github login unlinks it",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0187",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 407,
-      "test": "changing email requires the current password",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0188",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 416,
-      "test": "changing email with a wrong current password is refused",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0189",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 424,
-      "test": "a new password cannot stand in for the current one",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0190",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 432,
-      "test": "changing email with the current password records a self-change",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0191",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 442,
-      "test": "other profile edits and case-only email edits need no password and record nothing",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0192",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 450,
-      "test": "profile asks for the current password only when the account has one",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0193",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 459,
-      "test": "update saves the theme and time zone",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0194",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 467,
-      "test": "update saves the text size",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0195",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 474,
-      "test": "an IANA time zone round-trips through the form",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0196",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 489,
-      "test": "a legacy Rails time zone name still shows selected",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0197",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 497,
-      "test": "choosing a time zone or Not set records an explicit choice",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0198",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 509,
-      "test": "the layout marks an explicit Not set so the browser skips detection",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0199",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 517,
-      "test": "update rejects an unknown theme or time zone",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0200",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 532,
-      "test": "the layout carries the theme, time zone, and sound state",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0201",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 545,
-      "test": "the layout mutes sounds for the DND presence",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0202",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 554,
-      "test": "the layout sends the quiet-hours window and zone for the sound gate",
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
@@ -2500,5 +2101,71 @@
   ],
   "aggregate_mapping_gaps": [
     "ws8br-system-mappings.json original phone/header/member/pins files remain partial named-declaration receipts; overlaps broad originals above."
+  ],
+  "history": [
+    {
+      "date": "2026-10-04",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+      "previous_broad_pending": 328,
+      "closed_original_ids": [
+        "P0146",
+        "P0147",
+        "P0148",
+        "P0149",
+        "P0150",
+        "P0151",
+        "P0152",
+        "P0153",
+        "P0154",
+        "P0155",
+        "P0156",
+        "P0157",
+        "P0158",
+        "P0159",
+        "P0160",
+        "P0161",
+        "P0162",
+        "P0163",
+        "P0164",
+        "P0165",
+        "P0166",
+        "P0167",
+        "P0168",
+        "P0169",
+        "P0170",
+        "P0171",
+        "P0172",
+        "P0173",
+        "P0174",
+        "P0175",
+        "P0176",
+        "P0177",
+        "P0178",
+        "P0179",
+        "P0180",
+        "P0181",
+        "P0182",
+        "P0183",
+        "P0184",
+        "P0185",
+        "P0186",
+        "P0187",
+        "P0188",
+        "P0189",
+        "P0190",
+        "P0191",
+        "P0192",
+        "P0193",
+        "P0194",
+        "P0195",
+        "P0196",
+        "P0197",
+        "P0198",
+        "P0199",
+        "P0200",
+        "P0201",
+        "P0202"
+      ]
+    }
   ]
 }

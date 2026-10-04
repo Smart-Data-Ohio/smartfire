@@ -1,0 +1,3053 @@
+{
+  "reference": "d7c7de92",
+  "stack_base": "b2389a94465fb61b65003b3e791891664fbf0e0f",
+  "counting": "57 original profile declarations, with individual assertion sites. Current branch native pass receipts, not replacement Rails file-run counts.",
+  "records": [
+    {
+      "id": "P0146",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 9,
+      "test": "show",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 13,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_page_tests::profile_route_renders_owner_sections_and_ws9_security_directly",
+          "checks": "Real GET succeeds; every owned section and provider connection is mounted.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:166",
+          "oracle": null,
+          "oracle_cases": [],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_page_tests::profile_route_renders_owner_sections_and_ws9_security_directly"
+      ]
+    },
+    {
+      "id": "P0147",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 15,
+      "test": "show gives the Edge install instructions to a browser identifying only as Edge",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 21,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_page_tests::edge_only_user_agent_gets_rails_edge_install_instructions",
+          "checks": "Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:215",
+          "oracle": null,
+          "oracle_cases": [],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);"
+        },
+        {
+          "line": 22,
+          "ruby": "assert_select \"details.pwa__instructions img[src*='install-edge']\"",
+          "rust_test": "controllers::users::profile_page_tests::edge_only_user_agent_gets_rails_edge_install_instructions",
+          "checks": "Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:215",
+          "oracle": null,
+          "oracle_cases": [],
+          "observation": "HTTP DOM selector details.pwa__instructions img[src*='install-edge']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_page_tests::edge_only_user_agent_gets_rails_edge_install_instructions"
+      ]
+    },
+    {
+      "id": "P0148",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 24,
+      "test": "update",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 28,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "core_profile"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 29,
+          "ruby": "assert_equal \"John Doe\", users(:david).reload.name",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "core_profile"
+          ],
+          "observation": "Saved state / response value: assert_equal \"John Doe\", users(:david).reload.name",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 30,
+          "ruby": "assert_equal \"Acrobat\", users(:david).bio",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "core_profile"
+          ],
+          "observation": "Saved state / response value: assert_equal \"Acrobat\", users(:david).bio",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 31,
+          "ruby": "assert_equal \"david@37signals.com\", users(:david).email_address",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "core_profile"
+          ],
+          "observation": "Saved state / response value: assert_equal \"david@37signals.com\", users(:david).email_address",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0149",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 33,
+      "test": "updates are limited to the current user",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 37,
+          "ruby": "assert_equal \"Jason\", users(:jason).reload.name",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "foreign_name"
+          ],
+          "observation": "Saved state / response value: assert_equal \"Jason\", users(:jason).reload.name",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0150",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 39,
+      "test": "profile shows Google Calendar as not configured without credentials",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 45,
+          "ruby": "assert_includes response.body, \"Google Calendar is not configured for this workspace\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Google Calendar is not configured for this workspace\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 46,
+          "ruby": "assert_not_includes response.body, \"Connect Google Calendar\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Connect Google Calendar\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0151",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 48,
+      "test": "profile offers a connect button without an account",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 52,
+          "ruby": "assert_includes response.body, \"Connect Google Calendar\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Connect Google Calendar\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 53,
+          "ruby": "assert_select \"form[action=?][method=post][data-turbo=false]\", google_connect_path, count: 1",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "HTTP DOM selector form[action=?][method=post][data-turbo=false]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::missing"
+      ]
+    },
+    {
+      "id": "P0152",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 55,
+      "test": "profile links to connect for meeting status without an account",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 59,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:79",
+          "assertion_anchor": "assert_eq!(reply.status, axum::http::StatusCode::OK, \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 60,
+          "ruby": "assert_select \"a[href='#google-calendar-title']\", text: \"Connect Google Calendar\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "HTTP DOM selector a[href='#google-calendar-title']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 61,
+          "ruby": "assert_select \"input[name='user[meeting_status_enabled]'][type=checkbox]\", count: 0",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "HTTP DOM selector input[name='user[meeting_status_enabled]'][type=checkbox]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::missing"
+      ]
+    },
+    {
+      "id": "P0153",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 63,
+      "test": "profile offers the meeting toggle for a connected account",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 69,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:79",
+          "assertion_anchor": "assert_eq!(reply.status, axum::http::StatusCode::OK, \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 70,
+          "ruby": "assert_select \"input[name='user[meeting_status_enabled]'][type=checkbox]\", count: 1",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP DOM selector input[name='user[meeting_status_enabled]'][type=checkbox]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 71,
+          "ruby": "assert_includes response.body, \"never titles or attendees\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"never titles or attendees\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_only"
+      ]
+    },
+    {
+      "id": "P0154",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 73,
+      "test": "profile shows the meeting fetch notice when a refresh failed",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 82,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date",
+          "checks": "Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:198",
+          "oracle": "rust/vectors/users_status_panels.json",
+          "oracle_cases": [
+            "http cache error/reconnect"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:79",
+          "assertion_anchor": "assert_eq!(reply.status, axum::http::StatusCode::OK, \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 83,
+          "ruby": "assert_includes response.body, CGI.escapeHTML(Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)",
+          "rust_test": "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date",
+          "checks": "Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:198",
+          "oracle": "rust/vectors/users_status_panels.json",
+          "oracle_cases": [
+            "http cache error/reconnect"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, CGI.escapeHTML(Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+      ]
+    },
+    {
+      "id": "P0155",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 85,
+      "test": "profile asks to reconnect for meeting status left on after disconnect",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 91,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date",
+          "checks": "Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:198",
+          "oracle": "rust/vectors/users_status_panels.json",
+          "oracle_cases": [
+            "http cache error/reconnect"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:79",
+          "assertion_anchor": "assert_eq!(reply.status, axum::http::StatusCode::OK, \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 92,
+          "ruby": "assert_select \"a[href='#google-calendar-title']\", text: \"Reconnect below\"",
+          "rust_test": "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date",
+          "checks": "Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:198",
+          "oracle": "rust/vectors/users_status_panels.json",
+          "oracle_cases": [
+            "http cache error/reconnect"
+          ],
+          "observation": "HTTP DOM selector a[href='#google-calendar-title']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+      ]
+    },
+    {
+      "id": "P0156",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 94,
+      "test": "profile lists the quiet-during-meetings switch",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 98,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:110",
+          "assertion_anchor": "case[\"status\"].as_u64().unwrap() as u16,"
+        },
+        {
+          "line": 99,
+          "ruby": "assert_select \"input[name='user[meeting_dnd_enabled]'][type=checkbox]\", count: 1",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP DOM selector input[name='user[meeting_dnd_enabled]'][type=checkbox]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 100,
+          "ruby": "assert_includes response.body, \"Do not disturb during meetings\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Do not disturb during meetings\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0157",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 102,
+      "test": "the layout sends meeting windows for the live sound gate",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 112,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_windows_include_all_cached_pairs",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:111",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_current"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 113,
+          "ruby": "assert_select \"meta[name=notification-dnd]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_windows_include_all_cached_pairs",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:111",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_current"
+          ],
+          "observation": "HTTP DOM selector meta[name=notification-dnd]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 114,
+          "ruby": "assert_select \"meta[name=meeting-quiet][content=?]\", \"#{start_at.to_i}-#{end_at.to_i}\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_windows_include_all_cached_pairs",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:111",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_current"
+          ],
+          "observation": "HTTP DOM selector meta[name=meeting-quiet][content=?]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_meeting_windows_include_all_cached_pairs"
+      ]
+    },
+    {
+      "id": "P0158",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 116,
+      "test": "the layout sends future meeting windows before the meeting starts",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 124,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_future_meeting_windows_before_start",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:112",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_future"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 125,
+          "ruby": "assert_select \"meta[name=meeting-quiet]\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_future_meeting_windows_before_start",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:112",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_future"
+          ],
+          "observation": "HTTP DOM selector meta[name=meeting-quiet]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_future_meeting_windows_before_start"
+      ]
+    },
+    {
+      "id": "P0159",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 127,
+      "test": "the layout sends no meeting windows without cached intervals",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 134,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_empty_or_missing_meeting_cache",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:113",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_empty",
+            "meeting_missing"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 135,
+          "ruby": "assert_select \"meta[name=meeting-quiet]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_empty_or_missing_meeting_cache",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:113",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_empty",
+            "meeting_missing"
+          ],
+          "observation": "HTTP DOM selector meta[name=meeting-quiet]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_empty_or_missing_meeting_cache"
+      ]
+    },
+    {
+      "id": "P0160",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 137,
+      "test": "the layout sends no meeting windows when meeting status itself is off",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 145,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_status_off_sends_no_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:114",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_status_off"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 146,
+          "ruby": "assert_select \"meta[name=meeting-quiet]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_status_off_sends_no_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:114",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_status_off"
+          ],
+          "observation": "HTTP DOM selector meta[name=meeting-quiet]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_meeting_status_off_sends_no_windows"
+      ]
+    },
+    {
+      "id": "P0161",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 148,
+      "test": "the layout sends OOO windows for the live sound gate",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 154,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_manual_ooo_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:115",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_ooo"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 155,
+          "ruby": "assert_select \"meta[name=ooo-quiet][content=?]\", \"0-#{users(:david).ooo_until.to_i}\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_manual_ooo_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:115",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_ooo"
+          ],
+          "observation": "HTTP DOM selector meta[name=ooo-quiet][content=?]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_manual_ooo_windows"
+      ]
+    },
+    {
+      "id": "P0162",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 157,
+      "test": "the layout sends future calendar OOO windows before the OOO starts",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 165,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_future_calendar_ooo_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:116",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "calendar_ooo_future"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 166,
+          "ruby": "assert_select \"meta[name=ooo-quiet]\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_future_calendar_ooo_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:116",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "calendar_ooo_future"
+          ],
+          "observation": "HTTP DOM selector meta[name=ooo-quiet]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_future_calendar_ooo_windows"
+      ]
+    },
+    {
+      "id": "P0163",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 168,
+      "test": "the layout sends no OOO windows when keeping notifications while out",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 174,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_ooo_notifications_kept_sends_no_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:117",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "ooo_notifications_kept"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 175,
+          "ruby": "assert_select \"meta[name=ooo-quiet]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_ooo_notifications_kept_sends_no_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:117",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "ooo_notifications_kept"
+          ],
+          "observation": "HTTP DOM selector meta[name=ooo-quiet]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_ooo_notifications_kept_sends_no_windows"
+      ]
+    },
+    {
+      "id": "P0164",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 177,
+      "test": "the layout leaves sounds alone for meetings when quiet-during-meetings is off",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 185,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_quiet_off_sends_no_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:118",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_quiet_off"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 186,
+          "ruby": "assert_select \"meta[name=notification-dnd]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_quiet_off_sends_no_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:118",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_quiet_off"
+          ],
+          "observation": "HTTP DOM selector meta[name=notification-dnd]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 187,
+          "ruby": "assert_select \"meta[name=meeting-quiet]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_meeting_quiet_off_sends_no_windows",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:118",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "meeting_quiet_off"
+          ],
+          "observation": "HTTP DOM selector meta[name=meeting-quiet]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_meeting_quiet_off_sends_no_windows"
+      ]
+    },
+    {
+      "id": "P0165",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 189,
+      "test": "profile shows the connected account with a disconnect button",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 195,
+          "ruby": "assert_includes response.body, \"Connected as david@gmail.test\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Connected as david@gmail.test\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 196,
+          "ruby": "assert_includes response.body, \"Disconnect\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Disconnect\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_only"
+      ]
+    },
+    {
+      "id": "P0166",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 198,
+      "test": "profile offers a reconnect when Google rejected the connection",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 204,
+          "ruby": "assert_includes response.body, \"Google rejected the connection, reconnect\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_calendar"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Google rejected the connection, reconnect\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 205,
+          "ruby": "assert_includes response.body, \"Connect Google Calendar\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_calendar"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Connect Google Calendar\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 206,
+          "ruby": "assert_select \"form[action=?][method=post][data-turbo=false]\", google_connect_path, count: 1",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_calendar"
+          ],
+          "observation": "HTTP DOM selector form[action=?][method=post][data-turbo=false]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_calendar"
+      ]
+    },
+    {
+      "id": "P0167",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 208,
+      "test": "profile offers Drive previews for a connected account without the Drive scope",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 214,
+          "ruby": "assert_includes response.body, \"Enable Drive previews\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Enable Drive previews\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 215,
+          "ruby": "assert_not_includes response.body, \"Drive previews enabled\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Drive previews enabled\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 216,
+          "ruby": "assert_select \"form[action=?][method=post][data-turbo=false]\", google_connect_path, count: 1 do",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP DOM selector form[action=?][method=post][data-turbo=false]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 217,
+          "ruby": "assert_select \"input[name='features[]'][value=drive]\", count: 1",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_only"
+          ],
+          "observation": "HTTP DOM selector input[name='features[]'][value=drive]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_only"
+      ]
+    },
+    {
+      "id": "P0168",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 220,
+      "test": "profile shows Drive previews as enabled when the account has the Drive scope",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 226,
+          "ruby": "assert_includes response.body, \"Drive previews enabled\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_drive"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Drive previews enabled\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 227,
+          "ruby": "assert_not_includes response.body, \"Enable Drive previews\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "calendar_drive"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Enable Drive previews\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_drive"
+      ]
+    },
+    {
+      "id": "P0169",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 229,
+      "test": "profile offers Drive previews again for the retired metadata grant",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 235,
+          "ruby": "assert_includes response.body, \"Enable Drive previews\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "retired_metadata"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Enable Drive previews\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 236,
+          "ruby": "assert_not_includes response.body, \"Drive previews enabled\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "retired_metadata"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Drive previews enabled\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::retired_metadata"
+      ]
+    },
+    {
+      "id": "P0170",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 238,
+      "test": "profile shows no Drive row when Google is not configured",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 244,
+          "ruby": "assert_not_includes response.body, \"Enable Drive previews\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Enable Drive previews\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 245,
+          "ruby": "assert_not_includes response.body, \"Drive previews enabled\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Drive previews enabled\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0171",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 247,
+      "test": "profile asks to reconnect when the grant lacks the calendar scope",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 253,
+          "ruby": "assert_includes response.body, \"Calendar permission needed, reconnect to publish events\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "drive_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Calendar permission needed, reconnect to publish events\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 254,
+          "ruby": "assert_not_includes response.body, \"Connected as\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "drive_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Connected as\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 255,
+          "ruby": "assert_includes response.body, \"Disconnect\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "drive_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Disconnect\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 256,
+          "ruby": "assert_select \"form[action=?][method=post][data-turbo=false]\", google_connect_path, count: 1",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "drive_only"
+          ],
+          "observation": "HTTP DOM selector form[action=?][method=post][data-turbo=false]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::drive_only"
+      ]
+    },
+    {
+      "id": "P0172",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 258,
+      "test": "profile shows Disconnect for a partial grant with Drive still active",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 265,
+          "ruby": "assert_includes response.body, \"Calendar permission needed, reconnect to publish events\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "drive_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Calendar permission needed, reconnect to publish events\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 266,
+          "ruby": "assert_includes response.body, \"Disconnect\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "drive_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Disconnect\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 267,
+          "ruby": "assert_includes response.body, \"Connect Google Calendar\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "drive_only"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Connect Google Calendar\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::drive_only"
+      ]
+    },
+    {
+      "id": "P0173",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 269,
+      "test": "reconnect preserves a granted Drive scope",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 275,
+          "ruby": "assert_includes response.body, \"Google rejected the connection, reconnect\"",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_drive"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Google rejected the connection, reconnect\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 276,
+          "ruby": "assert_select \"form[action=?][method=post][data-turbo=false]\", google_connect_path, count: 1 do",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_drive"
+          ],
+          "observation": "HTTP DOM selector form[action=?][method=post][data-turbo=false]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 277,
+          "ruby": "assert_select \"input[name='features[]'][value=drive]\", count: 1",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_drive"
+          ],
+          "observation": "HTTP DOM selector input[name='features[]'][value=drive]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_drive"
+      ]
+    },
+    {
+      "id": "P0174",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 280,
+      "test": "reconnect without Drive requests the calendar scope only",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 286,
+          "ruby": "assert_select \"form[action=?][method=post][data-turbo=false]\", google_connect_path, count: 1 do",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_calendar"
+          ],
+          "observation": "HTTP DOM selector form[action=?][method=post][data-turbo=false]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        },
+        {
+          "line": 287,
+          "ruby": "assert_select \"input[name='features[]']\", count: 0",
+          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:49",
+          "oracle": "rust/vectors/users_profile_sections.json",
+          "oracle_cases": [
+            "rejected_calendar"
+          ],
+          "observation": "HTTP DOM selector input[name='features[]']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:136",
+          "assertion_anchor": "if connected && calendar { assert!(body.contains(\"never titles or attendees\")); }"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_calendar"
+      ]
+    },
+    {
+      "id": "P0175",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 290,
+      "test": "layout carries the Drive previews meta tag only with the Drive scope",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 293,
+          "ruby": "assert_not_includes response.body, \"google-drive-previews\"",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:119",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "drive_missing",
+            "drive_calendar_only",
+            "drive_current_scope"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"google-drive-previews\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 297,
+          "ruby": "assert_not_includes response.body, \"google-drive-previews\"",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:119",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "drive_missing",
+            "drive_calendar_only",
+            "drive_current_scope"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"google-drive-previews\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 301,
+          "ruby": "assert_includes response.body, '<meta name=\"google-drive-previews\" content=\"enabled\">'",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:119",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "drive_missing",
+            "drive_calendar_only",
+            "drive_current_scope"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, '<meta name=\"google-drive-previews\" content=\"enabled\">'",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope"
+      ]
+    },
+    {
+      "id": "P0176",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 303,
+      "test": "linking a github login strips and downcases it",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 307,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "github"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 308,
+          "ruby": "assert_equal \"david-gh\", users(:david).reload.github_login",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "github"
+          ],
+          "observation": "Saved state / response value: assert_equal \"david-gh\", users(:david).reload.github_login",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0177",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 310,
+      "test": "a github login cannot be claimed by a second user",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 316,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected",
+          "checks": "Real PUT with original Rails values; exact status, location, text_size/voice_mode/raw preferences/login state and duplicate error. The raw true/false strings are preserved and typed preference semantics are checked below.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:157",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "mutations"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:110",
+          "assertion_anchor": "case[\"status\"].as_u64().unwrap() as u16,"
+        },
+        {
+          "line": 317,
+          "ruby": "assert_select \"p\", text: /already linked to another user/",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected",
+          "checks": "Real PUT with original Rails values; exact status, location, text_size/voice_mode/raw preferences/login state and duplicate error. The raw true/false strings are preserved and typed preference semantics are checked below.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:157",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "mutations"
+          ],
+          "observation": "HTTP DOM selector p",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 318,
+          "ruby": "assert_nil users(:david).reload.github_login",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected",
+          "checks": "Real PUT with original Rails values; exact status, location, text_size/voice_mode/raw preferences/login state and duplicate error. The raw true/false strings are preserved and typed preference semantics are checked below.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:157",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "mutations"
+          ],
+          "observation": "Saved state / response value: assert_nil users(:david).reload.github_login",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected"
+      ]
+    },
+    {
+      "id": "P0178",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 320,
+      "test": "profile lists the notification switches with explanations",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 324,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:110",
+          "assertion_anchor": "case[\"status\"].as_u64().unwrap() as u16,"
+        },
+        {
+          "line": 326,
+          "ruby": "assert_select \"input[name='user[inbox_preferences][#{key}]'][type=checkbox][checked]\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP DOM selector input[name='user[inbox_preferences][#{key}]'][type=checkbox][checked]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 328,
+          "ruby": "assert_includes response.body, \"GitHub review requests\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"GitHub review requests\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 329,
+          "ruby": "assert_includes response.body, \"The incoming-call banner still shows.\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"The incoming-call banner still shows.\"",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0179",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 331,
+      "test": "profile saves the notification switches",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 341,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_notifications"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:115",
+          "assertion_anchor": "reply.location(),"
+        },
+        {
+          "line": 343,
+          "ruby": "assert_equal false, preferences.github_review_requests",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_notifications"
+          ],
+          "observation": "Saved state / response value: assert_equal false, preferences.github_review_requests",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 344,
+          "ruby": "assert_equal false, preferences.agent_approvals",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_notifications"
+          ],
+          "observation": "Saved state / response value: assert_equal false, preferences.agent_approvals",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 345,
+          "ruby": "assert_equal true, preferences.agent_work",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_notifications"
+          ],
+          "observation": "Saved state / response value: assert_equal true, preferences.agent_work",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 346,
+          "ruby": "assert_equal false, preferences.event_reminders",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_notifications"
+          ],
+          "observation": "Saved state / response value: assert_equal false, preferences.event_reminders",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 347,
+          "ruby": "assert_equal true, preferences.huddle_invitations",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_notifications"
+          ],
+          "observation": "Saved state / response value: assert_equal true, preferences.huddle_invitations",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails"
+      ]
+    },
+    {
+      "id": "P0180",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 349,
+      "test": "profile rejects non-boolean notification input",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 353,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_notification_preserves_saved_state",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:155",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_bad_notification"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:110",
+          "assertion_anchor": "case[\"status\"].as_u64().unwrap() as u16,"
+        },
+        {
+          "line": 354,
+          "ruby": "assert_equal true, users(:david).reload.inbox_preferences.github_review_requests",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_notification_preserves_saved_state",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:155",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_bad_notification"
+          ],
+          "observation": "Saved state / response value: assert_equal true, users(:david).reload.inbox_preferences.github_review_requests",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_bad_notification_preserves_saved_state"
+      ]
+    },
+    {
+      "id": "P0181",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 356,
+      "test": "DND switch reflects the effective state after a timed expiry",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 362,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
+          "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:229",
+          "oracle": null,
+          "oracle_cases": [],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);"
+        },
+        {
+          "line": 363,
+          "ruby": "assert_select \"#user_dnd_enabled[checked]\", count: 0",
+          "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
+          "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:229",
+          "oracle": null,
+          "oracle_cases": [],
+          "observation": "HTTP DOM selector #user_dnd_enabled[checked]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers"
+      ]
+    },
+    {
+      "id": "P0182",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 365,
+      "test": "DND switch stays on while a timer runs",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 371,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
+          "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:229",
+          "oracle": null,
+          "oracle_cases": [],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);"
+        },
+        {
+          "line": 372,
+          "ruby": "assert_select \"#user_dnd_enabled[checked]\", count: 1",
+          "rust_test": "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers",
+          "checks": "Real GET with expired/live dnd_until; checkbox checked attribute follows effective state.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:229",
+          "oracle": null,
+          "oracle_cases": [],
+          "observation": "HTTP DOM selector #user_dnd_enabled[checked]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_page_tests.rs:169",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers"
+      ]
+    },
+    {
+      "id": "P0183",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 374,
+      "test": "profile lists the call settings with their defaults",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 378,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:110",
+          "assertion_anchor": "case[\"status\"].as_u64().unwrap() as u16,"
+        },
+        {
+          "line": 379,
+          "ruby": "assert_select \"select[name='user[voice_mode]'] option[selected]\", text: \"Voice activity\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP DOM selector select[name='user[voice_mode]'] option[selected]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 380,
+          "ruby": "assert_select \"input[name='user[push_to_talk_key]'][value='`']\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP DOM selector input[name='user[push_to_talk_key]'][value='`']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0184",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 382,
+      "test": "profile saves the call settings",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 386,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "voice"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 388,
+          "ruby": "assert_equal \"push_to_talk\", user.voice_mode",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "voice"
+          ],
+          "observation": "Saved state / response value: assert_equal \"push_to_talk\", user.voice_mode",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 389,
+          "ruby": "assert_equal \"CapsLock\", user.push_to_talk_key",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "voice"
+          ],
+          "observation": "Saved state / response value: assert_equal \"CapsLock\", user.push_to_talk_key",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0185",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 391,
+      "test": "profile rejects an unknown microphone mode",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 395,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_voice_preserves_saved_state",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:156",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_bad_voice"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:110",
+          "assertion_anchor": "case[\"status\"].as_u64().unwrap() as u16,"
+        },
+        {
+          "line": 396,
+          "ruby": "assert_equal \"voice_activity\", users(:david).reload.voice_mode",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_bad_voice_preserves_saved_state",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:156",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_bad_voice"
+          ],
+          "observation": "Saved state / response value: assert_equal \"voice_activity\", users(:david).reload.voice_mode",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_bad_voice_preserves_saved_state"
+      ]
+    },
+    {
+      "id": "P0186",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 398,
+      "test": "clearing a github login unlinks it",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 404,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "github_clear"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 405,
+          "ruby": "assert_nil users(:david).reload.github_login",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "github_clear"
+          ],
+          "observation": "Saved state / response value: assert_nil users(:david).reload.github_login",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0187",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 407,
+      "test": "changing email requires the current password",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 411,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 412,
+          "ruby": "assert_includes response.body, \"Current password is required to change your email address\"",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Current password is required to change your email address\"",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 413,
+          "ruby": "assert_equal \"david@37signals.com\", users(:david).reload.email_address",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "Saved state / response value: assert_equal \"david@37signals.com\", users(:david).reload.email_address",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 414,
+          "ruby": "assert_nil users(:david).email_self_changed_at",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "missing"
+          ],
+          "observation": "Saved state / response value: assert_nil users(:david).email_self_changed_at",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        }
+      ],
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ]
+    },
+    {
+      "id": "P0188",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 416,
+      "test": "changing email with a wrong current password is refused",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 420,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "wrong"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 421,
+          "ruby": "assert_includes response.body, \"Current password is incorrect\"",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "wrong"
+          ],
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Current password is incorrect\"",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 422,
+          "ruby": "assert_equal \"david@37signals.com\", users(:david).reload.email_address",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "wrong"
+          ],
+          "observation": "Saved state / response value: assert_equal \"david@37signals.com\", users(:david).reload.email_address",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        }
+      ],
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ]
+    },
+    {
+      "id": "P0189",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 424,
+      "test": "a new password cannot stand in for the current one",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 428,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "new_is_not_current"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 429,
+          "ruby": "assert_equal \"david@37signals.com\", users(:david).reload.email_address",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "new_is_not_current"
+          ],
+          "observation": "Saved state / response value: assert_equal \"david@37signals.com\", users(:david).reload.email_address",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 430,
+          "ruby": "assert users(:david).authenticate(\"secret123456\")",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "new_is_not_current"
+          ],
+          "observation": "Exact condition: assert users(:david).authenticate(\"secret123456\")",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        }
+      ],
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ]
+    },
+    {
+      "id": "P0190",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 432,
+      "test": "changing email with the current password records a self-change",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 437,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "correct"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:255",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{name}\");"
+        },
+        {
+          "line": 438,
+          "ruby": "assert_equal \"david@smartdata.net\", users(:david).reload.email_address",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "correct"
+          ],
+          "observation": "Saved state / response value: assert_equal \"david@smartdata.net\", users(:david).reload.email_address",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 439,
+          "ruby": "assert_equal Time.current, users(:david).email_self_changed_at",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "correct"
+          ],
+          "observation": "Saved state / response value: assert_equal Time.current, users(:david).email_self_changed_at",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        }
+      ],
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ]
+    },
+    {
+      "id": "P0191",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 442,
+      "test": "other profile edits and case-only email edits need no password and record nothing",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 446,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "case_only"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:255",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{name}\");"
+        },
+        {
+          "line": 447,
+          "ruby": "assert_equal \"Dave\", users(:david).reload.name",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "case_only"
+          ],
+          "observation": "Saved state / response value: assert_equal \"Dave\", users(:david).reload.name",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 448,
+          "ruby": "assert_nil users(:david).email_self_changed_at",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "case_only"
+          ],
+          "observation": "Saved state / response value: assert_nil users(:david).email_self_changed_at",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        }
+      ],
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ]
+    },
+    {
+      "id": "P0192",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 450,
+      "test": "profile asks for the current password only when the account has one",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 453,
+          "ruby": "assert_select \"input[name=?][autocomplete=current-password]\", \"user[current_password]\"",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "passwordless",
+            "missing"
+          ],
+          "observation": "HTTP DOM selector input[name=?][autocomplete=current-password]",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        },
+        {
+          "line": 457,
+          "ruby": "assert_select \"input[name=?]\", \"user[current_password]\", count: 0",
+          "rust_test": "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+          "checks": "Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence.",
+          "rust_source": "rust/crates/campfire/src/app/profile_security_tests.rs:178",
+          "oracle": "rust/vectors/profile_security.json",
+          "oracle_cases": [
+            "passwordless",
+            "missing"
+          ],
+          "observation": "HTTP DOM selector input[name=?]",
+          "assertion_source": "rust/crates/campfire/src/app/profile_security_tests.rs:76",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::FOUND);"
+        }
+      ],
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0193",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 459,
+      "test": "update saves the theme and time zone",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 463,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "legacy_zone"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 464,
+          "ruby": "assert_equal \"dark\", users(:david).reload.theme",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "legacy_zone"
+          ],
+          "observation": "Saved state / response value: assert_equal \"dark\", users(:david).reload.theme",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 465,
+          "ruby": "assert_equal \"Pacific Time (US & Canada)\", users(:david).time_zone",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "legacy_zone"
+          ],
+          "observation": "Saved state / response value: assert_equal \"Pacific Time (US & Canada)\", users(:david).time_zone",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0194",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 467,
+      "test": "update saves the text size",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 471,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_text_size_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:153",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_text_size"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:115",
+          "assertion_anchor": "reply.location(),"
+        },
+        {
+          "line": 472,
+          "ruby": "assert_equal \"smaller\", users(:david).reload.text_size",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_text_size_save_matches_rails",
+          "checks": "Real PUT using original values; exact status/location and saved settings, plus a real GET compared with Rails typed preferences.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:153",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "original_text_size"
+          ],
+          "observation": "Saved state / response value: assert_equal \"smaller\", users(:david).reload.text_size",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_text_size_save_matches_rails"
+      ]
+    },
+    {
+      "id": "P0195",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 474,
+      "test": "an IANA time zone round-trips through the form",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 479,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:61",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages[America/New_York]"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:30",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);"
+        },
+        {
+          "line": 480,
+          "ruby": "assert_select \"select#user_time_zone option[selected][value='America/New_York']\"",
+          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:61",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages[America/New_York]"
+          ],
+          "observation": "HTTP DOM selector select#user_time_zone option[selected][value='America/New_York']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 483,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:61",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages[America/New_York]"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 484,
+          "ruby": "assert_equal \"America/New_York\", users(:david).reload.time_zone",
+          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:61",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages[America/New_York]"
+          ],
+          "observation": "Saved state / response value: assert_equal \"America/New_York\", users(:david).reload.time_zone",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 487,
+          "ruby": "assert_select \"select#user_time_zone option[selected][value='America/New_York']\"",
+          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:61",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages[America/New_York]"
+          ],
+          "observation": "HTTP DOM selector select#user_time_zone option[selected][value='America/New_York']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0196",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 489,
+      "test": "a legacy Rails time zone name still shows selected",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 494,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:110",
+          "assertion_anchor": "case[\"status\"].as_u64().unwrap() as u16,"
+        },
+        {
+          "line": 495,
+          "ruby": "assert_select \"select#user_time_zone option[selected][value='America/Los_Angeles']\"",
+          "rust_test": "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+          "checks": "Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:53",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages"
+          ],
+          "observation": "HTTP DOM selector select#user_time_zone option[selected][value='America/Los_Angeles']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:126",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ]
+    },
+    {
+      "id": "P0197",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 497,
+      "test": "choosing a time zone or Not set records an explicit choice",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 500,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "not_set"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 501,
+          "ruby": "assert_equal \"America/New_York\", users(:david).reload.time_zone",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "not_set"
+          ],
+          "observation": "Saved state / response value: assert_equal \"America/New_York\", users(:david).reload.time_zone",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 502,
+          "ruby": "assert users(:david).time_zone_explicit?",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "not_set"
+          ],
+          "observation": "Exact condition: assert users(:david).time_zone_explicit?",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 505,
+          "ruby": "assert_redirected_to user_profile_url",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "not_set"
+          ],
+          "observation": "HTTP Location",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:195",
+          "assertion_anchor": "assert_eq!(response.location(), Some(\"http://campfire.test/users/me/profile\"), \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 506,
+          "ruby": "assert_nil users(:david).reload.time_zone",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "not_set"
+          ],
+          "observation": "Saved state / response value: assert_nil users(:david).reload.time_zone",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 507,
+          "ruby": "assert users(:david).time_zone_explicit?",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "appearance",
+            "not_set"
+          ],
+          "observation": "Exact condition: assert users(:david).time_zone_explicit?",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0198",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 509,
+      "test": "the layout marks an explicit Not set so the browser skips detection",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 514,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:61",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages[America/New_York]"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:30",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);"
+        },
+        {
+          "line": 515,
+          "ruby": "assert_select \"meta[name=current-user-time-zone][content='']\", count: 1",
+          "rust_test": "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+          "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:61",
+          "oracle": "rust/vectors/users_profile_original_receipts.json",
+          "oracle_cases": [
+            "pages[America/New_York]"
+          ],
+          "observation": "HTTP DOM selector meta[name=current-user-time-zone][content='']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection"
+      ]
+    },
+    {
+      "id": "P0199",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 517,
+      "test": "update rejects an unknown theme or time zone",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 520,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "bad_theme",
+            "bad_zone",
+            "bad_text"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:30",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);"
+        },
+        {
+          "line": 523,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "bad_theme",
+            "bad_zone",
+            "bad_text"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:30",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);"
+        },
+        {
+          "line": 526,
+          "ruby": "assert_response :unprocessable_entity",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "bad_theme",
+            "bad_zone",
+            "bad_text"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:30",
+          "assertion_anchor": "assert_eq!(response.status, StatusCode::UNPROCESSABLE_ENTITY);"
+        },
+        {
+          "line": 528,
+          "ruby": "assert_equal \"system\", users(:david).reload.theme",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "bad_theme",
+            "bad_zone",
+            "bad_text"
+          ],
+          "observation": "Saved state / response value: assert_equal \"system\", users(:david).reload.theme",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 529,
+          "ruby": "assert_equal \"default\", users(:david).text_size",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "bad_theme",
+            "bad_zone",
+            "bad_text"
+          ],
+          "observation": "Saved state / response value: assert_equal \"default\", users(:david).text_size",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        },
+        {
+          "line": 530,
+          "ruby": "assert_nil users(:david).time_zone",
+          "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+          "checks": "Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:154",
+          "oracle": "rust/vectors/users_profile_settings.json",
+          "oracle_cases": [
+            "bad_theme",
+            "bad_zone",
+            "bad_text"
+          ],
+          "observation": "Saved state / response value: assert_nil users(:david).time_zone",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:209",
+          "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);"
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ]
+    },
+    {
+      "id": "P0200",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 532,
+      "test": "the layout carries the theme, time zone, and sound state",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 538,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:108",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_dnd"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 539,
+          "ruby": "assert_select \"html[data-theme=light]\"",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:108",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_dnd"
+          ],
+          "observation": "HTTP DOM selector html[data-theme=light]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 540,
+          "ruby": "assert_select \"html[data-text-size=large]\"",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:108",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_dnd"
+          ],
+          "observation": "HTTP DOM selector html[data-text-size=large]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 541,
+          "ruby": "assert_select \"meta[name=color-scheme][content=light]\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:108",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_dnd"
+          ],
+          "observation": "HTTP DOM selector meta[name=color-scheme][content=light]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 542,
+          "ruby": "assert_select \"meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:108",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_dnd"
+          ],
+          "observation": "HTTP DOM selector meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 543,
+          "ruby": "assert_select \"meta[name=notification-dnd][content=muted]\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:108",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "manual_dnd"
+          ],
+          "observation": "HTTP DOM selector meta[name=notification-dnd][content=muted]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state"
+      ]
+    },
+    {
+      "id": "P0201",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 545,
+      "test": "the layout mutes sounds for the DND presence",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 551,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_dnd_presence_mutes_sounds",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:109",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "dnd_presence"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 552,
+          "ruby": "assert_select \"meta[name=notification-dnd][content=muted]\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_dnd_presence_mutes_sounds",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:109",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "dnd_presence"
+          ],
+          "observation": "HTTP DOM selector meta[name=notification-dnd][content=muted]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_dnd_presence_mutes_sounds"
+      ]
+    },
+    {
+      "id": "P0202",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "line": 554,
+      "test": "the layout sends the quiet-hours window and zone for the sound gate",
+      "ledger": "rust/plans/ws8br-rails-cases.json",
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "assertions": [
+        {
+          "line": 561,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:110",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "quiet_hours",
+            "quiet_hours_off"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 562,
+          "ruby": "assert_select \"meta[name=quiet-hours][content='1320-420']\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:110",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "quiet_hours",
+            "quiet_hours_off"
+          ],
+          "observation": "HTTP DOM selector meta[name=quiet-hours][content='1320-420']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 563,
+          "ruby": "assert_select \"meta[name=quiet-hours-zone][content='UTC']\", count: 1",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:110",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "quiet_hours",
+            "quiet_hours_off"
+          ],
+          "observation": "HTTP DOM selector meta[name=quiet-hours-zone][content='UTC']",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 569,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:110",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "quiet_hours",
+            "quiet_hours_off"
+          ],
+          "observation": "HTTP status",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57",
+          "assertion_anchor": "assert_eq!(page.status, axum::http::StatusCode::OK, \"{name}\");"
+        },
+        {
+          "line": 570,
+          "ruby": "assert_select \"meta[name=quiet-hours]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:110",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "quiet_hours",
+            "quiet_hours_off"
+          ],
+          "observation": "HTTP DOM selector meta[name=quiet-hours]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        },
+        {
+          "line": 571,
+          "ruby": "assert_select \"meta[name=quiet-hours-zone]\", count: 0",
+          "rust_test": "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone",
+          "checks": "Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:110",
+          "oracle": "rust/vectors/users_layout_preferences.json",
+          "oracle_cases": [
+            "quiet_hours",
+            "quiet_hours_off"
+          ],
+          "observation": "HTTP DOM selector meta[name=quiet-hours-zone]",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:70",
+          "assertion_anchor": "\"{name}: complete sound meta bytes\""
+        }
+      ],
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone"
+      ]
+    }
+  ]
+}

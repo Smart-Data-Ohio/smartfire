@@ -251,6 +251,9 @@ async fn profile_guard_fields_errors_and_security_writes_match_pinned_rails() {
             "{name}: {}",
             response.text()
         );
+        if response.status == StatusCode::FOUND {
+            assert_eq!(response.location(), Some("http://campfire.test/users/me/profile"), "{name}");
+        }
         let saved = a.db().read(|c| User::find(c, DAVID)).await.unwrap();
         assert_eq!(json!(saved.email_address), case["email"], "{name}");
         assert_eq!(json!(saved.name), case["name"], "{name}");

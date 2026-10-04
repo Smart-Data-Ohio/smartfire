@@ -191,7 +191,11 @@ async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
             "{}",
             case["name"]
         );
+        if response.status == StatusCode::FOUND {
+            assert_eq!(response.location(), Some("http://campfire.test/users/me/profile"), "{}", case["name"]);
+        }
         let state=app.db().read(|conn| {
+            assert_eq!(campfire_db::User::find(conn, DAVID)?.email_address.as_deref(), Some("david@37signals.com"));
             let other_name:String=conn.query_row("SELECT name FROM users WHERE id=?",[JASON],|r|r.get(0))?;
             let mut stmt=conn.prepare("SELECT theme,text_size,time_zone,time_zone_explicit,voice_mode,push_to_talk_key,inbox_preferences,github_login,name,updated_at,bio FROM users WHERE id=?")?;
             let state=stmt.query_row([DAVID],|r|{
