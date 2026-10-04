@@ -2,11 +2,13 @@
 """Check the partial cutover ledger's receipts, history and exact remainder."""
 import argparse
 import json
+import re
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--nextest-list', type=Path, required=True,
                     help='cargo nextest list --message-format json output from this source')
+parser.add_argument('--native-log', type=Path, help='completed current-branch nextest log')
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[1]
 def load(name):
@@ -47,5 +49,10 @@ for group in ['ws8br_broad_original_receipts', 'ws8br_sidebar_original_receipts'
     for row in remaining[group]:
         assert (row['file'], row['test']) in original, f"remainder is not an original declaration: {row}"
 assert ws8['cutover_reconciliation']['partial'] and remaining['partial']
+if args.native_log:
+    passed = set(re.findall(r'^\s*PASS\s+\[[^\]]+\]\s+\([^)]+\)\s+\S+\s+(\S+)', args.native_log.read_text(), re.M))
+    credited = {r['test'] for r in receipts['ci_passes']} | {r['rust_test'] for r in changed if 'rust_test' in r}
+    assert credited <= passed, f'credited current tests did not pass: {sorted(credited-passed)}'
+    print(f'Cutover current branch: {len(credited)} credited test identities passed in the fresh-clone workspace run')
 print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; 14 WS17 closures; 3 external browser closures; 9 broad WS8 supersessions; 1 approved queue supersession; 0 inconsistent records")
 print('Cutover ledger remains partial: 328 broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')

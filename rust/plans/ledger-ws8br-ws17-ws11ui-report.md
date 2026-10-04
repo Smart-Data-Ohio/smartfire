@@ -136,6 +136,86 @@ HuddleGrant issuance producer is unchanged in the submitted patch.
 
 ## Fresh-clone verification
 
-Results will be recorded here after running the final committed source, with only
-the three independently regenerated CI seeds. No new scratch target directory is
-needed; the fresh clone uses the existing worktree compiler cache.
+The independently cloned source was `e2fe3ccd4`, fast-forwarded through
+`9f035162d` for the two media-runner corrections. Native Rust sources and vectors
+are identical throughout those commits. Only the three CI seeds were independently
+rebuilt. All 27 credited test identities (25 historical CI identities and the two
+new huddle tests) passed in the completed fresh-clone workspace run.
+
+Environment, from the fresh clone root (the existing worktree target is reused):
+
+```sh
+export CI=1 RUST_TEST_THREADS=4 CARGO_BUILD_JOBS=2
+export CARGO_TARGET_DIR=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws11ui/rust/target
+export TMPDIR="$PWD/.scratch/runtime"
+export CABLE_TEST_PORT_RANGE=52750-52799 INTEGRATION_TEST_PORT_RANGE=52750-52799
+export MAIL_TEST_PORT_RANGE=52750-52799 GITHUB_TEST_PORT_RANGE=52750-52799
+export PARITY_OWNER=ws11ui PARITY_IMAGE=ws11ui-cutover-reference:current-schema
+export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="python3 $PWD/rust/reference-tools/agents/pinned-media-runner.py"
+cargo nextest run --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever -j 4 --profile ci --no-fail-fast
+cargo nextest run --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever -j 4 --profile ci -E 'test(attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails)'
+cargo test --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --doc -- --test-threads=4
+cargo clippy --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --all-targets -- -D warnings
+bash rust/ci/with-release-inputs.sh cargo build --locked --workspace --bins
+```
+
+The first enumeration attempt stopped before running tests: the existing media
+wrapper printed a diagnostic on stdout during `--list`. It now prints to stderr,
+preserving nextest's unmodified libtest listing. The first complete run found one
+codec mismatch in main's newer attachment-processing test at
+`controllers/messages/attachment_processing_tests.rs:597`: the original MOV's
+hash was identical, but the host produced different JPEG/WebP preview bytes. That
+new test was missing from the pinned-media list. Adding it sends the unchanged test
+through the same pinned codec runtime already used by the six older application
+media-byte groups. The corrected test passes. No hash, byte count, expected HTML,
+assertion or timing threshold is changed; this is a runtime-routing correction,
+not a timing retry. The complete run's initial failure and the separate corrected
+replay are both retained below rather than replacing the initial receipt.
+
+Raw summary lines, in the command order above (the doctest lines represent the
+two distinct summaries across eleven targets; aggregate 0 runnable examples,
+0 failures, 2 existing ignored examples):
+
+```text
+     Summary [1746.931s] 4950 tests run: 4949 passed (7 slow), 1 failed, 20 skipped
+     Summary [   1.657s] 1 test run: 1 passed, 4969 skipped
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 49s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 58s
+```
+
+Thus all **4,950 unique enabled workspace tests** have passing receipts across
+the complete run and corrected pinned replay; the complete run itself records the
+initial codec failure. The 20 skipped tests are the pre-existing ignored tools/
+external cases. Filtered tests in the one-case replay are not new ignores. Strict
+clippy and release-input build both exited 0. The normal release-input guard had
+no access to vectors, parity files or reference tools.
+
+Fresh-clone browser replay and vector regeneration also exited 0:
+
+```text
+Cutover inbox: Rails 1 passed; Rust 1 passed; 0 failures
+Cutover inbox: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged
+Cutover inbox-filter: Rails 1 passed; Rust 1 passed; 0 failures
+Cutover inbox-filter: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged
+Cutover work: Rails 1 passed; Rust 1 passed; 0 failures
+Cutover work: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged
+Cutover browser discrimination: 3 paired sequences passed; 3 writer defects rejected; 0 invalid controls
+Rails huddle cutover: 2 source scenarios; 0 failures
+```
+
+The ledger checker consumes the current nextest listing and the completed native
+log; it verifies every credited function is enabled and actually passed:
+
+```text
+Cutover current branch: 27 credited test identities passed in the fresh-clone workspace run
+Cutover ledger receipts: 25 historical CI test identities still enabled; 14 WS17 closures; 3 external browser closures; 9 broad WS8 supersessions; 1 approved queue supersession; 0 inconsistent records
+Cutover ledger remains partial: 328 broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions
+```
+
+No production JS/CSS, vendored asset, digest golden or CodeQL configuration changed.
+No new target directory was created. The fresh clone, downloaded nextest binary/
+archive and copied Docker schema context are regenerable large scratch outputs and
+are deleted after recording these results; the pre-existing worktree target is
+retained. Small raw logs remain in the owned cutover scratch directory.
