@@ -21,6 +21,7 @@ import time
 import textwrap
 import urllib.request
 from behavior_action_rows import assert_action_rows
+from behavior_upload_bytes import uploaded_bytes
 from behavior_server_cleanup import stop_behavior_servers
 from behavior_mutation_jobs import probe_jobs
 from browser_host import build_host
@@ -595,12 +596,13 @@ for file in files:
                             elif case == "Markdown replies and file attachments remain usable":
                                 parent = conn.execute("SELECT id FROM messages WHERE markdown_source='**A useful point** with `inline code`.'").fetchone()
                                 assert parent is not None
-                                attachments = conn.execute("SELECT messages.reply_notify_author,blobs.filename,blobs.byte_size,blobs.key FROM messages JOIN active_storage_attachments AS attachments ON attachments.record_type='Message' AND attachments.record_id=messages.id JOIN active_storage_blobs AS blobs ON blobs.id=attachments.blob_id WHERE messages.reply_to_message_id=?", (parent[0],)).fetchall()
+                                attachments = conn.execute("SELECT messages.reply_notify_author,blobs.filename,blobs.byte_size,blobs.key,blobs.service_name FROM messages JOIN active_storage_attachments AS attachments ON attachments.record_type='Message' AND attachments.record_id=messages.id JOIN active_storage_blobs AS blobs ON blobs.id=attachments.blob_id WHERE messages.reply_to_message_id=?", (parent[0],)).fetchall()
                                 contents = b"An attachment sent from the Markdown composer.\n"
                                 assert len(attachments) == 1 and attachments[0][:3] == (0, "markdown-workspace-attachment.txt", len(contents))
                                 storage = work / (f".instances/{ports[0]}/storage" if database == databases[0] else "files")
                                 key = attachments[0][3]
-                                assert (storage / key[:2] / key[2:4] / key).read_bytes() == contents
+                                rails_test_port = ports[0] if database == databases[0] and attachments[0][4] == "test" else None
+                                assert uploaded_bytes(storage, key, rails_test_port=rails_test_port) == contents
                             elif case == "mention suggestions select a room member without sending the unfinished message":
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source IN ('@Kev','@[Kevin] ')").fetchone()[0] == 0
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='@[Kevin] please review **the layout**.'").fetchone()[0] == 1
