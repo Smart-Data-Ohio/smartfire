@@ -229,6 +229,8 @@ async fn tour_stamp_controls_the_room_layout_auto_start() {
         StatusCode::NO_CONTENT
     );
     let after = browser.get("/rooms/486777696").await;
+    assert_eq!(after.status, StatusCode::OK);
+    assert!(after.text().contains("id=\"help-menu-button\""));
     assert!(
         after
             .text()

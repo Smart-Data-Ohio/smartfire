@@ -107,6 +107,11 @@ async fn join_writes_match_rails_duplicate_scope_open_rooms_and_sessions() {
     assert_eq!(valid.status, StatusCode::FOUND);
     assert_eq!(valid.location(), v["valid"]["location"].as_str());
     assert!(browser.cookie_header().contains("session_token="));
+    // Authenticate the freshly issued cookie through the real middleware, rather than
+    // equating the existence of some session row with ownership of this browser.
+    let self_profile = browser.get("/users/me/profile").await;
+    // The new unenrolled human is required to complete 2FA by the approved WS9 drift.
+    assert_eq!(self_profile.location(), Some("http://campfire.test/two_factor_setup"));
     let state=app.db().read(move |c| {
         let id=c.query_row("SELECT id FROM users WHERE email_address='new@37signals.com'",[],|r|r.get::<_,i64>(0))?;let user=campfire_db::User::find(c,id)?;
         let rooms=c.prepare("SELECT room_id FROM memberships WHERE user_id=? ORDER BY room_id")?.query_map([id],|r|r.get::<_,i64>(0))?.collect::<Result<Vec<_>,_>>()?;
@@ -117,6 +122,10 @@ async fn join_writes_match_rails_duplicate_scope_open_rooms_and_sessions() {
         assert_eq!(state[key], v["valid"][key], "{key}");
     }
     assert_eq!(state["room_ids"], v["valid"]["open_ids"]);
+    let enrolled_page = browser.get("/two_factor_setup").await;
+    assert_eq!(enrolled_page.status, StatusCode::OK);
+    let id = app.db().read(|c| Ok(c.query_row("SELECT id FROM users WHERE email_address='new@37signals.com'", [], |r| r.get::<_,i64>(0))?)).await.unwrap();
+    assert!(enrolled_page.text().contains(&format!("name=\"current-user-id\" content=\"{id}\"")), "the issued cookie authenticates the newly created user");
     assert_eq!(
         browser.get(&path).await.location(),
         v["signed_get"]["location"].as_str()

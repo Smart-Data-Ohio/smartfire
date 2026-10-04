@@ -1,3 +1,11 @@
+> Current cutover assertion reconciliation: 120 original controller declarations
+> now have [399 individually inventoried assertion sites](ledger-ws8br-ws17-ws11ui-b-receipts.json),
+> linked to enabled native real-path checks and exact Rails oracle cases.
+> [Continuation report](ledger-ws8br-ws17-ws11ui-b-report.md).
+> The fourteen original browser criteria remain uncredited; these controller
+> receipts do not close their interacting browser clauses. The earlier checkpoints
+> below and their original run counts remain historical.
+
 # WS8br2 report — #175 merge verification
 
 ## Cutover reconciliation (2026-10-04)

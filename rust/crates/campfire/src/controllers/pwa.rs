@@ -56,6 +56,7 @@ mod tests {
                 assert_eq!(response.status.as_u16(), vector["status"].as_u64().unwrap() as u16);
                 assert_eq!(response.content_type(), vector["content_type"].as_str());
                 assert_eq!(response.text(), vector["body"].as_str().unwrap(), "{seed} {}", vector["path"]);
+                if vector["path"] == "/offline.html" { assert_eq!(response.header("set-cookie"), None); }
             }
         }
     }

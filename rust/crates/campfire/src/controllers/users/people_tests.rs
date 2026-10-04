@@ -103,6 +103,36 @@ fn assert_bytes(name: &str, actual: &str, expected: &str) {
     assert_eq!(actual, expected, "{name}: complete Rails bytes");
 }
 
+/// The complete fragment byte oracle remains above. At the HTTP boundary compare the
+/// same DOM, retaining every attribute/text node except the random CSRF value.
+/// None of the original Rails assertions inspect that random value.
+pub(crate) fn assert_http_fragment(actual: &str, expected: &str, tag: &str, attr: &str, value: &str) {
+    use campfire_richtext::dom::{Dom, NodeData, NodeId};
+    fn project(dom: &Dom, id: NodeId) -> serde_json::Value {
+        match &dom.node(id).data {
+            NodeData::Element(element) => {
+                let mut attrs = dom.attrs(id);
+                if dom.name(id) == "input" && dom.attr(id, "name") == Some("authenticity_token") {
+                    attrs.retain(|(name, _)| name != "value");
+                }
+                attrs.sort();
+                serde_json::json!([element.name.local.to_string(), attrs, dom.children(id).iter().map(|id| project(dom,*id)).collect::<Vec<_>>()])
+            }
+            NodeData::Text(text) => serde_json::json!(["text", text]),
+            NodeData::Comment(text) => serde_json::json!(["comment", text]),
+            _ => panic!("unexpected node inside HTTP fragment"),
+        }
+    }
+    let fragment = |body| {
+        let mut dom = Dom::new();
+        let root = dom.parse_fragment(body).unwrap();
+        let matches = dom.descendants(root).into_iter().filter(|id| dom.name(*id) == tag && dom.attr(*id,attr) == Some(value)).collect::<Vec<_>>();
+        assert_eq!(matches.len(), 1, "exact HTTP {tag}[{attr}={value}] cardinality");
+        project(&dom, matches[0])
+    };
+    assert_eq!(fragment(actual), fragment(expected), "complete routed {tag}[{attr}={value}] fragment");
+}
+
 async fn card_case(name: &str) {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let vectors = vectors();
@@ -138,6 +168,7 @@ async fn card_case(name: &str) {
             .render()
             .unwrap()
     });
+    assert_http_fragment(&reply.text(), case["html"].as_str().unwrap(), "turbo-frame", "id", "user_card");
     assert_bytes(name, &actual, case["html"].as_str().unwrap());
 }
 
@@ -210,19 +241,16 @@ async fn directories_match_complete_rails_body_and_starred_order() {
                 .unwrap()
         });
         assert_bytes("directory", &actual, case["html"].as_str().unwrap());
+        let reply = app.david().get("/users").await;
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_http_fragment(&reply.text(), case["html"].as_str().unwrap(), "ul", "class", "people-directory");
     }
 }
 
 #[tokio::test]
 async fn cards_require_sign_in_and_unknown_people_are_not_found() {
     let app = TestApp::boot().await.expect("seed required");
-    assert_eq!(
-        app.anonymous()
-            .get(&campfire_routes::user_card(JASON))
-            .await
-            .status,
-        StatusCode::FOUND
-    );
+    assert_eq!(app.anonymous().get(&campfire_routes::user_card(JASON)).await.location(), Some("http://campfire.test/session/new"));
     assert_eq!(
         app.david()
             .get(&campfire_routes::user_card(-1))
@@ -273,6 +301,9 @@ async fn index_lists_active_members_with_presence_and_selection() {
     assert!(html.contains("people-directory__presence\">Online"));
     assert!(html.contains("profile-card__badge\">Agent"));
     assert!(html.contains("data-multi-select-target=\"bar\""));
+    assert!(html.matches("class=\"people-directory__row").count() >= 2);
+    assert!(!html.contains(&format!("id=\"select_user_{DAVID}\"")));
+    assert!(!html.contains("JZ"));
 }
 
 #[tokio::test]
@@ -282,7 +313,8 @@ async fn profile_message_buttons_carry_the_accessible_name() {
         let reply = app.david().get(&campfire_routes::user(id)).await;
         assert_eq!(reply.status, StatusCode::OK);
         let html = reply.text();
-        assert!(html.contains(&format!("aria-label=\"Message {name}\"")));
+        assert_eq!(html.matches(&format!("aria-label=\"Message {name}\"")).count(), 1);
+        if id == KEVIN { assert!(html.contains("Ban Kevin")); }
         for image in html.split("<img").skip(1) {
             assert!(!image.split('>').next().unwrap().contains("aria-label="));
         }

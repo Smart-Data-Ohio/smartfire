@@ -39,7 +39,9 @@
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
     "partial": true,
     "reason": "Configured Huddle source/header/sidebar APIs are on main; the historical unmerged-owner blocker is superseded. Exact original browser receipts remain incomplete. Muted-room delivery is still an unexecuted full browser sequence here, not proved absent.",
-    "remaining_manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-remaining.json"
+    "remaining_manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-remaining.json",
+    "current_controller_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md",
+    "controller_receipts_do_not_close_aggregate_browser_mappings": true
   },
   "history": [
     {

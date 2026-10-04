@@ -126,307 +126,6 @@
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
-      "id": "P0089",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 21,
-      "test": "about renders signed-out with stable title and navigation",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0090",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 34,
-      "test": "privacy renders signed-out with Google disclosures",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0091",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 47,
-      "test": "privacy discloses picker-only Drive previews",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0092",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 57,
-      "test": "terms renders signed-out with software-license framing",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0093",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 67,
-      "test": "public pages never redirect to sign-in and set no session cookie",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0094",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 76,
-      "test": "public pages ignore the modern-browser gate, even for crawlers",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0095",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 87,
-      "test": "public pages render without OAuth configured",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0096",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 97,
-      "test": "public pages disclose no private state, credentials, or scripts",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0097",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 115,
-      "test": "public pages allow zoom and honor color schemes",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0098",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 123,
-      "test": "non-HTML formats expose nothing",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0099",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 137,
-      "test": "wildcard Accept header receives the HTML page",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0100",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 146,
-      "test": "HEAD requests succeed",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0101",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 154,
-      "test": "unconfigured installation uses generic wording without env names",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0102",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 165,
-      "test": "configured installation names the operator and contact",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0103",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 180,
-      "test": "operator name is escaped and malicious contact email is dropped",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0104",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 193,
-      "test": "public pages open in a new tab so following them never disturbs the current tab",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0105",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 204,
-      "test": "sign-in page links the public pages without OAuth",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0106",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 213,
-      "test": "sign-in page keeps public links beside Google sign-in when configured",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0113",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 7,
-      "test": "show",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0114",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 13,
-      "test": "profile message buttons carry the accessible name",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0115",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 28,
-      "test": "bot profile links to capability grants for admins",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0116",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 37,
-      "test": "bot profile links to capability grants for the agent owner",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0117",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 47,
-      "test": "bot profile hides capability grants from anyone else",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0118",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 56,
-      "test": "bot profile shows agent identity, status, rooms, and grants to a member",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0119",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 80,
-      "test": "bot profile shows the 24-hour activity line to the owner",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0120",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 93,
-      "test": "bot profile shows the 24-hour activity line to an admin",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0121",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 103,
-      "test": "bot profile hides the 24-hour activity line from another member",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0122",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 112,
-      "test": "bot profile hides rooms the viewer is not a member of",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0123",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 123,
-      "test": "suspended agent profile shows Suspended",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0124",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 133,
-      "test": "bot without an agent keeps the minimal profile",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0125",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 145,
-      "test": "new",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0126",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 150,
-      "test": "new does not allow a signed in user",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0127",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 157,
-      "test": "new requires a join code",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0128",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 162,
-      "test": "create",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0129",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 174,
-      "test": "creating a new user with an existing email address will redirect to login screen",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0130",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 182,
-      "test": "index lists active members with presence and selection",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0131",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 203,
-      "test": "index lists starred people first with a star marker",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0132",
-      "file": "test/controllers/users_controller_test.rb",
-      "line": 220,
-      "test": "index requires sign-in",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0141",
-      "file": "test/controllers/users/tours_controller_test.rb",
-      "line": 4,
-      "test": "update stamps the tour as completed",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0142",
-      "file": "test/controllers/users/tours_controller_test.rb",
-      "line": 13,
-      "test": "update is idempotent",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0143",
-      "file": "test/controllers/users/tours_controller_test.rb",
-      "line": 26,
-      "test": "update requires sign-in",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0144",
-      "file": "test/controllers/users/tours_controller_test.rb",
-      "line": 32,
-      "test": "room pages carry the tour shell for members who never completed it",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0145",
-      "file": "test/controllers/users/tours_controller_test.rb",
-      "line": 43,
-      "test": "room pages skip auto-start once the tour completed",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
       "id": "P0203",
       "file": "test/controllers/users/avatars_controller_test.rb",
       "line": 7,
@@ -438,55 +137,6 @@
       "file": "test/controllers/users/avatars_controller_test.rb",
       "line": 28,
       "test": "show image with invalid token responds 404",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0207",
-      "file": "test/controllers/users/cards_controller_test.rb",
-      "line": 7,
-      "test": "card shows identity, presence, role, and actions for a peer",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0208",
-      "file": "test/controllers/users/cards_controller_test.rb",
-      "line": 25,
-      "test": "offline peers read offline",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0209",
-      "file": "test/controllers/users/cards_controller_test.rb",
-      "line": 32,
-      "test": "card shows the presence dot and custom status badge",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0210",
-      "file": "test/controllers/users/cards_controller_test.rb",
-      "line": 45,
-      "test": "your own card offers editing your profile instead",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0211",
-      "file": "test/controllers/users/cards_controller_test.rb",
-      "line": 56,
-      "test": "agents can be messaged but not called",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0212",
-      "file": "test/controllers/users/cards_controller_test.rb",
-      "line": 68,
-      "test": "inactive users show status without message actions",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0213",
-      "file": "test/controllers/users/cards_controller_test.rb",
-      "line": 79,
-      "test": "card requires sign-in",
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
@@ -543,62 +193,6 @@
       "file": "test/controllers/users/bans_controller_test.rb",
       "line": 88,
       "test": "non-admins cannot unban users",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0222",
-      "file": "test/controllers/users/time_zones_controller_test.rb",
-      "line": 7,
-      "test": "detects the browser zone when none is saved",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0223",
-      "file": "test/controllers/users/time_zones_controller_test.rb",
-      "line": 15,
-      "test": "a hand-picked zone wins over later detections",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0224",
-      "file": "test/controllers/users/time_zones_controller_test.rb",
-      "line": 24,
-      "test": "detection never overwrites an explicit choice, not even Not set",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0225",
-      "file": "test/controllers/users/time_zones_controller_test.rb",
-      "line": 33,
-      "test": "an unknown zone is ignored",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0226",
-      "file": "test/controllers/accounts_controller_test.rb",
-      "line": 7,
-      "test": "edit",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0227",
-      "file": "test/controllers/accounts_controller_test.rb",
-      "line": 12,
-      "test": "edit groups administrators separately from members with a divider",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0228",
-      "file": "test/controllers/accounts_controller_test.rb",
-      "line": 44,
-      "test": "update",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0229",
-      "file": "test/controllers/accounts_controller_test.rb",
-      "line": 53,
-      "test": "non-admins cannot update",
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
@@ -893,41 +487,6 @@
       "file": "test/controllers/workspace_icons_controller_test.rb",
       "line": 67,
       "test": "stale enrolled sessions are signed out instead of served the icon",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0272",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "line": 4,
-      "test": "service worker serves as JavaScript with the fetch and notification handlers",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0273",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "line": 15,
-      "test": "service worker caches static assets only",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0274",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "line": 29,
-      "test": "notification clicks focus an existing window before opening a new one",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0275",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "line": 40,
-      "test": "offline shell renders signed-out with reconnect behavior",
-      "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0276",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "line": 50,
-      "test": "service worker fetch and notification logic",
       "ledger": "rust/plans/ws8br-rails-cases.json"
     },
     {
@@ -2165,6 +1724,76 @@
         "P0200",
         "P0201",
         "P0202"
+      ]
+    },
+    {
+      "date": "2026-10-04",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+      "previous_broad_pending": 271,
+      "closed_original_ids": [
+        "P0089",
+        "P0090",
+        "P0091",
+        "P0092",
+        "P0093",
+        "P0094",
+        "P0095",
+        "P0096",
+        "P0097",
+        "P0098",
+        "P0099",
+        "P0100",
+        "P0101",
+        "P0102",
+        "P0103",
+        "P0104",
+        "P0105",
+        "P0106",
+        "P0113",
+        "P0114",
+        "P0115",
+        "P0116",
+        "P0117",
+        "P0118",
+        "P0119",
+        "P0120",
+        "P0121",
+        "P0122",
+        "P0123",
+        "P0124",
+        "P0125",
+        "P0126",
+        "P0127",
+        "P0128",
+        "P0129",
+        "P0130",
+        "P0131",
+        "P0132",
+        "P0141",
+        "P0142",
+        "P0143",
+        "P0144",
+        "P0145",
+        "P0207",
+        "P0208",
+        "P0209",
+        "P0210",
+        "P0211",
+        "P0212",
+        "P0213",
+        "P0222",
+        "P0223",
+        "P0224",
+        "P0225",
+        "P0226",
+        "P0227",
+        "P0228",
+        "P0229",
+        "P0272",
+        "P0273",
+        "P0274",
+        "P0275",
+        "P0276"
       ]
     }
   ]
