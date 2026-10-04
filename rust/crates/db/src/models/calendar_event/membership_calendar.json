@@ -1,0 +1,64 @@
+{
+  "reference": "d7c7de92",
+  "source": "app/models/membership.rb:282",
+  "rows": [
+    {
+      "name": "matching_entries",
+      "before_commit": 0,
+      "membership_exists": false,
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            390339825,
+            127326141
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "no_entries",
+      "before_commit": 0,
+      "membership_exists": false,
+      "jobs": []
+    },
+    {
+      "name": "other_room",
+      "before_commit": 0,
+      "membership_exists": false,
+      "jobs": []
+    },
+    {
+      "name": "other_user",
+      "before_commit": 0,
+      "membership_exists": false,
+      "jobs": []
+    },
+    {
+      "name": "removed_later",
+      "before_commit": 0,
+      "membership_exists": false,
+      "jobs": []
+    },
+    {
+      "name": "added_later",
+      "before_commit": 0,
+      "membership_exists": false,
+      "jobs": [
+        [
+          "Calendar::SyncEntryJob",
+          [
+            390339825,
+            127326141
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "rollback",
+      "before_commit": 0,
+      "membership_exists": true,
+      "jobs": []
+    }
+  ]
+}

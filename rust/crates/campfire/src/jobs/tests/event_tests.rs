@@ -1,6 +1,66 @@
 use super::*;
 
 #[tokio::test]
+async fn membership_removal_calendar_job_is_durable_and_atomic() {
+    use campfire_db::fixtures::{Options, identify, load, reference_dir};
+    use campfire_db::{Membership, models::google_entry};
+    let (booted, _dir) = app().await;
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    let app = booted.app.clone();
+    let (room, user, event) = (
+        identify("designers"),
+        identify("david"),
+        identify("launch_party"),
+    );
+    app.db.write(move |tx| {
+        load(tx.conn(), &reference_dir(), &Options { now: tx.now(), bcrypt_cost: 4 })?;
+        google_entry::reserve(tx, event, user)?;
+        tx.conn().execute_batch("CREATE TRIGGER reject_membership_calendar BEFORE INSERT ON background_jobs WHEN NEW.job_class='Calendar::SyncEntryJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END")?;
+        Ok(())
+    }).await.unwrap();
+    assert!(
+        app.db
+            .write(
+                move |tx| Membership::find_by_room_and_user(tx.conn(), room, user)?
+                    .unwrap()
+                    .destroy(tx)
+            )
+            .await
+            .is_err()
+    );
+    assert!(
+        app.db
+            .read(move |c| Ok(Membership::find_by_room_and_user(c, room, user)?.is_some()))
+            .await
+            .unwrap()
+    );
+    assert!(jobs(&app).is_empty());
+    app.db
+        .write(move |tx| {
+            tx.conn()
+                .execute_batch("DROP TRIGGER reject_membership_calendar")?;
+            Membership::find_by_room_and_user(tx.conn(), room, user)?
+                .unwrap()
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    assert!(
+        !app.db
+            .read(move |c| Ok(Membership::find_by_room_and_user(c, room, user)?.is_some()))
+            .await
+            .unwrap()
+    );
+    let queued = jobs(&app);
+    assert_eq!(queued.len(), 1);
+    assert_eq!(queued[0].class, "Calendar::SyncEntryJob");
+    assert_eq!(
+        queued[0].arguments,
+        serde_json::json!({"event_id":event,"user_id":user})
+    );
+}
+
+#[tokio::test]
 async fn ws14e_one_invalid_event_does_not_stop_other_reminders() {
     use campfire_db::fixtures::{Options, identify, load, reference_dir};
     use campfire_db::{CalendarEvent, NewCalendarEvent};

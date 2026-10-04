@@ -21,6 +21,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 type Responses = VecDeque<(u16, Vec<u8>)>;
+mod acceptance_cases;
 type TargetedResponses = BTreeMap<(String, String), VecDeque<Result<(u16, Vec<u8>), Unavailable>>>;
 pub struct Recorded {
     pub answers: Mutex<Responses>,
