@@ -136,11 +136,13 @@ and **32/302 in Rails**. Rust's per-recipient growth is no faster than Rails.
 Activated controls for per-recipient user reloads and wrong persisted event types
 fail the precise cost/fact assertions. No Recorder service implementation changed.
 
-The AgentBudgetNotice Recorder source integration is genuinely still peer-owned:
-`rust/crates/db/src/models/activity_item/recorder.rs:377` requires an explicit owner
-reader, whose public contract is in `recording_source.rs:47`. The typed WS11 reader
-and presenter consumers are installed. Wiring the source producer belongs to WS12's
-unmerged `rust/ws12-board-automations-4` round. No WS12 board-automation file is edited.
+The AgentBudgetNotice Recorder source integration is merged. The default
+`ActivityItem::record_typed` entry point installs `PersistedBudgetNoticeReader`
+(`rust/crates/db/src/models/activity_item/recorder.rs:60` and `:418`), which reads
+the owning domain's current persisted recipients. The producer remains owned by
+`agent_posting`; no adapter argument is needed by ordinary Recorder callers.
+`rust/crates/db/src/tests/ws12_generic_recorder_test.rs:278` verifies the default
+entry point, and `:344` checks the reader/Recorder cost at two recipient sizes.
 
 ## Peer-owned fixed read costs
 
