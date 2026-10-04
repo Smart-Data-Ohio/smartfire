@@ -334,9 +334,19 @@ impl EventSink for Jobs {
         // after the reader is released; enqueueing through Database::write would deadlock.
         if let Some(id) = message_id {
             let result = (|| {
-                if let Some(message) = campfire_db::Message::find_by_id(after.conn(), id)?
-                    && let Some((_, blob)) = message.attachment(after.conn())? {
-                    campfire_db::models::message_attachment_processing::recover(after, id, blob.id)?;
+                use rusqlite::OptionalExtension;
+                let blob_id: Option<i64> = after.conn().query_row(
+                    "SELECT a.blob_id FROM active_storage_attachments a
+                     JOIN active_storage_blobs b ON b.id=a.blob_id
+                     JOIN messages m ON m.id=a.record_id
+                     WHERE a.record_type='Message' AND a.name='attachment' AND a.record_id=?
+                     AND b.content_type LIKE 'video/%'
+                     AND NOT EXISTS(SELECT 1 FROM active_storage_attachments p
+                         WHERE p.record_type='ActiveStorage::Blob' AND p.name='preview_image' AND p.record_id=b.id)
+                     LIMIT 1", [id], |row| row.get(0),
+                ).optional()?;
+                if let Some(blob_id) = blob_id {
+                    campfire_db::models::message_attachment_processing::schedule(after, id, blob_id);
                 }
                 Ok::<_, campfire_db::Error>(())
             })();

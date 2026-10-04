@@ -1146,6 +1146,7 @@ impl Message {
             Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
         {
             if Some(attachment.blob_id) == blob_id {
+                super::message_attachment_processing::schedule(tx, self.id, attachment.blob_id);
                 return Ok(());
             }
             attachment.delete(tx)?;

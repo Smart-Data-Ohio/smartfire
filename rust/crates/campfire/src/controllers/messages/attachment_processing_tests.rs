@@ -692,3 +692,39 @@ async fn attachment_processing_reassigning_the_same_blob_schedules_the_save_call
         "Rails after_save also processes an unchanged attachment assignment"
     );
 }
+
+#[tokio::test]
+async fn attachment_processing_agent_root_processes_before_its_create_broadcast() {
+    use crate::controllers::agent_http_tests::{AGENT, SECRET};
+    for corrupt in [false, true] {
+        let (app, _, _, blob) = setup(corrupt).await;
+        crate::controllers::agent_http_tests::initialize(&app).await;
+        app.db().write(|tx| {
+            tx.conn().execute("INSERT INTO agent_grants(agent_id,capability,granted_by_id,created_at,updated_at) VALUES(?,'post_messages',127326141,?,?)", rusqlite::params![AGENT,tx.now(),tx.now()])?;
+            Ok(())
+        }).await.unwrap();
+        let (_client, server) = subscribe(&app).await;
+        app.publications().take();
+        let signed = campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, blob, None);
+        let response = app.anonymous().send(
+            Req::new(axum::http::Method::POST, &format!("/rooms/{ALL_TALK}/agents/messages"))
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .header("authorization", &format!("Bearer {SECRET}"))
+                .body(json!({"message":{"attachment":signed,"client_message_id":"root-processing-order"}}).to_string())
+        ).await;
+        assert_eq!(response.status.as_u16(), 201, "{}", response.text());
+        let storage = app.booted.app.storage.clone();
+        app.db().read(move |conn| {
+            let source = Blob::find(conn, blob).unwrap().unwrap();
+            assert!(source.is_analyzed(), "Rails analyzes before broadcasting the root post");
+            assert_eq!(storage.existing_preview_image(conn, &source).unwrap().is_some(), !corrupt);
+            Ok(())
+        }).await.unwrap();
+        let frames = app.publications().take();
+        let create = frames.iter().find(|(_, bytes)| bytes.contains("action=\\\"append\\\"")).unwrap();
+        assert_eq!(create.1.contains("poster=\\\""), !corrupt, "the first root broadcast must use the processed attachment");
+        assert_eq!(state(&app, blob).await.2, if corrupt { 1 } else { 0 });
+        server.abort();
+    }
+}
