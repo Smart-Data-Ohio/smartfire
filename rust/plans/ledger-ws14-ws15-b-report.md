@@ -304,3 +304,22 @@ Mutation summary: 3 run; 3 killed; 0 not accepted; production restored=True
 ```
 
 The two scheduling faults fail at `cutover/rendered.rs:204` when following the real submission: the rendered wrong action returns 404 instead of the required redirect. That helper assertion is mapped alongside the original post-Schedule heading assertion. The `_top` button fault fails at `cutover/interactions.rs:162`: submitting the rendered top-level target returns 302 rather than the frame's 200. The assertion is mapped to the partial server Going-response predicate; the explicit browser-current-path claim remains open even though this wiring fault is now caught.
+
+### Corrected B checkout validation
+
+Verified native source `ea09026ba201fdfdc8bacbfa0893ec21a5b790f7` in the separate B worktree, with fresh pinned default/first_run/agents_ui seed validation (29 + 4 + 40 = 73 passed, zero failed). Canonical Rust 1.98.1/libvips, `CI=true`, two build jobs, unchanged shared compiler throttle and nextest workers 4. All 78 named native tests in the 81-record map ran; the 20 skips are the existing ignored tests. The canonical logo/PNG comparison passes. No timing failure appeared. Only ledger/report metadata follows this native source.
+
+```sh
+cargo nextest run --locked --workspace --exclude html5ever -j 4 --no-fail-fast
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+python3 rust/reference-tools/cutover/assertion-maps.py rust/plans/ledger-ws14-ws15-b-assertions.json --pass-log rust/target/review243-fixes/nextest.log
+python3 rust/reference-tools/cutover/check-ws14-ws15.py --nextest-log rust/target/review243-fixes/nextest.log
+```
+
+```text
+     Summary [1217.504s] 5038 tests run: 5038 passed (1 slow), 20 skipped
+    Finished `dev` profile [unoptimized] target(s) in 54.84s
+Assertion maps: 81 records; 271 original Rails assertion calls; 2 unmapped
+```
+
+Both Cargo commands exit 0. Compact raw logs and mutation receipts are archived in the C worktree under `rust/target/review243-fixes/` before this B worktree is removed. Generated seeds, reference inputs and test runtime output are removed with the disposable B worktree. The C integration has a separate validation receipt.

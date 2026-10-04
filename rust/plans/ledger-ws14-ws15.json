@@ -18917,6 +18917,45 @@
     "open_total": 177,
     "reopened_records": [
       "WS14e-101"
-    ]
+    ],
+    "verification": {
+      "scope": "PR #243 rendered markup corrections; separate rust-ws14g-b worktree; only receipts follow this verified native source",
+      "code_head": "ea09026ba201fdfdc8bacbfa0893ec21a5b790f7",
+      "reference_sha": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+      "test_sources": {
+        "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs": "56f7b9244ec4ee2cf0a4bb488c3c2d48d547beddb3f4214a2bfcd9e1ad4716aa",
+        "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/rendered.rs": "0c2ee3148dc1a67d37077bd4717035180c4faa0b36f93f522895e784d4ff20a1"
+      },
+      "nextest": {
+        "command": "cargo nextest run --locked --workspace --exclude html5ever -j 4 --no-fail-fast",
+        "exit_code": 0,
+        "raw_log_sha256": "7e54a2b52caca5c82ad3b87c0845c5d2ecde3e060da17f435e80cf29f371b86d",
+        "summary": "     Summary [1217.504s] 5038 tests run: 5038 passed (1 slow), 20 skipped",
+        "passed": 5038,
+        "failed": 0,
+        "skipped": 20
+      },
+      "clippy": {
+        "command": "cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings",
+        "exit_code": 0,
+        "raw_log_sha256": "809d4d374447978046a4dc24a1d65d98db36548b383e39a57444f1c4e84ceeff",
+        "summary": "    Finished `dev` profile [unoptimized] target(s) in 54.84s"
+      },
+      "review243": {
+        "mutations": "rust/plans/ledger-ws14-ws15-b-review243-mutations.json",
+        "before_survived": 3,
+        "after_killed": 3,
+        "production_restored": true,
+        "choices": {
+          "WS14e-099": "a",
+          "WS14e-100": "a",
+          "WS14e-101": "b"
+        },
+        "missing_browser_assertions": [
+          "test/system/events_test.rb:136",
+          "test/system/events_test.rb:137"
+        ]
+      }
+    }
   }
 }
