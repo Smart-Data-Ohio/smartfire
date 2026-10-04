@@ -756,7 +756,7 @@
           "status": "deferred",
           "previous_remaining_reason": "Needs 15 real Scroll rooms, focus/blur and actual >=400 px overflow, exact scrollTop=400, current room outside view, exact closed/open offset retention and visible focus after reopening (motion_test.rb:177-238). Own fixture and sequence remain unported; preserve the original 5 s polling.",
           "previous_evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
-          "remaining_reason": "Review #230: motion_test.rb:177-238. The fresh Rust negative fails at initial scrollTop=400 (behavior-motion.mjs drawer scroll lands) before closing; no valid paired intended closed-offset proof. Restored to deferred; unchanged-path retries supply no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
+          "remaining_reason": "Review #230: motion_test.rb:177-238. The reviewed fresh Rust negative failed at initial scrollTop=400 (behavior-motion.mjs drawer scroll lands) before closing; that receipt contains no valid paired intended closed-offset proof. Restored to deferred; unchanged-path retries supply no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
         },
         {
           "name": "mobile drawer reveals a current room far down the list on first open",
@@ -769,7 +769,7 @@
           "status": "deferred",
           "previous_remaining_reason": "Needs 15 Scroll rooms, original focused current link, 5 s settled-scroll/current-in-view predicate, exact closed/reopened scroll offset and focused current link (motion_test.rb:260-292). Own fixture and sequence remain unported.",
           "previous_evidence": "reference-tools/messaging/behavior-check.py: behavior-motion.mjs: pinned motion_test.rb predicates, actions, 5 s/50 ms polling and explicit visibility; real fixture rows and browser controller actions, unchanged message/thread/user/room identities; its served motion/geometry/focus mutant rejects on both apps at its unique intended phase; receipts and original-line audit in plans/ws8bm-pr3-review.md; no pixels",
-          "remaining_reason": "Review #230: motion_test.rb:260-292. The fresh Rails negative fails at the initial current-link focus before closing/reopening; no valid paired post-reopen-focus proof. Restored to deferred; unchanged-path rerun supplies no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
+          "remaining_reason": "Review #230: motion_test.rb:260-292. The reviewed fresh Rails negative failed at the initial current-link focus before closing/reopening; that receipt contains no valid paired post-reopen-focus proof. Restored to deferred; unchanged-path rerun supplies no credit. A new pair reaches the intended assertion on both apps, but the prior setup races remain unexplained; an unchanged-path later success does not restore closure credit."
         }
       ]
     },

@@ -1,8 +1,10 @@
 # WS8bm #230 corrections carried into round 4
 
-Both branches merge main `566c1bd77`. Round 3 is pushed at `d2d05351d`. Current stacked round-4 inventory is **156/156 controllers; 133 passed / 2 deferred / 0 owner-blocked systems**. Scroll preservation and reopen focus remain deferred; the upload flow closes after the approved #231 shared-client fix. See [the review correction](ws8bm-review230.md). Older 134/1 and 129/6 headlines below are historical and superseded.
+Both branches merge main `566c1bd77`. Round 3 is pushed at `1f3678ed5`. Current stacked round-4 inventory is **156/156 controllers; 133 passed / 2 deferred / 0 owner-blocked systems**. Scroll preservation and reopen focus remain deferred; the upload flow closes after the approved #231 shared-client fix. See [the review correction](ws8bm-review230.md). Older 134/1 and 129/6 headlines below are historical and superseded.
 
-# WS8bm -4: five closures and one exact upload follow-up
+Final merged round-4 affected checks: **8 paired controls / 14 intended paired rejections / 0 invalid or escaped**; helpers **65 Node / 32 Python**. Fresh-clone workspace: **4,923 passed / 0 failed / 22 existing ignores**. Strict clippy and release-input-only binary build pass. [The complete corrected round-4 report](ws8bm-pr4-review.md) contains all 59 raw workspace target lines, failing-first receipts and exact deferrals. Final owned processes, listeners, containers and scratch targets are all `[]`; 33.6 GiB of compiler output and four generated diagnostics are removed. The model server is untouched. This is the requested pushed checkpoint.
+
+# Historical WS8bm -4: five closures and one exact upload follow-up
 
 Stacked branch `rust/ws8bm-messages-http-4`, based on -3 `69d9e3b9d7c8dca348df7b872a5b43427e73f4ac`; the reviewed -3 branch is untouched. The legacy Drive picker, all three Drive attachment flows, and the actual test-environment motion contract now have paired browser controls, saved-row checks and intended served-fault rejections. Inventory is **156/156 controllers; 134 passed / 1 deferred / 0 owner-blocked systems**. [The complete -4 report](ws8bm-pr4-review.md) records original scopes, failing-first evidence, command/source checkpoints and every raw target summary.
 

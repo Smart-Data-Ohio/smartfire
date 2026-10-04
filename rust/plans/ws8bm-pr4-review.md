@@ -1,4 +1,19 @@
-# WS8bm -4: Drive transport and actual test layouts
+# WS8bm -4 after #230 review and main #231
+
+Current controller coverage is **156/156**. Current system inventory is **133 passed / 2 deferred / 0 owner-blocked**, superseding the historical 134/1 below. Both branches merge main `566c1bd77` (including approved client fix #231), and round 4 carries all round-3 review corrections. The workspace assertion targets the actual committed mobile message with visible body text within two seconds. Motion starts in HQ and its negative executes the original native off-canvas assertion. [The correction report](ws8bm-review230.md) records the original-line audit and failing-first escapes.
+
+The only current deferrals are:
+
+| Declaration | Exact reason retained | Pin |
+| --- | --- | --- |
+| Mobile drawer keeps room-list scroll position | The earlier Rust negative failed while establishing scrollTop=400, before the intended closed-offset assertion. A new paired intended failure does not explain that setup race; it stays deferred. | motion_test.rb:177-238 |
+| Mobile drawer reopens on current room already in view | The earlier Rails negative failed initial current-link focus, before reopen. The later unchanged-path success is not a race fix or closure proof. | motion_test.rb:260-292 |
+
+The Markdown reply/file-upload declaration is now passed: main #231 prevents late upload progress/failure callbacks from overwriting delivered messages. This was a shared client race, not a Rust server defect. The exact approved client module is compiled into the pinned reference host, while Rust serves main's revendored assets. No app/ file is edited by this review correction. Original deadlines, predicate scopes and byte checks remain intact.
+
+The following earlier report and broad-run failures are retained as historical evidence; its upload deferral and 134/1 inventory are superseded. The merged-source checkpoint and raw receipts follow at the end.
+
+# Historical WS8bm -4: Drive transport and actual test layouts
 
 Stacked branch `rust/ws8bm-messages-http-4`, from `origin/rust/ws8bm-messages-http-3` at `69d9e3b9d7c8dca348df7b872a5b43427e73f4ac`. The -3 branch is unchanged. Rails remains pinned to `d7c7de9264c63015be398001d7a1094e7695a6db` plus approved drift. **156/156 controller declarations; 134 passed / 1 deferred / 0 owner-blocked system declarations.** Four Drive declarations and the test-environment motion declaration close. The upload declaration remains deferred after reproducing its original 10-second preview failure on Rust in the literal pinned Capybara body, after repairing the Rails test host.
 
@@ -314,3 +329,162 @@ WS8bm final owned resources: {"processes": [], "listeners": [], "containers": []
 ```
 
 No test process, owned listener, container or scratch target remains. The model server was not touched. Logs stay in the owned `.scratch/ws8bm-pr4/` directory; generated fixtures/targets are not required to rerun any check. The branch stops at this partial pushed checkpoint.
+
+## Merged-source #230 checkpoint
+
+Both branches contain main `566c1bd77`; round 3's pushed review/verification head is `1f3678ed5`, merged into round 4 with merge commits. The runtime replay uses the no-hardlinks fresh clone at `a8f5409b6`. Later commits carry only docs/deferral wording: crates/ and reference-tool sources are unchanged. `run4.sh` runs these eight affected declarations on both real hosts:
+
+- Original native HQ drawer animation, and actual test-environment motion default.
+- Workspace theme/navigation and actual saved mobile message.
+- Original native Markdown reply/file attachment body (13 assertions per host; original preview wait 10 s).
+- Legacy Drive picker, textless two-file send/edit removal, root two-file edit/remove-one, and thread Drive attachment.
+
+Commands are `python3 rust/reference-tools/messaging/behavior-check.py motion workspace_markdown composer_attach_menu drive_attachments --keep-going`, restricted by exact case names to the eight listed declarations using the runner's `--exclude-case` selector, followed by the identical selection with `--negative`. All applicable variants are scheduled (14); none is excluded. `WS8BM_DISCRIMINATION_RETRIES=1` means one attempt, with no automatic retry. Metadata/source/persistence witnesses and hardened intended-phase attribution remain mandatory. Native motion negatives run the unmodified pinned Capybara/Selenium body; filename negatives use the independent original two-second element scope, after the original ten-second reply-preview assertion. Both hosts retain real browser writes and exact stored bytes/row identities.
+
+Raw receipts (`round4-positive.log`, `round4-negative.log`, `round4-summary.log`):
+
+```text
+1 runs, 8 assertions, 0 failures, 0 errors, 0 skips
+1 runs, 8 assertions, 0 failures, 0 errors, 0 skips
+1 runs, 13 assertions, 0 failures, 0 errors, 0 skips
+1 runs, 13 assertions, 0 failures, 0 errors, 0 skips
+WS8bm behaviour check: 8 named cases passed on Rails and Rust; 0 failed; no pixel checks
+1 runs, 3 assertions, 1 failures, 0 errors, 0 skips
+1 runs, 3 assertions, 1 failures, 0 errors, 0 skips
+WS8bm invalid discrimination attempts: 0; bounded fresh-fixture retries only
+WS8bm discrimination check: 14 served mutants rejected on Rails and Rust across 8 named checks; 0 invalid or escaped
+round-4 positive exit: 0
+round-4 negative exit: 0
+```
+
+Fresh-clone helper commands:
+
+```sh
+node --test --test-concurrency=1 rust/reference-tools/messaging/*.test.mjs
+python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
+```
+
+Raw final helper summaries (`node4-sequential.log`, `python4-final.log`):
+
+```text
+ℹ tests 65
+ℹ suites 0
+ℹ pass 65
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7332.426224
+Ran 32 tests in 3.517s
+
+OK
+```
+
+These final affected replays have zero failures, invalid proofs or escapes. They do not reclassify the earlier broad-run failures recorded above; the old upload failure is addressed by main #231 and re-proved here. The reviewed scroll/reopen failures remain two explicit deferrals, despite one newer intended-negative pair each. No diagnostic-only readiness wait, unchanged-path success or unrelated timeout supplies closure credit. The two new workspace probes demonstrably escape the exact `69d9e3b9d` assertion before correction, then fail its restored predicate/deadline. Main's client module is vendored byte-identically from `0373dfbd9` and compiled by Rails; native mutation transport forwards real HTTP writes and Cable bytes and always tears down.
+
+### Fresh-clone merged round-4 Rust suite
+
+`validate4.sh` runs from the same no-hardlinks fresh source clone at `a8f5409b6`, with `CAMPFIRE_REFERENCE` pointing to that clone, eight test threads, compiler jobs two and the existing machine-wide rustc throttle. It builds all three tracked seeds first. A single owned target is compilation cache only; no check reads a pre-existing target or untracked fixture. The canonical child runner supplies libvips 8.16.1 and ffmpeg 7.1.5 without a global library-path override.
+
+```sh
+bash rust/parity/bin/seed build default first_run agents_ui
+mise exec rust@1.98.1 -- cargo test --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=8
+```
+
+All 59 raw workspace summaries (`workspace4.log`); totals **4,923 passed / 0 failed / 22 existing ignores**. The CI html5ever exclusion is unchanged; no new ignore or timing/concurrency change is included.
+
+```text
+test result: ok. 2813 passed; 0 failed; 13 ignored; 0 measured; 0 filtered out; finished in 550.34s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.09s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.00s
+test result: ok. 1379 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 79.38s
+test result: ok. 58 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.62s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 54 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.53s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.19s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.06s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.69s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.19s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.80s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.96s
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 56 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 80 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.50s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Strict lint and release-input command, run after the fresh-clone workspace suite:
+
+```sh
+mise exec rust@1.98.1 -- cargo clippy --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --all-targets -- -D warnings
+bash rust/ci/with-release-inputs.sh mise exec rust@1.98.1 -- cargo build --locked --bins
+```
+
+Raw command summaries (`validation-summary4.log`, `clippy4.log`, `release4.log`):
+
+```text
+fresh seed exit: 0
+fresh workspace exit: 0
+strict clippy exit: 0
+release inputs exit: 0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 28.00s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 11s
+```
+
+`cargo metadata --manifest-path rust/Cargo.toml --locked --format-version 1 >/dev/null` passes; Python `tomllib` parses all 78 workspace dependency keys without duplicates on both merged branches. The newer crate diff adds no include_str!/include_bytes! expression; the release-input build confirms only Cargo.toml, Cargo.lock and crates/ are needed. Both `origin/main` and the pushed round-3 head are ancestors of round 4.
+
+### Cleanup and stopping point
+
+Measured owned output: 33G compiler target and 40K generated JSON target. `cargo clean --manifest-path rust/Cargo.toml --target-dir .scratch/ws8bm-review230/target` removes the compiler cache. Cargo correctly refuses the second directory because it is not a tagged Cargo cache; it holds exactly four generated diagnostic JSON files. The cleanup verifies the bounded path, exact four filenames, regular-file/non-symlink status and valid JSON, unlinks those files and removes the empty directory. No pre-existing root rust/target or another worker's output is removed.
+
+Raw cleanup/resource lines:
+
+```text
+     Removed 25050 files, 33.6GiB total
+Removed four generated JSON diagnostics and their empty target directory
+WS8bm final owned resources: {"processes": [], "listeners": [], "containers": [], "scratch_targets": []}
+```
+
+`python3 .scratch/ws8bm-review230/resource-check.py` enumerates owned active processes, all relevant fixed listeners, owned Docker containers/mounts and scratch target directories; its final assertion passes. Native temporary profiles, proof mounts and container instances are removed by their unconditional teardown. Logs and canonical media remain for review and later runs. The Python model server is untouched. Work stops after the requested push; the two explicit drawer deferrals remain. No current affected check or Rust verification failed. Earlier invalid setup/network attempts and historical broad failures above remain disclosed and receive no credit.
