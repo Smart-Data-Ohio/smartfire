@@ -24,7 +24,7 @@ assert not (clone / ".scratch").exists() and not (clone / "rust/target").exists(
 env = dict(os.environ, CI="1", TMPDIR=str(clone / ".scratch"), CARGO_TARGET_DIR=str(clone / "rust/target"),
            CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="8", CABLE_TEST_PORT_RANGE="52050-52099", MAIL_TEST_PORT_RANGE="52050-52099",
            CAMPFIRE_REFERENCE=str(clone), PARITY_NAMESPACE="ws8bm-fresh", PARITY_OWNER="ws8bm",
-           PARITY_CPUS="2", PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92"))
+           PARITY_CPUS="2", PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"))
 
 revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=clone, text=True).strip()
 print(f"WS8bm fresh checkout: {revision}; no pre-existing scratch or Cargo target; {clone}", flush=True)

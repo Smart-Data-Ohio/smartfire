@@ -7,8 +7,11 @@ from pathlib import Path
 import re
 import argparse
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from status_pin_identity import PIN_FULL
 parser=argparse.ArgumentParser()
-parser.add_argument('--reference',default='d7c7de92',help='Git reference whose Rails declarations are inventoried')
+parser.add_argument('--reference',default=PIN_FULL,help='Git reference whose Rails declarations are inventoried')
 parser.add_argument('--test-log',type=Path,help='raw cargo test output for the named one-to-one Rust Rails cases')
 parser.add_argument('--rails-log',type=Path,help='raw per-file output from check_controller_files.py')
 parser.add_argument('--system-log',type=Path,action='append',default=[],help='raw successful browser interaction log with original mapping and pinned source hash')

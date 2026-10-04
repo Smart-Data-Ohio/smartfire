@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
+source "$ROOT/reference-tools/reference_image_env.sh"
 cd "$ROOT"
 STORE=${STORE:-../.scratch/agents-ui-downcase}
 mkdir -p "$STORE"
 WORK=$(mktemp -d -p "$STORE" run.XXXXXX)
 trap 'rm -rf "$WORK"' EXIT
 PIN=$(cat parity/reference.sha)
-docker run --rm --name "${PARITY_OWNER:-ws11ui}-downcase" --cpus 2 \
-  --entrypoint ruby -v "$ROOT:/work:ro" "${PARITY_IMAGE:-ws11ui-reference:d7c7de92}" \
+docker run --rm -e PARITY_REFERENCE_SHA --name "${PARITY_OWNER:-ws11ui}-downcase" --cpus 2 \
+  --entrypoint ruby -v "$ROOT:/work:ro" "${PARITY_IMAGE:-campfire-reference}" \
   /work/reference-tools/views/agents_ui/downcase.rb "$PIN" > "$WORK/mappings.json"
 python3 - "$WORK/mappings.json" "$WORK/downcase.rs" "$PIN" <<'PY'
 import json

@@ -28,5 +28,5 @@ rows = inputs.map do |input|
   html = renderer.render(partial:"users/profiles/fizzy_connection",locals:{user:user})
   input.merge(html:html, reason_after:FizzyConnectedAccount.find_by(user_id:user.id)&.disconnected_reason)
 end
-puts JSON.pretty_generate(reference:"d7c7de92",rows:rows)
-warn "Rails Fizzy profile oracle: #{rows.size} complete fragments and token-usability side effects; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),rows:rows)
+warn "Rails Fizzy profile oracle: #{rows.size} complete fragments and token-usability side effects; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

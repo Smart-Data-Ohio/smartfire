@@ -50,5 +50,5 @@ cases = []
   end
 end
 Current.reset
-File.write(ENV.fetch("GITHUB_SEED_FRAGMENTS"), JSON.pretty_generate({ reference: "d7c7de92", sources:, bot_id: bot.id, user_id: user.id, thread: thread_fragments, connections: cases })+"\n")
-puts "GitHub seed fragments Rails oracle: thread header/write frame and #{cases.size} profile/bot states; reference d7c7de92"
+File.write(ENV.fetch("GITHUB_SEED_FRAGMENTS"), JSON.pretty_generate({ reference: ENV.fetch("PARITY_REFERENCE_SHA"), sources:, bot_id: bot.id, user_id: user.id, thread: thread_fragments, connections: cases })+"\n")
+puts "GitHub seed fragments Rails oracle: thread header/write frame and #{cases.size} profile/bot states; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

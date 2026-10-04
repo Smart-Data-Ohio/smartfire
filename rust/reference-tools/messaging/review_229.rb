@@ -78,5 +78,5 @@ sends=[]
     frames:frames.select { |f| f[:stream]=="#{room.to_gid_param}:messages" }.dup}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:,sends:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:,sends:)+"\n")
 puts "WS8bm2 review229 Rails: #{groups.length*2} complete HTTP feature sections at 4/16 visible rows; #{sends.length} real immediate sends, complete persisted rows and frames"

@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b154",
   "source_sha256": {
     "app/models/event.rb": "9cdab96224b35f60cbc0df573ecc093302d255baded6fcdef2c3fef3184287b8",
     "app/models/event_attendance.rb": "710524343d68311da71c36900f5462e86e1583f28e197bd41d271d6b264ec52e"

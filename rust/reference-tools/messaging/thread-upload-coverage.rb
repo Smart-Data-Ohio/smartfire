@@ -66,5 +66,5 @@ end
   end
   travel_to Time.utc(2026, 3, 2, 16)
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', rows:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], rows:) + "\n")
 puts "WS8bm thread-upload-coverage oracle: #{rows.size} scenarios; #{rows.sum { |r| r[:responses].size }} actual Rails requests; 3 client-id paths, 4 media types, top/nested initial capabilities and rollback"

@@ -8,9 +8,15 @@ import subprocess
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[3]
+PIN = (ROOT / "rust/parity/reference.sha").read_text().strip()
+IMAGE = os.environ.get("PARITY_IMAGE", "campfire-reference")
+image_env = subprocess.check_output(
+    ["docker", "image", "inspect", "--format", "{{range .Config.Env}}{{println .}}{{end}}", IMAGE], text=True,
+)
+assert f"GIT_REVISION={PIN}" in image_env.splitlines(), "controller reference must match parity/reference.sha"
 SCRATCH = ROOT / ".scratch/messaging-controller-reference"
 SCRATCH.mkdir(parents=True, exist_ok=True)
-archive = subprocess.check_output(["git", "archive", "d7c7de92", "test"], cwd=ROOT)
+archive = subprocess.check_output(["git", "archive", PIN, "test"], cwd=ROOT)
 with tarfile.open(fileobj=io.BytesIO(archive)) as bundle:
     bundle.extractall(SCRATCH, filter="data")
 FILES = [
@@ -32,7 +38,7 @@ run = subprocess.run(["docker", "run", "--rm", "--cpus", "2", "--name", "ws8bm-c
                       "--entrypoint", "sh", "--env-file", str(ROOT / "rust/parity/.env.reference"),
                       "-e", "RAILS_ENV=test", "-e", "PARALLEL_WORKERS=1", "-e", "RAILS_LOG_LEVEL=warn",
                       "-v", f"{SCRATCH / 'test'}:/rails/test:ro",
-                      os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92"), "-ec", script],
+                      IMAGE, "-ec", script],
                      cwd=ROOT, capture_output=True, text=True)
 (SCRATCH / "run.log").write_text(run.stdout + run.stderr)
 assert run.returncode == 0, f"Rails controller reference failed; inspect {SCRATCH / 'run.log'}"

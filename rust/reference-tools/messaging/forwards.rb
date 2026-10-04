@@ -38,5 +38,5 @@ capture.call('nested_source',:get,"/rooms/#{room.id}/threads/#{open_thread.id}/m
 capture.call('not_forwarded',:get,"/messages/#{source.id}/forward_source.json")
 Membership.find_by!(room:,user:viewer).destroy!
 capture.call('source_inaccessible',:get,"/messages/#{copy.id}/forward_source.json")
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',source_id:source.id,thread_id:open_thread.id,locked_id:locked.id,stale_id:stale.id,child_id:child.id,board_id:board.id,copy_id:copy.id,nested_copy_id:nested_copy.id,rows:) + "\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],source_id:source.id,thread_id:open_thread.id,locked_id:locked.id,stale_id:stale.id,child_id:child.id,board_id:board.id,copy_id:copy.id,nested_copy_id:nested_copy.id,rows:) + "\n")
 puts "WS8bm forwards oracle: #{rows.size} real picker/refusal/source-privacy requests; exact JSON bytes"

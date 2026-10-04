@@ -73,6 +73,6 @@ travel_to(Time.utc(2026,3,2,16)) do
     ActiveSupport::Notifications.unsubscribe(sub)
     broadcasts << {name:,now:Time.current.iso8601,frames:}
   end
-  puts JSON.generate(reference:"d7c7de92",now:"2026-03-02T16:00:00Z",rows:,profiles:,allowances:,assets:,broadcasts:)
+  puts JSON.generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:"2026-03-02T16:00:00Z",rows:,profiles:,allowances:,assets:,broadcasts:)
 end
 Current.reset

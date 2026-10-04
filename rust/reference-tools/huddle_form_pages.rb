@@ -41,4 +41,4 @@ cases=[]
     room.memberships.delete_all;room.delete if persisted
   end
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:cases})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases})

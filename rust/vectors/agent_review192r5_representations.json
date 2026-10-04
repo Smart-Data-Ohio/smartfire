@@ -1,5 +1,5 @@
 {
-  "reference_pin": "d7c7de92",
+  "reference_pin": "78b9b154",
   "notes": [
     "Real exact signed HTTP variations are processed and committed before deleting one file. Fixed storage keys, mtimes and CSP nonce-generator entropy are fixture inputs. Real config.ru Rack::Deflater entrypoint, HTTP/1.1, Accept */* and no Accept-Encoding.",
     "All seven responses per scenario retain their exact bodies and every response header, including signed Locations. Only Date, X-Request-Id and X-Runtime values are stabilized by name; raw receipts are retained beside the capture. The six named security defaults on Rust streamed proxies are approved additions, with exact values checked. Missing-file requests change no rows, files or jobs."

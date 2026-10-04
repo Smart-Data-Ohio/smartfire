@@ -4,13 +4,14 @@ import hashlib
 from pathlib import Path
 import subprocess
 import sys
+import os
 
 root = Path(__file__).resolve().parents[2]
-pin = "d7c7de92"
+pin = (root / "rust/parity/reference.sha").read_text().strip()
 assert sys.argv[1:] in ([], ["--board-tag"], ["--status-popup"])
 status_popup = sys.argv[1:] == ["--status-popup"]
 board_tag = bool(sys.argv[1:])
-image = "ws17-reference-status-2e20b24c:latest" if status_popup else "ws17-reference-board-a6f10a25:latest" if board_tag else "triage-reference-d7c7de92:latest"
+image = os.environ.get("PARITY_IMAGE", "campfire-reference")
 status_files = [
     "app/assets/stylesheets/people.css", "app/controllers/users/statuses_controller.rb",
     "app/javascript/controllers/profile_card_controller.js", "app/views/layouts/application.html.erb",
@@ -62,12 +63,7 @@ checks = subprocess.check_output([
 ], text=True).splitlines()
 assert len(checks) == len(files)
 for path, check in zip(files, checks, strict=True):
-    source_pin = "2e20b24c" if status_popup and path in status_files else "a6f10a25" if board_tag and path == "app/models/board_automations/nudge_pusher.rb" else pin
+    source_pin = pin
     source = subprocess.check_output(["git", "show", f"{source_pin}:{path}"], cwd=root)
     assert hashlib.sha256(source).hexdigest() == check.split()[0], f"reference drift: {path}"
-if status_popup:
-    print(f"Rails source verified: {len(files)-11} files match {pin}; 1 board pusher matches a6f10a25; 10 status/layout files match 2e20b24c")
-elif board_tag:
-    print(f"Rails source verified: {len(files)-1} files match {pin}; 1 board pusher matches a6f10a25")
-else:
-    print(f"pinned Rails source verified: {len(files)} files match {pin}")
+print(f"Rails source verified: {len(files)} files match {pin}; one plain reference image")

@@ -95,5 +95,5 @@ http = []
     raise ActiveRecord::Rollback
   end
 end
-puts JSON.pretty_generate(reference: 'd7c7de92 plus approved board drift', setup:, models:, recorder:, http:)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), setup:, models:, recorder:, http:)
 warn "Rails BoardSlaNudge oracle: #{models.size} model cases; #{recorder.size} recorder cases; #{http.size} complete JSON responses plus HTML list fragments; 0 masks"

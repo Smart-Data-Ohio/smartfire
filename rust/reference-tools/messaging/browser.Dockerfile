@@ -1,5 +1,5 @@
 # Pinned app, process config, and opt-in ActiveJob::TestHelper boundary only.
-ARG BASE_IMAGE=triage-reference-d7c7de92
+ARG BASE_IMAGE=campfire-reference
 FROM ${BASE_IMAGE}
 USER root
 # Match parity/bin/ci-seed: pinned behavior with the current required schema.

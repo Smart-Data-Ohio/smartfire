@@ -1,5 +1,5 @@
 {
-  "reference_pin": "d7c7de92",
+  "reference_pin": "78b9b154",
   "payloads": {
     "slash": "{\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":900000000},\"event_type\":\"slash_command\",\"user\":{\"id\":127326141,\"name\":\"David\"},\"room\":{\"id\":486777696,\"name\":\"All Talk\"},\"thread_id\":321,\"command\":{\"name\":\"inspect\",\"arguments\":\"\\u003c\\u003e\\u0026 é \"}}",
     "slash_no_actor": "{\"agent\":{\"id\":773018776,\"name\":\"Bender Bot\",\"owner\":\"David\",\"delivery_id\":900000001},\"event_type\":\"slash_command\",\"command\":{\"name\":null,\"arguments\":null}}",

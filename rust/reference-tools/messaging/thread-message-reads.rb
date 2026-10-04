@@ -51,6 +51,6 @@ capture.call("show_xml", "#{base}/#{messages[10].id}.xml")
 thread.update_columns(locked_at: Time.current)
 capture.call("locked_actions", "#{base}/#{messages[10].id}/actions.json")
 capture.call("locked_show", "#{base}/#{messages[10].id}.json")
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", parent_id: parent.id, thread_id: thread.id,
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], parent_id: parent.id, thread_id: thread.id,
   empty_id: empty.id, message_ids: messages.map(&:id), rows:) + "\n")
 puts "WS8bm thread-message read oracle: #{rows.size} actual Rails requests; scoped pages, empty formats, raw JSON/actions/HTML and locked reads"

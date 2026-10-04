@@ -53,9 +53,9 @@ class HuddleInvitationSequences
     ENV["LIVEKIT_API_SECRET"] = "ws13b-fixture-api-secret"
     ENV["LIVEKIT_API_KEY"] = "ws13b-fixture-api-key"
     ENV.delete("LIVEKIT_URL"); ENV.delete("LIVEKIT_INTERNAL_URL")
-    titles = File.read(Rails.root.join("test/models/huddle_invitation_test.rb")).scan(/^  test "(.*)" do$/).flatten
+    titles = File.read(File.join(ENV.fetch("PARITY_WORK"), "reference-tools/huddle_pinned/huddle_invitation_test.rb")).scan(/^  test "(.*)" do$/).flatten
     rows = definitions.map { |number, options, operations| scenario(number, titles.fetch(number - 1), options, operations) }
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", now: Time.utc(2026, 1, 1, 12).to_i, cases: rows)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], now: Time.utc(2026, 1, 1, 12).to_i, cases: rows)
   ensure
     Huddle::RingPolicy.quiet_check = nil
     travel_back

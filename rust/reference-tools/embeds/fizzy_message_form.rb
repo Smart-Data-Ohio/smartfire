@@ -11,5 +11,5 @@ frames=cases.map do |name,linked,board,thread|
  html=ApplicationController.renderer.render(template:'rooms/fizzy/message_cards/new',layout:false,assigns:{room:room,message:message,thread:thread,account:linked,boards:[{'id'=>'03board1','name'=>'Engineering <&>'},{'id'=>'03board2','name'=>'Support'}],board_id:board,title:'Deploy <&>',description:"Description <&>\nTwo"})
  {name:name,connected:!!linked,board:board,thread:thread&.id,html:html[html.index('<main')..]}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate({reference:'d7c7de92',frames:frames})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),frames:frames})+"\n")
 puts "WS15e Fizzy message form Rails oracle: #{frames.size} form branches"

@@ -248,3 +248,15 @@ Assertion maps: 81 records; 271 original Rails assertion calls; 0 unmapped
 ```
 
 All 78 named native tests used by the 81 closures ran and passed. The canonical `avatar_bot_logo_uploads_match_pinned_rails` comparison passes. No inherited timing flake appeared. The earlier fresh-clone receipt is historical; this audit validation runs in the working checkout against the newly compiled, restored audit code. The new stacked continuation has separate receipts.
+
+## Full parent audit reconciliation (6880979a)
+
+The fix239b parent audit landed while continuation C was being verified. It is merged into #243, including its reviewed reference-pin refresh and strengthened code/assertions. All 81 B closures and their 271 assertion mappings are retained. The incoming parent audit metadata and all 32 newly reopened contracts are retained separately; none of those reopens is replaced by an unrelated B receipt. The combined ledger now has **176 open records** before C's closures, rather than the earlier 144. These are precise missing assertions, not owner waivers.
+
+The ledger verifier now checks both the original parent audit schema and the continuation assertion maps. It preserves the historical parent full-run hash/counts; new continuation execution is recorded separately. Native test identifiers in B receipts now use nextest's actual `campfire::bin/campfire` package identifier. The earlier full-workspace receipts above remain tied to their recorded code heads; validation of this integration is recorded in the continuation C report.
+
+```text
+Assertion maps: 81 records; 271 original Rails assertion calls; 0 unmapped
+Acceptance ledger: 445 records checked; 86 baseline-CI passed; 182 current implementation receipts; 1 test-only outside gate; 176 explicitly open
+Full closure audit: 220 records; 555 Rails assertions/predicates; 487 mapped; 78 strengthened closures; 32 reopened
+```

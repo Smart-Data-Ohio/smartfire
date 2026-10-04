@@ -6,5 +6,5 @@ names = ["saved item reminders", "scheduled messages", "poll closing", "stuck ro
 runner = Periodic::Runner.new(reminders_interval: 17, retention_interval: 123)
 tasks = runner.instance_variable_get(:@tasks).select { |task| names.include?(task.name) }
 raise "missing Rails task" unless tasks.map(&:name).sort == names.sort
-puts JSON.pretty_generate({reference: "d7c7de9264c63015be398001d7a1094e7695a6db",
+puts JSON.pretty_generate({reference: ENV.fetch("PARITY_REFERENCE_SHA"),
   tasks: tasks.map { |task| {name: task.name, seconds: task.interval.to_i} }})

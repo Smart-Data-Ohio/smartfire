@@ -85,5 +85,5 @@ cases.each do |entry|
  end
  ActiveSupport::ExecutionContext.clear
 end
-puts JSON.pretty_generate(reference:'d7c7de92',status_reference:'2e20b24c',cases:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),status_reference:ENV.fetch("PARITY_REFERENCE_SHA"),cases:)
 warn "Rails navigation matrix: #{cases.size} full responses; sidebar/profile growth at 2/12 rows"

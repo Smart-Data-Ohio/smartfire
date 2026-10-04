@@ -41,5 +41,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   grant.revoke!
   capture.call(:revoked_show, Agents::Approvals.show(agent: agent, id: approval.id))
   capture.call(:revoked_list, Agents::Approvals.list(agent: agent))
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", results: results }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], results: results }.as_json)
 end

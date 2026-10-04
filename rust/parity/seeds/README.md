@@ -78,7 +78,7 @@ Native/host-browser modes are conveniences, not acceptance runs.
 ## Rust CI seeds
 
 The Rust test workflow builds `default`, `first_run` and `agents_ui` from the full Rails SHA in
-`parity/reference.sha` (currently `d7c7de92`). `parity/bin/ci-seed prepare` archives that commit
+`parity/reference.sha` (currently `78b9b1546`). `parity/bin/ci-seed prepare` archives that commit
 into ignored `parity/.ci/reference`, then overlays the checkout's `db/schema.rb` and
 `db/migrate/` so seeds match the schema required by the Rust build. Rails behavior,
 fixtures and bundle stay pinned; migrations still run only through Rails.

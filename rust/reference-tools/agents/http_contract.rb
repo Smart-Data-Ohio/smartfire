@@ -72,5 +72,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
     s.get "/agents/events", headers: { "Authorization" => ["Bearer", secret].join(" "), "Accept" => "application/json" }
   end
   capture.call("event_rate_overflow", :get, "/agents/events")
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", cases: cases })
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases: cases })
 end

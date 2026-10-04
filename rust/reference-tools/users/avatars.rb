@@ -20,5 +20,5 @@ cases = names.map do |name|
   raise "avatar status: #{session.response.status}" unless session.response.status == 200
   { name: name, initials: user.initials, body: session.response.body, etag: session.response.headers["ETag"], cache_control: session.response.headers["Cache-Control"] }
 end
-puts JSON.pretty_generate(reference: "d7c7de92", user_id: user.id, cases: cases)
-warn "Rails avatar oracle: #{cases.length} initials SVG bodies; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), user_id: user.id, cases: cases)
+warn "Rails avatar oracle: #{cases.length} initials SVG bodies; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

@@ -60,7 +60,7 @@ specs = [
   {name:'scalar_link',kind:'meet',remote:[200,{hangoutLink:7}]},
   {name:'invalid_event_save',kind:'meet',invalid:true}
 ]
-out={reference:'d7c7de92',now:now.iso8601,cases:[]}
+out={reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:now.iso8601,cases:[]}
 specs.each_with_index do |spec,i|
   Rails.application.executor.run!(reset:true)
   Current.user=user

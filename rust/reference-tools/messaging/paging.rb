@@ -65,7 +65,7 @@ formats = %w[html json turbo_stream].flat_map do |format|
       body: action == "destroy" && browser.response.successful? ? browser.response.body : nil }
   end
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", message_ids: messages.map(&:id),
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], message_ids: messages.map(&:id),
   template_digest: digest, expanded_etag: expanded, related_stamp: related, pin_stamp: pins, pages:, formats:) + "\n")
 File.write(File.join(File.dirname(ARGV.fetch(0)), "index-template-digest.txt"), digest + "\n")
 puts "WS8bm paging oracle: #{pages.size} real Rails page requests; #{formats.size} format requests; template digest #{digest}"

@@ -231,7 +231,7 @@ class WS13bRingMatrix
       {spec:spec,phases:phases}
     end
     files = %w[app/models/huddle_grant.rb app/models/activity_item.rb app/models/huddle/ring_policy.rb app/models/huddle/invitation_resolver.rb app/jobs/huddle/push_invitation_job.rb app/models/huddle/invitation_pusher.rb app/jobs/huddle/join_notice_job.rb app/models/huddle/join_notifier.rb app/models/huddle/join_pusher.rb app/javascript/controllers/huddle_invitation_controller.js app/controllers/activity_items_controller.rb]
-    puts JSON.generate(reference_pin:"d7c7de92",source_sha256: files.to_h { |file| [file,Digest::SHA256.file(Rails.root.join(file)).hexdigest] },seeds:SEEDS,random_count:count,cases:cases)
+    puts JSON.generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],source_sha256: files.to_h { |file| [file,Digest::SHA256.file(Rails.root.join(file)).hexdigest] },seeds:SEEDS,random_count:count,cases:cases)
   ensure
     travel_back
   end

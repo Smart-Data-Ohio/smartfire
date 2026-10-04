@@ -21,5 +21,5 @@ steps=cases.map do |c|
  browser.patch("/rooms/#{room.id}/messages/#{c['message_id']}",params:c['input'],headers:headers.dup,as: :json)
  c.slice('label','message_id','input').merge(status:browser.response.status,frames:frames.select{|f|f[:stream]=="#{room.to_gid_param}:messages"}.dup)
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:base['rows'],room_id:room.id,steps:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:base['rows'],room_id:room.id,steps:)+"\n")
 puts "WS8bm2 provider edit Rails oracle: #{steps.size} HTTP edits; #{steps.sum{|s|s[:frames].size}} exact replacement frames"

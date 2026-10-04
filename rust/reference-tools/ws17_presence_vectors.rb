@@ -49,5 +49,5 @@ travel_to(Time.utc(2026, 3, 2, 16)) do
     item.merge(path:, body: client.response.body, content_type: client.response.content_type,
       retained_leases: WorkspacePresenceLease.count)
   end
-  puts JSON.generate(reference: "d7c7de92", cases: outputs)
+  puts JSON.generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases: outputs)
 end

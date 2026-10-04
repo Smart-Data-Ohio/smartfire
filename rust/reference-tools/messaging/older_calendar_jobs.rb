@@ -69,5 +69,5 @@ groups=[]
  end
  groups << {size:size,event_id:rows['events'].first['id'],entry_id:entry.id,thread_id:thread.id,old_ids:messages.map(&:id),rows:rows,cases:cases}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:groups)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:groups)+"\n")
 puts "WS8bm2 older-calendar jobs Rails: #{groups.sum { |g| g[:cases].size }} real jobs; #{groups.sum { |g| g[:cases].sum { |c| c[:frames].size } }} exact frames; 2 pending retries; 10 guarded no-ops; no external network"

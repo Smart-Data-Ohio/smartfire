@@ -296,7 +296,7 @@ The first assertion discriminates RecordInvalid directly; the second checks the 
 
 Rails declaration: `test/models/event/recurrence_test.rb:225` — recurrence fields cannot be changed by injecting the guard flag
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::cutover_recurrence_guard_flag_injection_cannot_change_the_rule`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::cutover_recurrence_guard_flag_injection_cannot_change_the_rule`.
 
 Unknown model attributes are rejected at the typed EventChanges boundary (compile-fail E0560); the real HTTP path additionally proves no persisted rule change. No Rails exception-class equivalence is claimed for the Rust type system.
 
@@ -632,7 +632,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:10` — index lists upcoming, past, and cancelled events separately
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_separates_upcoming_past_and_cancelled`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_separates_upcoming_past_and_cancelled`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -648,7 +648,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:37` — a member can create an event and members are invited
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_member_create_invites_and_parses_posted_zone`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_member_create_invites_and_parses_posted_zone`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -664,7 +664,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:51` — a member can create a repeating event with one invitation per member
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_series_create_invites_once_per_member`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_series_create_invites_once_per_member`.
 
 One exact invitation tuple per member discriminates both item count and source identity.
 
@@ -681,7 +681,7 @@ One exact invitation tuple per member discriminates both item count and source i
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:74` — create rejects a series above the occurrence cap
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_above_cap_renders_error_without_writes`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_above_cap_renders_error_without_writes`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -695,7 +695,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:109` — index lists past occurrences individually
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_lists_each_past_occurrence`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_lists_each_past_occurrence`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -709,7 +709,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:172` — updating this and following shifts later occurrences and notifies once per attendee
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_following_shift_notifies_once_per_attendee`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_following_shift_notifies_once_per_attendee`.
 
 The exact item tuple discriminates count, event_type and source identity.
 
@@ -726,7 +726,7 @@ The exact item tuple discriminates count, event_type and source identity.
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:196` — updating without a scope leaves the rest of the series untouched
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_default_update_leaves_other_occurrences_untouched`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_default_update_leaves_other_occurrences_untouched`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -740,7 +740,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:218` — changing the rule away from the first event is rejected
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_follower_rule_change_is_rejected`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_follower_rule_change_is_rejected`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -753,7 +753,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:253` — an administrator who is not the organizer can use this and following, but an ordinary member cannot
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_admin_following_edit_succeeds_and_member_edit_is_denied`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_admin_following_edit_succeeds_and_member_edit_is_denied`.
 
 Ordered title vector discriminates each head/second/third title separately.
 
@@ -770,7 +770,7 @@ Ordered title vector discriminates each head/second/third title separately.
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:288` — cancelling this and following cancels later occurrences with one item per attendee
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_following_cancel_cancels_later_and_notifies_once`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_following_cancel_cancels_later_and_notifies_once`.
 
 Ordered cancellation vector discriminates each occurrence; exact item tuple discriminates count and source.
 
@@ -787,7 +787,7 @@ Ordered cancellation vector discriminates each occurrence; exact item tuple disc
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:307` — cancelling without a scope cancels only that occurrence
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_default_cancel_is_local`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_default_cancel_is_local`.
 
 local_cancel(None) executes the shared redirect and ordered cancellation assertions.
 
@@ -802,7 +802,7 @@ local_cancel(None) executes the shared redirect and ordered cancellation asserti
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:322` — cancelling this event explicitly cancels only that occurrence
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_explicit_this_event_cancel_is_local`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_explicit_this_event_cancel_is_local`.
 
 local_cancel(Some("this_event")) executes the shared redirect and ordered cancellation assertions.
 
@@ -817,7 +817,7 @@ local_cancel(Some("this_event")) executes the shared redirect and ordered cancel
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:337` — show renders cancel scopes for series occurrences and a single cancel for single events
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_show_cancel_scope_inputs_only_for_series`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_show_cancel_scope_inputs_only_for_series`.
 
 Input-count assertion executes once for each cancel_scope value; the second GET verifies the singleton.
 
@@ -834,7 +834,7 @@ Input-count assertion executes once for each cancel_scope value; the second GET 
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:356` — index issues a bounded number of queries regardless of occurrence count
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_query_count_is_independent_of_occurrence_count`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_index_query_count_is_independent_of_occurrence_count`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -851,7 +851,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:419` — requires authentication
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_signed_out_index_redirects_to_sign_in`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_signed_out_index_redirects_to_sign_in`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -863,7 +863,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:443` — the organizer can update times and attendees are notified
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_uses_existing_zone_and_notifies_attendees`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_uses_existing_zone_and_notifies_attendees`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -878,7 +878,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:541` — a member can create an event with a venue
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_with_venue_persists_the_room`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_with_venue_persists_the_room`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -891,7 +891,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:553` — the organizer can set and clear the venue
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_sets_and_clears_venue`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_sets_and_clears_venue`.
 
 The redirect and saved-venue assertions execute for both setting the ID and posting the blank sentinel.
 
@@ -906,7 +906,7 @@ The redirect and saved-venue assertions execute for both setting the ID and post
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:571` — create rejects a text channel venue
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_rejects_text_venue_without_writes`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_rejects_text_venue_without_writes`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -920,7 +920,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:582` — create rejects a venue the organizer does not belong to
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_rejects_nonmember_venue_without_writes`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_create_rejects_nonmember_venue_without_writes`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -934,7 +934,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:595` — update rejects a venue the organizer does not belong to
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_rejects_nonmember_venue_and_keeps_original`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_update_rejects_nonmember_venue_and_keeps_original`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -948,7 +948,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:609` — the edit form keeps a venue the editor cannot see so an unrelated edit does not clear it
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_editor_keeps_hidden_venue_during_unrelated_edit`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_editor_keeps_hidden_venue_during_unrelated_edit`.
 
 The exact option text is located inside the Voice optgroup of the venue select; the linked assertions require its value and selected attributes.
 
@@ -963,7 +963,7 @@ The exact option text is located inside the Voice optgroup of the venue select; 
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:792` — index issues the same queries regardless of event count when venues are shared
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_shared_venue_index_query_count_is_independent_of_event_count`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_shared_venue_index_query_count_is_independent_of_event_count`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -978,7 +978,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events_controller_test.rb:863` — show renders no Meet row for a non-https link
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_show_hides_non_https_meet_link`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_show_hides_non_https_meet_link`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -992,7 +992,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events/attendances_controller_test.rb:49` — a response on the first event of a series is copied to every future occurrence
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::attendances::cutover_attendance_head_response_copies_to_each_future_occurrence`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::attendances::cutover_attendance_head_response_copies_to_each_future_occurrence`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -1005,7 +1005,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/controllers/rooms/events/attendances_controller_test.rb:64` — a later response stays local unless apply to all future is checked
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::attendances::cutover_attendance_later_response_is_local_until_apply_future_checked`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::attendances::cutover_attendance_later_response_is_local_until_apply_future_checked`.
 
 The ordered response vectors compare head/second/third after each real PATCH.
 
@@ -1024,7 +1024,7 @@ The ordered response vectors compare head/second/third after each real PATCH.
 
 Rails declaration: `test/system/events_test.rb:4` — scheduling an event invites members, who respond and see it in the inbox
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_schedule_invitation_inbox_open_and_response`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_schedule_invitation_inbox_open_and_response`.
 
 Shared schedule/inbox helpers execute in this test. Assertions compare the server DOM/state reached by the original interaction; no pixel receipt is claimed.
 
@@ -1044,7 +1044,7 @@ Shared schedule/inbox helpers execute in this test. Assertions compare the serve
 
 Rails declaration: `test/system/events_test.rb:48` — scheduling a repeating event invites once per member and copies the first response
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_repeating_schedule_invites_once_and_copies_response`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_repeating_schedule_invites_once_and_copies_response`.
 
 Shared schedule/inbox helpers execute with repeating=true. Assertions compare the server DOM/state reached by the original interaction; no pixel receipt is claimed.
 
@@ -1066,7 +1066,7 @@ Shared schedule/inbox helpers execute with repeating=true. Assertions compare th
 
 Rails declaration: `test/system/events_test.rb:102` — scheduling an event announces it in the room with a card members respond from
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_announcement_card_response_stays_in_requested_frame`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_announcement_card_response_stays_in_requested_frame`.
 
 Card text is scoped to the unique Card session card. The room path invariant is checked through the real Turbo response: OK, no Location/Turbo-Location redirect, exact requested frame. Shared Rails assets consume that frame; no browser pixel receipt is claimed.
 
@@ -1085,7 +1085,7 @@ Card text is scoped to the unique Card session card. The room path invariant is 
 
 Rails declaration: `test/integration/event_cards_test.rb:108` — a link to an event in another room stays a plain link with no card for anyone
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_foreign_event_link_is_plain_for_members_and_nonmembers`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_foreign_event_link_is_plain_for_members_and_nonmembers`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -1104,7 +1104,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/integration/event_cards_test.rb:142` — a message without an event link renders no card
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_message_without_event_link_has_no_card`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_message_without_event_link_has_no_card`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 
@@ -1117,7 +1117,7 @@ Each cited assertion executes through this named real model/HTTP test. Shared he
 
 Rails declaration: `test/integration/event_cards_test.rb:153` — rendering a room page costs no extra queries per message with an event link
 
-Executed test: `campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_whole_room_query_count_is_independent_of_event_link_count`.
+Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::cards::cutover_cards_whole_room_query_count_is_independent_of_event_link_count`.
 
 Each cited assertion executes through this named real model/HTTP test. Shared helpers and loops execute the original control cases.
 

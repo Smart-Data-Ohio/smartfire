@@ -148,8 +148,12 @@ docker_build() {
 }
 
 docker_env_args() {
-  local spec; spec=$(faketime_spec)
+  local spec revision; spec=$(faketime_spec)
   printf '%s\n' --env-file "$ENV_FILE"
+  # GIT_REVISION stays "parity" for stable response headers. Producer provenance
+  # comes from the image, independently of that fixed application environment.
+  revision=$(docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$IMAGE" | sed -n 's/^GIT_REVISION=//p')
+  printf '%s\n' -e "PARITY_REFERENCE_SHA=$revision"
   if [ -n "$spec" ]; then printf '%s\n' -e "FAKETIME=$spec"; fi
   if [ -n "$FREEZE" ]; then printf '%s\n' -e WEB_CONCURRENCY=0; fi # see freeze_note
   local seed_env="$SEEDS/${SEED:-default}/labels.json"
@@ -255,6 +259,9 @@ native_bundle_bin() {
 native_env() {
   set -a; # shellcheck disable=SC1090
   . "$ENV_FILE"; set +a
+  # Instances retain the revision of the copied app even if the source checkout moves.
+  [ -f .parity-reference.sha ] || die "native app has no revision: rebuild with PARITY_RUNTIME=native parity/bin/reference build"
+  export PARITY_REFERENCE_SHA="$(cat .parity-reference.sha)"
   export BUNDLE_PATH=$NATIVE/bundle BUNDLE_DEPLOYMENT=1 BUNDLE_WITHOUT=development
   export PATH="$NATIVE/bin:$(native_bundle_bin):$PATH"
   export TZ=UTC PARITY_WORK=$ROOT
@@ -273,7 +280,8 @@ native_env() {
 }
 
 native_build() {
-  local want; want=$(cat "$REFERENCE_ROOT/.ruby-version")
+  local want revision; want=$(cat "$REFERENCE_ROOT/.ruby-version")
+  revision=$(git -C "$REFERENCE_ROOT" rev-parse HEAD)
   ruby -e "exit(RUBY_VERSION == '$want')" || log "warning: host Ruby $(ruby -e 'print RUBY_VERSION') != reference $want"
   mkdir -p "$NATIVE"/{bin,lib,src}
 
@@ -283,6 +291,7 @@ native_build() {
   rsync -a --delete --exclude=/.git --exclude='/storage/*' --exclude='/tmp/*' --exclude='/log/*' \
     --exclude=/.bundle --exclude=/public/assets --exclude=/rust --exclude=/.claude --exclude=node_modules \
     "$REFERENCE_ROOT/" "$NATIVE/app/"
+  printf '%s\n' "$revision" > "$NATIVE/app/.parity-reference.sha"
 
   log "bundle install"
   ( cd "$NATIVE/app" && native_env && bundle install -j8 --quiet )

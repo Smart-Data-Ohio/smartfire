@@ -91,5 +91,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
     end
     result
   end
-  puts JSON.pretty_generate({ pin: "d7c7de92", cases: results })
+  puts JSON.pretty_generate({ pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases: results })
 end

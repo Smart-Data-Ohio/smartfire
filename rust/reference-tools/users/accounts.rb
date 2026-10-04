@@ -62,5 +62,5 @@ cases=[
   {name:name,method:method.upcase,path:path,params:params,styles_before:styles,theme_before:theme || "system",status_before:status || 0,session_ip:session_ip,status:browser.response.status,location:browser.response.location,state:state,audits:rows}
 end
 deferred,cases=cases.partition{|c|c[:name]=="deactivate_self"}
-puts JSON.pretty_generate(reference:"d7c7de92",cases:cases,deferred_agent_owner_cases:deferred)
-warn "Rails account mutation oracle: #{cases.size} HTTP cases with audit snapshots, #{deferred.size} deferred agent-owner case; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),cases:cases,deferred_agent_owner_cases:deferred)
+warn "Rails account mutation oracle: #{cases.size} HTTP cases with audit snapshots, #{deferred.size} deferred agent-owner case; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

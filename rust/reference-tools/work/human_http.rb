@@ -194,5 +194,5 @@ rows = cases.map do |name,user_id,method,path,input,setup,headers,status|
  raise "#{name}: expected #{expected}, got #{browser.response.status}" unless browser.response.status == expected
  {name:,user_id:,method:,path:,input:,setup:common+setup,headers:headers.except('Cookie','User-Agent'),status:browser.response.status,body:browser.response.body,location:browser.response.headers['Location'],cache_control:browser.response.headers['Cache-Control'],content_type:browser.response.headers['Content-Type'],google_reply:}
 end
-puts JSON.pretty_generate(reference:'d7c7de92 plus approved board drift',sources:hashes,rows:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),sources:hashes,rows:)
 warn "Rails human work HTTP oracle: #{rows.size} complete responses; committed handoffs; 0 masks"

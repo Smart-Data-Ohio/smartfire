@@ -49,6 +49,17 @@ async fn github_room_cards_real_pages_match_pinned_rails_card_containers() {
         );
         match case["name"].as_str().unwrap() {
             "public" => {
+                assert_eq!(
+                    body.matches("class=\"github-pr-card__discuss-form\"")
+                        .count(),
+                    1
+                );
+                assert_eq!(
+                    body.matches("<button class=\"github-pr-card__discuss\"")
+                        .count(),
+                    1
+                );
+                assert!(!body.contains("<a class=\"github-pr-card__discuss\""));
                 for text in [
                     "Rails/Rails",
                     "#12",
@@ -63,6 +74,13 @@ async fn github_room_cards_real_pages_match_pinned_rails_card_containers() {
                 }
                 assert!(body.contains("rel=\"noopener noreferrer\""));
                 assert!(body.contains("href=\"https://github.com/Rails/Rails/pull/12\""));
+            }
+            "discuss_link" => {
+                assert_eq!(
+                    body.matches("<a class=\"github-pr-card__discuss\"").count(),
+                    1
+                );
+                assert!(!body.contains("class=\"github-pr-card__discuss-form\""));
             }
             "private" | "unknown" => {
                 assert!(!body.contains("Secret title"));

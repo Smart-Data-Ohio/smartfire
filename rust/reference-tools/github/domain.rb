@@ -71,4 +71,4 @@ end
 end
 vectors={display:,files:,updates:,subscriptions:subs}
 File.write("/work/vectors/github_domain.json",JSON.pretty_generate(vectors)+"\n")
-puts "GitHub domain Rails oracle: #{display.size} display, #{files.size} file summaries, #{updates.size} saves, #{subs.size} subscription validations; reference d7c7de92"
+puts "GitHub domain Rails oracle: #{display.size} display, #{files.size} file summaries, #{updates.size} saves, #{subs.size} subscription validations; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

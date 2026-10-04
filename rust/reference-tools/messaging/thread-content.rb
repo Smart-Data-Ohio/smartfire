@@ -51,6 +51,6 @@ room_composer = GoldenThreadController.renderer.new(http_host: 'campfire.test', 
 room_schedule = GoldenThreadController.renderer.new(http_host: 'campfire.test', https: false).render(partial: 'scheduled_messages/composer_button', locals: {room:})
 room_footer = GoldenThreadController.renderer.new(http_host: 'campfire.test', https: false).render(inline: '<% render "rooms/show/composer", room: @room %><%= content_for :footer %>', layout: false, assigns: {room:})
 pending_template = GoldenThreadController.renderer.new(http_host: 'campfire.test', https: false).render(partial: 'messages/template')
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', parent_id: parent.id, thread_id: thread.id, other_id: other.id, foreign_id: foreign.id,
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], parent_id: parent.id, thread_id: thread.id, other_id: other.id, foreign_id: foreign.id,
   message_ids: messages.map(&:id), room_updated_at: room.updated_at.iso8601(3), slash_names: SlashCommands::Registry.all.map(&:name), rows:, room_composer:, room_schedule:, room_footer:, pending_template:) + "\n")
 puts "WS8bm thread-content oracle: #{rows.size} actual requests; anchor scope and fixed-secret conversation/composer bytes"

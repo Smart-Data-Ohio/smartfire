@@ -121,5 +121,5 @@ cases=specs.map do |spec|
  known_difference=!name.start_with?('blob_') && responses.any? { |r| r[:body][/data-tour-auto-start-value="(.*?)"/,1] != main_auto_start }
  {name:,value:,sql:,responses:,known_difference:known_difference ? 'Known main datetime-cast difference; fix after #196 merges' : nil}
 end
-puts JSON.pretty_generate(reference:'d7c7de92',cases:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),cases:)
 warn "Rails tour datetime corpus: #{cases.size} stored values; #{cases.size*2} HTTP responses"

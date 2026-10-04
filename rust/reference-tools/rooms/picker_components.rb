@@ -18,5 +18,5 @@ rows=(0...8).map do |bits|
   {input:config.select{|key,_|ENV.key?(key)},configured:Google::Picker.configured?,composer:parts['footer']}
 end
 Current.reset
-puts JSON.pretty_generate(reference_pin:'d7c7de92',picker_cases:rows)
+puts JSON.pretty_generate(reference_pin: ENV.fetch('PARITY_REFERENCE_SHA'),picker_cases:rows)
 warn "Rails Picker components: #{rows.size} public configurations and complete root composers"

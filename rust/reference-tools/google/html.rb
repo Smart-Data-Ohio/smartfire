@@ -9,4 +9,4 @@ class GoogleHtmlController < ApplicationController
   end
 end
 renderer = GoogleHtmlController.renderer.new(http_host: "campfire.test", https: false, "rack.session" => {})
-puts JSON.pretty_generate({reference:"d7c7de9264c63015be398001d7a1094e7695a6db", html:renderer.render(partial:"sessions/google_sign_in"), domains:Google::SignIn.allowed_domains.map { |d| "@#{d}" }.to_sentence})
+puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"), html:renderer.render(partial:"sessions/google_sign_in"), domains:Google::SignIn.allowed_domains.map { |d| "@#{d}" }.to_sentence})

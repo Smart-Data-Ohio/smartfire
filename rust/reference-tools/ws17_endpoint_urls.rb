@@ -13,5 +13,5 @@ rows = endpoints.uniq.map do |endpoint|
   sub = user.push_subscriptions.new(endpoint:, p256dh_key: "test_key", auth_key: "test_auth")
   {endpoint:, valid: sub.valid?, errors: sub.errors.full_messages, resolved: sub.resolved_endpoint_ip}
 end
-puts JSON.generate(reference: "d7c7de92", uri: Gem.loaded_specs.fetch("uri").version.to_s, rows:)
+puts JSON.generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], uri: Gem.loaded_specs.fetch("uri").version.to_s, rows:)
 guard.define_method(:resolve, original)

@@ -52,4 +52,4 @@ vectors=cases.map do |c|
  {**c,request_body:body,path:path,status:res.status,body:res.body.empty? ? nil : JSON.parse(res.body),statuses:statuses,cache_control:res['Cache-Control'],retry_after:res['Retry-After'],replay:replay,approvals:rows,credential_used:credential.reload.last_used_at.present?,agent_seen:agent.reload.last_seen_at.present?}
 end
 File.write('/work/vectors/github_agent_http.json',JSON.pretty_generate(vectors)+"\n")
-puts "GitHub agent HTTP Rails oracle: #{vectors.size} authorization/action/replay/budget/throttle cases; reference d7c7de92"
+puts "GitHub agent HTTP Rails oracle: #{vectors.size} authorization/action/replay/budget/throttle cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

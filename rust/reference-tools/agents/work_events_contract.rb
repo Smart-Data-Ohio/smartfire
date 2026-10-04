@@ -46,5 +46,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   thread.deleted_by = human
   thread.destroy!
   results[:deleted] = serialize.call([agent.agent_events.where(event_type: "work_unassigned").order(:id).last])
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", results: results }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], results: results }.as_json)
 end

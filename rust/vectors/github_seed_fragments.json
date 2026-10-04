@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "sources": {
     "app/views/github/pull_requests/_thread_header.html.erb": "982ca0f51e30548d00a0b7ed92951377c2d3bce4e04fae8a02087e33b17c6936",
     "app/views/github/pull_requests/_write_actions.html.erb": "9712afa27eaa22bcd3b422c120f02df8a683b1df9b77eb43bff74eeb372250f9",

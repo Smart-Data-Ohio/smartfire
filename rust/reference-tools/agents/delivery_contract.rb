@@ -31,5 +31,5 @@ travel_to Time.utc(2026,3,2,16) do
     e.reload
     {attempts:e.webhook_attempts,status:e.webhook_status,delay:e.webhook_next_attempt_at-Time.current}
   end
-  puts JSON.pretty_generate(reference_pin:"d7c7de92",responses:snapshots,retry_after:delays,exhaustion:exhaustion)
+  puts JSON.pretty_generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],responses:snapshots,retry_after:delays,exhaustion:exhaustion)
 end

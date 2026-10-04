@@ -25,5 +25,5 @@ ActiveRecord::Base.transaction do
  end
  raise ActiveRecord::Rollback
 end
-puts JSON.generate(reference_pin:'d7c7de92',scalar_forms:forms.length,positions:11,allowed:allowed,cases:cases)
+puts JSON.generate(reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],scalar_forms:forms.length,positions:11,allowed:allowed,cases:cases)
 warn "PR214 Rails ID corpus: #{forms.length} scalar forms; 11 positions; #{cases.length} executed predicates"

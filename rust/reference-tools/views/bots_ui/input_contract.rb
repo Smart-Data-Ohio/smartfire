@@ -4,7 +4,7 @@ require_relative "setup"
 
 bot = User.find_by!(name: "Bender Bot")
 owner = User.find_by!(email_address: "david@37signals.com")
-result = { "reference" => "d7c7de9264c63015be398001d7a1094e7695a6db" }
+result = { "reference" => ENV.fetch("PARITY_REFERENCE_SHA") }
 
 inputs = [nil, "", " ", "12", " 12 ", "+12", "012", "12.0", "12.5", "12e1",
   "12x", "x12", "abc", "0", "-1", "1_000", "0x10", "9223372036854775807",

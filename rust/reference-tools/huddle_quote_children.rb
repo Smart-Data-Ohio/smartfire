@@ -18,4 +18,4 @@ rows=[]
     rows << {input:{reference_id:reference.id,room_id:room.id,source_room_id:room.id,client_message_id:quoting.client_message_id,author:source.creator.name,room_label:ApplicationController.helpers.viewer_neutral_room_label(room),created_at:source.created_at.iso8601(6),plain_text:source.plain_text_body,path:URI.parse(Nokogiri::HTML.fragment(html).at_css(".message-quote__jump")["href"]).request_uri},html:html}
   end
 end
-puts JSON.pretty_generate({reference_pin:'d7c7de92',cases:rows})
+puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:rows})

@@ -113,5 +113,5 @@ source.fetch('groups').each do |group|
   end
   groups << group.slice('size', 'event_id', 'entry_id', 'thread_id', 'rows').merge(cases:)
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: 'd7c7de92', groups:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], groups:) + "\n")
 puts "WS8bm2 Calendar retry Rails: #{groups.sum { |g| g[:cases].length }} cases; #{groups.sum { |g| g[:cases].sum { |c| c[:steps].length } }} real job executions; complete persisted rows, calls, counters, retry delays and broadcasts"

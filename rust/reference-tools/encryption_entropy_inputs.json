@@ -1,0 +1,27 @@
+{
+  "github": [
+    "yzjmjIDBYi5YTHpJ",
+    "KECS6NSiO+LJh/Ju"
+  ],
+  "slack": [
+    "LTBVY0lSzBkrwZZX",
+    "w5keszraMmtkfr3n"
+  ],
+  "fizzy": [
+    "3XoELqORFgJBB+WT"
+  ],
+  "two_factor": {
+    "credential": "GDHsVPwN2U38BBFv",
+    "setup": "f7Ro2H8x6Wd0Zo9A",
+    "encoded": [
+      "S6glndmPUJa0knOu",
+      "/rP2mylAq69nEh0G",
+      "p8O+PaT3YpzPkO19",
+      "URLD58DH8FuMyweU"
+    ]
+  },
+  "webhook": {
+    "iv": "1ozD+VnkC75okj61",
+    "plaintext": "88acfa3d46a9dc4c193025074354a622311a7d815a7835a6a5a56e13a5456e28"
+  }
+}

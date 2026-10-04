@@ -31,7 +31,7 @@ class HuddlePresenceOracle
         end
       end
     end
-    puts JSON.pretty_generate({ reference_pin: "d7c7de92", cases: vectors })
+    puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases: vectors })
   ensure
     travel_back
   end
