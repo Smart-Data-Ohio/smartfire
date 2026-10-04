@@ -1,23 +1,11 @@
 # WS14 / WS15 cutover assertions still open
 
-**Partial slice: 221 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
+**Partial slice: 209 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
 
-The three inventories retain all historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`; it is exhaustive for this slice, not a new aggregate owner handoff. Implementing or proving these domain, HTTP, job, failure-injection and browser assertions is larger than one reconciliation PR.
+The three inventories retain historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`. Continuation batches and Rails/native execution receipts are recorded in `ledger-ws14-ws15-b-report.md`.
 
 | Record | Current ledger row | Rails declaration | Assertion still required |
 |---|---|---|---|
-| WS14e-001 | `rust/plans/ws14e-test-inventory.md:22` | `test/models/event_test.rb:25` | requires the end to follow the start |
-| WS14e-002 | `rust/plans/ws14e-test-inventory.md:23` | `test/models/event_test.rb:33` | rejects bot and non-member organizers |
-| WS14e-003 | `rust/plans/ws14e-test-inventory.md:24` | `test/models/event_test.rb:42` | rejects a soft-deleted room as the venue |
-| WS14e-004 | `rust/plans/ws14e-test-inventory.md:27` | `test/models/event_test.rb:70` | members with notifications off or invisible get no invitation |
-| WS14e-005 | `rust/plans/ws14e-test-inventory.md:28` | `test/models/event_test.rb:81` | members with notifications off keep their invitation through updates and cancellations |
-| WS14e-006 | `rust/plans/ws14e-test-inventory.md:29` | `test/models/event_test.rb:97` | a mentions member is notified through updates and cancellations |
-| WS14e-007 | `rust/plans/ws14e-test-inventory.md:30` | `test/models/event_test.rb:109` | invitations exclude bots |
-| WS14e-008 | `rust/plans/ws14e-test-inventory.md:31` | `test/models/event_test.rb:118` | a time change notifies going and maybe attendees without duplicating items |
-| WS14e-010 | `rust/plans/ws14e-test-inventory.md:33` | `test/models/event_test.rb:148` | a title-only edit creates no items |
-| WS14e-011 | `rust/plans/ws14e-test-inventory.md:34` | `test/models/event_test.rb:157` | cancel notifies going and maybe attendees and clears the other items |
-| WS14e-013 | `rust/plans/ws14e-test-inventory.md:36` | `test/models/event_test.rb:189` | event items vanish when the recipient leaves the room |
-| WS14e-014 | `rust/plans/ws14e-test-inventory.md:37` | `test/models/event_test.rb:200` | deleting a room removes its events, attendances, and inbox items |
 | WS14e-017 | `rust/plans/ws14e-test-inventory.md:51` | `test/models/event_calendar_entry_test.rb:11` | destroying an entry enqueues its remote delete |
 | WS14e-018 | `rust/plans/ws14e-test-inventory.md:52` | `test/models/event_calendar_entry_test.rb:19` | delete skips the remote delete for already-reconciled rows |
 | WS14e-019 | `rust/plans/ws14e-test-inventory.md:53` | `test/models/event_calendar_entry_test.rb:27` | delete_all skips remote deletes for disconnect cleanup |

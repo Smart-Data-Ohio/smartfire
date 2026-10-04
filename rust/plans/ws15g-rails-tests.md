@@ -2,7 +2,7 @@
 
 ## Cutover reconciliation (2026-10-04)
 
-This annotation reviews **64 originally open records** against main `78b9b154`. Current dispositions: **21 passed in baseline CI, 0 implemented in this slice, 0 test-only outside gate, 43 unsupported acceptance assertions**.
+This annotation reviews **64 originally open records** against main `78b9b154`. Current dispositions: **21 passed in baseline CI, 0 implemented assertions, 0 test-only outside gate, 43 unsupported acceptance assertions**. Continuation receipts are in `ledger-ws14-ws15-b-report.md`.
 
 The original status, counts and owner handoffs below are **historical receipts**, not current cutover dispositions. Each reviewed declaration now has an explicit record ID and current evidence in its own row. A missing discriminating assertion remains in the gate even when the production path exists; owner attribution does not close it. Browser cases remain in the gate. New test registrations are covered by the unchanged CI package selectors; their actual local pass receipts are separate from the baseline run.
 
