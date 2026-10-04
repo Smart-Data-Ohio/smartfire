@@ -13,6 +13,8 @@ class HostSourceTests(unittest.TestCase):
             root = Path(directory)
             inputs = {
                 "rust/Cargo.toml": b"workspace",
+                "rust/parity/reference.sha": b"pinned",
+                "rust/reference-tools/messaging/browser-attachment-jobs.rs": b"explicit attachment job adapter",
                 "rust/crates/campfire/src/controllers/presenters/test_support.rs":
                     b"async fn ws8bm_browser_host_without_jobs() {}",
                 "rust/reference-tools/messaging/older_provider_callbacks.rb": b"callback",
@@ -37,6 +39,7 @@ class HostSourceTests(unittest.TestCase):
                 for name in ("extreme_cast_inputs.json.gz", "normalized_cast_inputs.json.gz", "render_replay_inputs.json.gz", "casting_followups_inputs.json"):
                     relative = "reference-tools/views/agents_ui/" + name
                     self.assertEqual((generated / relative).read_bytes(), inputs["rust/" + relative])
+                self.assertEqual((generated / "parity/reference.sha").read_bytes(), b"pinned")
                 self.assertFalse((generated / "target").exists())
                 (generated / "stale.rs").write_bytes(b"old generated source")
                 (root / "public/500.html").write_bytes(b"updated error page")

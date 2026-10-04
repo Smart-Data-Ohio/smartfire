@@ -12,7 +12,7 @@ def prepare_source(root):
     paths = subprocess.check_output(["git", "ls-files", "rust", "public/500.html"], cwd=root, text=True).splitlines()
     wanted = [Path(path).relative_to("rust") for path in paths
               if path.startswith(("rust/crates/", "rust/vectors/", "rust/test-support/", "rust/reference-tools/views/agents_ui/")) or
-              path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference",
+              path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference", "rust/parity/reference.sha",
                        "rust/reference-tools/messaging/older_provider_callbacks.rb")]
     expected = set(wanted)
     if generated.exists():
