@@ -165,6 +165,116 @@ fn rendered_oracle() -> Value {
     .unwrap()
 }
 
+fn attachment_oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../vectors/twitter_backfill_attachment.json"
+    ))
+    .unwrap()
+}
+
+#[tokio::test]
+async fn twitter_backfill_saved_content_attachment_aborts_and_preserves_only_earlier_commits() {
+    let vector = attachment_oracle();
+    // Exercise both the reviewer's raw persisted HTML and the normal rich-text save output.
+    for inputs in [&vector["inputs"], &vector["stored"]] {
+        let app = arranged_rendered(&json!({"inputs": inputs})).await;
+        let conn = Connection::open(app.db().path()).unwrap();
+        for result in [&vector["first"], &vector["repeated"]] {
+            let error = twitter_backfill_with_env(&conn, app.db().env()).unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                format!(
+                    "{}: {}",
+                    result["error"]["class"].as_str().unwrap(),
+                    result["error"]["message"].as_str().unwrap()
+                )
+            );
+            assert!(conn.is_autocommit());
+            assert_eq!(
+                state(&conn),
+                result["state"],
+                "earlier rows and jobs commit; failing/later rows are untouched"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn twitter_saved_content_attachment_default_and_request_renderers_and_sync_match_rails() {
+    let vector = attachment_oracle();
+    let app = arranged_rendered(&json!({"inputs": vector["stored"]})).await;
+    let conn = Connection::open(app.db().path()).unwrap();
+    let html = vector["stored"][1]["html"].as_str().unwrap();
+    assert_eq!(
+        app.db()
+            .env()
+            .rich_text
+            .try_canonicalize_html(&conn, vector["inputs"][1]["html"].as_str().unwrap())
+            .unwrap(),
+        html
+    );
+    assert_eq!(
+        app.db()
+            .env()
+            .rich_text
+            .try_rendered_html(&conn, html)
+            .unwrap_err(),
+        format!(
+            "{}: {}",
+            vector["render_error"]["class"].as_str().unwrap(),
+            vector["render_error"]["message"].as_str().unwrap()
+        )
+    );
+    let secrets = rails_compat::Secrets::new("offline-render-probe");
+    let resolver = crate::controllers::presenters::DbResolver::new(
+        &conn,
+        &secrets,
+        jiff::Timestamp::from_second(1772467200).unwrap(),
+    );
+    let ctx = resolver.render_context(Some("campfire.test".into()));
+    assert_eq!(
+        campfire_richtext::Content::load(html, &ctx)
+            .unwrap()
+            .to_rendered_html_with_layout(&ctx)
+            .unwrap(),
+        vector["request_rendered"].as_str().unwrap()
+    );
+    let _ = twitter_backfill_with_env(&conn, app.db().env());
+    for _ in 0..2 {
+        campfire_db::run_write(&conn, app.db().env(), |tx| {
+            let message = campfire_db::Message::find(tx.conn(), 2120000008)?;
+            crate::integrations::twitter::references::sync_message(tx, &message, true)
+        })
+        .unwrap();
+        assert_eq!(state(&conn), vector["sync"]);
+    }
+    conn.execute("UPDATE messages SET markdown_source='https://x.com/source/status/99115' WHERE id=2120000008", []).unwrap();
+    assert_eq!(
+        twitter_backfill_with_env(&conn, app.db().env()).unwrap(),
+        vector["short_circuit"]["stdout"].as_str().unwrap()
+    );
+    assert_eq!(state(&conn), vector["short_circuit"]["state"]);
+}
+
+#[tokio::test]
+async fn twitter_operator_content_attachment_uses_rake_failure_exit_and_diagnostic() {
+    let vector = attachment_oracle();
+    let app = arranged_rendered(&json!({"inputs": vector["stored"]})).await;
+    let args = [
+        "twitter-backfill-references".into(),
+        app.db().path().to_str().unwrap().into(),
+    ];
+    let (status, error) = execute(&args).unwrap_err();
+    assert_eq!(
+        status,
+        vector["cli"]["exit_status"].as_i64().unwrap() as i32
+    );
+    assert_eq!(
+        format!("{error}\n"),
+        vector["cli"]["stderr"].as_str().unwrap()
+    );
+}
+
 async fn arranged_rendered(scenario: &Value) -> TestApp {
     let app = TestApp::boot_frozen()
         .await

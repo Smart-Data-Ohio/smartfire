@@ -7,7 +7,12 @@ const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrat
 pub fn run(args: &[String]) -> Option<i32> {
     if !matches!(
         args.first().map(String::as_str),
-        Some("db-check" | "db-migrate" | "verify-additive-sqlite-migration" | "twitter-backfill-references")
+        Some(
+            "db-check"
+                | "db-migrate"
+                | "verify-additive-sqlite-migration"
+                | "twitter-backfill-references"
+        )
     ) {
         return None;
     }
@@ -16,7 +21,11 @@ pub fn run(args: &[String]) -> Option<i32> {
             print!("{output}");
             0
         }
-        Err((1, message)) => {
+        Err((1, message))
+            if args
+                .first()
+                .is_none_or(|arg| arg != "twitter-backfill-references") =>
+        {
             print!("{message}");
             1
         }
@@ -29,21 +38,58 @@ pub fn run(args: &[String]) -> Option<i32> {
 
 fn execute(args: &[String]) -> Result<String, (i32, String)> {
     let fail = |error: anyhow::Error| (2, format!("ERROR: {error}"));
-    match args.iter().map(String::as_str).collect::<Vec<_>>().as_slice() {
-        ["twitter-backfill-references", database] => twitter_backfill(Path::new(database)).map_err(fail),
+    match args
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .as_slice()
+    {
+        ["twitter-backfill-references", database] => {
+            twitter_backfill(Path::new(database)).map_err(twitter_failure)
+        }
         ["db-check", database] => check(Path::new(database), false).map_err(fail),
         ["db-check", "--immutable", database] => check(Path::new(database), true).map_err(fail),
-        ["db-migrate", database, directory] => migrate(Path::new(database), Path::new(directory)).map_err(fail),
-        ["verify-additive-sqlite-migration", before, after] => additive::verify(Path::new(before), Path::new(after))
-            .map_err(|error| {
+        ["db-migrate", database, directory] => {
+            migrate(Path::new(database), Path::new(directory)).map_err(fail)
+        }
+        ["verify-additive-sqlite-migration", before, after] => {
+            additive::verify(Path::new(before), Path::new(after)).map_err(|error| {
                 let status = if matches!(error, additive::Error::Mismatch(_)) {
                     1
                 } else {
                     2
                 };
                 (status, error.to_string())
-            }),
+            })
+        }
         _ => Err((2, USAGE.into())),
+    }
+}
+
+fn twitter_failure(error: anyhow::Error) -> (i32, String) {
+    if error.to_string() == campfire_richtext::Error::ContentAttachmentRenderer.to_string() {
+        // Reproduce the pinned rake's diagnostic for this deliberate reference
+        // failure, including its Ruby cause/source excerpt. These are reference
+        // frames, not a Rust backtrace; the fresh real CLI differential checks
+        // every byte and fails if Rails' source locations or formatting change.
+        (1, concat!(
+            "bin/rails aborted!\n",
+            "ActionView::Template::Error: undefined method 'include?' for nil (ActionView::Template::Error)\n",
+            "/rails/app/models/twitter/post_reference_backfill.rb:20:in 'block in Twitter::PostReferenceBackfill.call'\n",
+            "/rails/app/models/twitter/post_reference_backfill.rb:19:in 'Twitter::PostReferenceBackfill.call'\n",
+            "/rails/lib/tasks/twitter.rake:9:in 'block (2 levels) in <top (required)>'\n",
+            "\nCaused by:\n",
+            "NoMethodError: undefined method 'include?' for nil (NoMethodError)\n",
+            "\n          if prefix.include?(?/) && object_path.include?(?/)\n",
+            "                   ^^^^^^^^^\n",
+            "/rails/app/models/twitter/post_reference_backfill.rb:20:in 'block in Twitter::PostReferenceBackfill.call'\n",
+            "/rails/app/models/twitter/post_reference_backfill.rb:19:in 'Twitter::PostReferenceBackfill.call'\n",
+            "/rails/lib/tasks/twitter.rake:9:in 'block (2 levels) in <top (required)>'\n",
+            "Tasks: TOP => twitter:backfill_references\n",
+            "(See full trace by running task with --trace)"
+        ).into())
+    } else {
+        (2, format!("ERROR: {error}"))
     }
 }
 
@@ -69,7 +115,8 @@ fn twitter_backfill(database: &Path) -> anyhow::Result<String> {
     // temporary signed markup is neither returned nor stored. Reuse the configured
     // signing base when present; an offline invocation without one uses a private,
     // ephemeral base. Signatures/local paths contain no plaintext post URLs.
-    let signing_base = std::env::var("SECRET_KEY_BASE").ok()
+    let signing_base = std::env::var("SECRET_KEY_BASE")
+        .ok()
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let rich_text = crate::rich_text::AppRichText::new(
@@ -116,10 +163,17 @@ fn check(database: &Path, immutable: bool) -> anyhow::Result<String> {
     let integrity: String = conn.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
     anyhow::ensure!(integrity == "ok", "database integrity check failed");
     let mismatch = schema::schema_mismatch(&conn)?;
-    anyhow::ensure!(mismatch.missing.is_empty() && mismatch.unknown.is_empty(), "{mismatch}");
+    anyhow::ensure!(
+        mismatch.missing.is_empty() && mismatch.unknown.is_empty(),
+        "{mismatch}"
+    );
     let counts: Vec<_> = ["users", "rooms", "messages"]
         .into_iter()
-        .map(|table| conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get::<_, i64>(0)))
+        .map(|table| {
+            conn.query_row(&format!("SELECT count(*) FROM {table}"), [], |r| {
+                r.get::<_, i64>(0)
+            })
+        })
         .collect::<rusqlite::Result<_>>()?;
     Ok(format!(
         "SCHEMA: {} migration versions accepted (read-only)\nCOUNTS: users={} rooms={} messages={}\n",
@@ -137,7 +191,11 @@ fn migrate(database: &Path, directory: &Path) -> anyhow::Result<String> {
         if path.extension().is_none_or(|extension| extension != "sql") {
             continue;
         }
-        anyhow::ensure!(path.is_file(), "migration must be a regular file: {}", path.display());
+        anyhow::ensure!(
+            path.is_file(),
+            "migration must be a regular file: {}",
+            path.display()
+        );
         let name = path
             .file_stem()
             .and_then(|name| name.to_str())
@@ -149,7 +207,8 @@ fn migrate(database: &Path, directory: &Path) -> anyhow::Result<String> {
         });
     }
     // No CREATE: a mistyped path must never initialize a second production database.
-    let mut conn = Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE)?;
+    let mut conn =
+        Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE)?;
     conn.busy_timeout(std::time::Duration::from_millis(schema::BUSY_TIMEOUT_MS))?;
     conn.pragma_update(None, "foreign_keys", true)?;
     let applied = migrations::apply_pending(&mut conn, &catalog)?;
@@ -194,7 +253,10 @@ mod tests {
         assert_eq!(std::fs::read(&database).unwrap(), before);
         Connection::open(&database)
             .unwrap()
-            .execute("INSERT INTO schema_migrations VALUES ('29990101000000')", [])
+            .execute(
+                "INSERT INTO schema_migrations VALUES ('29990101000000')",
+                [],
+            )
             .unwrap();
         assert!(
             check(&database, false)
@@ -218,7 +280,12 @@ mod tests {
         let mut wal = database.as_os_str().to_os_string();
         wal.push("-wal");
         std::fs::write(Path::new(&wal), "must not be ignored").unwrap();
-        assert!(check(&database, true).unwrap_err().to_string().contains("WAL sidecar"));
+        assert!(
+            check(&database, true)
+                .unwrap_err()
+                .to_string()
+                .contains("WAL sidecar")
+        );
     }
 
     #[test]
@@ -239,12 +306,20 @@ mod tests {
             migrate(&database, &migrations).unwrap(),
             "MIGRATED: 29990101000000\nMIGRATIONS: 1 applied\n"
         );
-        assert_eq!(migrate(&database, &migrations).unwrap(), "MIGRATIONS: 0 applied\n");
+        assert_eq!(
+            migrate(&database, &migrations).unwrap(),
+            "MIGRATIONS: 0 applied\n"
+        );
     }
 
     #[test]
     fn verifier_and_usage_exit_codes_match_reference() {
-        assert_eq!(execute(&["verify-additive-sqlite-migration".into()]).unwrap_err().0, 2);
+        assert_eq!(
+            execute(&["verify-additive-sqlite-migration".into()])
+                .unwrap_err()
+                .0,
+            2
+        );
         assert_eq!(execute(&["db-check".into()]).unwrap_err().0, 2);
         assert!(run(&["server".into()]).is_none());
         let dir = tempfile::tempdir().unwrap();

@@ -176,7 +176,7 @@ impl RichText for AppRichText {
     fn try_rendered_html(&self, conn: &Connection, html: &str) -> Result<String, String> {
         self.with_context(conn, |ctx| {
             campfire_richtext::Content::load(html, ctx)
-                .and_then(|content| content.to_rendered_html_with_layout(ctx))
+                .and_then(|content| content.to_rendered_html_with_default_renderer(ctx))
         })
         .map_err(|error| error.to_string())
     }

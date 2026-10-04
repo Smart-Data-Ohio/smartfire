@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "notes": "The unchanged board DELETE route raises NoMethodError on nil @room.name at rooms_controller.rb:29 because the subclass callback scopes exclude destroy. The lead decision is to reproduce this Rails reference error, as with directs#show. All seven responses are from /rooms/boards/:id itself; complete domain rows, durable queue, enqueued jobs and broadcasts remain unchanged. Board deletion by the UI continues through the existing /rooms/:id route. Nothing remains flagged.",
   "cases": [
     {

@@ -1,5 +1,5 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "notes": "Unchanged Rails rendered-body selection; extraction uses canonical Content#to_html outside code, plus forward_note. Single-row review repro and 25 persisted-HTML edge cases use actual rake invocations twice, full reference/post/fetch-job state, and no body or state masks.",
   "single": {
     "inputs": [

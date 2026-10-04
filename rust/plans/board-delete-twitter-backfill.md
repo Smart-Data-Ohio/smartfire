@@ -211,3 +211,109 @@ The board-route handler/vector and exhaustive route guard are unchanged by this
 fix. No Rails source, JS/CSS, CodeQL, timing threshold, rustc throttle or Python
 model-server change was made. No new large scratch output outside `target/`
 remains.
+
+## PR #238 saved HTML content attachment follow-up
+
+Merged `origin/main` with a merge commit (`52dbb1e72`), bringing in #236's
+reference refresh. The plain Rails image `review236-reference:78b9b1546`
+has `GIT_REVISION=78b9b1546bdab4c6c1c9b8ddb94512f661289112`, matching
+`parity/reference.sha`. All three gate seeds were validated with that image:
+default 29/29, first_run 4/4, agents_ui 40/40. Freshly regenerated board,
+1,008-row Twitter backfill, and 25-edge rendered-backfill vectors change only
+their reference identity; all response and state output remains identical.
+Their producers now record the image's real `PARITY_REFERENCE_SHA`.
+
+Fresh `reference-tools/twitter_backfill_attachment.rb` reproduces Astra's
+encoded tweet link in a **normally saved** `ActionText::RichText`, not merely
+raw SQL HTML. The precise failure is `ActionView::Template::Error: undefined
+method 'include?' for nil`, caused by `NoMethodError` in ActionView's
+`AbstractRenderer#merge_prefix_into_object_path` (`abstract_renderer.rb:93`).
+`ContentAttachment#to_html` (`content_attachment.rb:25`) calls the nested
+`Content#render` as an object. Outside Action Text's controller around_action,
+that uses a new ApplicationController renderer with a nil context prefix.
+The request's real MessagesController renderer has a prefix and renders the
+same saved attachment successfully. Rust exposes that default-renderer mode
+explicitly; it does not infer renderer identity from the optional request host.
+The rich-text model adapter's rendered-body projection uses this mode.
+
+Rails does **not** transact the whole backfill, wrap a whole batch, or wrap
+the entire per-message sync. `PostReferenceBackfill.call` and
+`PostReferenceSync.call` contain no enclosing transaction; individual Active
+Record model writes use their normal save transactions. At the rendering
+abort there are zero open transactions. Earlier messages' synced references,
+post claims and fetch jobs remain committed; the failing message has no new
+reference/post/job, and the later message has not been visited. Rust's
+existing per-message sync transactions preserve the same partial progress
+under the approved atomic-queue rule. The regression compares the complete
+projected reference/post/claim/job state twice for both the raw review input
+and the normally saved content, including absence of forward-note post 99113
+and later post 99114. Repeating the abort changes nothing.
+
+Direct `Twitter::PostReferenceSync.call` does **not** render: it reads canonical
+`Content#to_html`. It succeeds and creates the forward-note reference/job
+99113, then is idempotent. Rust's same sync service matches this behavior;
+there is no error added to canonicalization. A Markdown URL also short-circuits
+rendering in both backfills and allows the later message to be processed.
+The vector includes exact request-rendered bytes, saved canonical bytes,
+sync/repeat state, and the successful Markdown short-circuit count/state.
+
+The real `bin/rails twitter:backfill_references` subprocess exits **1**, has
+empty stdout (no `Backfilled` summary), and prints its rendering exception,
+cause, source excerpt and filtered trace to stderr. Rust returns the same
+exit status and full stderr bytes for this particular reference exception.
+The displayed Ruby frames identify the emulated Rails failure, not a Rust
+backtrace. Ordinary schema/argument/queue errors retain the existing command
+contract. The fresh vector captures stderr without a projection or mask;
+the operator regression compares it in full. The real-binary checker also
+compares exit status, both output streams, exact frozen-clock partial state,
+and complete unchanged rows on repeat.
+
+Three regressions failed first against `82f49253`'s implementation retained
+in the main merge, before changing either producer. The backfill and operator
+returned success; the default renderer returned rendered attachment HTML.
+
+```text
+Summary [   0.684s] 3 tests run: 0 passed, 3 failed, 2869 skipped
+```
+
+The new reference vector has four actual rake aborts (three in-process and
+one real CLI), two direct sync calls, request rendering, and a successful
+Markdown short-circuit invocation. A second fresh execution reproduces every
+response, error, CLI diagnostic and state byte. No Rails source substitution,
+reference-output injection, broad masking or timing adjustment is involved.
+
+Current follow-up verification (Rust 1.98.1 through mise, CI=1, validated gate
+seeds, two build jobs, four nextest workers, configured rustc throttle and one
+Cargo build at a time). The first suite covers every database/rich-text test
+and the affected room/admin/Twitter/route-guard/Calendar app tests. After a final
+error-evaluation-order correction (Ruby canonicalizes the nested content before
+entering the failing object renderer), the complete rich-text/operator subset
+was rerun. Strict clippy and the normal binary build use the final source.
+The CLI wrapper executes that binary in the plain pinned runtime with a frozen
+wall clock, no network and no server/job runner. Both real binary invocations
+match Rails' exit status, empty stdout, full stderr, exact partial rows/claims/jobs
+and complete unchanged source rows; the repeat keeps all five inspected tables
+byte-identical as rows.
+
+```sh
+cargo nextest run --manifest-path rust/Cargo.toml --locked --build-jobs 2 -j 4 -p campfire -p campfire_db -p campfire_richtext --profile ci -E 'package(campfire_db) | package(campfire_richtext) | test(controllers::rooms::) | test(controllers::tests::every_) | test(admin::) | test(integrations::twitter::) | test(controllers::google_calendar::)'
+cargo nextest run --manifest-path rust/Cargo.toml --locked --build-jobs 2 -j 4 -p campfire -p campfire_richtext --profile ci -E 'package(campfire_richtext) | test(admin::twitter_tests::)'
+cargo clippy --manifest-path rust/Cargo.toml --locked -j 2 --workspace --exclude html5ever --all-targets -- -D warnings
+cargo build --manifest-path rust/Cargo.toml --locked -j 2 -p campfire --bin campfire
+PARITY_IMAGE=review236-reference:78b9b1546 rust/reference-tools/check_twitter_attachment_cli.sh
+```
+
+```text
+Summary [ 418.125s] 1877 tests run: 1877 passed (1 slow), 2459 skipped
+Summary [  40.079s] 92 tests run: 92 passed, 2861 skipped
+Finished `dev` profile [unoptimized] target(s) in 1m 03s
+Finished `dev` profile [unoptimized] target(s) in 1m 23s
+Production Twitter attachment CLI: 2 aborts matched Rails exit/status, stdout/stderr bytes, exact partial state and unchanged repeat rows; 0 differences
+```
+
+Strict workspace clippy exits zero with `-D warnings`. There are no remaining
+flagged board-route or Twitter-backfill differences. No Rails source, JS/CSS,
+CodeQL configuration, timing thresholds, rustc throttle, or model server was
+changed. The retained new scratch files are only small logs/reference outputs;
+private reference and production-CLI databases have been removed. No extra
+Cargo target directory was created.

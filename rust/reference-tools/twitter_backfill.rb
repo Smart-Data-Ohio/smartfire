@@ -50,5 +50,5 @@ first = run_backfill
 first_state = state
 second = run_backfill
 raise "non-idempotent operator" unless first_state == state
-puts JSON.pretty_generate(reference: "d7c7de92", filler_count: filler_count, inputs: inputs, output: first, repeated_output: second, state: first_state)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), filler_count: filler_count, inputs: inputs, output: first, repeated_output: second, state: first_state)
 warn "Rails Twitter backfill: 1008 inserted rows; two actual rake invocations; identical repeated state"

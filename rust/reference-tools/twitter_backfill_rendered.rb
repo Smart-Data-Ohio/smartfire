@@ -60,5 +60,5 @@ end
 single = scenario([inputs.find { |row| row.fetch('label') == 'hidden_attribute' }])
 raise "single-row probe drift" unless single[:output] == "Backfilled 2 messages\n"
 edges = scenario(inputs)
-puts JSON.pretty_generate(reference: "d7c7de92", notes: "Unchanged Rails rendered-body selection; extraction uses canonical Content#to_html outside code, plus forward_note. Single-row review repro and 25 persisted-HTML edge cases use actual rake invocations twice, full reference/post/fetch-job state, and no body or state masks.", single: single, edges: edges)
+puts JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA"), notes: "Unchanged Rails rendered-body selection; extraction uses canonical Content#to_html outside code, plus forward_note. Single-row review repro and 25 persisted-HTML edge cases use actual rake invocations twice, full reference/post/fetch-job state, and no body or state masks.", single: single, edges: edges)
 warn "Rails Twitter rendered backfill: #{inputs.size} edge cases + exact single-row review repro; four actual rake invocations; repeated state unchanged"

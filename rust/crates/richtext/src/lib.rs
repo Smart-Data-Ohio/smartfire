@@ -42,6 +42,9 @@ pub enum Error {
     Parse(dom::ParseError),
     #[error("raised {0}")]
     Raised(&'static str),
+    /// ContentAttachment#to_html starts a new default renderer with no controller prefix.
+    #[error("ActionView::Template::Error: undefined method 'include?' for nil")]
+    ContentAttachmentRenderer,
     /// Raised with a message that isn't valid UTF-8, so the rescue's own logging raises too.
     #[error("raised {0} with an unloggable message")]
     Unrenderable(&'static str),
@@ -114,7 +117,10 @@ pub fn mentioned_users(body: &str, ctx: &RenderContext) -> Result<Vec<MentionUse
 /// `Webhook#without_recipient_mentions`: the plain body with the bot's own "@Name" removed and
 /// leading and trailing Unicode whitespace trimmed.
 pub fn without_recipient_mentions(plain_text: &str, recipient_name: &str) -> String {
-    plain_text.replace(&format!("@{recipient_name}"), "").trim_matches(char::is_whitespace).to_string()
+    plain_text
+        .replace(&format!("@{recipient_name}"), "")
+        .trim_matches(char::is_whitespace)
+        .to_string()
 }
 
 /// Text-message branching in `MessagesHelper#message_presentation`. Attachment and sound
@@ -127,5 +133,9 @@ pub fn text_message_presentation(
     icons: &dyn markdown::IconResolver,
     asset_host: Option<&str>,
 ) -> Result<String, Error> {
-    if markdown || forwarded_markdown { markdown::presentation(body, ctx, icons, asset_host) } else { message_presentation(body, ctx) }
+    if markdown || forwarded_markdown {
+        markdown::presentation(body, ctx, icons, asset_host)
+    } else {
+        message_presentation(body, ctx)
+    }
 }
