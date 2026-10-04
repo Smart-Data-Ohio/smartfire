@@ -53,7 +53,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
       if(Date.now()>=deadline) throw new Error('ChromeDriver startup timeout');
       await new Promise(resolve=>setTimeout(resolve,50));
     }
-    console.log(`WS8bm native ${label} source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; ${label==='attachment'?'original behavior body; shared file path adapted':'unchanged behavior body/helpers, screenshots omitted'}`);
+    console.log(`WS8bm native ${label} source: Rails ${PIN}; SHA256 ${createHash('sha256').update(source).digest('hex')}; ${label==='attachment'?'original behavior body; shared file path adapted':label==='release'?"original behavior body/helpers; main's #composer scope retained":'unchanged behavior body/helpers, screenshots omitted'}`);
     const extra=database?['--env-file',root+'rust/parity/.env.reference','-e','RAILS_ENV=test','-e','WS8BM_NATIVE_DATABASE=/readback/'+basename(database),'-e',`WS8BM_NATIVE_UPLOAD=${temp}/markdown-workspace-attachment.txt`,'-v',`${dirname(database)}:/readback:ro`,'-v',`${temp}:${temp}`]:[];
     if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
     if(mutation||Number(process.env.WS8BM_SETUP_DELAY||0)) {probe.networkFailures=[];proxy=await nativeAssetProxy(base,mutation,probe);}

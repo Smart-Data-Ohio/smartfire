@@ -44,7 +44,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
     if(caseName===RELEASE_CASE) {
-      await nativeRelease(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],probe,negative||!!selectedMutant);return;
+      await nativeRelease(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],probe,negative||!!selectedMutant,variant);return;
     }
     // The positive phone control is the pinned Selenium sequence itself.
     // Served negatives retain their translated initial creation checkpoint.

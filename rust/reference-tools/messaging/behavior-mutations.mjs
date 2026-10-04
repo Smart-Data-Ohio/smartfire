@@ -6,6 +6,7 @@ import {mutationTarget} from './behavior-discrimination.mjs';
 import {WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motionCases} from './behavior-motion.mjs';
 import {actionMutations} from './behavior-action-mutations.mjs';
+import {RELEASE_SCOPE_MUTATION} from './behavior-native-release.mjs';
 const list='controllers/message_list_controller-';
 const actions='controllers/message_actions_controller-';
 const composer='controllers/composer_controller-';
@@ -119,6 +120,7 @@ const mutations=new Map([
 // defects. Keep source text intact while removing only its keyword styling.
 const missingKeyword=keyword=>['models/code_highlighter-','span.className = "code-token"',`span.className = token.content.trim() === "${keyword}" ? "missing-keyword-token" : "code-token"`];
 const reviewMutations=new Map([
+  ['a release click landing on the just-opened menu does not activate it',new Map([['unrelated-hidden-context',RELEASE_SCOPE_MUTATION]])],
   ...['assigned owner can change work status but cannot reassign it','a member who cannot manage the thread cannot assign an agent'].map(name=>[name,new Map([['wrong-permission-status',['work-controller-permission-response']]])]),
   ['work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable',new Map([['wrong-validation-status',['work-controller-permission-response']]])],
   ['search results highlight code on initial load and after returning to the channel',new Map([['missing-const',missingKeyword('const')]])],

@@ -124,7 +124,7 @@ class Ws8bmNativePhoneTest < Minitest::Test
         rescue StandardError => error
           puts "WS8bm native log diagnostic failure: #{error.class}: #{error.message}"
         end
-        state=page.evaluate_script('(() => { const surface=document.querySelector("#sidebar .sidebar__container"); return {room:location.pathname,open:document.querySelector("#sidebar")?.classList.contains("open"),duration:surface?getComputedStyle(surface).transitionDuration:null,transform:surface?getComputedStyle(surface).transform:null,releaseClicks:window.__ws8bmReleaseClicks,releaseGeometry:window.__ws8bmReleaseGeometry}; })()')
+        state=page.evaluate_script('(() => { const surface=document.querySelector("#sidebar .sidebar__container"); return {room:location.pathname,open:document.querySelector("#sidebar")?.classList.contains("open"),duration:surface?getComputedStyle(surface).transitionDuration:null,transform:surface?getComputedStyle(surface).transform:null,releaseClicks:window.__ws8bmReleaseClicks,releaseGeometry:window.__ws8bmReleaseGeometry,contextScopes:[...document.querySelectorAll("[data-composer-target=context]")].map(node=>({form:node.closest("form")?.id,hidden:node.hidden}))}; })()')
         puts "WS8bm native mutation state: #{JSON.generate(state)}"
       rescue StandardError => error
         puts "WS8bm native diagnostic failure: #{error.class}: #{error.message}"
