@@ -1,6 +1,12 @@
+# WS8bm PR #241 scope correction
+
+The active-composer scope is restored, and the served hidden-sibling fault rejects specifically at the original line-83 assertion on both apps. Release: **10/10 stock pairs plus one metadata-delay pair**; release negatives: **2/2 intended paired rejections**; scroll negative: **1/1 clean intended paired rejection**. No retries, wider predicates or longer deadlines. Inventory remains **135/135**.
+
+Fresh-clone nextest: **4,948 passed / 0 failed / 20 existing skips**. Strict clippy and the release-input build pass. Helpers: **71 Node / 41 Python**. Final owned processes, listeners, containers and generated big output are all empty. [Failing-first evidence, source-preservation checks and raw lines](ws8bm-review241.md). No Rust product, asset or golden changes.
+
 # Cutover: close the three browser deferrals
 
-Current systems: **135 passed / 0 deferred / 0 blocked**. Release-click now runs the literal pinned Selenium body and helpers; scroll and reopen await the real completed sidebar/current-link before opening. Causal scheduling controls reproduce the old failures on both hosts and pass after the fixes. Each case has ten complete paired positives with persisted-row checks; all three broken implementations reject at their intended assertions. No product assets, goldens, predicates or deadlines changed. [Causal diagnoses, commands, retained setup failures and verification](ws8bm-deferrals.md).
+Current systems: **135 passed / 0 deferred / 0 blocked**. Release-click runs the pinned Selenium body and helpers with main's original `#composer` scope retained; scroll and reopen await the real completed sidebar/current-link before opening. Causal scheduling controls reproduce the old failures on both hosts and pass after the fixes. Each case has ten complete paired positives with persisted-row checks; all three broken implementations reject at their intended assertions. No product assets, goldens, predicates or deadlines changed. [Causal diagnoses, commands, retained setup failures and verification](ws8bm-deferrals.md).
 
 # Historical #230 ledger follow-up
 
