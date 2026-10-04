@@ -27,5 +27,5 @@ ActiveRecord::Base.transaction do
   end
   raise ActiveRecord::Rollback
 end
-puts JSON.pretty_generate(reference:'d7c7de92',rows:rows)
-warn "Rails room pin refresh: #{rows.size} complete HTTP Turbo goldens; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),rows:rows)
+warn "Rails room pin refresh: #{rows.size} complete HTTP Turbo goldens; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

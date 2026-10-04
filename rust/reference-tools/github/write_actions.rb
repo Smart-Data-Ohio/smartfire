@@ -51,6 +51,6 @@ vectors=cases.map do |c|
  render_data={thread_id:817,room_id:815,pull_request_id:816,linked:!a.nil?,usable:a&.usable? || false,login:a&.github_login || "",notice:nil,alert:nil,comment_body:nil,review_body:nil,reviewers_body:nil}.merge(Thread.current[:render_locals].except(:status))
  {**c,render_data:,request_body:body,path:,status:res.status,content_type:res["Content-Type"],body:res.status==404 ? nil : res.body,requests:Thread.current[:requests],disconnected:a&.disconnected_reason}
 end
-File.write("/work/vectors/github_write_http.json",JSON.pretty_generate(vectors)+"\n");puts "GitHub write actions Rails oracle: #{vectors.size} controller/frame/status/request cases; reference d7c7de92"
+File.write("/work/vectors/github_write_http.json",JSON.pretty_generate(vectors)+"\n");puts "GitHub write actions Rails oracle: #{vectors.size} controller/frame/status/request cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
 inputs=[nil,"", " @Alice, alice @BOB,bob ","-a","a-","a--b","a_b","user!!","a"*39,"a"*40,(1..15).map{|i|"user#{i}"},(1..16).map{|i|"user#{i}"},["alice, bob","@Alice"],false,12,"ſame","Kate","alice\u00a0bob"]
-File.write("/work/vectors/github_review_logins.json",JSON.pretty_generate(inputs.map{|input|{input:,expected:Github::ReviewLogins.normalize(input)}})+"\n");puts "GitHub review logins Rails oracle: #{inputs.size} normalization cases; reference d7c7de92"
+File.write("/work/vectors/github_review_logins.json",JSON.pretty_generate(inputs.map{|input|{input:,expected:Github::ReviewLogins.normalize(input)}})+"\n");puts "GitHub review logins Rails oracle: #{inputs.size} normalization cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

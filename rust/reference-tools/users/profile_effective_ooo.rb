@@ -49,5 +49,5 @@ cases = inputs.map do |name, attrs, intervals|
   end
 end
 Current.reset
-puts JSON.pretty_generate(reference: 'd7c7de92', status_reference: '2e20b24c', now: now.iso8601, cases: cases)
-warn "Rails effective OOO profile oracle: #{cases.size} persisted Calendar/manual/boundary/zone cases; complete status panel bytes; status template 2e20b24c, model files d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'), now: now.iso8601, cases: cases)
+warn "Rails effective OOO profile oracle: #{cases.size} persisted Calendar/manual/boundary/zone cases; complete status panel bytes; plain pinned reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

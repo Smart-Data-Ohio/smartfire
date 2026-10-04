@@ -27,7 +27,7 @@ class HuddleNeighborMention
     body="Hey <action-text-attachment sgid=\"#{jason.attachable_sgid}\" content-type=\"application/vnd.campfire.mention\" content=\"#{attachment.gsub('"','&quot;')}\"></action-text-attachment>"
     message=Room.find(ActiveRecord::FixtureSet.identify(:designers)).messages.create!(creator:david,body:body,client_message_id:"huddle-switch-neighbour")
     item=ActivityItem.find_by!(user:jason,source:message)
-    result={reference_pin:"d7c7de92",now:Time.utc(2026,3,2,16).to_i,before:before,after_timeout:after,body:body,message:{room_id:message.room_id,creator_id:message.creator_id,client_message_id:message.client_message_id},mention:{user_id:item.user_id,source_type:item.source_type,event_type:item.event_type},plain_text:message.body.to_plain_text}
+    result={reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.utc(2026,3,2,16).to_i,before:before,after_timeout:after,body:body,message:{room_id:message.room_id,creator_id:message.creator_id,client_message_id:message.client_message_id},mention:{user_id:item.user_id,source_type:item.source_type,event_type:item.event_type},plain_text:message.body.to_plain_text}
     room=message.room
     member=room.memberships.find_by!(user:jason)
     result[:guards]=%w[everything nothing muted invisible self bot inactive system_note streaming thread_mentions thread_nothing].map do |name|

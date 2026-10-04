@@ -1,7 +1,7 @@
 require "json"
 require "active_support/testing/time_helpers"
 
-# ActivityItem#broadcast_updated and HuddleGrant#refresh_invitation! at d7c7de92.
+# ActivityItem#broadcast_updated and HuddleGrant#refresh_invitation! at the current reference pin.
 # Rails emits these frames synchronously; only the delivery endpoints are observed.
 class WS13bRingGenerations
   include ActiveSupport::Testing::TimeHelpers
@@ -57,7 +57,7 @@ class WS13bRingGenerations
       retry_phase = phase("retry", retried)
       {operation: operation, phases: [initial, mutation, retry_phase]}
     end
-    puts JSON.pretty_generate(reference_pin: "d7c7de92", cases: cases)
+    puts JSON.pretty_generate(reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases: cases)
   ensure
     travel_back
   end

@@ -246,5 +246,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
     response = session.response
     item.merge(body: raw, status: response.status, response: response.body.blank? ? nil : JSON.parse(response.body), response_body: response.body, response_headers: %w[Content-Type Cache-Control Pragma Retry-After Location X-Smartfire-Next-Since].to_h { |key| [key,response.headers[key]] })
   end
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", cases: result })
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], cases: result })
 end

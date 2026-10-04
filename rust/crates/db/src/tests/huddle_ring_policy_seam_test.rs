@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 fn run(name: &str) {
     let fixture: Value =
         serde_json::from_str(include_str!("huddle_ring_policy_seam.json")).unwrap();
-    assert_eq!(fixture["reference_pin"], "d7c7de92");
+    assert_eq!(fixture["reference_pin"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
     assert_eq!(fixture["cases"].as_array().unwrap().len(), 8);
     let case = fixture["cases"]
         .as_array()

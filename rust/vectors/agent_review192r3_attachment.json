@@ -1,4 +1,5 @@
 {
+  "reference_pin": "78b9b154",
   "notes": [
     "Fresh #226 on the pinned harness: HTTP commits before the real processing job generates and uploads JPEG and WebP. Every row and logical remaining job is captured."
   ],
@@ -16,6 +17,7 @@
         }
       },
       "rails_state": {
+        "open_transactions": 0,
         "row_deltas": {
           "messages": 1,
           "channel_threads": 0,

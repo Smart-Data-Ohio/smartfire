@@ -47,5 +47,5 @@ pages = []
   pages << {kind:kind, size:size, links:links, reads:queries.size, cards:cards}
  end
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:base['rows'],pages:pages)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:base['rows'],pages:pages)+"\n")
 puts "WS8bm2 private provider Rails: #{pages.map{|p| "#{p[:kind]} #{p[:size]}=#{p[:reads]} reads"}.join('; ')}; #{pages.sum{|p|p[:cards].size}} card containers"

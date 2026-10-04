@@ -51,5 +51,5 @@ raise "thread stamp unchanged" unless states.map { |state| state[:thread_updated
 raise "replies changed" unless states.map { |state| state[:messages].drop(1) }.uniq.size == 1
 raise "parent rename changed" unless states[1][:messages].first == states[2][:messages].first
 raise "parent count unchanged" if states[0][:messages].first == states[1][:messages].first
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", thread_id: thread.id, states:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], thread_id: thread.id, states:) + "\n")
 puts "WS8bm thread cache stability: replies retain Rails helper keys/HTML after post and rename; parent count refreshes"

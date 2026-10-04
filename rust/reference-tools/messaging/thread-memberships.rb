@@ -46,5 +46,5 @@ steps = [
     cache_control: browser.response.headers["Cache-Control"], location: browser.response.headers["Location"],
     membership: row }
 end
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", parent_id: parent.id, thread_id: thread.id, steps:) + "\n")
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], parent_id: parent.id, thread_id: thread.id, steps:) + "\n")
 puts "WS8bm thread-membership oracle: #{steps.size} real Rails requests; membership rows and JSON bytes captured"

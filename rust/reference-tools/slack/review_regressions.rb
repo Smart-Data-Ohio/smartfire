@@ -66,7 +66,7 @@ users = names.each_with_index.to_h { |name, i| ["U#{i}", User.create!(id: 812 + 
 group = Slack::ConversationMapper.new(workspace: workspace, run: run).resolve(
   {'id' => 'GREVIEW', 'is_mpim' => true}, member_ids: users.keys, users:)
 
-result = {reference: 'd7c7de9264c63015be398001d7a1094e7695a6db', rooms:, emails:, handles:,
+result = {reference: ENV.fetch("PARITY_REFERENCE_SHA"), rooms:, emails:, handles:,
   group: {names:, result: group.room.name}, downcase: ['ΟΣ', 'AΣ', 'İ', 'Équipe'].map { |input| {input:, output: input.downcase} }}
 File.write(File.join(ENV.fetch('PARITY_WORK'), 'vectors/slack/review_regressions.json'), JSON.pretty_generate(result) + "\n")
 downcase = (0..0x10ffff).filter_map do |point|

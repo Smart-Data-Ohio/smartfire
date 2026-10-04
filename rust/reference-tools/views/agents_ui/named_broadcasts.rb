@@ -28,5 +28,5 @@ end
 streams=[[human,:status],[human,:ooo_notice]].map { |s| Turbo::StreamsChannel.send(:stream_name_from,s) }
 ooo=frames.call(streams)
 raise "OOO must emit a badge and a notice: #{ooo.inspect}" unless ooo.size==2
-puts JSON.pretty_generate(reference:'d7c7de92',at:Time.current.iso8601,status:,secrets:,private_values:,ooo:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),at:Time.current.iso8601,status:,secrets:,private_values:,ooo:)
 warn 'Rails named UI broadcasts: 3 comparisons, 6 complete stream frames'

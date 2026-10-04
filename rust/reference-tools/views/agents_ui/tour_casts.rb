@@ -7,5 +7,5 @@ cases=inputs.fetch('cases').map do |input|
  stored=value.respond_to?(:iso8601) ? ActiveRecord::Base.connection.send(:quoted_date,value) : value
  {name:input.fetch('name'),sql:input.fetch('sql'),stored:}
 end
-puts JSON.pretty_generate(reference:'d7c7de92',cases:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA"),cases:)
 warn "Rails stored datetime casts: #{cases.size} values"

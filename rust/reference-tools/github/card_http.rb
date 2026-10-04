@@ -62,4 +62,4 @@ vectors=cases.map do |c|
  {**c,initially_disconnected:c[:disconnected]||false,responses:,requests:Thread.current[:card_requests],disconnected:GithubConnectedAccount.first&.disconnected_reason}
 end
 File.write("/work/vectors/github_card_http.json",JSON.pretty_generate(vectors)+"\n")
-puts "GitHub viewer card Rails oracle: #{vectors.size} HTTP cases; reference d7c7de92"
+puts "GitHub viewer card Rails oracle: #{vectors.size} HTTP cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

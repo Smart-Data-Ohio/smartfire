@@ -14,7 +14,7 @@ root = Path(__file__).resolve().parents[3]
 scratch = root / ".scratch/zone-write-followup/rails"
 scratch.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, PARITY_NAMESPACE="ws8br-card-write-zones", PARITY_OWNER="ws8br",
-           PARITY_IMAGE="ws8br-reference-status-2e20b24c")
+           PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "campfire-reference"))
 run = subprocess.run([str(root / "rust/parity/bin/reference"), "exec", "--seed", "default",
                       "--time", "2026-03-02T16:00:00Z", "--freeze", "bin/rails", "runner",
                       "--skip-executor", "/work/reference-tools/rooms/card_write_zones.rb"],
@@ -24,7 +24,7 @@ run = subprocess.run([str(root / "rust/parity/bin/reference"), "exec", "--seed",
 run.check_returncode()
 captured = json.loads(run.stdout)
 for path, digest in captured["sources"].items():
-    pinned = subprocess.check_output(["git", "show", f"d7c7de92:{path}"], cwd=root)
+    pinned = subprocess.check_output(["git", "show", f"{(root / 'rust/parity/reference.sha').read_text().strip()}:{path}"], cwd=root)
     assert digest == hashlib.sha256(pinned).hexdigest(), f"Rails source drift: {path}"
 fixture = root / "rust/crates/campfire/src/controllers/rooms/card_write_zones.json"
 if args.record:

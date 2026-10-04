@@ -1,5 +1,4 @@
 {
-  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
   "now": "2026-03-02T16:00:00Z",
   "setup": [
     "DELETE FROM workspace_presence_leases",
@@ -999,5 +998,6 @@
         "last-modified": null
       }
     }
-  ]
+  ],
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
 }

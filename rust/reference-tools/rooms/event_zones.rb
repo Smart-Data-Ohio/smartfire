@@ -71,5 +71,5 @@ rows.each_value do |records|
   end
 end
 sources = %w[app/controllers/concerns/set_time_zone.rb app/views/rooms/events/_card.html.erb app/views/rooms/events/_cards.html.erb app/views/github/pull_requests/_card.html.erb app/views/github/pull_requests/_thread_header.html.erb].to_h { |path| [path, Digest::SHA256.file(Rails.root.join(path)).hexdigest] }
-puts JSON.generate({ reference: "d7c7de92", sources:, rows:,
+puts JSON.generate({ reference: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], sources:, rows:,
   github: { id: pull_request.id, updated_at: pull_request.github_updated_at.utc.strftime("%Y-%m-%d %H:%M:%S.%6N") }, cases: })

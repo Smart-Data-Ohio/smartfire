@@ -6,7 +6,8 @@ import readline from 'node:readline';
 import { isDeepStrictEqual } from 'node:util';
 import { execFileSync } from 'node:child_process';
 // Always execute the pinned UI, including after a main merge changes local files.
-const source=execFileSync('git',['show','d7c7de92:app/javascript/controllers/huddle_invitation_controller.js'],{cwd:new URL('../../',import.meta.url),encoding:'utf8'});
+const pin=fs.readFileSync(new URL('../parity/reference.sha',import.meta.url),'utf8').trim();
+const source=execFileSync('git',['show',`${pin}:app/javascript/controllers/huddle_invitation_controller.js`],{cwd:new URL('../../',import.meta.url),encoding:'utf8'});
 async function client(userId) {
   let receive,now=0,next=0;
   const timers=new Map(), requests=[];

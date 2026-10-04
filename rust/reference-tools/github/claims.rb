@@ -66,5 +66,5 @@ output = cases.map do |test|
   jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.map { |j| { class: j[:job].name, args: j[:args] } }
   test.merge(expected:, audits:, jobs:)
 end
-File.write(ENV.fetch("GITHUB_CLAIM_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: "d7c7de92", cases: output }) + "\n")
-puts "GitHub/Fizzy claim Rails oracle: #{output.size} persisted outcome cases; reference d7c7de92"
+File.write(ENV.fetch("GITHUB_CLAIM_VECTOR_PATH"), JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA"), cases: output }) + "\n")
+puts "GitHub/Fizzy claim Rails oracle: #{output.size} persisted outcome cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

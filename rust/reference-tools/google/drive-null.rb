@@ -25,4 +25,4 @@ cases = ['/google/drive/files/1AbcDefGhIjKlMnOpQrSt','/google/drive/files'].map 
   {path:,status:session.response.status,google_calls:calls.size-before,
     body_is_production_500:session.response.body==File.read(Rails.root.join('public/500.html'))}
 end
-puts JSON.generate({reference:'d7c7de92',cases:})
+puts JSON.generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:})

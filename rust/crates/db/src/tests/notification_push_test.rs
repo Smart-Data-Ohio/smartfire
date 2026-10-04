@@ -18,8 +18,8 @@ fn payload(v: &Value) -> PushPayload {
 #[test]
 fn ws17_event_board_and_huddle_pushers_match_50_actual_rails_source_cases() {
     let golden = vectors();
-    assert_eq!(golden["reference"], "d7c7de92");
-    assert_eq!(golden["board_reference"], "a6f10a25");
+    assert_eq!(golden["reference"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
+    assert_eq!(golden["board_reference"], &include_str!("../../../../parity/reference.sha").trim()[..8]);
     let now = stamp(golden["now"].as_str().unwrap());
     for row in golden["rows"].as_array().unwrap() {
         let t = TestDb::with_clock(TestClock::frozen_at(now), 4);

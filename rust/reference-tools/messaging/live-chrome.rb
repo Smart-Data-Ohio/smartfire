@@ -23,5 +23,5 @@ inputs=Search.where(user:users).order(:id).map { |s| {id:s.id,user_id:s.user_id,
  end
 end
 Current.reset
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',inputs:inputs,rows:rows)+"\n")
-puts "WS8bm live chrome: #{rows.size} icon/recent-search components; ordered custom icons, scoped latest ten, escaped HTML/URLs; reference d7c7de92"
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],inputs:inputs,rows:rows)+"\n")
+puts "WS8bm live chrome: #{rows.size} icon/recent-search components; ordered custom icons, scoped latest ten, escaped HTML/URLs; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

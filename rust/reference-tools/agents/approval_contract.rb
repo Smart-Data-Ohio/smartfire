@@ -84,5 +84,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   flows[:suspended_decidable] = external.decidable_by?(owner)
   agent.user.update_column(:status, :banned)
   flows[:inactive_decidable] = external.reload.decidable_by?(owner)
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", validation: validation, permissions: permissions, flows: flows }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], validation: validation, permissions: permissions, flows: flows }.as_json)
 end

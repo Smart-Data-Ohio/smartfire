@@ -92,6 +92,6 @@ Icons.custom_icons;Icons.instance_variable_set(:@custom_cache_at,Float::INFINITY
  end
  groups << {size:,event_id:event.id,entry_id:entry.id,thread_id:thread.id,old_ids:messages.map(&:id),rows:,cases:}
 end
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',groups:)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],groups:)+"\n")
 puts "WS8bm2 Calendar execution Rails: #{groups.sum{|g|g[:cases].size}} parent jobs; 4 queued SyncEntry children executed; #{groups.sum{|g|g[:cases].sum{|c|c[:frames].size}}} exact old-window frames"
 puts "WS8bm2 Calendar execution Rails reads: #{groups.map{|g|[g[:size],g[:cases].map{|c|c[:reads]}.join('/')].join(':')}.join(', ')}"

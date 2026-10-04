@@ -113,5 +113,5 @@ snapshot.call("agent_without_owner")
 agent.user.update_columns(status:1)
 snapshot.call("agent_inactive")
 matrix = {setup:setup,memberships:memberships,items:rows,agent_id:agent.id,agent_user_id:agent.user_id,snapshots:snapshots}
-puts JSON.pretty_generate(reference:"d7c7de92",snapshots:baseline_snapshots,states:states,matrix:matrix,validations:validations,combined_validation:combined_validation,update_validation:update_validation,invalid_event_update:invalid_event_update)
-warn "Rails activity domain oracle: #{baseline_snapshots.size + snapshots.size} access snapshots over all 11 source types, #{states.size} state transitions, #{validations.size + 3} validation cases; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),snapshots:baseline_snapshots,states:states,matrix:matrix,validations:validations,combined_validation:combined_validation,update_validation:update_validation,invalid_event_update:invalid_event_update)
+warn "Rails activity domain oracle: #{baseline_snapshots.size + snapshots.size} access snapshots over all 11 source types, #{states.size} state transitions, #{validations.size + 3} validation cases; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

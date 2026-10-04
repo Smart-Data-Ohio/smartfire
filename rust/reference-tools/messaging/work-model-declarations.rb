@@ -21,5 +21,5 @@ first.update_work!(actor:,work_status:'in_progress')
 second.update_work!(actor:,work_status:'blocked')
 raise 'global work event delta' unless WorkThreadEvent.count-count_before==2
 stale={status:thread.reload.work_status,owner:thread.work_owner_id,events:thread.work_thread_events.ordered.pluck(:actor_id,:event_type,:from_status,:to_status)}
-puts JSON.pretty_generate(reference:'d7c7de92',sources:%w[app/models/channel_thread.rb].to_h{|path|[path,Digest::SHA256.file(Rails.root.join(path)).hexdigest]},omitted:,stale:)
+puts JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],sources:%w[app/models/channel_thread.rb].to_h{|path|[path,Digest::SHA256.file(Rails.root.join(path)).hexdigest]},omitted:,stale:)
 warn 'WS8bm Rails direct-model declarations: 2 cases; omitted-owner refusal and independent stale writes; real callbacks'

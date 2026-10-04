@@ -25,7 +25,7 @@ class HuddleHandsOracle
       "voice_invalid_stage_role_lower"=>{type:"Rooms::Voice",role:"listener",operation:"lower"}
     }
     cases=variants.map {|name,options|scenario(name,options)}
-    puts JSON.pretty_generate({reference_pin:"d7c7de92",now:Time.current.to_i,cases:cases})
+    puts JSON.pretty_generate({reference_pin:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],now:Time.current.to_i,cases:cases})
   ensure
     travel_back
   end

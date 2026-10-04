@@ -19,7 +19,7 @@ if dependency_file.exists() and 'crates/storage/tests/vectors.rs' in dependency_
         'docker', 'run', '--rm', '--cpus', '2', '--name', f'ws8br-media-{os.getpid()}',
         '--user', f'{os.getuid()}:{os.getgid()}', '--env', 'CI=1', '--env', 'RUSTC_BOOTSTRAP=1',
         '--env', f'TMPDIR={root}/.scratch', '-v', f'{root}:{root}', '-w', str(root),
-        '--entrypoint', str(binary), os.environ.get('PARITY_IMAGE', 'ws8br-reference-d7c7de92'),
+        '--entrypoint', str(binary), os.environ.get('PARITY_IMAGE', 'campfire-reference'),
         *sys.argv[2:],
     ]
     raise SystemExit(subprocess.run(command).returncode)

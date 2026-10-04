@@ -3,17 +3,21 @@
 import os
 import fcntl
 import argparse
-import json
 from pathlib import Path
 import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRATCH = ROOT / ".scratch/messaging-golden-check"
-IMAGE = os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92")
-# _common.md explicitly accepts #163's application layout and its two assets.
-# Message/thread content still comes from d7c7de92 and is cross-checked below.
-LAYOUT_IMAGE = os.environ.get("PARITY_LAYOUT_IMAGE", "ws8br2-reference:d7c7de92-status-2e20b24c")
+IMAGE = os.environ.get("PARITY_IMAGE", "campfire-reference")
+image_env = subprocess.check_output(
+    ["docker", "image", "inspect", "--format", "{{range .Config.Env}}{{println .}}{{end}}", IMAGE],
+    text=True,
+)
+revision = next(line.removeprefix("GIT_REVISION=") for line in image_env.splitlines()
+                if line.startswith("GIT_REVISION="))
+assert revision == (ROOT / "rust/parity/reference.sha").read_text().strip(), \
+    "reference image revision does not match parity/reference.sha"
 ORACLES = ["fresh-github-reference", "thread-cache-stability", "cache-stability", "rendered-dependencies", "cache-reaction-review", "preview", "fragments", "root", "paging", "broadcasts", "thread-memberships", "collection", "room-list", "message-states", "thread-message-reads", "thread-message-writes", "thread-pages", "thread-lifecycle", "thread-content", "forwards", "forward-success", "modern-boosts", "signed-attachments", "boost-pages", "thread-review", "thread-upload-coverage", "client-retries", "avatar-logo-uploads", "jpeg-boundary", "room-components", "github-thread-page", "drive-controllers", "live-chrome", "github-edit-refresh", "cached-csrf", "thread-declarations", "provider-declarations", "legacy-cache", "root-declarations", "validator-declarations", "recipient-declarations", "bot-controller-declarations", "event-reference-declaration", "room-csrf"]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("names", nargs="*", choices=ORACLES)
@@ -35,6 +39,7 @@ for name in names:
     args = ["docker", "run", "--rm", "--cpus", "2", "--name", f"ws8bm-goldens-{name}",
             "--user", f"{os.getuid()}:{os.getgid()}", "--env-file", str(ROOT / "rust/parity/.env.reference"),
             "-e", "RAILS_LOG_LEVEL=warn", "-e", "PARITY_REDIS=1",
+            "-e", "PARITY_REFERENCE_SHA=" + revision,
             "-v", f"{SCRATCH / 'db'}:/rails/storage/db", "-v", f"{SCRATCH / 'files'}:/rails/storage/files",
             "-v", f"{SCRATCH / 'out'}:/out", "-v", f"{ROOT / 'rust'}:/work:ro", IMAGE,
             "bash", "-c", f"bin/rails runner --skip-executor /work/reference-tools/messaging/{name}.rb /out/{name}.json"]
@@ -44,30 +49,10 @@ for name in names:
     for line in run.stdout.splitlines():
         if line.startswith("WS8bm "):
             print(line, flush=True)
-    if name == "thread-pages":
-        shutil.copyfile(ROOT / "rust/parity/.seed/default/db/production.sqlite3", SCRATCH / "db/production.sqlite3")
-        layout_args = args.copy()
-        layout_args[-4] = LAYOUT_IMAGE
-        layout_args[-1] = "bin/rails runner --skip-executor /work/reference-tools/messaging/thread-pages.rb /out/thread-pages-layout.json"
-        layout_run = subprocess.run(layout_args, cwd=ROOT, capture_output=True, text=True)
-        (SCRATCH / "thread-pages-layout.log").write_text(layout_run.stdout + layout_run.stderr)
-        assert layout_run.returncode == 0, "thread-pages: approved layout reference failed"
-        pinned = json.loads((SCRATCH / "out/thread-pages.json").read_text())
-        layout = json.loads((SCRATCH / "out/thread-pages-layout.json").read_text())
-        full_bodies = [row["full_body"] for row in layout["rows"]]
-        # Replace in place to preserve the reference oracle's JSON field order.
-        # Only layout HTML is approved drift; all other fields still compare in full.
-        for row in [*layout["rows"], *pinned["rows"]]:
-            row["full_body"] = None
-        assert layout == pinned, "thread-pages: content drift outside the approved layout"
-        for row, full_body in zip(pinned["rows"], full_bodies):
-            row["full_body"] = full_body
-        pinned["layout_reference"] = "2e20b24c (#163 application layout and assets only; thread/message source remains d7c7de92)"
-        (SCRATCH / "out/thread-pages.json").write_text(json.dumps(pinned, ensure_ascii=False, indent=2) + "\n")
-        print("WS8bm thread layout: #163 Rails layout; every non-layout field identical to d7c7de92", flush=True)
     files = [f"{name}.json"] + (["message-template-digest.txt"] if name == "rendered-dependencies" else []) + (["index-template-digest.txt"] if name == "paging" else [])
     for file in files:
         target = (ROOT / "rust/crates/views/src/messages/rails-template-digest.txt" if file == "message-template-digest.txt"
+                  else ROOT / "rust/crates/campfire/src/controllers/messages/rails-index-template-digest.txt" if file == "index-template-digest.txt"
                   else ROOT / "rust/vectors/messaging" / file)
         if options.write:
             shutil.copyfile(SCRATCH / "out" / file, target)

@@ -24,4 +24,4 @@ operations=[]
   operations << {room_id:room_id,level:level,frames:frames.map(&:dup)}
 end
 puts JSON.pretty_generate(operations)
-warn "Rails involvement: #{operations.size} HTTP transitions, #{operations.sum { |o|o[:frames].size }} recipient frames; reference d7c7de92"
+warn "Rails involvement: #{operations.size} HTTP transitions, #{operations.sum { |o|o[:frames].size }} recipient frames; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Recapture all agent wire artifacts from private copies of the pinned Rails seed."""
+
+from pin_identity import PIN, PIN_FULL, PIN_IMAGE
 from pathlib import Path
 import os
 import subprocess
@@ -8,7 +10,7 @@ import sys
 root = Path(__file__).resolve().parents[3]
 output = Path(sys.argv[1]).resolve()
 output.mkdir(parents=True, exist_ok=True)
-env = dict(os.environ, PARITY_IMAGE='ws11api-reference:d7c7de92')
+env = dict(os.environ, PARITY_IMAGE=PIN_IMAGE)
 env.setdefault('PARITY_NAMESPACE', 'ws11api-wire')
 for script, filename in [
     ('http_contract.rb', 'agent_http.json'),
@@ -39,6 +41,8 @@ for script, filename in [
     ('review192r2_attachment_diagnosis.rb', 'agent_review192r2_attachment.json'),
     ('review192r3_attachment_diagnosis.rb', 'agent_review192r3_attachment.json'),
 ]:
+    if os.environ.get('AGENT_HTTP_NAMES') and filename not in os.environ['AGENT_HTTP_NAMES'].split(','):
+        continue
     with (output / filename).open('w') as stdout, (output / (script + '.log')).open('w') as stderr:
         result = subprocess.run([
             str(root / 'rust/parity/bin/reference'), 'exec', '--seed', 'default',
@@ -47,8 +51,20 @@ for script, filename in [
     assert result.returncode == 0, (script, result.returncode)
     print('WS11-api captured ' + filename, flush=True)
 
-subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-r5-representations.py"), str(output)], cwd=root, env=env, check=True)
+if not os.environ.get('AGENT_HTTP_NAMES') or any(name in os.environ['AGENT_HTTP_NAMES'].split(',') for name in ['agent_review192r5_representations.json']):
+    subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-r5-representations.py"), str(output)], cwd=root, env=env, check=True)
 
-subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-blob-proxy-headers.py"), str(output)], cwd=root, env=env, check=True)
+if not os.environ.get('AGENT_HTTP_NAMES') or any(name in os.environ['AGENT_HTTP_NAMES'].split(',') for name in ['agent_blob_proxy_headers.json']):
+    subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-blob-proxy-headers.py"), str(output)], cwd=root, env=env, check=True)
 
-subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-array-shapes.py"), str(output)], cwd=root, env=env, check=True)
+if not os.environ.get('AGENT_HTTP_NAMES') or any(name in os.environ['AGENT_HTTP_NAMES'].split(',') for name in ['agent_array_shapes.json']):
+    subprocess.run([sys.executable, str(root / "rust/reference-tools/agents/record-array-shapes.py"), str(output)], cwd=root, env=env, check=True)
+
+if "--write" in sys.argv[2:]:
+    count = 0
+    for source in sorted(output.glob("*.json")):
+        target = root / "rust/vectors" / source.name
+        if target.is_file():
+            target.write_bytes(source.read_bytes())
+            count += 1
+    print(f"Rails agent HTTP: {count} complete corpora regenerated", flush=True)

@@ -1,6 +1,6 @@
 # Additional component combinations, bit-field boundaries and arbitrary Integers.
 # These call the pinned model and JSON decoder, not an isolated grammar oracle.
-result={reference:'d7c7de92',expiry:[],tokens:[]}
+result={reference:ENV.fetch("PARITY_REFERENCE_SHA"),expiry:[],tokens:[]}
 years=['-292278','292279','9223372036854775808','-9223372036854775809','9'*110,'-'+'9'*110]
 inputs=[]
 years.product(['01-01','02-29','12-31'],['',' 23:59:60',' 24:00:00',' 00:00:00 +2359',' 23:59:59 -2359',' BC']).each {|y,date,clock| inputs << "#{y}-#{date}#{clock}"}

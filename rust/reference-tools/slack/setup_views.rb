@@ -37,5 +37,5 @@ rows=cases.map do |c|
  {name:c[:name],data:,html:}
 end
 Current.reset
-File.write(File.join(ENV.fetch('PARITY_WORK'),'vectors/slack/setup_views.json'),JSON.pretty_generate({reference:'d7c7de92',source_sha256:Digest::SHA256.file(Rails.root.join('app/views/accounts/slack_imports/show.html.erb')).hexdigest,cases:rows})+"\n")
+File.write(File.join(ENV.fetch('PARITY_WORK'),'vectors/slack/setup_views.json'),JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA"),source_sha256:Digest::SHA256.file(Rails.root.join('app/views/accounts/slack_imports/show.html.erb')).hexdigest,cases:rows})+"\n")
 puts "Slack setup views: #{rows.length} complete Rails template bodies generated with shared deterministic CSRF inputs"

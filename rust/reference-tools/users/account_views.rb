@@ -60,5 +60,5 @@ styles=['</textarea><script>styles()</script> & "',nil,"/* é <&> */\nbody { col
   account=Account.first; account.assign_attributes(custom_styles:css)
   {custom_styles:css,**render_account(david,"accounts/custom_styles/edit",{account:account})}
 end
-puts JSON.pretty_generate(reference:"d7c7de92",rows:rows,pages:pages,invites:invites,styles:styles)
-warn "Rails account views oracle: #{rows.size} rows, #{pages.size} settings bodies/navs/footers, #{invites.size} invites, #{styles.size} CSS bodies; reference d7c7de92"
+puts JSON.pretty_generate(reference: ENV.fetch('PARITY_REFERENCE_SHA'),rows:rows,pages:pages,invites:invites,styles:styles)
+warn "Rails account views oracle: #{rows.size} rows, #{pages.size} settings bodies/navs/footers, #{invites.size} invites, #{styles.size} CSS bodies; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

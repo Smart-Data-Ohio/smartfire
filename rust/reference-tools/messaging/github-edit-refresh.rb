@@ -40,5 +40,5 @@ rows=[]
           suppressed:message.embeds_suppressed,edited_at:message.edited_at&.iso8601(6)}
 end
 Current.reset
-File.write(ARGV.fetch(0),JSON.pretty_generate(reference:'d7c7de92',rows:rows)+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:rows)+"\n")
 puts "WS8bm GitHub edit refresh: #{rows.size} actual Rails requests; bodyless legacy and unchanged root/thread refresh claims"

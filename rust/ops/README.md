@@ -49,8 +49,8 @@ python3 -m unittest discover -s rust/ops/tests -p 'test_release.py'
 WS18_BINARY="$PWD/rust/target/debug/campfire" python3 -m unittest discover -s rust/ops/tests -p 'test_additive_reference.py'
 ```
 
-The committed Rails baseline comes from the recorded `origin/main` SHA. The
-differential uses `ws6-reference-d7c7de92:latest` unless
+The committed Rails baseline comes from `parity/reference.sha`. The
+differential uses `campfire-reference` (or `PARITY_IMAGE`) unless
 `WS18_REFERENCE_IMAGE` selects another **pinned local reference image**.
 
 ## Image and release contract

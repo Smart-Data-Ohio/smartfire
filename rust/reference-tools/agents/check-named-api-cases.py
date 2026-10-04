@@ -14,6 +14,7 @@ spec.loader.exec_module(ports)
 
 
 def check(log=None):
+    pin = (ROOT / "rust/parity/reference.sha").read_text().strip()
     ledger = json.loads((ROOT / "rust/plans/ws11api-named-api-cases.json").read_text())
     audit = json.loads((ROOT / ledger["audit_source"]).read_text())
     audited = [(c["file"], c["test"]) for c in audit["cases"]
@@ -37,7 +38,7 @@ def check(log=None):
         seen.add(identity)
         if case["rails_file"] not in pinned_files:
             pinned_files[case["rails_file"]] = subprocess.check_output(
-                ["git", "show", ledger["reference"] + ":" + case["rails_file"]], cwd=ROOT, text=True)
+                ["git", "show", pin + ":" + case["rails_file"]], cwd=ROOT, text=True)
         pinned = pinned_files[case["rails_file"]]
         assert (ROOT / case["rails_file"]).read_text() == pinned, case["rails_file"]
         assert case["rails_test"] in re.findall(r'^\s*test "(.*?)" do', pinned, re.M), identity

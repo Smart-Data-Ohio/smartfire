@@ -3,6 +3,32 @@ require 'json'
 require 'net/http'
 require 'openssl'
 require 'action_dispatch/testing/integration'
+# The original sampler ran outside the frozen wall clock. Replay its stage-note
+# UUID and Message timestamp inputs; Rails still creates and renders the note.
+stage_note_input=JSON.parse(File.read(File.join(__dir__,'lifecycle-inputs.json')))
+class LifecycleEntropyError < StandardError; end
+Message.singleton_class.prepend(Module.new do
+  define_method(:current_time_from_proper_timezone) do
+    inputs=Thread.current[:google_lifecycle_message_clocks]
+    if inputs
+      raise LifecycleEntropyError, 'unexpected stage-note clock draw' if inputs.empty?
+      Time.at(Rational(inputs.shift,1000)).utc
+    else
+      super()
+    end
+  end
+end)
+Random.singleton_class.prepend(Module.new do
+  define_method(:uuid) do
+    inputs=Thread.current[:google_lifecycle_message_uuids]
+    if inputs
+      raise LifecycleEntropyError, 'unexpected stage-note UUID draw' if inputs.empty?
+      inputs.shift
+    else
+      super()
+    end
+  end
+end)
 Rails.application.routes.default_url_options.merge!(host:'campfire.test',protocol:'http')
 ActiveJob::Base.queue_adapter=:test
 ENV['GOOGLE_CLIENT_ID']='test-client-id'
@@ -32,7 +58,7 @@ specs=[
   {name:'disconnect_manual_ooo',kind:'disconnect',manual:true},
   {name:'disconnect_no_cache',kind:'disconnect',cache:false}
 ]
-out={reference:'d7c7de92',cases:[]}
+out={reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:[]}
 specs.each_with_index do |spec,i|
   Rails.application.executor.run!(reset:true)
   Calendar::PushChannel.delete_all;Calendar::MeetingCache.delete_all;EventCalendarEntry.delete_all;GoogleAccount.delete_all
@@ -52,7 +78,19 @@ specs.each_with_index do |spec,i|
   error=nil;status=nil
   begin
     if spec[:kind]=='deactivate'
-      user.deactivate
+      if i.zero?
+        Thread.current[:google_lifecycle_message_clocks]=stage_note_input.fetch('timestamp_milliseconds').dup
+        Thread.current[:google_lifecycle_message_uuids]=[stage_note_input.fetch('uuid')]
+        begin
+          user.deactivate
+          raise LifecycleEntropyError, 'unused stage-note entropy inputs' unless Thread.current[:google_lifecycle_message_clocks].empty? && Thread.current[:google_lifecycle_message_uuids].empty?
+        ensure
+          Thread.current[:google_lifecycle_message_clocks]=nil
+          Thread.current[:google_lifecycle_message_uuids]=nil
+        end
+      else
+        user.deactivate
+      end
     else
       session=Session.create!(user:,user_agent:'lifecycle-fixture',ip_address:'127.0.0.1',two_factor_verified_at:now)
       req=ActionDispatch::Request.new(Rails.application.env_config.merge('HTTP_HOST'=>'campfire.test','rack.url_scheme'=>'http','REQUEST_METHOD'=>'GET'))
@@ -65,6 +103,7 @@ specs.each_with_index do |spec,i|
       status=request.response.status
     end
   rescue => e
+    raise if e.is_a?(LifecycleEntropyError)
     error=e.class.name
   end
   jobs=ActiveJob::Base.queue_adapter.enqueued_jobs.select { |j|j[:job].name.start_with?('Calendar::') }.map do |j|

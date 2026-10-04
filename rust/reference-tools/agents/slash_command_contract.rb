@@ -48,5 +48,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   grant.revoke!
   dispatch.call(:revoked, "/inspect nope")
   capture.call(:revoked_registration, Agents::SlashCommands.register(agent: agent, room_id: room.id, name: "inspect"))
-  puts JSON.pretty_generate({ reference_pin: "d7c7de92", validation: validation, registrations: registrations, invocations: invocations, events: events }.as_json)
+  puts JSON.pretty_generate({ reference_pin: ENV.fetch("PARITY_REFERENCE_SHA")[0, 8], validation: validation, registrations: registrations, invocations: invocations, events: events }.as_json)
 end
