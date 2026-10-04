@@ -1,5 +1,16 @@
 # WS8br2 report — #175 merge verification
 
+## Cutover reconciliation (2026-10-04)
+
+The preceding checkpoint is historical. Main `78b9b1546` has merged the source
+APIs it described as absent. The current, **partial** result is recorded in
+[ledger-ws8br-ws17-ws11ui-report.md](ledger-ws8br-ws17-ws11ui-report.md);
+[the remaining manifest](ledger-ws8br-ws17-ws11ui-remaining.json) enumerates every
+original clause still lacking a verified receipt. No old owner-held paragraph is
+credited as a present missing implementation. Original run/count history below
+is retained; it is not a new cutover execution claim.
+
+
 Verified implementation: `0b009d1087c25cb2d72b20c77663108151d9a29a`.
 Merge commit: `9380d068139e5123c1e90049a03a1ee40e5cf25b`, parents `ad32fff5` and main `434d1c14` (#175). The following test-only commits retain Astra's owner-list precedence probe and remove an automatically duplicated fixture initializer. Locked metadata passes after the merge and in the fresh clone.
 

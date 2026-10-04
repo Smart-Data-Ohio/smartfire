@@ -1,5 +1,16 @@
 # WS17 Wave 4 — review fixes complete; workstream partial, 332 of 347 selected scenarios delivered
 
+## Cutover reconciliation (2026-10-04)
+
+The preceding checkpoint is historical. Main `78b9b1546` has merged the source
+APIs it described as absent. The current, **partial** result is recorded in
+[ledger-ws8br-ws17-ws11ui-report.md](ledger-ws8br-ws17-ws11ui-report.md);
+[the remaining manifest](ledger-ws8br-ws17-ws11ui-remaining.json) enumerates every
+original clause still lacking a verified receipt. No old owner-held paragraph is
+credited as a present missing implementation. Original run/count history below
+is retained; it is not a new cutover execution claim.
+
+
 ## Main integration and live-asset verification (2026-09-30)
 
 Merged `origin/main` **`b66199b7`** (#166 WS15e and #168 shared asset golden helper) with merge commit **`b747a1af`**. The merge preserves both endpoint lists, room embed-fetch handoffs plus WS17 OOO members, and the combined periodic registrations. Pushed **`68051a62`** changes only the two WS17 view test files to resolve actual assets and use the shared `asset_goldens` comparison. No captured bytes, runtime behavior or four P2 fix commits were altered. Asset-free status/OOO frames remain exact, and the helper keeps non-asset bytes strict.

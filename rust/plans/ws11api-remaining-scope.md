@@ -36,7 +36,8 @@ classification remain explicitly approved, with current-state checks retained.
 
 The typed AgentBudgetNotice owner API is exported, and all three activity presenter
 read seams use its batch reader. `ws11api-budget-notice-reader.md` records its exact
-API and audiences. WS12 owns its ActivityItems::Recorder source integration.
+API and audiences. WS12's ActivityItems::Recorder source integration is installed;
+the cutover reconciliation below replaces the earlier owner-held claim.
 
 ## Completed API behavior checked by the audit
 
@@ -110,7 +111,9 @@ other agents' hooks for later test steps changes only test run-at inputs.
 vector, producer recipe and receipt. The checker reads each declaration's own
 receipt file and optionally requires its actual cargo pass. The domain ledger has
 **0 deferred names** and the broader API ledger has **0 pending declarations**.
-The peer-owned Recorder source integration is also merged, as described below.
+**No peer-owned Recorder integration remains flagged for this scope.** The earlier
+checkpoint named that integration as the sole remaining seam; current main supplies
+the reader at the public recording entrypoint.
 
 ### Work polling read fix
 
@@ -125,7 +128,7 @@ measured board/work/read/write/ack paths remain flat at 5/50 rows; the exact tab
 is in `ws11api-next-6-report.md`. No WS12 grant, ledger, audit or service transaction
 logic is replaced.
 
-### Recorder review and actual peer-owned seam
+### Recorder review and cutover reconciliation
 
 Fresh uncached Rails and Rust run real Recorder transactions, commit callbacks,
 complete persisted items and activity frames at 10/100 recipients. Schema discovery
@@ -136,13 +139,34 @@ and **32/302 in Rails**. Rust's per-recipient growth is no faster than Rails.
 Activated controls for per-recipient user reloads and wrong persisted event types
 fail the precise cost/fact assertions. No Recorder service implementation changed.
 
-The AgentBudgetNotice Recorder source integration is merged. The default
-`ActivityItem::record_typed` entry point installs `PersistedBudgetNoticeReader`
-(`rust/crates/db/src/models/activity_item/recorder.rs:60` and `:418`), which reads
-the owning domain's current persisted recipients. The producer remains owned by
-`agent_posting`; no adapter argument is needed by ordinary Recorder callers.
-`rust/crates/db/src/tests/ws12_generic_recorder_test.rs:278` verifies the default
-entry point, and `:344` checks the reader/Recorder cost at two recipient sizes.
+Historical checkpoint: this section called AgentBudgetNotice a peer-held blocker
+because the internal source-facts branch requires a reader. That claim is superseded
+on cutover main `78b9b1546`. The public `record_typed` entrypoint supplies
+`PersistedBudgetNoticeReader` in
+`rust/crates/db/src/models/activity_item/recorder.rs:60`; its implementation at
+`:419` reads the real `AgentBudgetNotice`. The internal missing-reader error is a
+defensive check, not an absent producer. Enabled CI tests
+`tests::ws12_generic_recorder_test::ws12_generic_budget_notice_uses_the_merged_owner_reader_without_an_adapter_argument`
+and `::ws12_budget_notice_batch_reader_and_recorder_reads_at_two_sizes` prove both
+the ordinary caller and batch-read boundary.
+
+The same cutover check resolves older events/polling/thread-page flags:
+
+- `/agents/events` uses token authorization, grants, throttling, no-store and the
+  real event page at `rust/crates/campfire/src/controllers/agents.rs:125`; it returns
+  JSON, not a 501 placeholder. The human ledger uses the real batched presenter at
+  `rust/crates/campfire/src/controllers/agents/history.rs:129`.
+- `rust/crates/campfire/src/controllers/agent_polling_tests.rs:17` and `:21`
+  contain enabled REST/MCP Drive-byte tests, without `#[ignore]`.
+- The owning standalone thread renderer calls the real GitHub header at
+  `rust/crates/campfire/src/controllers/channel_threads.rs:144` and `:175`. The enabled
+  `controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies`
+  compares all three visibility states and denies non-members.
+
+All named test groups above passed in main CI run
+[37200618245](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37200618245).
+The exact repository URL and raw pass receipts are also recorded in the cutover
+ledger report; this paragraph does not claim the external browser harness runs in CI.
 
 ## Peer-owned fixed read costs
 

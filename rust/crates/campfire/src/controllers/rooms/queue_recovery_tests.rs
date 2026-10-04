@@ -7,8 +7,7 @@ use campfire_db::{Membership, Room, models::room_delete};
 #[tokio::test]
 async fn queue_decision_keeps_atomic_http_failure_and_recovers_a_rails_tombstone() {
     let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap()));
-    let mut app = TestApp::boot_with_test_clock(clock.clone()).await.expect("default seed required");
-    app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+    let app = TestApp::boot_with_test_clock(clock.clone()).await.expect("default seed required").without_job_runner().await;
     let id = 654632876;
     let mut browser = app.david();
     app.db().write(|tx| {
