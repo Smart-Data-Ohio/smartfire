@@ -69,6 +69,53 @@ try {
       const body = await page.evaluate(async () => (await fetch('/network-probe', {method:'POST',body:'held request'})).text());
       if (body !== '<h1>stable network</h1>') throw new Error('forwarder changed response bytes');
     });
+  } else if (scenario === 'inbox' || scenario === 'inbox-filter') {
+    await run('activity_inbox_test.rb', scenario === 'inbox' ? 'handles an item, clears the badge, and receives a later activity' : 'filters by type and saves a notification switch', 'david', async page => {
+      await visit(page, `${base}/activity`);
+      await contains(page.locator('#activity-inbox-title'), 'Activity inbox');
+      const item = page.locator(`#activity_item_${labels['system.activity_item']}`);
+      await item.waitFor({state:'visible'});
+      if (scenario === 'inbox') {
+        await contains(page.locator('.workspace-activity-count'), '1', 10000);
+        await item.getByRole('button',{name:'Mark handled',exact:true}).click();
+        for (const selector of ['#activity-unread-count','.workspace-activity-count']) {
+          await page.locator(`${selector}[hidden]`).waitFor({state:'attached',timeout:10000});
+          if (await page.locator(selector).isVisible()) throw new Error(`${selector}: handled badge remained visible`);
+        }
+        const control = process.env.WS11UI_ACTIVITY_CONTROL;
+        fs.writeFileSync(`${control}.request`, 'create');
+        const deadline = performance.now() + 10000;
+        while (!fs.existsSync(`${control}.response`)) {
+          if (performance.now() >= deadline) throw new Error('followup producer did not complete');
+          await new Promise(resolve=>setTimeout(resolve,20));
+        }
+        const created = JSON.parse(fs.readFileSync(`${control}.response`,'utf8'));
+        if (created.error || !created.id) throw new Error('followup producer failed: '+JSON.stringify(created));
+        await page.locator(`#activity_item_${created.id}`).waitFor({state:'visible',timeout:10000});
+        for (const selector of ['#activity-unread-count','.workspace-activity-count']) await contains(page.locator(selector),'1',10000);
+      } else {
+        const event = page.locator(`#activity_item_${labels['system.event_item']}`);
+        await event.waitFor({state:'visible'});
+        await page.locator("nav[aria-label='Activity type filters']").getByRole('link',{name:'Events',exact:true}).click();
+        await event.waitFor({state:'visible'}); await item.waitFor({state:'detached'});
+        await page.locator("nav[aria-label='Activity type filters']").getByRole('link',{name:'All',exact:true}).click();
+        await item.waitFor({state:'visible'});
+        await visit(page, `${base}/users/me/profile`);
+        const checkbox = page.locator('#user_inbox_preferences_event_reminders');
+        await checkbox.locator('xpath=ancestor::label').click();
+        const submitted = page.waitForResponse(response=>['PATCH','POST'].includes(response.request().method()) && new URL(response.url()).pathname==='/users/me/profile');
+        await checkbox.locator('xpath=ancestor::form').locator("button[type='submit']").click();
+        // The original test waits on persisted state: the local checkbox changes
+        // before Turbo submits. Read only after the real form response commits.
+        // User::InboxPreferences casts its stored form value "0" to false;
+        // comparing the serialized JSON to a literal boolean is not that reader.
+        await submitted;
+        if (await checkbox.isChecked()) throw new Error('event reminders checkbox remained checked');
+        const {spawnSync}=await import('node:child_process');
+        const saved=spawnSync('python3',['-c',"import json,sqlite3,sys;c=sqlite3.connect(sys.argv[1]);p=json.loads(c.execute('SELECT inbox_preferences FROM users WHERE id=?',(sys.argv[2],)).fetchone()[0] or '{}');v=p.get('event_reminders',True);effective=False if v in (False,0,'0','false') else True;assert effective is False",database,String(labels['users.david'])]);
+        if(saved.status!==0) throw new Error('event reminders preference was not saved: '+saved.stdout.toString()+' '+saved.stderr.toString());
+      }
+    });
   } else if (scenario === 'work') {
     await run('agent_work_assignment_test.rb', 'assigns an agent and renders its API status change after refresh', 'jz', async page => {
       await joinRoom(page, labels['rooms.designers']);

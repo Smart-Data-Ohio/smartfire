@@ -3608,7 +3608,7 @@
       "test": "a member with notifications off gets no work items but a mentions member does",
       "status": "ported",
       "owner": "WS12",
-      "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/work_mutations_test.rs::work_recipients_honor_current_room_thread_and_agent_assignment_preferences"
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::work_room_notifications_off_then_mentions_restores_updates. Real ChannelThread::update_work: tracking and assignment produce no recipient item while room involvement is nothing; changing it to mentions restores one unread work_update sourced by the newest in_progress event. Enabled in the ordinary campfire_db nextest CI gate; exact-head CI receipt pending."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3632,7 +3632,7 @@
       "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
       "status": "ported",
       "owner": "WS12",
-      "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/work_mutations_test.rs::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item"
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::work_status_update_retains_assignment_for_same_recipient. Real ChannelThread::update_work: the same David recipient retains exactly [work_update, work_assignment]; update identity survives and points to the newest in_progress event, and the complete assignment row is unchanged. Enabled in the ordinary campfire_db nextest CI gate; exact-head CI receipt pending."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3656,7 +3656,7 @@
       "test": "work assigned by an agent honors the recipient's agent_work switch",
       "status": "ported",
       "owner": "WS12",
-      "evidence": "Actual Message/WorkThreadEvent source hooks, current room/thread preferences, author exclusion, grouping and independent query measurements; WS17 pinned message activity/policy vectors and the new generic-recorder caller-authorized vector. Executed assertion mappings: rust/crates/db/src/tests/work_mutations_test.rs::work_recipients_honor_current_room_thread_and_agent_assignment_preferences"
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::agent_work_opt_out_allows_agent_updates_and_human_reassignment. Real WorkThreadEvent::create_for_change and after-commit Recorder: agent assignment is suppressed by agent_work=false; agent status update still notifies; after handling it, human reassignment still creates a new unread unhandled assignment for the former owner. Enabled in the ordinary campfire_db nextest CI gate; exact-head CI receipt pending."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -3702,25 +3702,127 @@
       "file": "test/system/activity_inbox_test.rb",
       "line": 13,
       "test": "handles an item, clears the badge, and receives a later activity",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS11-UI",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/activity_items.rs:212; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Full original Playwright sequence: system_behavior.py --scenario inbox, on two independently copied Rails/Rust seeds. check_cutover_browser.py passes all 3 paired sequences and rejects all 3 activated writer defects at the intended assertions, with 0 invalid controls. No retries, changed original assertions, deadline widening or asset edits. Registered ignored Rust browser test runs this paired sequence and its intended writer control via rust/parity/system/ws12. CI execution comes via the ignored browser-test job supplied on rust/ci-full-gate; combined-branch CI receipt is pending.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/system/activity_inbox_test.rb",
+            "line": 13,
+            "test": "handles an item, clears the badge, and receives a later activity",
+            "status": "deferred",
+            "owner": "WS11-UI",
+            "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/activity_items.rs:212; existing production implementation is retained and is not itself credited as this original assertion set."
+          }
+        }
+      ],
+      "browser_scenario": "inbox",
+      "browser_receipt": "rust/reference-tools/views/agents_ui/check_cutover_browser.py",
+      "supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::activity_items::tests::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions",
+        "log_line": 3421,
+        "result": "PASS"
+      },
+      "rust_test": "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions",
+      "browser_ci": {
+        "entry_point": "rust/parity/system/ws12",
+        "job_branch": "rust/ci-full-gate",
+        "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions",
+        "ignored": true,
+        "receipt": "pending combined-branch CI execution",
+        "registration": "existing exact selector in rust/ci-full-gate browser manifest"
+      }
     },
     {
       "file": "test/system/activity_inbox_test.rb",
       "line": 42,
       "test": "filters by type and saves a notification switch",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS11-UI",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/views/src/activity.rs:114; rust/crates/campfire/src/controllers/users/profiles.rs:189; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Full original Playwright sequence: system_behavior.py --scenario inbox-filter, on two independently copied Rails/Rust seeds. check_cutover_browser.py passes all 3 paired sequences and rejects all 3 activated writer defects at the intended assertions, with 0 invalid controls. No retries, changed original assertions, deadline widening or asset edits. Registered ignored Rust browser test runs this paired sequence and its intended writer control via rust/parity/system/ws12. CI execution comes via the ignored browser-test job supplied on rust/ci-full-gate; combined-branch CI receipt is pending.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/system/activity_inbox_test.rb",
+            "line": 42,
+            "test": "filters by type and saves a notification switch",
+            "status": "deferred",
+            "owner": "WS11-UI",
+            "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/views/src/activity.rs:114; rust/crates/campfire/src/controllers/users/profiles.rs:189; existing production implementation is retained and is not itself credited as this original assertion set."
+          }
+        }
+      ],
+      "browser_scenario": "inbox-filter",
+      "browser_receipt": "rust/reference-tools/views/agents_ui/check_cutover_browser.py",
+      "supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::activity_items::tests::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions",
+        "log_line": 3421,
+        "result": "PASS"
+      },
+      "rust_test": "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions",
+      "browser_ci": {
+        "entry_point": "rust/parity/system/ws12",
+        "job_branch": "rust/ci-full-gate",
+        "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions",
+        "ignored": true,
+        "receipt": "pending combined-branch CI execution",
+        "registration": "existing exact selector in rust/ci-full-gate browser manifest"
+      }
     },
     {
       "file": "test/system/agent_work_assignment_test.rb",
       "line": 19,
       "test": "assigns an agent from the update dialog and renders its API status change after refresh",
-      "status": "deferred",
+      "status": "ported",
       "owner": "WS11-UI",
-      "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/channel_threads.rs:83; existing production implementation is retained and is not itself credited as this original assertion set."
+      "evidence": "Full original Playwright sequence: system_behavior.py --scenario work, on two independently copied Rails/Rust seeds. check_cutover_browser.py passes all 3 paired sequences and rejects all 3 activated writer defects at the intended assertions, with 0 invalid controls. No retries, changed original assertions, deadline widening or asset edits. Registered ignored Rust browser test runs this paired sequence and its intended writer control via rust/parity/system/ws12. CI execution comes via the ignored browser-test job supplied on rust/ci-full-gate; combined-branch CI receipt is pending.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/system/agent_work_assignment_test.rb",
+            "line": 19,
+            "test": "assigns an agent from the update dialog and renders its API status change after refresh",
+            "status": "deferred",
+            "owner": "WS11-UI",
+            "evidence": "Server bytes, domain writes and Cable vectors run; this complete named browser sequence has not been re-executed at this checkpoint. Pixel geometry is excluded, browser behavior is not. Blocking named comparison/control belongs to WS11-UI at rust/crates/campfire/src/controllers/channel_threads.rs:83; existing production implementation is retained and is not itself credited as this original assertion set."
+          }
+        }
+      ],
+      "browser_scenario": "work",
+      "browser_receipt": "rust/reference-tools/views/agents_ui/check_cutover_browser.py",
+      "supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::channel_threads::page_tests::ordinary_work_and_board_posts_render_through_authorized_routes",
+        "log_line": 3618,
+        "result": "PASS"
+      },
+      "rust_test": "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions",
+      "browser_ci": {
+        "entry_point": "rust/parity/system/ws12",
+        "job_branch": "rust/ci-full-gate",
+        "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions",
+        "ignored": true,
+        "receipt": "pending combined-branch CI execution",
+        "registration": "existing exact selector in rust/ci-full-gate browser manifest"
+      }
     },
     {
       "file": "test/system/board_automations_test.rb",
@@ -3906,5 +4008,17 @@
       "owner": "WS12",
       "evidence": "Complete original named Rails output and persisted facts run in the credited Rust tests; producer replay rejects the targeted clause. Full response bodies / source facts are unmasked; FrozenClock and two-size reads are exercised. Executed assertion mappings: rust/crates/campfire/src/controllers/ws12_work_remaining_tests.rs::ws12_work_c230_complete_named_rails_http_sequence"
     }
-  ]
+  ],
+  "ws11ui_cutover": {
+    "date": "2026-10-04",
+    "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+    "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+    "original_browser_flags": 3,
+    "passed": 3,
+    "remaining": 0,
+    "browser_ci_gated": true,
+    "browser_ci_entry_point": "rust/parity/system/ws12",
+    "browser_ci_job_branch": "rust/ci-full-gate",
+    "browser_ci_receipt": "pending combined-branch CI execution"
+  }
 }

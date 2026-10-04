@@ -15,6 +15,7 @@ root = Path(__file__).resolve().parents[3]
 binary = Path(sys.argv[1]).resolve()
 arguments = sys.argv[2:]
 pinned_application_tests = (
+    'controllers::messages::attachment_processing_tests::attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails',
     'controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers',
     'controllers::agent_review_r3_tests::pr192_r3_fresh_video_retains_preview_and_variant_files',
     'controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_redirect',
@@ -30,7 +31,7 @@ def pinned_args(test_arguments):
     temporary.mkdir(parents=True, exist_ok=True)
     image = os.environ.get('PARITY_IMAGE', PIN_IMAGE)
     owner = os.environ.get('PARITY_OWNER', 'ws11ui')
-    print(f'WS11 media runner: byte-exact media tests execute in {image}', flush=True)
+    print(f'WS11 media runner: byte-exact media tests execute in {image}', file=sys.stderr, flush=True)
     args = ['docker', 'run', '--rm', '--network', 'none', '--name',
             owner + '-fresh-pinned-media-' + str(os.getpid()), '--cpus', '2',
             '--user', f'{os.getuid()}:{os.getgid()}', '--entrypoint', str(binary),
@@ -61,7 +62,7 @@ if (Path.cwd() == root / 'rust/crates/campfire'
         for test in media:
             native_arguments.extend(['--skip', test])
         native = subprocess.run(native_arguments)
-        # Sequential: never add another worker to the native eight-thread run.
-        pinned = subprocess.run(pinned_args([*media, '--exact', '--test-threads=8']))
+        # Sequential: never add another worker to the native run.
+        pinned = subprocess.run(pinned_args([*media, '--exact', '--test-threads=4']))
         sys.exit(native.returncode or pinned.returncode)
 os.execv(str(binary), [str(binary), *arguments])
