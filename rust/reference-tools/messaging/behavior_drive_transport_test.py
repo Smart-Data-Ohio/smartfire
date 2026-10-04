@@ -6,6 +6,17 @@ from urllib.error import HTTPError
 from behavior_drive_transport import drive_transport
 
 class DriveTransportTests(unittest.TestCase):
+    def test_default_port_stays_reserved_and_does_not_collide_with_another_transport(self):
+        payloads = {'list': {'files': []}, 'files': {}}
+        with drive_transport(payloads) as first, drive_transport(payloads) as second:
+            self.assertNotEqual(first.port, second.port)
+            for calls in (first, second):
+                with urlopen(Request(f'http://127.0.0.1:{calls.port}/drive/v3/files?pageSize=10',
+                                     headers={'Host': 'www.googleapis.com'})) as reply:
+                    self.assertEqual(reply.status, 200)
+            self.assertEqual(len(first), 1)
+            self.assertEqual(len(second), 1)
+
     def test_real_http_scopes_and_teardown_after_diagnostic_failure(self):
         payloads = {'list': {'files': []}, 'files': {'fixture': {'name': 'Q3 Planning'}}}
         with self.assertRaisesRegex(RuntimeError, 'diagnostic failure'):

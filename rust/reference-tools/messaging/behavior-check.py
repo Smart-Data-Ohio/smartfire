@@ -423,13 +423,18 @@ for file in files:
             if case in test_environment_cases:
                 run_env.update(RAILS_ENV="test",CAMPFIRE_DATABASE_PATH=str(work / "db/test.sqlite3"))
             if case in drive_cases:
-                run_env.update(WS8BM_DRIVE_PORT=str(port_base+4),WS8BM_DRIVE_STUBS="1",WS8BM_DRIVE_TWO="1" if case.startswith("edit a room message") else "0")
+                run_env.update(WS8BM_DRIVE_STUBS="1",WS8BM_DRIVE_TWO="1" if case.startswith("edit a room message") else "0")
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log, ExitStack() as transports:
                 try:
                     metadata_path=fixture / "db/browser-fixture.json"
                     metadata=json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-                    drive_calls=transports.enter_context(drive_transport(metadata["drive_payloads"],port_base+4)) if case in drive_cases else None
+                    # Hold an OS-assigned listener through the whole case. A fixed
+                    # mock port can be taken by an unrelated outbound connection
+                    # between cases, even when no server owns that port.
+                    drive_calls=transports.enter_context(drive_transport(metadata["drive_payloads"])) if case in drive_cases else None
+                    if drive_calls is not None:
+                        run_env["WS8BM_DRIVE_PORT"]=str(drive_calls.port)
                     reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
                     if case.startswith("From Google Drive starts the enhanced"):
                         for key in ["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_PICKER_API_KEY","GOOGLE_CLOUD_PROJECT_NUMBER"]:

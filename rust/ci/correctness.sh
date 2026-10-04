@@ -85,6 +85,8 @@ run_suite() {
       ;;
     messaging)
       # The scripted paired-browser runner owns its fixture/paused-job seeds and checks rows.
+      # These listeners stay outside Linux's ephemeral outbound-client range.
+      export WS8BM_BROWSER_PORT_BASE=22020 WS8BM_CHROMEDRIVER_PORT=22023
       python3 rust/reference-tools/messaging/behavior-check.py --keep-going
       ;;
     agents-ui)
