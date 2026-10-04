@@ -1,3 +1,177 @@
+# WS8b-m2 I: remaining-work audit and visible-list proofs
+
+Baseline main: `566c1bd77` (#229), including #225/#226/#228/#231. Branch:
+`rust/ws8bm2-message-features-i`. Tested code and vectors:
+`e9aed9269704c1de928e00954df73fb482346ca6`. The follow-up commit only updates
+this report and corrects the audit's mismatch count to the actual 24/36 result.
+Fresh checkout: `.scratch/ws8bm2-i/fresh`; all seeds rebuilt there. No runtime
+producer changes are needed for the newly proved Files/mentions paths.
+
+## Audit table
+
+The detailed evidence ledger is [ws8bm2-i-audit.md](ws8bm2-i-audit.md). It
+supersedes every historical remaining-work list below.
+
+| Earlier item | Current state | Evidence |
+| --- | --- | --- |
+| WS8 / WS11-UI extreme range | **Still open, shared-core dependency** | New 26-case Rails vector: 34 represented outcomes match; 12 larger relative cases produce 24 mismatches across 36 comparisons. Strict comparison fails without exceptions. Blocking `db/src/time.rs:23,32`, `slash_commands/time_parser.rs:235`, `rails_compat/src/datetime.rs:6`. |
+| Visible lists beyond Saved/Scheduled | **Closed by main plus I proof** | Production search cache-key proof (#191), pin/poll scaling and bounds (#216), Saved/Scheduled (#229). I closes missing Files and mention HTTP/query proof; catalogs and single-card endpoints have no per-message associations. Root/thread windows belong to WS8b-m. |
+| Board/work seams | **Closed by main (#225)** | WS12's zero-owned-flags report, automations and generic typed recorder are on main. The previous blanket blocker is stale. Its broader future owner work stays WS12's. |
+| Enqueue rejection | **Closed, approved difference** | Decision 2 and `ws8bm2-approved-differences.md`; freshly regenerated Rails adapter vector and eight actual native atomic rollback executions, plus rejected error-swallow mutation. |
+| Calendar retry/exhaustion | **Closed by main (#223)** | 156 real registered executions, exact owner requests/full persisted rows/queue counters/publications and flat reads at both sizes; fresh oracle replay and affected suite rerun. |
+| Exceptional relative/split/container corpus | **Closed by main; range gap above remains** | Shared #196 parser; #216/G/H corpus including 96 DST outcomes, 552 relative/split outcomes, 84 container and 80 relative-consumer requests, microsecond rounding and wide Saved rows. Fresh replay and native rerun. |
+| Typed AgentBudgetNotice reader | **Closed by main (#214/#225)** | Typed model and one-bind reader, batched activity presenter and real generic recorder; native typed-reader/recorder tests rerun. |
+| Browser/system cutover | **Lead-owned** | No browser harness or cutover rerun this slice; the prior 45/45 inventory is historical. |
+
+## Changes and comparison integrity
+
+`list_scaling.rb` captures complete real Files sections and full mention JSON
+with status, Content-Type, total count and Link headers, twice per path in UTC
+and New York. It creates 4/16 actual visible uploads, Drive attachments and
+eligible mention users (including duplicate names). `list_scaling_tests.rs`
+executes the real production HTTP paths, independently checks those visible-row
+premises, compares actual bytes/headers and counts physical SELECT/WITH reads.
+No mask, allowlist, output normalization, clock/deadline change or reconstructed
+actual value is used. Whole application layout/token bytes are outside this
+feature-section claim. Existing blob batches are bounded to 600 uploads by the
+20-page cap, below the older 999-bind default as well as the bundled limit; mention pages cap at 20.
+
+`extreme_range.rb` records actual Rails parse/split results for enormous relative
+hours/days and signed 110-digit absolute calendar years. The native test reuses
+the shared parser. Its 34 represented outcomes pass. The separately named
+owner diagnostic is **not** a parity pass: `probe_extreme_range.py --strict`
+compares all 36 recorded operations for the twelve unsupported cases and exits
+1 with 24 mismatches. Trailing splits return the full title/nil on both sides.
+Example: Rails accepts `in 10^145 hours`; native parse/leading split returns nil.
+The actual input is the expanded integer in the pinned vector. These values
+cannot even be decoded by the shared I512 Timestamp. No second parser, larger
+fixed-width workaround, re-pinned result or approved difference was installed.
+Joint WS8 / WS11-UI representation work remains open.
+
+The new producer-control script changes real upload filenames, mention JSON,
+per-upload blob lookups, and relative-hour arithmetic, preserving every fixture
+and comparator. Each fails at its intended bytes/query assertion. The old
+adapter control suppresses the real durable queue error and fails at the actual
+refusal assertion. All sources are restored byte-for-byte. Fresh source mtimes
+are advanced before the final build to prevent reuse of mutant artifacts.
+
+Commands actually run (configured Docker-native runner; one Cargo build at a
+time, CARGO_BUILD_JOBS=2, existing machine-wide rustc throttle, four test threads):
+
+```sh
+bash .scratch/ws8bm2-i/initial.sh
+python3 rust/reference-tools/messaging/check_list_scaling_mutants.py bash .scratch/ws8bm2-h/fresh-native.sh
+python3 rust/reference-tools/messaging/probe_extreme_range.py --strict -- bash .scratch/ws8bm2-h/fresh-native.sh
+python3 rust/reference-tools/messaging/probe_adapter_rejections.py --output .scratch/ws8bm2-i/logs/adapter-actual.json -- bash .scratch/ws8bm2-h/fresh-native.sh
+python3 rust/reference-tools/messaging/probe_adapter_rejections.py --control --output .scratch/ws8bm2-i/logs/adapter-control.json -- bash .scratch/ws8bm2-h/fresh-native.sh
+```
+
+```text
+WS8bm2 slice-I producer mutant 1: rejected at actual visible-list envelope differs from Rails: /rooms/918001/files
+WS8bm2 slice-I producer mutant 2: rejected at actual visible-list envelope differs from Rails: /autocompletable/users
+WS8bm2 slice-I producer mutant 3: rejected at visible-list physical reads grow per row: /rooms/918001/files
+WS8bm2 slice-I producer mutant 4: rejected at actual represented extreme differs from Rails:
+WS8bm2 slice-I producer controls: 4/4 rejected at intended real-output/read assertions
+WS8bm2 extreme-range strict comparison: 24/36 outcomes differ; owner WS11-UI/shared WS8 Timestamp; no approved difference or masking
+WS8bm2 adapter approved-difference probe: 8/8 atomic refusal executions; complete actual rows and empty publications; flat reads; atomic rollback is an approved difference under decision 2
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2829 filtered out; finished in 8.10s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2829 filtered out; finished in 0.54s
+WS8bm2 adapter enqueue-error producer mutant: rejected at adapter actual durable refusal
+```
+
+The initial worktree seed was stale after #226's lease migration and failed the
+schema guard before any HTTP capture ran. It was rebuilt through pinned Rails
+with main's db/schema.rb/migrations mounted, consistent with ci-seed's schema
+overlay policy. The later fresh checkout independently builds pinned-schema
+seeds for oracle regeneration, then rebuilds all three with main's schema for
+native tests. This preserves the behavior pin and the current runtime schema
+without manually changing SQLite or re-pinning fixtures.
+
+## Physical read counts, actual visible rows
+
+Both viewer zones and both cold/warm requests have the same numbers below.
+
+| Path | Rust 4 / 16 | Rails 4 / 16 | Output |
+| --- | --- | --- | --- |
+| Files, all | 15 / 15 | 14 / 14 | Complete feature section identical |
+| Files, documents | 15 / 15 | 15 / 15 | Complete feature section identical |
+| Mention autocomplete | 7 / 7 | 7 / 7 | Entire JSON/status/type/count/Link identical |
+| Generic/LinkedIn durable refusal, first INSERT | 15 / 15 | 7 / 7 | Approved atomic rollback difference |
+| Generic/LinkedIn durable refusal, second INSERT | 14 / 14 | 7 / 7 | Approved atomic rollback difference |
+
+No new N+1 or unbounded IN list is added. No WS12-protected file or owner
+reader internal changes; the two controller producer files and shared parser
+were changed only temporarily for the restored controls. Pinned fixtures are
+`list_scaling.json` and `extreme_range.json`; the oracle verifier adds both.
+
+## Fresh-checkout verification
+
+The checkout contains only committed source/fixtures. The test runner sets CI=1,
+so absent seeds fail. Existing owned native-target and Cargo caches are shared;
+no new scratch target directory is created. Oracle generators run sequentially,
+and only one large Rails generator runs at a time.
+
+```sh
+git clone --no-hardlinks --single-branch --branch rust/ws8bm2-message-features-i "$ROOT" "$FRESH"
+# In the fresh checkout, first with the pinned image/schema for the oracle corpus:
+bash rust/parity/bin/seed build default first_run agents_ui
+WS8BM2_ORACLE_SCRATCH="$LOG/oracle-replays" python3 rust/reference-tools/messaging/verify_oracles.py
+# Rebuild current-schema seeds through pinned Rails, as described above:
+bash "$ROOT/.scratch/ws8bm2-i/seeds-current.sh"
+# Configured native Docker Cargo runner in that same fresh checkout:
+bash rust/ci/cargo.sh metadata --locked --format-version 1
+bash rust/ci/cargo.sh test --locked -p campfire --bin campfire --no-run -j2
+bash rust/ci/cargo.sh clippy --locked --workspace --all-targets -j2 -- -D warnings
+(cd rust && bash ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins)
+bash rust/ci/cargo.sh test --locked -p campfire_db scheduled_message_test -j2 -- --test-threads=4 --nocapture
+bash rust/ci/cargo.sh test --locked -p campfire_db relative_overflow_tests -j2 -- --test-threads=4 --nocapture
+bash rust/ci/cargo.sh test --locked -p campfire_db agent_budget_notice_reader_test -j2 -- --test-threads=4 --nocapture
+bash rust/ci/cargo.sh test --locked -p campfire_db ws12_generic_recorder_test -j2 -- --test-threads=4 --nocapture
+bash rust/ci/cargo.sh test --locked -p campfire --bin campfire controllers::message_features -j2 -- --test-threads=4 --nocapture
+```
+
+Raw summary lines, in the same test-command order (the feature suite includes
+one explicitly labelled range diagnostic, which does not claim missing parity):
+
+```text
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 1358 filtered out; finished in 0.90s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1379 filtered out; finished in 0.02s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1382 filtered out; finished in 0.36s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 1375 filtered out; finished in 13.62s
+test result: ok. 257 passed; 0 failed; 0 ignored; 0 measured; 2572 filtered out; finished in 126.62s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 10s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 12s
+WS8bm2 oracle replay: 60/60 independently replayed fixtures byte-identical
+cargo metadata --locked: exit 0
+```
+
+Logs are `.scratch/ws8bm2-i/logs/`; generators and controls are committed.
+No browsers/system tests, deployment, model-server operation, stash, deadline
+relaxation or lowered test concurrency. Owned runners/containers are finished
+at handoff, and there are no newly created target directories to leave behind.
+
+## Remaining and owners
+
+Only shared-owner and lead-owned items remain from this audited list:
+
+- Joint **WS8 / WS11-UI**: arbitrary-size relative timestamps beyond I512;
+  twelve pinned cases, 24 mismatches, exact blocking source lines above. This
+  remains a genuine unported behavior, not an approved difference. Coordinated
+  shared representation work is required; I does not claim WS8's joint gap closed.
+- **Lead**: final both-app browser/system cutover rerun. Existing accepted
+  45/45 inventories remain historical, with no browser work in I.
+- **WS12 / WS11 owners** retain their broader domain ledgers; the specific old
+  WS8 board/work and typed-reader runtime seams are closed and no longer block this slice.
+
+This is a coherent proof/audit checkpoint, partial with respect to the shared
+extreme-range gap. No solely WS8b-m2-owned item remains from the requested list.
+
+---
+
+# Historical H and earlier reports
+
+The audit and verification above supersede the remaining-work lists below.
+
 # WS8b-m2 H: #229 review fixes
 
 Both requested P2s are fixed. Source/fixtures tested: `b7bf9c579bd504c42ac8069ddca5a3ba928ea0ff`.
