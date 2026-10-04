@@ -68,11 +68,19 @@ def verify_junit(records, path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--filter", choices=["database", "acme", "browsers", "livekit"])
+    parser.add_argument("--package", action="store_true")
     parser.add_argument("--junit", type=Path)
     args = parser.parse_args()
     manifest = json.loads((ROOT / "ci/ignored-tests.json").read_text())
     correctness, utilities = check(ROOT, manifest, (ROOT.parent / ".github/workflows/rust.yml").read_text())
-    if args.junit:
+    if args.package:
+        if not args.filter:
+            parser.error("--package needs --filter")
+        packages = {record["package"] for record in manifest[args.filter]}
+        if len(packages) != 1:
+            parser.error("each prerequisite suite must have one package")
+        print(packages.pop())
+    elif args.junit:
         if not args.filter:
             parser.error("--junit needs --filter")
         verify_junit(manifest[args.filter], args.junit)

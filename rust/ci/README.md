@@ -42,7 +42,7 @@ RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/exec.sh bash rust/ci/correctness.sh da
 # Repeat the last command for acme, browsers, livekit, messaging, and agents-ui.
 ```
 
-The ignored runner uses `cargo nextest run --locked --workspace --exclude html5ever
+The ignored runner uses `cargo nextest run --locked -p PACKAGE
 --profile ci --build-jobs 4 -j 4 --no-fail-fast --run-ignored only --no-tests fail -E
 "$(python3 ci/ignored_tests.py --filter SUITE)"`. Exact selectors come from
 `ignored-tests.json`; the post-run check rejects missing, skipped, or failed
