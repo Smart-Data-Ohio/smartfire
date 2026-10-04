@@ -536,9 +536,11 @@ pub async fn disk_update(c: &mut Ctx) -> Result {
     if !acceptable_content(c, &token) {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    let body = c.request.raw_post().clone();
+    // Rails' DiskController passes request.body to DiskService#upload. The adapter has
+    // already validated/spooled the whole PUT, including any configured front-server limit.
+    let body = c.take_body_file().await.map_err(Error::internal)?;
     let (key, checksum) = (token.key.clone(), token.checksum.clone());
-    let uploaded = tokio::task::spawn_blocking(move || storage.service.upload(&key, body.as_ref(), Some(&checksum)))
+    let uploaded = tokio::task::spawn_blocking(move || storage.service.upload(&key, body, Some(&checksum)))
         .await
         .map_err(Error::internal)?;
     match uploaded {
@@ -577,12 +579,6 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
     let Some(byte_size) = text("byte_size").and_then(|s| crate::concerns::cast_integer(&s)) else {
         return Err(Error::Status(StatusCode::UNPROCESSABLE_ENTITY));
     };
-    // The upload's PUT body is read into memory, so it's capped like other bodies: don't hand out
-    // a URL for more than it will accept. (Campfire's editor only attaches mentions and embeds;
-    // files go up with the message form.)
-    if !(0..=campfire_kit::body::MAX_BUFFERED_BODY as i64).contains(&byte_size) {
-        return Err(Error::Status(StatusCode::PAYLOAD_TOO_LARGE));
-    }
     let content_type = text("content_type");
     let metadata = match blob_params.get("metadata").and_then(|m| m.as_hash()) {
         Some(metadata) => Json::parse(&metadata.to_json().to_string()).map_err(Error::internal)?,

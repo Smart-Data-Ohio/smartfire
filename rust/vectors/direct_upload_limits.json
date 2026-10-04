@@ -1,0 +1,67 @@
+{
+  "reference_sha": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "transport": "HTTP/1.1 through Thruster and Puma",
+  "cases": [
+    {
+      "name": "direct_16777217",
+      "byte_size": 16777217,
+      "checksum": "4BidsqiuPaG9dh0Zz/sriQ==",
+      "metadata_status": 200,
+      "put_status": 204,
+      "stored_bytes": 16777217,
+      "stored_checksum": "4BidsqiuPaG9dh0Zz/sriQ==",
+      "bad_checksum_status": 422,
+      "bad_checksum_file_exists": false
+    },
+    {
+      "name": "direct_100000000",
+      "byte_size": 100000000,
+      "checksum": "e3lfryxebJcq1qVpjZR26g==",
+      "metadata_status": 200,
+      "put_status": 204,
+      "stored_bytes": 100000000,
+      "stored_checksum": "e3lfryxebJcq1qVpjZR26g==",
+      "bad_checksum_status": 422,
+      "bad_checksum_file_exists": false
+    },
+    {
+      "name": "metadata_over_multipart_limit",
+      "byte_size": 10737418241,
+      "metadata_status": 200
+    },
+    {
+      "name": "metadata_0",
+      "byte_size": 0,
+      "metadata_status": 200
+    },
+    {
+      "name": "metadata_-1",
+      "byte_size": -1,
+      "metadata_status": 200
+    },
+    {
+      "name": "metadata_9223372036854775807",
+      "byte_size": 9223372036854775807,
+      "metadata_status": 200
+    },
+    {
+      "name": "direct_video",
+      "fixture": "test/fixtures/files/alpha-centuri.mov",
+      "content_type": "video/quicktime",
+      "byte_size": 100000000,
+      "checksum": "F+z96pg5lm+SFQMlkDA3aw==",
+      "metadata_status": 200,
+      "put_status": 204,
+      "stored_bytes": 100000000,
+      "stored_checksum": "F+z96pg5lm+SFQMlkDA3aw=="
+    },
+    {
+      "name": "composer_video",
+      "fixture": "test/fixtures/files/alpha-centuri.mov",
+      "byte_size": 100000000,
+      "status": 200,
+      "stored_bytes": 100000000,
+      "stored_checksum": "F+z96pg5lm+SFQMlkDA3aw=="
+    }
+  ]
+}

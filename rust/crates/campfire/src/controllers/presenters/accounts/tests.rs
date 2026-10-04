@@ -589,7 +589,7 @@ async fn a_rails_issued_session_cookie_continues_on_rust() {
 }
 
 #[tokio::test]
-async fn direct_uploads_are_refused_past_the_body_limit() {
+async fn direct_upload_metadata_is_not_limited_by_the_buffered_body_cap() {
     let Some(test) = boot_seed("default").await else {
         return;
     };
@@ -625,7 +625,7 @@ async fn direct_uploads_are_refused_past_the_body_limit() {
             )),
         )
         .await;
-    assert_eq!(large.status, StatusCode::PAYLOAD_TOO_LARGE);
+    assert_eq!(large.status, StatusCode::OK, "{}", large.text());
 }
 
 #[tokio::test]
