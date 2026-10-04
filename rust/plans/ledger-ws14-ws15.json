@@ -144,7 +144,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
           "line": 50
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 50
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-001"
+        }
       },
       "historical_line": 11,
       "historical_receipt": "Covered: `event_validations_match_rails_messages (equal end; earlier end still deferred)`",
@@ -172,7 +183,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
           "line": 63
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 63
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-002"
+        }
       },
       "historical_line": 12,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -198,9 +220,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_rejects_soft_deleted_venue",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 86
+          "line": 93
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 86
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-003"
+        }
       },
       "historical_line": 13,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -226,9 +259,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_off_and_invisible_members_get_no_invitation",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 118
+          "line": 125
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 118
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-004"
+        }
       },
       "historical_line": 16,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -254,9 +298,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_off_member_keeps_invitation_on_update_and_cancel",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 131
+          "line": 138
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 131
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-005"
+        }
       },
       "historical_line": 17,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -282,9 +337,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_mentions_member_receives_update_and_cancel",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 149
+          "line": 156
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 149
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-006"
+        }
       },
       "historical_line": 18,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -310,9 +376,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_invitations_exclude_bots",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 163
+          "line": 170
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 163
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-007"
+        }
       },
       "historical_line": 19,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -338,9 +415,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_time_change_notifies_going_and_maybe_once",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 176
+          "line": 183
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 176
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-008"
+        }
       },
       "historical_line": 20,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -387,9 +475,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_title_only_edit_creates_no_items",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 196
+          "line": 203
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 196
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-010"
+        }
       },
       "historical_line": 22,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -415,9 +514,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_cancel_notifies_going_maybe_and_handles_declined",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 217
+          "line": 233
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 217
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-011"
+        }
       },
       "historical_line": 23,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -464,9 +574,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_items_inaccessible_after_member_leaves",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 234
+          "line": 250
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 234
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-013"
+        }
       },
       "historical_line": 25,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -492,9 +613,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_event_test::cutover_event_room_deletion_removes_events_attendances_and_items",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
-          "line": 255
+          "line": 271
         },
-        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_event_test.rs",
+            "line": 255
+          },
+          "detail": "Direct port of original Rails event_test.rb setup and all discriminating assertions, using real model APIs and a frozen clock. Rails original file: 18 runs, 74 assertions, zero failures/errors/skips; native batch: 12/12 pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-014"
+        }
       },
       "historical_line": 26,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -564,7 +696,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
           "line": 26
         },
-        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+            "line": 26
+          },
+          "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-017"
+        }
       },
       "historical_line": 40,
       "historical_receipt": "Deferred: WS14g",
@@ -592,7 +735,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
           "line": 46
         },
-        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+            "line": 46
+          },
+          "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-018"
+        }
       },
       "historical_line": 41,
       "historical_receipt": "Deferred: WS14g",
@@ -620,7 +774,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
           "line": 58
         },
-        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+            "line": 58
+          },
+          "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-019"
+        }
       },
       "historical_line": 42,
       "historical_receipt": "Deferred: WS14g",
@@ -648,7 +813,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
           "line": 30
         },
-        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+            "line": 30
+          },
+          "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-020"
+        }
       },
       "historical_line": 48,
       "historical_receipt": "Covered: `series_materializes_organizer_attendance_one_invitation_and_one_announcement (series only; singleton exact count deferred)`",
@@ -674,9 +850,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_timeline_test::cutover_timeline_edits_and_cancels_post_no_messages",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
-          "line": 54
+          "line": 63
         },
-        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+            "line": 54
+          },
+          "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-021"
+        }
       },
       "historical_line": 50,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -702,9 +889,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_timeline_test::cutover_timeline_announcement_has_no_inbox_items",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
-          "line": 76
+          "line": 85
         },
-        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+            "line": 76
+          },
+          "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-022"
+        }
       },
       "historical_line": 51,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -772,9 +970,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_timeline_test::cutover_timeline_event_destroy_removes_references_but_preserves_message",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
-          "line": 90
+          "line": 99
         },
-        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_timeline_test.rs",
+            "line": 90
+          },
+          "detail": "Original channel timeline setup and assertions through real CalendarEvent/Message APIs: root-message count, creator, complete title/relative URL source, references and absence of message inbox items. Rails original and native files pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-025"
+        }
       },
       "historical_line": 54,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -802,7 +1011,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
           "line": 23
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 23
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-026"
+        }
       },
       "historical_line": 67,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -830,7 +1050,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
           "line": 33
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 33
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-027"
+        }
       },
       "historical_line": 70,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -858,7 +1089,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover.rs",
           "line": 5
         },
-        "detail": "The HTTP mutation-flag injection returns 422 and retains weekly. EventChanges also has a compile-fail doctest proving the Rails unknown attribute cannot be supplied through the typed model input; the original Rails UnknownAttributeError assertion passes."
+        "detail": "The HTTP mutation-flag injection returns 422 and retains weekly. EventChanges also has a compile-fail doctest proving the Rails unknown attribute cannot be supplied through the typed model input; the original Rails UnknownAttributeError assertion passes.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover.rs",
+            "line": 5
+          },
+          "detail": "The HTTP mutation-flag injection returns 422 and retains weekly. EventChanges also has a compile-fail doctest proving the Rails unknown attribute cannot be supplied through the typed model input; the original Rails UnknownAttributeError assertion passes."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-028"
+        }
       },
       "historical_line": 76,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -907,7 +1149,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
           "line": 64
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 64
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-030"
+        }
       },
       "historical_line": 84,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -975,9 +1228,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_active_series_slots_have_unique_database_constraint",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
-          "line": 90
+          "line": 91
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 90
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-033"
+        }
       },
       "historical_line": 95,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1066,9 +1330,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_equal_time_orders_active_before_cancelled",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
-          "line": 106
+          "line": 120
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 106
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-037"
+        }
       },
       "historical_line": 111,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1094,9 +1369,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_rule_over_cap_rejects_and_preserves_original_series",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
-          "line": 128
+          "line": 142
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 128
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-038"
+        }
       },
       "historical_line": 112,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1122,9 +1408,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_head_only_series_retimes_through_following",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
-          "line": 167
+          "line": 181
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 167
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-039"
+        }
       },
       "historical_line": 119,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1150,9 +1447,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_head_description_edit_stays_local",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
-          "line": 191
+          "line": 229
         },
-        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+            "line": 191
+          },
+          "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-040"
+        }
       },
       "historical_line": 120,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1178,9 +1486,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_message_without_link_has_no_events",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
-          "line": 31
+          "line": 41
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+            "line": 31
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-041"
+        }
       },
       "historical_line": 131,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1206,9 +1525,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_missing_event_creates_no_references",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
-          "line": 37
+          "line": 48
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+            "line": 37
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-042"
+        }
       },
       "historical_line": 133,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1234,9 +1564,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_edit_adds_the_exact_event",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
-          "line": 47
+          "line": 59
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+            "line": 47
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-043"
+        }
       },
       "historical_line": 134,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1262,9 +1603,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_reference_test::cutover_reference_message_destroy_removes_join_and_preserves_event",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
-          "line": 68
+          "line": 82
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reference_test.rs",
+            "line": 68
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-044"
+        }
       },
       "historical_line": 136,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1334,7 +1686,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reminder_test.rs",
           "line": 12
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reminder_test.rs",
+            "line": 12
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-047"
+        }
       },
       "historical_line": 150,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1362,7 +1725,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reminder_test.rs",
           "line": 71
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_reminder_test.rs",
+            "line": 71
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-048"
+        }
       },
       "historical_line": 151,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1594,9 +1968,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_optional_is_valid_and_absent",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 71
+          "line": 70
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 71
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-059"
+        }
       },
       "historical_line": 176,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1622,9 +2007,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_voice_and_stage_are_valid",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 76
+          "line": 75
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 76
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-060"
+        }
       },
       "historical_line": 177,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1650,9 +2046,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_text_and_direct_are_rejected",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 84
+          "line": 83
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 84
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-061"
+        }
       },
       "historical_line": 178,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1678,9 +2085,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_organizer_membership_is_required",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 91
+          "line": 90
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 91
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-062"
+        }
       },
       "historical_line": 179,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1706,9 +2124,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_voice_event_can_use_own_room",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 107
+          "line": 106
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 107
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-063"
+        }
       },
       "historical_line": 180,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1734,9 +2163,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_unrelated_edits_remain_valid_after_organizer_leaves",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 120
+          "line": 119
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 120
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-064"
+        }
       },
       "historical_line": 181,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1762,9 +2202,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_destroy_clears_link_and_preserves_event",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 145
+          "line": 144
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 145
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-065"
+        }
       },
       "historical_line": 182,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1790,9 +2241,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_series_copies_to_all_occurrences",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 165
+          "line": 164
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 165
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-066"
+        }
       },
       "historical_line": 183,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1818,9 +2280,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_following_propagates_change",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 172
+          "line": 171
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 172
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-067"
+        }
       },
       "historical_line": 184,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1846,9 +2319,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_following_propagates_clear",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 181
+          "line": 180
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 181
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-068"
+        }
       },
       "historical_line": 185,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1874,9 +2358,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_local_edit_changes_only_one_occurrence",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 189
+          "line": 188
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 189
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-069"
+        }
       },
       "historical_line": 186,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1902,9 +2397,20 @@
         "test": "campfire_db tests::calendar_event_test::cutover_venue_test::cutover_venue_only_edit_creates_no_inbox_items",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
-          "line": 199
+          "line": 198
         },
-        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_venue_test.rs",
+            "line": 199
+          },
+          "detail": "Reproduces the original Rails fixture setup and exact persisted lifecycle assertions through real model operations with a frozen clock; original Rails file and named native test pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-070"
+        }
       },
       "historical_line": 187,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1932,7 +2438,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 7
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 7
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-071"
+        }
       },
       "historical_line": 193,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1960,7 +2477,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 37
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 37
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-072"
+        }
       },
       "historical_line": 195,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -1988,7 +2516,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 62
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 62
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-073"
+        }
       },
       "historical_line": 196,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2016,7 +2555,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 91
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 91
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-074"
+        }
       },
       "historical_line": 197,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2044,7 +2594,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 101
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 101
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-075"
+        }
       },
       "historical_line": 199,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2072,7 +2633,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 134
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 134
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-076"
+        }
       },
       "historical_line": 202,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2100,7 +2672,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 164
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 164
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-077"
+        }
       },
       "historical_line": 203,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2128,7 +2711,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 179
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 179
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-078"
+        }
       },
       "historical_line": 204,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2156,7 +2750,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 193
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 193
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-079"
+        }
       },
       "historical_line": 206,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2184,7 +2789,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 218
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 218
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-080"
+        }
       },
       "historical_line": 207,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2212,7 +2828,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 267
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 267
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-081"
+        }
       },
       "historical_line": 208,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2240,7 +2867,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 271
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 271
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-082"
+        }
       },
       "historical_line": 209,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2268,7 +2906,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 275
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 275
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-083"
+        }
       },
       "historical_line": 210,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2296,7 +2945,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 300
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 300
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-084"
+        }
       },
       "historical_line": 211,
       "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
@@ -2344,7 +3004,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 332
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 332
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-086"
+        }
       },
       "historical_line": 214,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2393,7 +3064,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 340
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 340
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-088"
+        }
       },
       "historical_line": 216,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2421,7 +3103,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 356
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 356
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-089"
+        }
       },
       "historical_line": 224,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2449,7 +3142,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 377
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 377
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-090"
+        }
       },
       "historical_line": 225,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2477,7 +3181,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 421
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 421
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-091"
+        }
       },
       "historical_line": 226,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2505,7 +3220,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 425
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 425
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-092"
+        }
       },
       "historical_line": 227,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2533,7 +3259,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
           "line": 429
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 429
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-093"
+        }
       },
       "historical_line": 228,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2559,9 +3296,20 @@
         "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_editor_keeps_hidden_venue_during_unrelated_edit",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
-          "line": 453
+          "line": 456
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 453
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-094"
+        }
       },
       "historical_line": 229,
       "historical_receipt": "Covered: `full_event_forms_match_pinned_rails_bytes (hidden stored venue rendering; unrelated HTTP edit still deferred)`",
@@ -2587,9 +3335,20 @@
         "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_shared_venue_index_query_count_is_independent_of_event_count",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
-          "line": 487
+          "line": 490
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 487
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Whole-request SQL counts fail first on the per-row reader and pass after batched association loading, matching the original Rails bounded-query assertion."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-095"
+        }
       },
       "historical_line": 242,
       "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
@@ -2615,9 +3374,20 @@
         "test": "campfire controllers::rooms::events::tests::cutover::controllers::cutover_events_show_hides_non_https_meet_link",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
-          "line": 540
+          "line": 543
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs",
+            "line": 540
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-096"
+        }
       },
       "historical_line": 247,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2645,7 +3415,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/attendances.rs",
           "line": 18
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/attendances.rs",
+            "line": 18
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-097"
+        }
       },
       "historical_line": 257,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2673,7 +3454,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/attendances.rs",
           "line": 36
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/attendances.rs",
+            "line": 36
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-098"
+        }
       },
       "historical_line": 258,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2699,9 +3491,20 @@
         "test": "campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_schedule_invitation_inbox_open_and_response",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-          "line": 121
+          "line": 118
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+            "line": 121
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-099"
+        }
       },
       "historical_line": 274,
       "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
@@ -2727,9 +3530,20 @@
         "test": "campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_repeating_schedule_invites_once_and_copies_response",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-          "line": 135
+          "line": 132
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+            "line": 135
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-100"
+        }
       },
       "historical_line": 275,
       "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
@@ -2755,9 +3569,20 @@
         "test": "campfire controllers::rooms::events::tests::cutover::interactions::cutover_interaction_announcement_card_response_stays_in_requested_frame",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
-          "line": 154
+          "line": 151
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/interactions.rs",
+            "line": 154
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report. Server interaction port of the system declaration: follows actual forms, inbox open and/or lazy Turbo attendance frames. The Rails-derived events-interactions.rb executes the same server assertions (3 cases, 114 assertions); no browser pixel receipt is claimed."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-101"
+        }
       },
       "historical_line": 276,
       "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
@@ -2869,7 +3694,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
           "line": 24
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
+            "line": 24
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-106"
+        }
       },
       "historical_line": 287,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2897,7 +3733,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
           "line": 67
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
+            "line": 67
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-107"
+        }
       },
       "historical_line": 288,
       "historical_receipt": "Deferred: WS14e continuation",
@@ -2925,7 +3772,18 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
           "line": 103
         },
-        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/cards.rs",
+            "line": 103
+          },
+          "detail": "Ports the original fixture users/room and discriminating assertions through real authenticated HTTP and persisted Event state with a frozen clock; native and Rails HTTP receipts are in the continuation report."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14e-108"
+        }
       },
       "historical_line": 289,
       "historical_receipt": "Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling",
@@ -5545,7 +6403,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
           "line": 26
         },
-        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+            "line": 26
+          },
+          "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14g-129"
+        }
       },
       "historical_line": 543,
       "historical_receipt": "WS14g continuation.",
@@ -5573,7 +6442,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
           "line": 46
         },
-        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+            "line": 46
+          },
+          "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14g-130"
+        }
       },
       "historical_line": 544,
       "historical_receipt": "WS14g continuation.",
@@ -5601,7 +6481,18 @@
           "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
           "line": 58
         },
-        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass.",
+        "assertion_map_prior_receipt": {
+          "source": {
+            "file": "rust/crates/db/src/tests/calendar_event_test/cutover_entry_test.rs",
+            "line": 58
+          },
+          "detail": "Original EventCalendarEntry model setup: real reserve/destroy/delete/delete_all; exact remote identity, no job before commit, callback omission and other-user isolation. Original Rails file passes; native entry tests pass."
+        },
+        "assertion_map": {
+          "file": "rust/plans/ledger-ws14-ws15-b-assertions.json",
+          "record": "WS14g-131"
+        }
       },
       "historical_line": 545,
       "historical_receipt": "WS14g continuation.",

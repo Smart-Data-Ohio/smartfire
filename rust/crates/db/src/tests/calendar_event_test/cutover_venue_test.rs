@@ -56,10 +56,9 @@ fn venues(t: &TestDb, head: &CalendarEvent) -> Vec<Option<i64>> {
 fn invalid(t: &TestDb, vid: i64) {
     let mut a = attrs(t);
     a.venue_room_id = Some(vid);
-    let Error::RecordInvalid(e) = t
-        .try_write(move |tx| CalendarEvent::create(tx, a))
-        .unwrap_err()
-    else {
+    let result = t.try_write(move |tx| CalendarEvent::create(tx, a));
+    assert!(matches!(&result, Err(Error::RecordInvalid(_))));
+    let Error::RecordInvalid(e) = result.unwrap_err() else {
         panic!("expected validation error")
     };
     assert_eq!(

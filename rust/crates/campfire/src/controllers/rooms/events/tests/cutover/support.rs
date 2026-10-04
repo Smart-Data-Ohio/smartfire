@@ -182,3 +182,32 @@ pub(super) async fn live(app: &TestApp, vid: i64) {
         .await
         .unwrap();
 }
+
+/// DOM checks use the production HTML parser, so CSS class tokens and scoped text
+/// cannot be satisfied by a different fixture's card or an attribute substring.
+pub(super) fn headings(html: &str) -> Vec<String> {
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(html).unwrap();
+    dom.descendants(root)
+        .into_iter()
+        .filter(|&n| dom.local_name(n) == Some("h1"))
+        .map(|n| {
+            dom.text_content(n)
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect()
+}
+pub(super) fn cards(html: &str) -> Vec<String> {
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(html).unwrap();
+    dom.descendants(root)
+        .into_iter()
+        .filter(|&n| {
+            dom.attr(n, "class")
+                .is_some_and(|c| c.split_whitespace().any(|word| word == "event-card"))
+        })
+        .map(|n| dom.to_html(n))
+        .collect()
+}

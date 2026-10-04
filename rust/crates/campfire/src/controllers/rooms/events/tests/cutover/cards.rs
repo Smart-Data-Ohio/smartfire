@@ -54,13 +54,13 @@ async fn cutover_cards_foreign_event_link_is_plain_for_members_and_nonmembers() 
     let mut david = app.sign_in(DAVID).await;
     let reply = david.get(&room).await;
     assert_eq!(reply.status, StatusCode::OK);
-    assert!(!reply.text().contains("class=\"event-card\""));
+    assert!(cards(&reply.text()).is_empty());
     assert!(reply.text().contains(&format!("href=\"{url}\"")));
     assert!(!reply.text().contains("Secret planning"));
     let mut kevin = app.sign_in(KEVIN).await;
     let reply = kevin.get(&room).await;
     assert_eq!(reply.status, StatusCode::OK);
-    assert!(!reply.text().contains("class=\"event-card\""));
+    assert!(cards(&reply.text()).is_empty());
     assert!(!reply.text().contains("Secret planning"));
 }
 #[tokio::test]
@@ -70,7 +70,7 @@ async fn cutover_cards_message_without_event_link_has_no_card() {
     let mut david = app.sign_in(DAVID).await;
     let reply = david.get(&format!("/rooms/{}", id("designers"))).await;
     assert_eq!(reply.status, StatusCode::OK);
-    assert!(!reply.text().contains("class=\"event-card\""));
+    assert!(cards(&reply.text()).is_empty());
 }
 async fn create_messages(app: &TestApp, count: i64, offset: i64) {
     for n in 0..count {

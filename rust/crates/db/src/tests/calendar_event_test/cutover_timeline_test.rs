@@ -1,5 +1,5 @@
 //! Remaining test/models/event/channel_timeline_test.rb declarations.
-use super::cutover_event_test::{cancel, shift};
+use super::cutover_event_test::cancel;
 use super::*;
 use crate::{Message, NewMessage};
 fn timeline_db() -> TestDb {
@@ -49,6 +49,15 @@ fn cutover_timeline_singleton_has_one_organizer_announcement_with_title_url_and_
         )
     });
     assert_eq!(refs, vec![e.id]);
+    assert_eq!(
+        t.read(|c| Ok(CalendarEvent::for_message_ids(c, &[m.id])?
+            .remove(&m.id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|e| e.id)
+            .collect::<Vec<_>>())),
+        vec![e.id]
+    );
 }
 #[test]
 fn cutover_timeline_edits_and_cancels_post_no_messages() {
@@ -62,13 +71,13 @@ fn cutover_timeline_edits_and_cancels_post_no_messages() {
             eid,
             crate::models::calendar_event::changes::EventChanges {
                 title: Some("Renamed".into()),
+                starts_at: Some(Some(tx.now().since(SignedDuration::from_hours(72)))),
                 ..Default::default()
             },
             "this_event",
             Some(id("david")),
         )
     });
-    shift(&t, e.id);
     cancel(&t, e.id);
     assert_eq!(count(&t, "messages"), before);
 }

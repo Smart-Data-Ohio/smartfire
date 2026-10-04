@@ -1,0 +1,153 @@
+{
+  "mutations": [
+    {
+      "id": "organizer_bot",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "u.is_active() && !u.is_bot()",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"organizer_bot\") { u.is_active() } else { u.is_active() && !u.is_bot() })",
+      "test": "cutover_event_rejects_bot_and_nonmember_organizers",
+      "scope": "fn validate_fields("
+    },
+    {
+      "id": "deleted_venue",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "r.deleted_at.is_none() && matches!(r.room_type, RoomType::Voice | RoomType::Stage)",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"deleted_venue\") { matches!(r.room_type, RoomType::Voice | RoomType::Stage) } else { r.deleted_at.is_none() && matches!(r.room_type, RoomType::Voice | RoomType::Stage) })",
+      "test": "cutover_event_rejects_soft_deleted_venue",
+      "scope": null
+    },
+    {
+      "id": "invisible_invites",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "\"SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id \\\n            WHERE m.room_id=? AND u.id<>? AND u.status=0 AND u.role<>2 AND m.involvement IN ('mentions','everything') ORDER BY u.id\"",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"invisible_invites\") { \"SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id<>? AND u.status=0 AND u.role<>2 ORDER BY u.id\" } else { \"SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id<>? AND u.status=0 AND u.role<>2 AND m.involvement IN ('mentions','everything') ORDER BY u.id\" })",
+      "test": "cutover_event_off_and_invisible_members_get_no_invitation",
+      "scope": null
+    },
+    {
+      "id": "bot_invites",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "for user_id in ids {",
+      "new": "let ids = if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"bot_invites\") { query_all(after.conn(), \"SELECT u.id FROM users u JOIN memberships m ON m.user_id=u.id WHERE m.room_id=? AND u.id<>? AND u.status=0 AND m.involvement IN ('mentions','everything') ORDER BY u.id\", params![self.room_id,self.organizer_id], |r| r.get::<_, i64>(0))? } else { ids };\n        for user_id in ids {",
+      "test": "cutover_event_invitations_exclude_bots",
+      "scope": "fn invite_after_commit"
+    },
+    {
+      "id": "mentions_notify",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "\"SELECT u.id FROM users u JOIN event_attendances a ON a.user_id=u.id \\\n            JOIN memberships m ON m.user_id=u.id AND m.room_id=? WHERE a.event_id=? AND a.response IN ('going','maybe') \\\n            AND u.status=0 AND u.role<>2 AND m.involvement IN ('mentions','everything') ORDER BY u.id\"",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"mentions_notify\") { \"SELECT u.id FROM users u JOIN event_attendances a ON a.user_id=u.id \\\n            JOIN memberships m ON m.user_id=u.id AND m.room_id=? WHERE a.event_id=? AND a.response IN ('going','maybe') \\\n            AND u.status=0 AND u.role<>2 AND m.involvement IN ('everything') ORDER BY u.id\" } else { \"SELECT u.id FROM users u JOIN event_attendances a ON a.user_id=u.id \\\n            JOIN memberships m ON m.user_id=u.id AND m.room_id=? WHERE a.event_id=? AND a.response IN ('going','maybe') \\\n            AND u.status=0 AND u.role<>2 AND m.involvement IN ('mentions','everything') ORDER BY u.id\" })",
+      "test": "cutover_event_mentions_member_receives_update_and_cancel",
+      "scope": null
+    },
+    {
+      "id": "update_kind",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "\"event_update\"",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"update_kind\") { \"event_invitation\" } else { \"event_update\" })",
+      "test": "cutover_event_time_change_notifies_going_and_maybe_once",
+      "scope": "pub fn update_with_scope("
+    },
+    {
+      "id": "cancel_kind",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "\"event_cancelled\"",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"cancel_kind\") { \"event_update\" } else { \"event_cancelled\" })",
+      "test": "cutover_event_cancel_notifies_going_maybe_and_handles_declined",
+      "scope": "fn cancel_one"
+    },
+    {
+      "id": "year_cap",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": ".is_ok_and(|year| until > year)",
+      "new": ".is_ok_and(|year| until > year && !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"year_cap\")))",
+      "test": "cutover_recurrence_head_plain_update_checks_one_year_cap",
+      "scope": null
+    },
+    {
+      "id": "occurrence_cap",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "count > recurrence::MAX_OCCURRENCES",
+      "new": "(count > recurrence::MAX_OCCURRENCES) && !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"occurrence_cap\"))",
+      "test": "cutover_recurrence_rule_over_cap_rejects_and_preserves_original_series",
+      "scope": null
+    },
+    {
+      "id": "series_order",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "\"SELECT * FROM events WHERE series_id=? ORDER BY starts_at, cancelled_at ASC NULLS FIRST, id\"",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"series_order\") { \"SELECT * FROM events WHERE series_id=? ORDER BY starts_at, cancelled_at DESC NULLS LAST, id\" } else { \"SELECT * FROM events WHERE series_id=? ORDER BY starts_at, cancelled_at ASC NULLS FIRST, id\" })",
+      "test": "cutover_recurrence_equal_time_orders_active_before_cancelled",
+      "scope": null
+    },
+    {
+      "id": "guard_reset",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "SaveRules::default()",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"guard_reset\") { SaveRules { following: true, ..SaveRules::default() } } else { SaveRules::default() })",
+      "test": "cutover_recurrence_head_only_series_retimes_through_following",
+      "scope": "pub fn update("
+    },
+    {
+      "id": "description",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "self\n                .description\n                .clone()\n                .unwrap_or_else(|| old.description.clone())",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"description\") { old.description.clone() } else { self\n                .description\n                .clone()\n                .unwrap_or_else(|| old.description.clone()) })",
+      "test": "cutover_recurrence_head_description_edit_stays_local",
+      "scope": null
+    },
+    {
+      "id": "venue_change",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "self.venue_room_id.unwrap_or(old.venue_room_id)",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"venue_change\") { old.venue_room_id } else { (if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"venue_clear\") { if self.venue_room_id == Some(None) { old.venue_room_id } else { self.venue_room_id.unwrap_or(old.venue_room_id) } } else { self.venue_room_id.unwrap_or(old.venue_room_id) }) })",
+      "test": "cutover_venue_following_propagates_change",
+      "scope": null
+    },
+    {
+      "id": "venue_clear",
+      "test": "cutover_venue_following_propagates_clear",
+      "reuse": true
+    },
+    {
+      "id": "association_reader",
+      "file": "rust/crates/db/src/models/calendar_event.rs",
+      "old": "if ids.is_empty() {",
+      "new": "if ids.is_empty() || std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"association_reader\") {",
+      "test": "cutover_reference_edit_adds_the_exact_event",
+      "scope": "pub fn for_message_ids("
+    },
+    {
+      "id": "entry_destroy",
+      "file": "rust/crates/db/src/models/google_entry.rs",
+      "old": "if tx.conn().execute(\"DELETE FROM event_calendar_entries WHERE id=?\", [entry.id])? != 0 {",
+      "new": "if tx.conn().execute(\"DELETE FROM event_calendar_entries WHERE id=?\", [entry.id])? != 0 && !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"entry_destroy\")) {",
+      "test": "cutover_entry_destroy_enqueues_captured_remote_identity_after_commit",
+      "scope": null
+    },
+    {
+      "id": "delete_callback",
+      "file": "rust/crates/db/src/models/google_entry.rs",
+      "old": "pub fn delete(tx: &mut Tx<'_>, entry: &Entry) -> Result<()> {",
+      "new": "pub fn delete(tx: &mut Tx<'_>, entry: &Entry) -> Result<()> {\n    if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"delete_callback\") { return destroy(tx,entry); }",
+      "test": "cutover_entry_delete_skips_remote_delete",
+      "scope": null
+    },
+    {
+      "id": "existing_zone",
+      "file": "rust/crates/campfire/src/controllers/rooms/events/input.rs",
+      "old": "event.map(|e| e.time_zone.clone())",
+      "new": "(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"existing_zone\") { None } else { event.map(|e| e.time_zone.clone()) })",
+      "test": "cutover_events_update_uses_existing_zone_and_notifies_attendees",
+      "scope": null
+    },
+    {
+      "id": "preload_n1",
+      "file": "rust/crates/campfire/src/controllers/presenters/events/index.rs",
+      "old": "for e in &upcoming {",
+      "new": "for e in &upcoming {\n        if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"preload_n1\") { let _ = Room::find(conn,e.room_id)?; }",
+      "test": "cutover_events_index_query_count_is_independent_of_occurrence_count",
+      "scope": null
+    }
+  ]
+}

@@ -34,18 +34,18 @@ fn cutover_recurrence_head_plain_update_checks_one_year_cap() {
     let t = frozen();
     let h = head(&t, "2026-10-05 09:00:00", "2026-10-19");
     let eid = h.id;
-    let err = t
-        .try_write(move |tx| {
-            CalendarEvent::update(
-                tx,
-                eid,
-                EventChanges {
-                    recurrence_until: Some(Some("2029-09-22".parse().unwrap())),
-                    ..Default::default()
-                },
-            )
-        })
-        .unwrap_err();
+    let result = t.try_write(move |tx| {
+        CalendarEvent::update(
+            tx,
+            eid,
+            EventChanges {
+                recurrence_until: Some(Some("2029-09-22".parse().unwrap())),
+                ..Default::default()
+            },
+        )
+    });
+    assert!(matches!(&result, Err(Error::RecordInvalid(_))));
+    let err = result.unwrap_err();
     let Error::RecordInvalid(errors) = err else {
         panic!("{err:?}")
     };
@@ -65,6 +65,7 @@ fn cutover_recurrence_head_local_edit_accepts_unchanged_rule_values() {
     let t = frozen();
     let h = head(&t, "2026-09-23 09:00:00", "2026-10-07");
     let before = rows(&t, &h);
+    assert_eq!(before.len(), 3);
     update(
         &t,
         h.id,
@@ -91,15 +92,28 @@ fn cutover_recurrence_active_series_slots_have_unique_database_constraint() {
     let t = frozen();
     let h = head(&t, "2026-10-05 09:00:00", "2026-10-19");
     let taken = rows(&t, &h)[1].clone();
-    let unique=t.read(|c|Ok(c.query_row("SELECT \"unique\" FROM pragma_index_list('events') WHERE name='index_events_on_series_slot'",[],|r|r.get::<_,bool>(0))?));
-    assert!(unique);
+    use rusqlite::OptionalExtension;
+    let index = t.read(|c| Ok(c.query_row("SELECT \"unique\" FROM pragma_index_list('events') WHERE name='index_events_on_series_slot'", [], |r| r.get::<_, bool>(0)).optional()?));
+    assert!(index.is_some());
+    assert_eq!(index, Some(true));
     let mut a = attrs(&t);
     a.title = "Duplicate slot".into();
     a.starts_at = Some(taken.starts_at);
     a.ends_at = taken.ends_at;
-    let err=t.try_write(move|tx|{let duplicate=CalendarEvent::create(tx,a)?;tx.conn().execute("UPDATE events SET series_id=?,recurrence_rule='weekly',recurrence_until=? WHERE id=?",params![h.id,h.recurrence_until.map(|d|d.to_string()),duplicate.id])?;Ok(())}).unwrap_err();
+    let result = t.try_write(move |tx| {
+        let duplicate = CalendarEvent::create(tx, a)?;
+        tx.conn().execute(
+            "UPDATE events SET series_id=?,recurrence_rule='weekly',recurrence_until=? WHERE id=?",
+            params![
+                h.id,
+                h.recurrence_until.map(|d| d.to_string()),
+                duplicate.id
+            ],
+        )?;
+        Ok(())
+    });
     assert!(
-        matches!(err,Error::Sqlite(rusqlite::Error::SqliteFailure(e,_)) if e.extended_code==rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE)
+        matches!(result,Err(Error::Sqlite(rusqlite::Error::SqliteFailure(e,_))) if e.extended_code==rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE)
     );
 }
 #[test]
@@ -130,21 +144,21 @@ fn cutover_recurrence_rule_over_cap_rejects_and_preserves_original_series() {
     let h = head(&t, "2026-10-05 09:00:00", "2026-10-19");
     let before = rows(&t, &h);
     let eid = h.id;
-    let err = t
-        .try_write(move |tx| {
-            CalendarEvent::update_with_scope(
-                tx,
-                eid,
-                EventChanges {
-                    recurrence_rule: Some(Some("daily".into())),
-                    recurrence_until: Some(Some("2026-12-15".parse().unwrap())),
-                    ..Default::default()
-                },
-                "this_and_following",
-                Some(id("david")),
-            )
-        })
-        .unwrap_err();
+    let result = t.try_write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            eid,
+            EventChanges {
+                recurrence_rule: Some(Some("daily".into())),
+                recurrence_until: Some(Some("2026-12-15".parse().unwrap())),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david")),
+        )
+    });
+    assert!(matches!(&result, Err(Error::RecordInvalid(_))));
+    let err = result.unwrap_err();
     let Error::RecordInvalid(errors) = err else {
         panic!("{err:?}")
     };
@@ -167,7 +181,10 @@ fn cutover_recurrence_rule_over_cap_rejects_and_preserves_original_series() {
 fn cutover_recurrence_head_only_series_retimes_through_following() {
     let t = frozen();
     let h = head(&t, "2027-01-01 09:00:00", "2027-01-05");
-    assert_eq!(rows(&t, &h).len(), 1);
+    assert_eq!(
+        rows(&t, &h).iter().map(|e| e.id).collect::<Vec<_>>(),
+        vec![h.id]
+    );
     update(
         &t,
         h.id,
@@ -185,6 +202,27 @@ fn cutover_recurrence_head_only_series_retimes_through_following() {
     assert_eq!(
         rows(&t, &h).iter().map(|e| e.id).collect::<Vec<_>>(),
         vec![h.id]
+    );
+    // Rails checks @following_reorder is cleared. Exercise the validation it
+    // guards, immediately after the scoped operation (event.rb:315-319).
+    let eid = h.id;
+    let result = t.try_write(move |tx| {
+        CalendarEvent::update(
+            tx,
+            eid,
+            EventChanges {
+                starts_at: Some(Some(stamp("2027-01-01 12:00:00"))),
+                ends_at: Some(Some(stamp("2027-01-01 13:00:00"))),
+                ..Default::default()
+            },
+        )
+    });
+    assert!(
+        matches!(result, Err(Error::RecordInvalid(ref errors)) if errors.on("starts_at") == vec!["moves the whole series: choose This and following or the entire series"])
+    );
+    assert_eq!(
+        t.read(|c| CalendarEvent::find(c, eid)).starts_at,
+        fresh.starts_at
     );
 }
 #[test]

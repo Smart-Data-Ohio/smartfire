@@ -78,9 +78,16 @@ fn cutover_event_rejects_bot_and_nonmember_organizers() {
         a.organizer_id = user;
         assert!(matches!(
             t.try_write(move |tx| CalendarEvent::create(tx, a)),
-            Err(Error::RecordInvalid(_))
+            Err(Error::RecordInvalid(ref errors)) if errors.on("organizer") == vec!["must be an active human member of the room"]
         ));
     }
+    t.write(|tx| Membership::create_default(tx, id("designers"), id("bender")));
+    let mut a = attrs(&t);
+    a.organizer_id = id("bender");
+    assert!(
+        matches!(t.try_write(move |tx| CalendarEvent::create(tx, a)),
+        Err(Error::RecordInvalid(ref errors)) if errors.on("organizer") == vec!["must be an active human member of the room"])
+    );
 }
 #[test]
 fn cutover_event_rejects_soft_deleted_venue() {
@@ -103,9 +110,9 @@ fn cutover_event_rejects_soft_deleted_venue() {
     });
     let mut a = attrs(&t);
     a.venue_room_id = Some(room.id);
-    let error = t
-        .try_write(move |tx| CalendarEvent::create(tx, a))
-        .unwrap_err();
+    let result = t.try_write(move |tx| CalendarEvent::create(tx, a));
+    assert!(matches!(&result, Err(Error::RecordInvalid(_))));
+    let error = result.unwrap_err();
     let Error::RecordInvalid(errors) = error else {
         panic!("{error:?}")
     };
@@ -196,7 +203,16 @@ fn cutover_event_time_change_notifies_going_and_maybe_once() {
 fn cutover_event_title_only_edit_creates_no_items() {
     let t = frozen();
     let e = scheduled(&t);
-    let before = count(&t, "activity_items");
+    let event_count = || {
+        t.read(|c| {
+            Ok(c.query_row(
+                "SELECT COUNT(*) FROM activity_items WHERE source_type='Event' AND source_id=?",
+                [e.id],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+    };
+    let before = event_count();
     let eid = e.id;
     t.write(move |tx| {
         CalendarEvent::update_with_scope(
@@ -210,7 +226,7 @@ fn cutover_event_title_only_edit_creates_no_items() {
             Some(id("david")),
         )
     });
-    assert_eq!(count(&t, "activity_items"), before);
+    assert_eq!(event_count(), before);
     assert_eq!(t.read(|c| CalendarEvent::find(c, e.id)).title, "Renamed");
 }
 #[test]
@@ -256,6 +272,16 @@ fn cutover_event_room_deletion_removes_events_attendances_and_items() {
     let t = frozen();
     let e = scheduled(&t);
     let eid = e.id;
+    respond(&t, eid, "jason", "going", false);
+    let attendance_ids: Vec<i64> = t.read(|c| {
+        crate::sql::query_all(
+            c,
+            "SELECT id FROM event_attendances WHERE event_id=?",
+            [eid],
+            |r| r.get(0),
+        )
+    });
+    assert!(!attendance_ids.is_empty());
     let ids: Vec<i64> = t.read(|c| {
         Ok(
             c.prepare("SELECT id FROM activity_items WHERE source_type='Event' AND source_id=?")?
@@ -288,6 +314,16 @@ fn cutover_event_room_deletion_removes_events_attendances_and_items() {
         )?)),
         0
     );
+    for aid in attendance_ids {
+        assert_eq!(
+            t.read(|c| Ok(c.query_row(
+                "SELECT COUNT(*) FROM event_attendances WHERE id=?",
+                [aid],
+                |r| r.get::<_, i64>(0)
+            )?)),
+            0
+        );
+    }
     for iid in ids {
         assert!(t.db.read_blocking(|c| ActivityItem::find(c, iid)).is_err());
     }

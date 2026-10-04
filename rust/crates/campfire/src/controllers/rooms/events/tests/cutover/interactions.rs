@@ -10,6 +10,7 @@ async fn schedule(app: &TestApp, title: &str, description: Option<&str>, repeati
     assert!(room.text().contains(&index_path()));
     let index = david.get(&index_path()).await;
     assert_eq!(index.status, StatusCode::OK);
+    assert!(headings(&index.text()).iter().any(|h| h == "Events"));
     assert!(index.text().contains("New event"));
     assert!(index.text().contains(&format!("{}/new", index_path())));
     let form = david.get(&format!("{}/new", index_path())).await;
@@ -50,11 +51,7 @@ async fn schedule(app: &TestApp, title: &str, description: Option<&str>, repeati
     redirected(&reply, eid);
     let shown = david.get(&path(eid)).await;
     assert_eq!(shown.status, StatusCode::OK);
-    assert!(
-        shown
-            .text()
-            .contains(&format!(">{}</h1>", find(app, eid).await.title))
-    );
+    assert!(headings(&shown.text()).contains(&find(app, eid).await.title));
     if let Some(description) = description {
         assert!(shown.text().contains(description));
     }
@@ -160,8 +157,12 @@ async fn cutover_interaction_announcement_card_response_stays_in_requested_frame
     let room = jason.get(&room_url).await;
     assert_eq!(room.status, StatusCode::OK);
     assert!(room.text().contains("Scheduled an event: Card session"));
-    assert!(room.text().contains("event-card__title"));
-    assert!(room.text().contains("Organized by David"));
+    let matching_cards: Vec<_> = cards(&room.text())
+        .into_iter()
+        .filter(|card| visible_text(card).contains("Card session"))
+        .collect();
+    assert_eq!(matching_cards.len(), 1);
+    assert!(visible_text(&matching_cards[0]).contains("Organized by David"));
     let frame = format!("response_for_message_{mid}_event_{eid}");
     let url = format!("{}/attendance?message_id={mid}", path(eid));
     assert!(room.text().contains(&url));
@@ -183,6 +184,7 @@ async fn cutover_interaction_announcement_card_response_stays_in_requested_frame
         .await;
     assert_eq!(saved.status, StatusCode::OK);
     assert_eq!(saved.location(), None);
+    assert!(saved.headers.get("turbo-location").is_none());
     assert!(saved.text().contains(&format!("id=\"{frame}\"")));
     assert!(saved.text().contains("Currently: <strong>Going</strong>"));
     let room = jason.get(&room_url).await;

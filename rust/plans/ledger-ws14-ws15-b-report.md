@@ -190,3 +190,47 @@ bash ci/with-release-inputs.sh cargo build --workspace --bins
 ```
 
 Exit status 0. Own fresh-clone/Rails storage/scratch output is removed after the PR is opened; the shared target cache and inherited worktree output are preserved.
+
+## PR #243 per-assertion audit
+
+Merged parent review head ec35cd92 (merge 553eb219); its four reopened declarations remain explicitly open and belong to the next continuation. Parent audit fix239b has not landed as of this receipt.
+
+All **81 continuation records / 271 original Rails assertion calls** now have an individual mapping in `ledger-ws14-ws15-b-assertions.json` and its rendered Markdown. The validator checks physical citations, complete original assertion enumeration and actual native PASS names; semantic pairing is reviewed manually and sampled with production mutations. Historical receipts remain in place.
+
+Strengthened real-path assertions cover the organizer-specific error with an independently member bot, event-scoped title-only activity counts, deletion of captured attendance IDs, actual Event association readers, simultaneous title/time edits, parsed heading/card selectors, card-scoped organizer text, Turbo redirects and the existing-zone/nonmember-venue request setup. Validation errors are asserted directly before checking their messages. The recurrence flag reset is checked by its next-update validation consequence, with a pinned-Rails probe (`event-guard-reset.rb`).
+
+Audit run (canonical Rust 1.98.1/libvips container, unchanged machine rustc slots, nextest workers 4):
+
+```sh
+cargo nextest run --workspace --exclude html5ever -j 4 -E 'test(cutover_)' --no-fail-fast
+python3 rust/reference-tools/cutover/assertion-maps.py rust/plans/ledger-ws14-ws15-b-assertions.json --render --pass-log AUDIT_PASS_LOG
+cargo clippy --workspace --exclude html5ever --all-targets -- -D warnings
+```
+
+```text
+     Summary [  16.257s] 78 tests run: 78 passed, 4976 skipped
+Assertion maps: 81 records; 271 original Rails assertion calls; 0 unmapped
+    Finished `dev` profile [unoptimized] target(s) in 1m 13s
+```
+
+Direct Result assertions added after this audit run replace the previous equivalent unwrap-error / error-variant panic guards; they change where the mutation fails, not the tested predicate. They were compiled by the mutation build and strict clippy. The full unmutated workspace run is in progress and its final receipt will be recorded in the continuation report.
+
+Nineteen distinct newly added tests have retained mutation failures, each at an assertion mapped to its Rails declaration. See `ledger-ws14-ws15-b-mutations.md` for every raw nextest summary and panic citation, and the JSON receipt for production source hashes. No compile/setup failure counts. The equality-end exploratory mutation also failed, but is not counted in the retained sample. Temporary production guards are absent from the committed tree.
+
+```text
+Mutation summary: 19 run; 19 killed; production restored=True
+```
+
+Pinned Rails guard probe (`d7c7de92`, network disabled):
+
+```text
+1 runs, 4 assertions, 0 failures, 0 errors, 0 skips
+```
+
+```sh
+python3 rust/reference-tools/cutover/check-ws14-ws15.py
+```
+
+```text
+Acceptance ledger: 445 records checked; 181 baseline-CI passed; 119 new assertions; 1 test-only outside gate; 144 explicitly open
+```

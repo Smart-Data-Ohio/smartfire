@@ -431,12 +431,15 @@ async fn cutover_events_update_rejects_nonmember_venue_and_keeps_original() {
     let eid = id("launch_party");
     let vid = venue(&app, RoomType::Voice, "Outsiders", JASON, &[JASON]).await;
     let original = find(&app, eid).await;
+    let zone = campfire_views::time::Zone::for_user(Some(&original.time_zone));
+    let start = zone.format(original.starts_at.jiff(), "%Y-%m-%dT%H:%M");
+    let end = zone.format(original.ends_at.unwrap().jiff(), "%Y-%m-%dT%H:%M");
     let mut david = app.sign_in(DAVID).await;
     let reply = david
         .write(json(
             Method::PATCH,
             &path(eid),
-            json!({"event":{"venue_room_id":vid}}),
+            json!({"event":{"starts_at":start,"ends_at":end,"venue_room_id":vid}}),
         ))
         .await;
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);

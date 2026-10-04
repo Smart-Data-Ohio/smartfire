@@ -27,11 +27,22 @@ fn references(t: &TestDb, mid: i64) -> Vec<i64> {
         )
     })
 }
+fn event_ids(t: &TestDb, mid: i64) -> Vec<i64> {
+    t.read(|c| {
+        Ok(CalendarEvent::for_message_ids(c, &[mid])?
+            .remove(&mid)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|e| e.id)
+            .collect())
+    })
+}
 #[test]
 fn cutover_reference_message_without_link_has_no_events() {
     let t = frozen();
     let m = message(&t, "just chatting", "evt-ref-none");
     assert!(references(&t, m.id).is_empty());
+    assert!(event_ids(&t, m.id).is_empty());
 }
 #[test]
 fn cutover_reference_missing_event_creates_no_references() {
@@ -42,12 +53,14 @@ fn cutover_reference_missing_event_creates_no_references() {
         "evt-ref-missing",
     );
     assert!(references(&t, m.id).is_empty());
+    assert!(event_ids(&t, m.id).is_empty());
 }
 #[test]
 fn cutover_reference_edit_adds_the_exact_event() {
     let t = frozen();
     let mut m = message(&t, "just chatting", "evt-ref-edit");
     assert!(references(&t, m.id).is_empty());
+    assert!(event_ids(&t, m.id).is_empty());
     let mid = m.id;
     t.write(move |tx| {
         m.edit(
@@ -63,6 +76,7 @@ fn cutover_reference_edit_adds_the_exact_event() {
         )
     });
     assert_eq!(references(&t, mid), vec![id("launch_party")]);
+    assert_eq!(event_ids(&t, mid), vec![id("launch_party")]);
 }
 #[test]
 fn cutover_reference_message_destroy_removes_join_and_preserves_event() {
