@@ -35,3 +35,19 @@ Summary [   0.303s] 7 tests run: 7 passed, 1396 skipped
 ```
 
 Original Rails files: `10 runs, 40 assertions, 0 failures, 0 errors, 0 skips`. Total continuation: **22 ledger records closed; 199 remain**.
+
+## Batch 3: recurrence guards, ordering, uniqueness and local edits
+
+Nine original recurrence declarations are closed. Eight model tests cover nil singleton series/neighbors, head update range limits and rollback, unchanged recurrence form values, the active-series-slot unique index (including a real rejected SQLite write), equal-time cancelled ordering, over-cap rule rollback, a retimed head-only series and a local description edit. The ninth runs a guard-flag injection through real HTTP (422, weekly unchanged); a compile-fail EventChanges doctest additionally proves the unknown attribute cannot be supplied to the typed model. Rust cannot dynamically assign unknown model fields as ActiveRecord does; this checks both its typed boundary and the observable request boundary.
+
+```sh
+cargo nextest run -p campfire_db -j 4 -E 'test(cutover_recurrence_test::)' --no-fail-fast
+cargo nextest run -p campfire -j 4 -E 'test(cutover_recurrence_guard_flag_injection)' --no-fail-fast
+```
+
+```text
+Summary [   0.325s] 8 tests run: 8 passed, 1403 skipped
+Summary [   0.896s] 1 test run: 1 passed, 2853 skipped
+```
+
+Original Rails recurrence file (source bytes checked against d7c7de92): `63 runs, 360 assertions, 0 failures, 0 errors, 0 skips`. Total continuation: **31 records closed; 190 remain**.

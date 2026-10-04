@@ -1,20 +1,11 @@
 # WS14 / WS15 cutover assertions still open
 
-**Partial slice: 199 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
+**Partial slice: 190 exact declarations remain without a discriminating acceptance receipt.** These are not declared absent production behavior, and are not waived because they have another owner. They are still in the cutover gate.
 
 The three inventories retain historical receipts and current per-record dispositions. This list is generated from `ledger-ws14-ws15.json`. Continuation batches and Rails/native execution receipts are recorded in `ledger-ws14-ws15-b-report.md`.
 
 | Record | Current ledger row | Rails declaration | Assertion still required |
 |---|---|---|---|
-| WS14e-026 | `rust/plans/ws14e-test-inventory.md:78` | `test/models/event/recurrence_test.rb:101` | a single event has no series |
-| WS14e-027 | `rust/plans/ws14e-test-inventory.md:81` | `test/models/event/recurrence_test.rb:133` | the occurrence cap and one-year range run on head updates too |
-| WS14e-028 | `rust/plans/ws14e-test-inventory.md:87` | `test/models/event/recurrence_test.rb:225` | recurrence fields cannot be changed by injecting the guard flag |
-| WS14e-030 | `rust/plans/ws14e-test-inventory.md:95` | `test/models/event/recurrence_test.rb:336` | this event on the head accepts the form's unchanged rule values |
-| WS14e-033 | `rust/plans/ws14e-test-inventory.md:106` | `test/models/event/recurrence_test.rb:520` | series slots are unique among uncancelled occurrences |
-| WS14e-037 | `rust/plans/ws14e-test-inventory.md:122` | `test/models/event/recurrence_test.rb:915` | series order puts uncancelled occurrences first at equal times |
-| WS14e-038 | `rust/plans/ws14e-test-inventory.md:123` | `test/models/event/recurrence_test.rb:932` | a rule change beyond the cap is rejected and leaves the series alone |
-| WS14e-039 | `rust/plans/ws14e-test-inventory.md:130` | `test/models/event/recurrence_test.rb:1033` | a head-only series can still be re-timed through this and following |
-| WS14e-040 | `rust/plans/ws14e-test-inventory.md:131` | `test/models/event/recurrence_test.rb:1051` | a single-occurrence description edit of the head still succeeds |
 | WS14e-041 | `rust/plans/ws14e-test-inventory.md:142` | `test/models/event/reference_sync_test.rb:41` | a message without an event link references nothing |
 | WS14e-042 | `rust/plans/ws14e-test-inventory.md:144` | `test/models/event/reference_sync_test.rb:64` | a link to a missing event creates nothing |
 | WS14e-043 | `rust/plans/ws14e-test-inventory.md:145` | `test/models/event/reference_sync_test.rb:75` | editing a message to add an event link adds the reference |

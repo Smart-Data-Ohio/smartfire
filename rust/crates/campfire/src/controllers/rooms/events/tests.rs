@@ -2,6 +2,8 @@ use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_db::{CalendarEvent, NewCalendarEvent, Timestamp};
 
+mod cutover;
+
 async fn event(app: &TestApp) -> CalendarEvent {
     app.db()
         .write(|tx| {

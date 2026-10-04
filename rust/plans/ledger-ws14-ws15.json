@@ -365,7 +365,7 @@
         "test": "campfire_db tests::calendar_event_test::series_notifications_replace_read_updates_and_rearm_every_reminder",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 906
+          "line": 907
         },
         "detail": "Explicit prior read update replacement and all occurrence reminded_at fields rearmed on a time shift.",
         "ci_log_line": 1978
@@ -442,7 +442,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 711
+          "line": 712
         },
         "detail": "cancel twice vector compares return values, unchanged cancelled state and activity rows.",
         "ci_log_line": 2013
@@ -794,16 +794,25 @@
       "rails_line": 101,
       "title": "a single event has no series",
       "id": "WS14e-026",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_singleton_has_no_series_or_neighbors",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 23
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 67,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a single event has no series. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 101
         }
       },
-      "historical_line": 67,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -813,16 +822,25 @@
       "rails_line": 133,
       "title": "the occurrence cap and one-year range run on head updates too",
       "id": "WS14e-027",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_head_plain_update_checks_one_year_cap",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 33
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 70,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: the occurrence cap and one-year range run on head updates too. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 133
         }
       },
-      "historical_line": 70,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -832,16 +850,25 @@
       "rails_line": 225,
       "title": "recurrence fields cannot be changed by injecting the guard flag",
       "id": "WS14e-028",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire controllers::rooms::events::tests::cutover::cutover_recurrence_guard_flag_injection_cannot_change_the_rule",
+        "source": {
+          "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover.rs",
+          "line": 5
+        },
+        "detail": "The HTTP mutation-flag injection returns 422 and retains weekly. EventChanges also has a compile-fail doctest proving the Rails unknown attribute cannot be supplied through the typed model input; the original Rails UnknownAttributeError assertion passes."
+      },
+      "historical_line": 76,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: recurrence fields cannot be changed by injecting the guard flag. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 225
         }
       },
-      "historical_line": 76,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -872,16 +899,25 @@
       "rails_line": 336,
       "title": "this event on the head accepts the form's unchanged rule values",
       "id": "WS14e-030",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_head_local_edit_accepts_unchanged_rule_values",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 64
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 84,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: this event on the head accepts the form's unchanged rule values. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 336
         }
       },
-      "historical_line": 84,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -896,7 +932,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 711
+          "line": 712
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -917,7 +953,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 711
+          "line": 712
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -933,16 +969,25 @@
       "rails_line": 520,
       "title": "series slots are unique among uncancelled occurrences",
       "id": "WS14e-033",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_active_series_slots_have_unique_database_constraint",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 90
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 95,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: series slots are unique among uncancelled occurrences. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 520
         }
       },
-      "historical_line": 95,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -957,7 +1002,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 711
+          "line": 712
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -978,7 +1023,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 711
+          "line": 712
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -999,7 +1044,7 @@
         "test": "campfire_db tests::calendar_event_test::event_scoped_operations_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 711
+          "line": 712
         },
         "detail": "previous bound (both scopes), local past neighbour, earlier following move, repeat updates coalesce, cancel excess protected; full rows/items/jobs projection.",
         "ci_log_line": 2013
@@ -1015,16 +1060,25 @@
       "rails_line": 915,
       "title": "series order puts uncancelled occurrences first at equal times",
       "id": "WS14e-037",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_equal_time_orders_active_before_cancelled",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 106
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 111,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: series order puts uncancelled occurrences first at equal times. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 915
         }
       },
-      "historical_line": 111,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1034,16 +1088,25 @@
       "rails_line": 932,
       "title": "a rule change beyond the cap is rejected and leaves the series alone",
       "id": "WS14e-038",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_rule_over_cap_rejects_and_preserves_original_series",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 128
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 112,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a rule change beyond the cap is rejected and leaves the series alone. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 932
         }
       },
-      "historical_line": 112,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1053,16 +1116,25 @@
       "rails_line": 1033,
       "title": "a head-only series can still be re-timed through this and following",
       "id": "WS14e-039",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_head_only_series_retimes_through_following",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 167
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 119,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a head-only series can still be re-timed through this and following. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 1033
         }
       },
-      "historical_line": 119,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1072,16 +1144,25 @@
       "rails_line": 1051,
       "title": "a single-occurrence description edit of the head still succeeds",
       "id": "WS14e-040",
-      "disposition": "unsupported_assertion",
+      "disposition": "implemented",
       "evidence": {
+        "test": "campfire_db tests::calendar_event_test::cutover_recurrence_test::cutover_recurrence_head_description_edit_stays_local",
+        "source": {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs",
+          "line": 191
+        },
+        "detail": "Ports the original recurrence setup and discriminating persisted-series/validation assertions through CalendarEvent and the real SQLite constraints."
+      },
+      "historical_line": 120,
+      "historical_receipt": "Deferred: WS14e continuation",
+      "reconciliation_receipt": {
         "detail": "Discriminating domain/HTTP assertion still required for: a single-occurrence description edit of the head still succeeds. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
         "source": {
           "file": "test/models/event/recurrence_test.rb",
           "line": 1051
         }
       },
-      "historical_line": 120,
-      "historical_receipt": "Deferred: WS14e continuation"
+      "continuation": "rust/ledger-ws14-ws15-b"
     },
     {
       "owner": "WS14e",
@@ -1172,7 +1253,7 @@
         "test": "campfire_db tests::calendar_event_test::room_involvement_and_inbox_preferences_control_reminder_items",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 506
+          "line": 507
         },
         "detail": "Going attendee with inbox reminder preference off keeps invitation while another gets reminder.",
         "ci_log_line": 1973
@@ -1193,7 +1274,7 @@
         "test": "campfire_db tests::calendar_event_test::ended_cancelled_and_soft_deleted_rooms_stay_silent",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 566
+          "line": 567
         },
         "detail": "Cancelled/ended/soft-deleted event reminder scans and direct dispatch send nothing.",
         "ci_log_line": 1956
@@ -1252,7 +1333,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_source_rechecks_membership_and_ignores_inbox_preferences",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 990
+          "line": 991
         },
         "detail": "Going/maybe recipients, removed membership, involvement/inbox reminder preference independence.",
         "ci_log_line": 1970
@@ -1273,7 +1354,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_source_rechecks_membership_and_ignores_inbox_preferences",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 990
+          "line": 991
         },
         "detail": "Going/maybe recipients, removed membership, involvement/inbox reminder preference independence.",
         "ci_log_line": 1970
@@ -1294,7 +1375,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1315,7 +1396,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1336,7 +1417,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1357,7 +1438,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1378,7 +1459,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1399,7 +1480,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1420,7 +1501,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1441,7 +1522,7 @@
         "test": "campfire_db tests::calendar_event_test::reminder_push_payload_and_staleness_match_rails_vectors",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1044
+          "line": 1045
         },
         "detail": "Pinned pusher vectors compare complete payload or null for countdown/singular/now/recent/stale/ended and direct-room title.",
         "ci_log_line": 1988
@@ -1956,7 +2037,7 @@
         "test": "campfire::bin/campfire controllers::rooms::events::tests::event_pages_scope_members_bots_and_the_series_index",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests.rs",
-          "line": 388
+          "line": 390
         },
         "detail": "Bot requests denied by actual scoped page handler.",
         "ci_log_line": 4488
@@ -1996,7 +2077,7 @@
         "test": "campfire::bin/campfire controllers::rooms::events::tests::event_write_controller_security_and_validation",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests.rs",
-          "line": 408
+          "line": 410
         },
         "detail": "Actual edit/update/delete HTTP for organizer, admin and unauthorized member.",
         "ci_log_line": 4489
@@ -3701,7 +3782,7 @@
         "test": "campfire_db tests::calendar_event_test::series_create_calendar_callbacks_match_pinned_rails_order_and_arguments",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 362
+          "line": 363
         },
         "detail": "Pinned singleton/series create callback vectors include Meet flag per occurrence and provisioning jobs.",
         "ci_log_line": 1976
@@ -3722,7 +3803,7 @@
         "test": "campfire_db tests::calendar_event_test::series_create_calendar_callbacks_match_pinned_rails_order_and_arguments",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 362
+          "line": 363
         },
         "detail": "Pinned singleton/series create callback vectors include Meet flag per occurrence and provisioning jobs.",
         "ci_log_line": 1976
@@ -4032,7 +4113,7 @@
         "test": "campfire_db tests::calendar_event_test::scoped_calendar_sync_and_cancel_preserve_ws14g_argument_contracts",
         "source": {
           "file": "rust/crates/db/src/tests/calendar_event_test.rs",
-          "line": 1070
+          "line": 1071
         },
         "detail": "Connected going/maybe time/title changes and entry cancellation callback IDs. Atomic timing is checked by calendar_api_durable_callbacks_coalesce_and_reject_atomically.",
         "ci_log_line": 1974
@@ -8728,7 +8809,7 @@
         "test": "campfire::bin/campfire controllers::rooms::events::tests::event_cards_refresh_after_an_event_edit_through_the_message_cache",
         "source": {
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests.rs",
-          "line": 344
+          "line": 346
         },
         "detail": "Warm message cache observes changed Event title and card.",
         "ci_log_line": 4486
