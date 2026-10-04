@@ -13,6 +13,7 @@ root = Path(__file__).resolve().parents[3]
 binary = Path(sys.argv[1]).resolve()
 arguments = sys.argv[2:]
 pinned_application_tests = (
+    'controllers::messages::attachment_processing_tests::attachment_processing_rows_html_and_broadcast_bytes_match_fresh_rails',
     'controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers',
     'controllers::agent_review_r3_tests::pr192_r3_fresh_video_retains_preview_and_variant_files',
     'controllers::agent_review_r5_tests::pr192_r5_video_missing_preview_redirect',
