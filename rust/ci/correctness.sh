@@ -64,6 +64,9 @@ run_suite() {
       ;;
     livekit)
       browser_images
+      # Start the private media server after the cold compile so its lifetime
+      # and logs cover the browser run rather than several minutes of rustc.
+      cargo test --manifest-path rust/Cargo.toml --locked -p campfire --no-run -j 4
       bin/livekit-local setup
       # Only this job's private signaling server is needed; the test owns its gateway.
       bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
