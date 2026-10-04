@@ -18,8 +18,9 @@ class DriveTransportTests(unittest.TestCase):
                 # registered independently of its Authorization header.
                 with urlopen(Request(f'http://127.0.0.1:{port}/drive/v3/files?pageSize=10', headers={'Host': 'www.googleapis.com'})) as reply:
                     self.assertEqual(reply.status, 200)
-                with self.assertRaises(HTTPError):
+                with self.assertRaises(HTTPError) as rejected:
                     urlopen(Request(f'http://127.0.0.1:{port}/drive/v3/files?pageSize=11', headers=headers))
+                rejected.exception.close()
                 with urlopen(Request(f'http://127.0.0.1:{port}/drive/v3/files/fixture?supportsAllDrives=true', headers=headers)) as reply:
                     self.assertEqual(reply.status, 200)
                 self.assertEqual([row['valid'] for row in calls], [True, True, False, True])
