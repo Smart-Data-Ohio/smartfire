@@ -40,8 +40,13 @@ for record in records:
     for assertion in record['assertions']:
         assert assertion['rust_test'] in record['rust_tests']
         assert assertion['observation'] and assertion['checks']
+        assert assertion['assertion_scope'], f"missing executed assertion scope: {assertion}"
+        assert not assertion['assertion_anchor'].startswith(('fn ', 'async fn ')), f"function declaration is not assertion evidence: {assertion}"
         path, line = assertion['assertion_source'].rsplit(':', 1)
         assert (root / path).read_text().splitlines()[int(line)-1].strip() == assertion['assertion_anchor'], f"stale assertion source: {assertion}"
+        for extra in assertion.get('additional_assertion_sources', []):
+            path, line = extra['path'].rsplit(':', 1)
+            assert (root / path).read_text().splitlines()[int(line)-1].strip() == extra['anchor'], f"stale additional assertion source: {extra}"
     for name in record['rust_tests']:
         assert name in active, f'missing or ignored: {name}'
         assert name in passed, f'no actual pass receipt: {name}'

@@ -39,7 +39,11 @@ pub(super) fn render(app: &TestApp, f: impl FnOnce(&ViewContext) -> String) -> S
     render_with(app, |_| {}, f)
 }
 
-pub(crate) fn render_with(app: &TestApp, configure: impl FnOnce(&mut ViewContext), f: impl FnOnce(&ViewContext) -> String) -> String {
+pub(crate) fn render_with(
+    app: &TestApp,
+    configure: impl FnOnce(&mut ViewContext),
+    f: impl FnOnce(&ViewContext) -> String,
+) -> String {
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {
@@ -106,7 +110,13 @@ fn assert_bytes(name: &str, actual: &str, expected: &str) {
 /// The complete fragment byte oracle remains above. At the HTTP boundary compare the
 /// same DOM, retaining every attribute/text node except the random CSRF value.
 /// None of the original Rails assertions inspect that random value.
-pub(crate) fn assert_http_fragment(actual: &str, expected: &str, tag: &str, attr: &str, value: &str) {
+pub(crate) fn assert_http_fragment(
+    actual: &str,
+    expected: &str,
+    tag: &str,
+    attr: &str,
+    value: &str,
+) {
     use campfire_richtext::dom::{Dom, NodeData, NodeId};
     fn project(dom: &Dom, id: NodeId) -> serde_json::Value {
         match &dom.node(id).data {
@@ -116,7 +126,14 @@ pub(crate) fn assert_http_fragment(actual: &str, expected: &str, tag: &str, attr
                     attrs.retain(|(name, _)| name != "value");
                 }
                 attrs.sort();
-                serde_json::json!([element.name.local.to_string(), attrs, dom.children(id).iter().map(|id| project(dom,*id)).collect::<Vec<_>>()])
+                serde_json::json!([
+                    element.name.local.to_string(),
+                    attrs,
+                    dom.children(id)
+                        .iter()
+                        .map(|id| project(dom, *id))
+                        .collect::<Vec<_>>()
+                ])
             }
             NodeData::Text(text) => serde_json::json!(["text", text]),
             NodeData::Comment(text) => serde_json::json!(["comment", text]),
@@ -126,11 +143,23 @@ pub(crate) fn assert_http_fragment(actual: &str, expected: &str, tag: &str, attr
     let fragment = |body| {
         let mut dom = Dom::new();
         let root = dom.parse_fragment(body).unwrap();
-        let matches = dom.descendants(root).into_iter().filter(|id| dom.name(*id) == tag && dom.attr(*id,attr) == Some(value)).collect::<Vec<_>>();
-        assert_eq!(matches.len(), 1, "exact HTTP {tag}[{attr}={value}] cardinality");
+        let matches = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|id| dom.name(*id) == tag && dom.attr(*id, attr) == Some(value))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            matches.len(),
+            1,
+            "exact HTTP {tag}[{attr}={value}] cardinality"
+        );
         project(&dom, matches[0])
     };
-    assert_eq!(fragment(actual), fragment(expected), "complete routed {tag}[{attr}={value}] fragment");
+    assert_eq!(
+        fragment(actual),
+        fragment(expected),
+        "complete routed {tag}[{attr}={value}] fragment"
+    );
 }
 
 async fn card_case(name: &str) {
@@ -168,7 +197,13 @@ async fn card_case(name: &str) {
             .render()
             .unwrap()
     });
-    assert_http_fragment(&reply.text(), case["html"].as_str().unwrap(), "turbo-frame", "id", "user_card");
+    assert_http_fragment(
+        &reply.text(),
+        case["html"].as_str().unwrap(),
+        "turbo-frame",
+        "id",
+        "user_card",
+    );
     assert_bytes(name, &actual, case["html"].as_str().unwrap());
 }
 
@@ -243,14 +278,26 @@ async fn directories_match_complete_rails_body_and_starred_order() {
         assert_bytes("directory", &actual, case["html"].as_str().unwrap());
         let reply = app.david().get("/users").await;
         assert_eq!(reply.status, StatusCode::OK);
-        assert_http_fragment(&reply.text(), case["html"].as_str().unwrap(), "ul", "class", "people-directory");
+        assert_http_fragment(
+            &reply.text(),
+            case["html"].as_str().unwrap(),
+            "ul",
+            "class",
+            "people-directory",
+        );
     }
 }
 
 #[tokio::test]
 async fn cards_require_sign_in_and_unknown_people_are_not_found() {
     let app = TestApp::boot().await.expect("seed required");
-    assert_eq!(app.anonymous().get(&campfire_routes::user_card(JASON)).await.location(), Some("http://campfire.test/session/new"));
+    assert_eq!(
+        app.anonymous()
+            .get(&campfire_routes::user_card(JASON))
+            .await
+            .location(),
+        Some("http://campfire.test/session/new")
+    );
     assert_eq!(
         app.david()
             .get(&campfire_routes::user_card(-1))
@@ -263,9 +310,11 @@ async fn cards_require_sign_in_and_unknown_people_are_not_found() {
 #[tokio::test]
 async fn directory_requires_sign_in_and_excludes_the_viewer() {
     let app = TestApp::boot().await.expect("seed required");
+    let anonymous = app.anonymous().get("/users").await;
+    assert_eq!(anonymous.status, StatusCode::FOUND);
     assert_eq!(
-        app.anonymous().get("/users").await.status,
-        StatusCode::FOUND
+        anonymous.location(),
+        Some("http://campfire.test/session/new")
     );
     let reply = app.david().get("/users").await;
     assert_eq!(reply.status, StatusCode::OK);
@@ -313,8 +362,14 @@ async fn profile_message_buttons_carry_the_accessible_name() {
         let reply = app.david().get(&campfire_routes::user(id)).await;
         assert_eq!(reply.status, StatusCode::OK);
         let html = reply.text();
-        assert_eq!(html.matches(&format!("aria-label=\"Message {name}\"")).count(), 1);
-        if id == KEVIN { assert!(html.contains("Ban Kevin")); }
+        assert_eq!(
+            html.matches(&format!("aria-label=\"Message {name}\""))
+                .count(),
+            1
+        );
+        if id == KEVIN {
+            assert!(html.contains("Ban Kevin"));
+        }
         for image in html.split("<img").skip(1) {
             assert!(!image.split('>').next().unwrap().contains("aria-label="));
         }
@@ -322,4 +377,6 @@ async fn profile_message_buttons_carry_the_accessible_name() {
 }
 
 #[tokio::test]
-async fn review_card_markup_matches_rails() {card_case("review_markup").await;}
+async fn review_card_markup_matches_rails() {
+    card_case("review_markup").await;
+}

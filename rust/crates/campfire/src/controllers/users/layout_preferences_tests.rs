@@ -56,6 +56,14 @@ async fn check_cases(names: &[&str]) {
         let page = app.david().get("/users/me/profile").await;
         assert_eq!(page.status, axum::http::StatusCode::OK, "{name}");
         let body = page.text();
+        // ProfilesControllerTest's light theme also pins the exact color-scheme cardinality.
+        if name == "manual_dnd" {
+            assert_eq!(
+                body.matches("<meta name=\"color-scheme\" content=\"light\">")
+                    .count(),
+                1
+            );
+        }
         // Read the whole helper's rendered line verbatim; tokens/nonces elsewhere stay real.
         let actual = body
             .split_once("<meta name=\"time-zone-url\" content=\"/users/me/time_zone\">\n      ")

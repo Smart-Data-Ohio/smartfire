@@ -105,6 +105,10 @@ mod tests {
                     "csrf-token",
                     "csrf-param",
                     "noindex",
+                    "action-cable",
+                    "turbo-prefetch",
+                    "google-drive-previews",
+                    "Upgrade to a supported web browser",
                 ] {
                     assert!(
                         !response.text().contains(private),
@@ -118,6 +122,7 @@ mod tests {
             let response = browser.get(path).await;
             assert_eq!(response.status, StatusCode::OK);
             assert_eq!(response.header("set-cookie"), None);
+            assert_eq!(response.text(), app.anonymous().get(path).await.text());
             let head = browser.send(Req::new(Method::HEAD, path)).await;
             assert_eq!(head.status, StatusCode::OK);
             assert!(head.body.is_empty());
@@ -136,6 +141,7 @@ mod tests {
                     .send(Req::new(Method::GET, path).header("accept", accept))
                     .await;
                 assert_eq!(response.status, StatusCode::OK);
+                assert!(response.text().contains("<title>Smartfire"));
             }
             for accept in [
                 "application/json",
