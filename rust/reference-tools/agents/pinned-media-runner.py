@@ -26,7 +26,7 @@ pinned_application_tests = (
 
 
 def pinned_args(test_arguments):
-    scratch = root / '.scratch'
+    scratch = Path(os.environ.get('PINNED_MEDIA_SCRATCH', root / '.scratch'))
     temporary = scratch / 'pinned-media'
     temporary.mkdir(parents=True, exist_ok=True)
     image = os.environ.get('PARITY_IMAGE', PIN_IMAGE)
@@ -63,6 +63,7 @@ if (Path.cwd() == root / 'rust/crates/campfire'
             native_arguments.extend(['--skip', test])
         native = subprocess.run(native_arguments)
         # Sequential: never add another worker to the native run.
-        pinned = subprocess.run(pinned_args([*media, '--exact', '--test-threads=4']))
+        pinned = subprocess.run(pinned_args([*media, '--exact',
+                                            '--test-threads=' + os.environ.get('RUST_TEST_THREADS', '4')]))
         sys.exit(native.returncode or pinned.returncode)
 os.execv(str(binary), [str(binary), *arguments])

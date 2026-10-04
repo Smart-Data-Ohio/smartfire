@@ -22,8 +22,10 @@ unexpected names and duplicate values. Only those six additions and the named
 Date/X-Request-Id/X-Runtime request values are approved differences. Disk and
 range transfer-encoding headers remain compared. No unapproved header drift is
 accepted; ws11api-approved-differences.md records the exact scope.
-Both approved JPEG/video crash differences and unconditional committed-file retention
-remain explicitly documented; they are deliberate differences, not unported API paths.
+The JPEG/video crash approvals were superseded by #226/#233: both fresh posts now
+return 201 in Rails and Rust, and processing retains the generated files.
+Unconditional committed-file retention remains an approved difference; see
+ws11api-approved-differences.md for its callback-failure scope and the retired approvals.
 
 The preceding rounds trimmed repeated capability/serialization-identity reads and
 batched array candidates. The preceding API round fixed nested/singleton/null/hash integer
@@ -65,10 +67,11 @@ explicit dispatch; all 38 call installed service/model adapters, including the f
 | Webhook transport | Timestamp/HMAC headers, encrypted signing secrets, SSRF/DNS/IP pinning, 7s timeout, transient legacy retries, five-attempt agent backoff/Retry-After | integrations/{webhook,jobs,agent_jobs}.rs; agents_webhook_contract.json; real socket/claim tests |
 | Webhook production paths | Message/slash/work/approval/action payloads, thread-aware sync replies, hop/fanout rules, durable jobs/claims/recovery and token scrubbing | agent_delivery/payloads/work_events; agent_jobs; jobs/periodic.rs; installed path/callback vectors |
 
-Existing approved JPEG/video crash and committed-file-retention differences remain explicit
-in ws11api-approved-differences.md. They are deliberate reviewed differences, not hidden
-unported paths. Native media-byte/version differences still require the pinned runtime for
-exact byte comparisons; sizes/checksums are never masked.
+The current JPEG/video vectors execute the deferred processing job and compare successful
+201 responses and retained files; see `agent_review192r2_attachment.json` and
+`agent_review192r3_attachment.json`. The separate committed-file-retention approval remains
+explicit in ws11api-approved-differences.md. Native media-byte/version differences still
+require the pinned runtime for exact byte comparisons; sizes/checksums are never masked.
 
 ## Completed named comparisons
 

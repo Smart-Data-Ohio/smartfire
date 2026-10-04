@@ -54,9 +54,8 @@ pub struct Ctx {
     formats: Option<std::result::Result<Vec<Format>, InvalidMimeType>>,
     rendered_format: Option<Format>,
     live: bool,
-    /// The body of an [`crate::unparsed_action`], until [`Ctx::read_body`] reads it. (A `Mutex`
-    /// only because a body isn't `Sync`.)
-    unread_body: std::sync::Mutex<Option<axum::body::Body>>,
+    /// The validated, spooled body of an [`crate::unparsed_action`].
+    unread_body: Option<tokio::fs::File>,
 }
 
 /// Options for `redirect_to`.
@@ -121,34 +120,43 @@ impl Ctx {
             formats: None,
             rendered_format: None,
             live: false,
-            unread_body: std::sync::Mutex::new(None),
+            unread_body: None,
         }
     }
 
-    pub(crate) fn leave_body_unread(&mut self, body: axum::body::Body) {
-        *self.unread_body.get_mut().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(body);
+    pub(crate) fn leave_body_unread(&mut self, body: tokio::fs::File) {
+        self.unread_body = Some(body);
+    }
+
+    /// Take an [`crate::unparsed_action`]'s validated upload as a rewound file, without buffering
+    /// it in memory. Parsed actions use their already-buffered `raw_post` instead.
+    pub async fn take_body_file(&mut self) -> std::io::Result<std::fs::File> {
+        use tokio::io::{AsyncSeekExt, AsyncWriteExt};
+
+        if let Some(file) = self.unread_body.take() {
+            return Ok(file.into_std().await);
+        }
+        let file = tokio::task::spawn_blocking(tempfile::tempfile).await.map_err(std::io::Error::other)??;
+        let mut file = tokio::fs::File::from_std(file);
+        file.write_all(self.request.raw_post()).await?;
+        file.seek(std::io::SeekFrom::Start(0)).await?;
+        Ok(file.into_std().await)
     }
 
     /// `request.body.read(limit)`: at most the first `limit` bytes of the body. An
     /// [`crate::unparsed_action`]'s body has already been validated and spooled before the
-    /// action ran: those bytes are kept and the rest is read and dropped. Any other action's
+    /// action ran: those bytes are kept and the rest is dropped. Any other action's
     /// comes from `raw_post`.
     pub async fn read_body(&mut self, limit: usize) -> bytes::Bytes {
-        use http_body_util::BodyExt;
+        use tokio::io::AsyncReadExt;
 
-        let unread = self.unread_body.get_mut().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
-        let Some(mut body) = unread else {
+        let Some(body) = self.unread_body.take() else {
             let raw = self.request.raw_post();
             return raw.slice(..raw.len().min(limit));
         };
-        let mut read = bytes::BytesMut::new();
-        while let Some(Ok(frame)) = body.frame().await {
-            if let Ok(data) = frame.into_data() {
-                let wanted = limit.saturating_sub(read.len()).min(data.len());
-                read.extend_from_slice(&data[..wanted]);
-            }
-        }
-        read.freeze()
+        let mut read = Vec::new();
+        let _ = body.take(limit as u64).read_to_end(&mut read).await;
+        read.into()
     }
 
     pub fn kit(&self) -> &Kit {
