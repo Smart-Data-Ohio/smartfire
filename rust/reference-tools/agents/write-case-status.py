@@ -38,7 +38,9 @@ if api_ledger.is_file():
         'ledger': api_ledger.relative_to(ROOT).as_posix(),
         'passed': sum(row['status'] == 'passed' for row in api),
         'pending': sum(row['status'] != 'passed' for row in api),
-        'owner': 'WS11-API; pending evidence is unblocked, not a missing service',
+        'owner': 'WS11-API; pending evidence, if any, is unblocked',
     }
+if not remaining and output.get('broader_named_api_assertions', {}).get('pending') == 0:
+    output['status'] = 'complete'
 (Path(__file__).parent / 'deferred-domain-cases.json').write_text(json.dumps(output, indent=2) + '\n')
 print(f"WS11 deferred case inventory: {len(remaining)} pinned files; {sum(len(g['remaining_named_case_ports']) for g in remaining)} named source cases; owners recorded per file")

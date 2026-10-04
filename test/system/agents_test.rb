@@ -35,4 +35,27 @@ class AgentsDirectoryTest < ApplicationSystemTestCase
     assert_text "Does things"
     assert_text "Working"
   end
+
+  test "the agent directory loads its sidebar without a script error" do
+    # Stimulus catches action errors and reports them through console.error
+    # and window.onerror, not as uncaught exceptions, so record both from
+    # the first script of every document onward.
+    page.driver.browser.execute_cdp("Page.addScriptToEvaluateOnNewDocument", source: <<~JS)
+      window.pageScriptErrors = []
+      const consoleError = console.error.bind(console)
+      console.error = (...args) => {
+        window.pageScriptErrors.push(args.map(String).join(" "))
+        consoleError(...args)
+      }
+      window.onerror = (message) => { window.pageScriptErrors.push(String(message)) }
+      window.addEventListener("unhandledrejection", event => window.pageScriptErrors.push(String(event.reason)))
+    JS
+
+    visit agents_url
+
+    assert_selector "h1", text: "Agents"
+    assert_selector "#user_sidebar[complete]", visible: :all, wait: 10
+    assert_selector "#user_sidebar a.btn", text: "Designers"
+    assert_empty page.evaluate_script("window.pageScriptErrors")
+  end
 end

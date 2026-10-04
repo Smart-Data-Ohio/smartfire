@@ -105,7 +105,7 @@ pub async fn index(c: &mut Ctx) -> Result {
         .read(move |conn| ChannelThread::visible_work_threads(conn, &viewer, &filter))
         .await
         .map_err(db_error)?;
-    c.no_store();
+    c.no_store(); c.set_header("pragma", "no-cache");
     let viewer = require_current_user(c)?.clone();
     if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
         let base = c.url_for("");
@@ -162,7 +162,7 @@ pub(super) async fn scope(c: &mut Ctx, manager: bool) -> Result<(Room, ChannelTh
 pub async fn new_handoff(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let (_, thread) = scope(c, true).await?;
-    c.no_store();
+    c.no_store(); c.set_header("pragma", "no-cache");
     handoff_form(c, StatusCode::OK, thread, None).await
 }
 async fn handoff_form(

@@ -81,6 +81,9 @@ def check(log=None):
             assert matches == ["ok"], (identity, "missing or ambiguous test pass", matches)
         passed += 1
     print(f"WS11 broader named API assertions: {passed} passed; {len(seen)-passed} pending; owner WS11-API (unblocked)")
+    next6_checker = Path(__file__).with_name('check-next6-assertions.py')
+    if next6_checker.is_file():
+        subprocess.run(['python3', str(next6_checker)], cwd=ROOT, check=True)
 
 
 if __name__ == "__main__":

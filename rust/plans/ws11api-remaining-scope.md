@@ -1,6 +1,6 @@
 # WS11 API remaining scope before cutover
 
-Updated on `rust/ws11api-next-5`, based on main `f85fb420`. #215 and #216
+Updated on `rust/ws11api-next-6`, stacked on next-5 `491b9425`, merged with main `7e35a5fd6` (merge `f61de2c57`). #215 and #216
 are merged. The pinned Rails reference remains `d7c7de92`. Domain named-case
 mapping and broader API assertion evidence are separate inventories.
 
@@ -10,7 +10,7 @@ All four REST and five MCP work writes formerly returning REST500 / MCP -32603
 are installed on main via #202. They use WS12's writer, handoff and tag services;
 244 pinned response/state/job vectors and flat query-growth controls remain in place.
 No pending work-write adapter remains. No other unported WS11 API implementation
-was found in the prior audit or this round. Broader named-case evidence remains partial.
+was found in the prior audit or this round. The broader named-case evidence is complete for all 51 audited declarations.
 
 #203 (`rust/ws11api-proxy-headers`, `7ec7d26c`) is now merged through main.
 Its Content-Transfer-Encoding correction is retained for successful streams and
@@ -69,92 +69,61 @@ in ws11api-approved-differences.md. They are deliberate reviewed differences, no
 unported paths. Native media-byte/version differences still require the pinned runtime for
 exact byte comparisons; sizes/checksums are never masked.
 
-## Broader named-case evidence still partial
+## Completed named comparisons
 
-All **378 domain declarations in 26 pinned files** are now mapped. This round
-freshly executes the 16 merged WS12 assignment cases: identical complete owner,
-validation, history and inbox facts, with no masks. All 16 producer controls
-activate and fail the intended persisted-fact assertion. The generated `cases!`
-functions are now discovered by the CI named-case checker; its regression fails
-when those macro invocations are hidden.
+All **378 domain declarations in 26 pinned files** are mapped and have actual
+cargo passes. The separate broader #215 assertion audit is also complete:
+**51 passed, 0 pending**. Next-5 closed 20 declarations; this round closes the
+remaining **31**, against **182 freshly executed Rails HTTP responses and four
+real producer outputs**. Each has an individual activated producer control
+rejected at its intended assertion. An additional query-growth control is rejected
+at the flat-read assertion. No assertion or vector is mutated by a control.
 
-The #215 assertion audit also flags 51 broader API declarations. That is a
-separate obligation, previously obscured by the domain-only ledger. This round
-closes **20 of 51** with **31 fresh Rails responses**, exact body bytes/status/
-selected headers, committed work/history/ledger/handoff/audit/jobs, and one
-activated producer control rejected at the intended assertion per declaration.
-Set/clear and set/repeat execute real writes, rather than pre-seeding the result.
-Non-owner writes supply valid fields; scoped grants and suspended receivers are
-isolated. Session requests use real cookies and CSRF tokens; bot-key requests
-use an authenticated key. No WS11-API behavior difference was found in this slice.
+REST/MCP bodies, statuses and selected headers are compared as raw bytes. Human
+history/HTML checks reproduce each original declaration's actual JSON fields,
+selectors, text and links. The agent-board integration uses real session cookies,
+CSRF, a human HTTP post, an agent reply, result update and a rendered inbox card.
+Webhook cases claim committed durable jobs and post them through the real runner;
+only DNS/TCP is routed to the local recording endpoint. Grant revocation and
+membership removal happen after a successful poll. Both 60-handoff throttle limits
+and shared REST/MCP bucket behavior are exercised. Positive fixture premises run
+in the existing CI checker, so an empty list or denied request cannot earn a credit.
 
-`ws11api-named-api-cases.json` is the exact broader ledger. Its CI checker verifies
-pinned declaration names, generated Rust functions, real vector observations and
-mutation receipts. Runtime pass counts additionally require cargo's actual output.
-The domain ledger has **0 deferred names**; the broader API ledger still has
-**31 pending declarations, all unblocked WS11-API evidence work**. This checkpoint
-is partial. It does not claim only owner-blocked items remain.
+Complete work/history/ledger/handoff/audit facts and logical queue job class/args
+are checked, including thread/message targets, notes, acknowledgments and inbox source
+IDs where applicable. The message-rate case compares a full logical job multiset
+with duplicates preserved: Rails' test adapter and Rust's atomic queue register
+push/delivery jobs in different order, which the original declaration does not
+specify. This comparison does not claim identical queue execution order. Scheduling
+other agents' hooks for later test steps changes only test run-at inputs.
 
-| Original API file | Passed this round | Pending evidence |
-| --- | ---: | ---: |
-| `test/controllers/agents/mcp_handoff_test.rb` | 2 | 1 |
-| `test/controllers/agents/posts_controller_test.rb` | 2 | 8 |
-| `test/controllers/agents/work_controller_test.rb` | 14 | 8 |
-| `test/controllers/agents/work_delivery_test.rb` | 0 | 9 |
-| `test/controllers/agents/work_handoff_test.rb` | 2 | 4 |
-| `test/integration/agent_boards_test.rb` | 0 | 1 |
+| Original API file | Next-5 | Next-6 | Pending |
+| --- | ---: | ---: | ---: |
+| `test/controllers/agents/mcp_handoff_test.rb` | 2 | 1 | 0 |
+| `test/controllers/agents/posts_controller_test.rb` | 2 | 8 | 0 |
+| `test/controllers/agents/work_controller_test.rb` | 14 | 8 | 0 |
+| `test/controllers/agents/work_delivery_test.rb` | 0 | 9 | 0 |
+| `test/controllers/agents/work_handoff_test.rb` | 2 | 4 | 0 |
+| `test/integration/agent_boards_test.rb` | 0 | 1 | 0 |
 
-The exact pending declarations follow; their original assertion locations and
-reasons remain in the JSON ledger. None is labelled an unmerged service blocker.
+`ws11api-named-api-cases.json` records each original name, exact Rust function,
+vector, producer recipe and receipt. The checker reads each declaration's own
+receipt file and optionally requires its actual cargo pass. The domain ledger has
+**0 deferred names** and the broader API ledger has **0 pending declarations**.
+**Only the peer-owned Recorder integration below remains flagged for this scope.**
 
-### `test/controllers/agents/mcp_handoff_test.rb` — owner WS11-API
+### Work polling read fix
 
-- Line 100: handoff_work shares its throttle bucket with the rest endpoint
-
-### `test/controllers/agents/posts_controller_test.rb` — owner WS11-API
-
-- Line 288: lists the board's open posts newest activity first
-- Line 312: a reply moves the post to the top of the list
-- Line 328: lists by single status, done, and all
-- Line 360: lists by owner me, agents, and id
-- Line 395: caps the list at 100 posts
-- Line 416: a legacy agent without grants can list but cannot create
-- Line 430: listing is 404 once the agent leaves the board
-- Line 438: creation, listing, and event delivery share one work payload
-
-### `test/controllers/agents/work_controller_test.rb` — owner WS11-API
-
-- Line 12: list shows only owned threads newest first with the work fields
-- Line 63: list is Bearer-only and empty without owned threads
-- Line 114: show includes links with pull request, event, and drive entries
-- Line 158: list includes links on owned threads
-- Line 184: patch changes the status and records the note in work history
-- Line 228: list excludes rooms the agent no longer belongs to
-- Line 476: put result requires ownership and manage_threads
-- Line 522: put result checks ownership and grants before markdown presence
-
-### `test/controllers/agents/work_delivery_test.rb` — owner WS11-API
-
-- Line 14: assignment appears in event polling with the work payload
-- Line 34: assignment work payload includes links
-- Line 51: unassignment appears in event polling
-- Line 64: ack works on work rows
-- Line 75: assignment enqueues the webhook instead of blocking on it
-- Line 97: assignment posts no webhook without read_messages
-- Line 113: polling omits work rows for rooms the agent lost read_messages in
-- Line 128: polling omits work rows after membership removal
-- Line 142: work events do not count toward the message rate limit
-
-### `test/controllers/agents/work_handoff_test.rb` — owner WS11-API
-
-- Line 45: the receiver polls the handoff with its context package
-- Line 64: the receiver acks the handoff row
-- Line 76: the handoff enqueues the receiver webhook with the package
-- Line 176: handoffs throttle at 60 a minute per credential
-
-### `test/integration/agent_boards_test.rb` — owner WS11-API
-
-- Line 17: an agent post flows from creation through reply to result
+The fresh two-size comparison exposed per-event room/actor/thread/payload and
+private-link preflight reads. At 5/50 work events, REST grew from **61 to 466** and
+MCP from **62 to 467**; Rails stayed **17/17** and **19/19**. Batched event/thread
+associations and shared work payload preloads now hold Rust at **25/25** and
+**26/26**. Repository decisions remain occurrence-scoped; Accounts still owns
+permission caching, and current identity sealing/redaction remains enforced.
+The regression first failed against next-5's production implementation. All other
+measured board/work/read/write/ack paths remain flat at 5/50 rows; the exact table
+is in `ws11api-next-6-report.md`. No WS12 grant, ledger, audit or service transaction
+logic is replaced.
 
 ### Recorder review and actual peer-owned seam
 

@@ -28,8 +28,12 @@ export default class extends Controller {
     })
   }
 
+  // Roomless pages (agents, activity, saved items) load the sidebar
+  // too; there's no current room to mark read there.
   loaded() {
-    this.read({ detail: { roomId: Current.room.id } })
+    const roomId = Current.room?.id
+
+    if (roomId) this.read({ detail: { roomId } })
   }
 
   read({ detail: { roomId } }) {
@@ -67,7 +71,7 @@ export default class extends Controller {
     const unreadRoom = this.#findRoomTarget(roomId)
 
     if (unreadRoom) {
-      if (Current.room.id != roomId) {
+      if (Current.room?.id != roomId) {
         unreadRoom.classList.add(this.unreadClass)
       }
 

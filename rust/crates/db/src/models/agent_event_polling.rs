@@ -5,7 +5,7 @@ use super::agent_payloads::{RepositoryAccess, compact, json_time};
 use crate::sql::{query_all, query_one};
 use crate::{ChannelThread, Connection, Message, Result, Timestamp};
 use serde_json::{Value, json};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub fn poll(
     conn: &Connection,
@@ -20,7 +20,7 @@ pub fn poll(
     let limit = limit.filter(|v| !blank(v)).map(ruby_i64);
     let events = super::agent_event_access::readable_page(conn, agent_id, since, limit)?;
     let next_since = events.last().map_or(since, |e| e.id);
-    let context = PollContext::load(conn, agent_id, now, access)?;
+    let context = PollContext::load(conn, agent_id, now, access, &events)?;
     let mut payloads = vec![];
     for event in events {
         if let Some(payload) = context.payload(&event, &mut presenter)? {
@@ -28,7 +28,15 @@ pub fn poll(
         }
     }
     if !access.valid(conn)? {
-        return poll(conn,agent_id,Some(&json!(since)),limit.as_ref().map(|value|json!(value)).as_ref(),now,&RepositoryAccess::default(),presenter);
+        return poll(
+            conn,
+            agent_id,
+            Some(&json!(since)),
+            limit.as_ref().map(|value| json!(value)).as_ref(),
+            now,
+            &RepositoryAccess::default(),
+            presenter,
+        );
     }
     Ok(json!({"events":payloads,"next_since":next_since}))
 }
@@ -53,6 +61,9 @@ struct PollContext<'a> {
     legacy: bool,
     members: HashSet<i64>,
     grants: HashSet<Option<i64>>,
+    rooms: HashMap<i64, Value>,
+    actors: HashMap<i64, Value>,
+    work: HashMap<i64, Value>,
 }
 impl<'a> PollContext<'a> {
     fn load(
@@ -60,6 +71,7 @@ impl<'a> PollContext<'a> {
         agent_id: i64,
         now: Timestamp,
         access: &'a RepositoryAccess,
+        events: &[AgentEvent],
     ) -> Result<Self> {
         let (user,owner_id,active,legacy):(i64,Option<i64>,bool,bool)=conn.query_row(
             "SELECT a.user_id,a.owner_id,(a.suspended_at IS NULL AND u.status=0),NOT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=a.id) FROM agents a JOIN users u ON u.id=a.user_id WHERE a.id=?",[agent_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?)))?;
@@ -72,6 +84,75 @@ impl<'a> PollContext<'a> {
         .into_iter()
         .collect();
         let grants=query_all(conn,"SELECT room_id FROM agent_grants WHERE agent_id=? AND capability='read_messages' AND revoked_at IS NULL",[agent_id],|r|r.get(0))?.into_iter().collect();
+        let names = |table: &str, ids: Vec<i64>| -> Result<HashMap<i64, Value>> {
+            if ids.is_empty() {
+                return Ok(HashMap::new());
+            }
+            Ok(query_all(
+                conn,
+                &format!(
+                    "SELECT id,name FROM {table} WHERE id IN (SELECT value FROM json_each(?))"
+                ),
+                [json!(ids).to_string()],
+                |r| {
+                    let id: i64 = r.get(0)?;
+                    Ok((id, json!({"id":id,"name":r.get::<_,Option<String>>(1)?})))
+                },
+            )?
+            .into_iter()
+            .collect())
+        };
+        let rooms = names("rooms", events.iter().filter_map(|e| e.room_id).collect())?;
+        let actors = names("users", events.iter().filter_map(|e| e.actor_id).collect())?;
+        let ids = events
+            .iter()
+            .filter(|e| WORK_TYPES.contains(&e.event_type.as_str()))
+            .filter_map(|e| e.metadata.get("thread_id").map(ruby_i64))
+            .collect::<Vec<_>>();
+        let threads = if ids.is_empty() {
+            HashMap::new()
+        } else {
+            query_all(
+                conn,
+                "SELECT * FROM channel_threads WHERE id IN (SELECT value FROM json_each(?))",
+                [json!(ids).to_string()],
+                ChannelThread::from_row,
+            )?
+            .into_iter()
+            .map(|t| (t.id, t))
+            .collect::<HashMap<_, _>>()
+        };
+        let entries = events
+            .iter()
+            .filter(|e| WORK_TYPES.contains(&e.event_type.as_str()))
+            .filter_map(|e| {
+                e.metadata
+                    .get("thread_id")
+                    .map(ruby_i64)
+                    .and_then(|id| threads.get(&id))
+                    .map(|t| (e.id, t.clone()))
+            })
+            .collect::<Vec<_>>();
+        let payloads =
+            super::agent_payloads::work_payloads_for_events(conn, &entries, owner_id, access)?;
+        let work = entries
+            .into_iter()
+            .zip(payloads)
+            .map(|((event, thread), mut work)| {
+                work["thread_id"] = json!(thread.id);
+                work["status"] = json!(thread.work_status);
+                let entry = events
+                    .iter()
+                    .find(|e| e.id == event)
+                    .expect("selected event");
+                work["assigned_by"] = entry
+                    .metadata
+                    .get("assigned_by")
+                    .cloned()
+                    .unwrap_or(Value::Null);
+                (event, work)
+            })
+            .collect();
         Ok(Self {
             conn,
             agent_id,
@@ -82,6 +163,9 @@ impl<'a> PollContext<'a> {
             legacy,
             members,
             grants,
+            rooms,
+            actors,
+            work,
         })
     }
     fn readable(&self, room: &Value) -> bool {
@@ -94,30 +178,8 @@ impl<'a> PollContext<'a> {
             && (self.legacy || self.grants.contains(&None) || self.grants.contains(&Some(id)))
     }
     fn common(&self, e: &AgentEvent) -> Result<Value> {
-        let room = e
-            .room_id
-            .map(|id| {
-                query_one(
-                    self.conn,
-                    "SELECT id,name FROM rooms WHERE id=?",
-                    [id],
-                    |r| Ok(json!({"id":r.get::<_,i64>(0)?,"name":r.get::<_,Option<String>>(1)?})),
-                )
-            })
-            .transpose()?
-            .flatten();
-        let actor = e
-            .actor_id
-            .map(|id| {
-                query_one(
-                    self.conn,
-                    "SELECT id,name FROM users WHERE id=?",
-                    [id],
-                    |r| Ok(json!({"id":r.get::<_,i64>(0)?,"name":r.get::<_,String>(1)?})),
-                )
-            })
-            .transpose()?
-            .flatten();
+        let room = e.room_id.and_then(|id| self.rooms.get(&id));
+        let actor = e.actor_id.and_then(|id| self.actors.get(&id));
         Ok(compact(
             json!({"id":e.id,"event_type":e.event_type,"outcome":e.outcome,"created_at":json_time(e.created_at),"room":room,"actor":actor}),
         ))
@@ -150,28 +212,9 @@ impl<'a> PollContext<'a> {
             if !self.readable(&payload["room"]) {
                 return Ok(None);
             };
-            let thread = e
-                .metadata
-                .get("thread_id")
-                .map(ruby_i64)
-                .map(|id| ChannelThread::find_by_id(self.conn, id))
-                .transpose()?
-                .flatten();
-            let work = if let Some(thread) = thread {
-                let mut work = super::agent_payloads::work_payload(
-                    self.conn,
-                    &thread,
-                    self.owner_id,
-                    &self.access.in_event(e.id),
-                )?;
-                work["thread_id"] = json!(thread.id);
-                work["status"] = json!(thread.work_status);
-                work["assigned_by"] = e
-                    .metadata
-                    .get("assigned_by")
-                    .cloned()
-                    .unwrap_or(Value::Null);
-                work
+            let mut thread_deleted = false;
+            let work = if let Some(work) = self.work.get(&e.id) {
+                work.clone()
             } else {
                 if e.event_type != "work_unassigned" {
                     return Ok(None);
@@ -180,10 +223,13 @@ impl<'a> PollContext<'a> {
                 else {
                     return Ok(None);
                 };
-                payload["thread_deleted"] = json!(true);
+                thread_deleted = true;
                 snapshot.clone()
             };
             payload["work"] = work;
+            if thread_deleted {
+                payload["thread_deleted"] = json!(true);
+            }
             if e.event_type == "work_handed_off"
                 && let Some(handoff) = e.metadata.get("handoff").and_then(Value::as_object)
             {
@@ -229,7 +275,9 @@ impl<'a> PollContext<'a> {
             let actor = fields.shift_remove("actor");
             fields.insert("hop".into(), json!(e.hop()));
             fields.insert("room".into(), room);
-            if let Some(actor) = actor { fields.insert("actor".into(), actor); }
+            if let Some(actor) = actor {
+                fields.insert("actor".into(), actor);
+            }
             payload["message"] = presenter(&message)?;
             payload["pull_request"] = super::agent_payloads::pull_request_for_message(
                 self.conn,

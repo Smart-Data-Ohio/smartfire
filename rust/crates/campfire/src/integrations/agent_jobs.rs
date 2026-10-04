@@ -782,3 +782,8 @@ mod message_controller_tests;
 
 #[cfg(test)]
 mod remaining_cases;
+
+#[cfg(test)]
+mod next6_named;
+#[cfg(test)]
+pub(crate) use next6_named::Next6Delivery;

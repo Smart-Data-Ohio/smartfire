@@ -36,7 +36,7 @@ export default class ClientMessage {
   }
 
   update(clientMessageId, body) {
-    const element = this.#findWithId(clientMessageId).querySelector(".message__body-content")
+    const element = this.#findPendingWithId(clientMessageId)?.querySelector(".message__body-content")
 
     if (element) {
       element.innerHTML = body
@@ -44,7 +44,7 @@ export default class ClientMessage {
   }
 
   failed(clientMessageId) {
-    const element = this.#findWithId(clientMessageId)
+    const element = this.#findPendingWithId(clientMessageId)
 
     if (element) {
       element.classList.add("message--failed")
@@ -60,8 +60,10 @@ export default class ClientMessage {
     }
   }
 
-  #findWithId(clientMessageId) {
-    return document.querySelector(`#message_${clientMessageId}`)
+  #findPendingWithId(clientMessageId) {
+    const element = document.querySelector(`#message_${clientMessageId}`)
+    // Upload callbacks can arrive after the server replaces the pending row.
+    return element?.hasAttribute("data-message-id") ? null : element
   }
 
   #contentFromNode(node) {

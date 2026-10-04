@@ -22,7 +22,7 @@
 
       <h3 class="margin-none txt-medium">Remembered devices</h3>
 {% if !data.devices.is_empty() %}        <menu id="two_factor_devices" class="flex flex-column gap margin-none pad-none">
-{% for device in data.devices %}            <li class="flex align-center gap margin-none" id="two_factor_remembered_device_{{ device.id }}">
+{% for device in data.devices %}            <li class="flex flex-wrap align-center gap margin-none" id="two_factor_remembered_device_{{ device.id }}">
               <div class="min-width flex-item-grow txt-small">
                 <div class="overflow-ellipsis"><strong>{{ self.agent(device) }}</strong></div>
                 <div class="txt-subtle">{{ self.last_used(device) }}</div>

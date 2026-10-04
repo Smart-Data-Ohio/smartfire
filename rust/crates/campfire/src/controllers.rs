@@ -1228,6 +1228,11 @@ mod agent_work_writes_tests;
 #[cfg(test)]
 mod agent_work_named_tests;
 #[cfg(test)]
+mod agent_next6_named_tests;
+
+#[cfg(test)]
+mod agent_pr227_tests;
+#[cfg(test)]
 mod ws12_agent_work_query_tests;
 #[cfg(test)]
 mod ws12_activity_helper_named_tests;
@@ -1265,3 +1270,12 @@ mod ws12_handled_sequence_tests;
 
 #[cfg(test)]
 mod ws12_private_pr_owner_tests;
+
+#[cfg(test)]
+mod ws12_inbox_remaining_tests;
+
+#[cfg(test)]
+mod ws12_work_remaining_tests;
+
+#[cfg(test)]
+mod ws12_browser_remaining_tests;

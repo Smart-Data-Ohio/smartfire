@@ -171,6 +171,54 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     File.delete(upload_path) if upload_path && File.exist?(upload_path)
   end
 
+  test "late upload progress preserves a delivered attachment and reply preview" do
+    parent = messages(:third)
+    within_message(parent) { right_click_message }
+    assert_message_menu_open
+    click_on "Reply", exact: true
+    assert_selector "#composer [data-composer-target='contextLabel']", text: "Replying to JZ"
+
+    # Hold the real uploader and its progress callback independently, so the
+    # callback can arrive after both the POST and the delivered DOM replacement.
+    result = page.driver.browser.execute_async_script(<<~JS)
+      const done = arguments[arguments.length - 1];
+      import("models/file_uploader").then(({ default: FileUploader }) => {
+        const upload = FileUploader.prototype.upload;
+        FileUploader.prototype.upload = function() {
+          const progress = this.progressCallback;
+          this.progressCallback = () => {};
+          return new Promise(resolve => {
+            window.attachmentUpload = {
+              progress: percent => progress(percent, this.clientMessageId, this.file),
+              resume: () => resolve(upload.call(this))
+            };
+          });
+        };
+        done(true);
+      }).catch(error => done(error.message));
+    JS
+    assert_equal true, result
+
+    find("#composer input[type='file']", visible: :all).set(file_fixture("moon.jpg").to_s)
+    click_on "Send Message"
+    assert_selector ".message:not([data-message-id]) .message__pending-upload", text: "moon.jpg - 0%"
+    page.execute_script "window.attachmentUpload.progress(50)"
+    assert_selector ".message:not([data-message-id]) .message__pending-upload", text: "moon.jpg - 50%"
+    page.execute_script "window.attachmentUpload.resume()"
+
+    assert_selector ".message[data-message-id] .message__reply-preview", text: "Third time's a charm.", wait: BROADCAST_WAIT
+    reply = Message.joins(:attachment_attachment).find_by!(reply_to_message_id: parent.id)
+    within_message(reply) do
+      assert_selector "img.message__attachment", wait: BROADCAST_WAIT
+      delivered_body = find(".message__body-content")["innerHTML"]
+      page.execute_script "window.attachmentUpload.progress(100)"
+      assert_equal delivered_body, find(".message__body-content")["innerHTML"]
+      assert_selector ".message__reply-preview", text: "Third time's a charm."
+      assert_selector "img.message__attachment"
+      assert_no_selector ".message__pending-upload"
+    end
+  end
+
   test "mention suggestions select a room member without sending the unfinished message" do
     using_session("Kevin") do
       sign_in "kevin@37signals.com"
