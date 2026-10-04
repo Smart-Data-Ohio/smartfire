@@ -7451,5 +7451,24 @@
     ],
     "broad_original_assertion_receipts": 112,
     "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md"
+  },
+  "source_pin_refresh": {
+    "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+    "generator": "rust/reference-tools/rooms/deferred_inventory.py",
+    "historical_declaration_reference": "d7c7de92",
+    "original_declarations_and_receipts_preserved": true,
+    "additional_current_pin_declarations_without_receipt_credit": [
+      {
+        "file": "test/controllers/users/sidebars_controller_test.rb",
+        "name": "your profile opens your card, falling back to the profile page",
+        "line": 29
+      },
+      {
+        "file": "test/system/unread_rooms_test.rb",
+        "name": "a live message in the current room leaves its row without a New badge",
+        "line": 27,
+        "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
+      }
+    ]
   }
 }
