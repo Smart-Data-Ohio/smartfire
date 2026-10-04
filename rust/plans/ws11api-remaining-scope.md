@@ -110,7 +110,7 @@ other agents' hooks for later test steps changes only test run-at inputs.
 vector, producer recipe and receipt. The checker reads each declaration's own
 receipt file and optionally requires its actual cargo pass. The domain ledger has
 **0 deferred names** and the broader API ledger has **0 pending declarations**.
-**Only the peer-owned Recorder integration below remains flagged for this scope.**
+The peer-owned Recorder source integration is also merged, as described below.
 
 ### Work polling read fix
 
