@@ -122,6 +122,11 @@ impl Layout {
             ..current_user(&secrets, user)
         });
         chrome.google_picker = user.as_ref().and(app.config.google_picker.clone());
+        chrome.test_environment = app.config.environment == "test";
+        chrome.service_worker_auto_register = !chrome.test_environment
+            || c.cookies
+                .get("enable_service_worker")
+                .is_some_and(|value| !campfire_richtext::ruby::is_blank(value));
         chrome.huddle_configured = app.config.huddle.configured();
         chrome.global_search_query = if c.request.path().starts_with("/searches") {
             crate::controllers::searches::display_query(c)

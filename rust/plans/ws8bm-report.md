@@ -1,10 +1,24 @@
 # #230 ledger follow-up
 
-Release-click is deferred again, alongside scroll preservation and reopen focus. Current http-3 system counts: **127 passed / 8 deferred / 0 owner-blocked**. These are ledger corrections only; no browser or Rust suite was rerun. [Verifier regression, exact reasons and raw output](ws8bm-review230-ledger.md). Older receipts below are historical, and disputed repetitions supply no closure credit.
+Current systems: **http-3 127 passed / 8 deferred; http-4 132 passed / 3 deferred; no owner-blocked cases**. Release-click is deferred again because its earlier DIV/menu hit failure has no causal resolution. All three disputed entries carry their reason without closure evidence, and the verifier accepts that schema while rejecting unsupported pass claims. [Regression tests and raw verifier output](ws8bm-review230-ledger.md). No browser or Rust suite was rerun; earlier verification receipts below remain historical.
 
-# WS8bm #230 correction
+# WS8bm #230 corrections carried into round 4
 
-Main `566c1bd77` is merged. Review fixes are tools/docs only: the workspace persisted-row assertion is back to 2 s; native motion opens HQ and uses a served native fault at the original off-canvas assertion; disputed release-click and invalid scroll/reopen closures are withdrawn. Main/#231 fixes the shared upload-progress client race and the original attachment predicate/filename proof now pass. Current round-3 inventory: **156/156 controllers; 127 passed / 8 deferred / 0 owner-blocked systems**. [Full audit, before/after proofs and retained invalid attempts](ws8bm-review230.md). All older checkpoint summaries below are historical and superseded where corrected here.
+Both branches merge main `566c1bd77`. Round 3 is pushed at `aef598492`. Current stacked round-4 inventory is **156/156 controllers; 132 passed / 3 deferred / 0 owner-blocked systems**. Release-click, scroll preservation and reopen focus remain deferred; the upload flow closes after the approved #231 shared-client fix. See [the review correction](ws8bm-review230.md). Older 134/1 and 129/6 headlines below are historical and superseded.
+
+Final merged round-4 affected checks: **8 paired controls / 14 intended paired rejections / 0 invalid or escaped**; helpers **65 Node / 32 Python**. Fresh-clone workspace: **4,923 passed / 0 failed / 22 existing ignores**. Strict clippy and release-input-only binary build pass. [The complete corrected round-4 report](ws8bm-pr4-review.md) contains all 59 raw workspace target lines, failing-first receipts and exact deferrals. Final owned processes, listeners, containers and scratch targets are all `[]`; 33.6 GiB of compiler output and four generated diagnostics are removed. The model server is untouched. This is the requested pushed checkpoint.
+
+# Historical WS8bm -4: five closures and one exact upload follow-up
+
+Stacked branch `rust/ws8bm-messages-http-4`, based on -3 `69d9e3b9d7c8dca348df7b872a5b43427e73f4ac`; the reviewed -3 branch is untouched. The legacy Drive picker, all three Drive attachment flows, and the actual test-environment motion contract now have paired browser controls, saved-row checks and intended served-fault rejections. Inventory is **156/156 controllers; 134 passed / 1 deferred / 0 owner-blocked systems**. [The complete -4 report](ws8bm-pr4-review.md) records original scopes, failing-first evidence, command/source checkpoints and every raw target summary.
+
+Rust now emits the pinned test layout's motion-off attribute and matches its service-worker cookie helper. Rails uses the literal pinned WebMock stubs and connected-account fixture; Rust's existing Google Client seam sends real outbound Drive requests to a held local HTTP fake. The browser image restores the exact pinned controller required to finish test/Active Storage routes. Test jobs are held on both hosts, and actual disk bytes are read from each host's real service. No production-only test transport, Rails client change, golden, mask, allowlist, ignore, longer deadline, retry or throttle change is introduced. The list/composer contract stays [ws8bm-integration.md](ws8bm-integration.md); no pixel work is included. Duplicate-delivery checks still inject browser Turbo markup, without claiming server-originated redelivery.
+
+The sole deferral is `workspace_markdown_test.rb:143-173`: after the route repair, Rails passes all thirteen original assertions in three samples; Rust fails twice at the unchanged 10-second reply-preview assertion, with a committed row overwritten by late 100% upload progress. A later paired original control passes exact saved rows and real 47-byte files after the separate disk-readback fix. All four upload faults reject at their intended assertions in one repaired-host run; the last run honestly records three paired rejections plus one early-preview invalid. These later successes do not erase the actual UI failures or earn declaration closure. The client update function is identical to the Rails pin and lacks a pending-row guard; the exact cause/files/lines and lead follow-up are in the detailed report.
+
+Fresh-clone workspace checks pass **4,807 / 0 failed / 15 existing ignores**, with canonical libvips 8.16.1 / FFmpeg 7.1.5. Strict clippy and release-input-only binaries pass. Final helper checks pass **32 Python / 59 Node**. Broad browser receipts remain **142 passed / 1 failed** and **198 paired rejections / 3 invalid / 0 escapes**; the report explains the incomplete-host filename attempt and the two inherited prerequisite/startup invalids. Final repaired-host Drive/motion replays pass all five controls and five intended faults. No invalid is assigned rejection credit or retried automatically.
+
+Both owned targets are removed, including the test-generated JSON output directory. Final resource inventory is empty: processes, listeners, containers and scratch targets all `[]`. The model server was not touched. This is the requested partial checkpoint; work stops after the push. Prior receipts below are historical.
 
 # Historical WS8bm -3: eleven deferred behaviours covered
 
@@ -57,3 +71,8 @@ Fresh-clone workspace verification reports **2,649 passed / 6 failed / 8 ignored
 This is a coherent PR-ready continuation slice with its inherited verification failures disclosed. All controller declarations are attributed; the seventeen own system deferrals remain concrete follow-up work, and none is owner-blocked.
 
 Own scratch target cleanup: `Removed 28073 files, 34.1GiB total`. Final scratch target inventory is empty; no own browser listeners remain. Raw logs are retained.
+
+
+# WS8bm #230 correction
+
+Main `566c1bd77` is merged. Review fixes are tools/docs only: the workspace persisted-row assertion is back to 2 s; native motion opens HQ and uses a served native fault at the original off-canvas assertion; invalid scroll/reopen closures are withdrawn. Main/#231 fixes the shared upload-progress client race and the original attachment predicate/filename proof now pass. Current round-3 inventory: **156/156 controllers; 127 passed / 8 deferred / 0 owner-blocked systems**. [Full audit, before/after proofs and retained invalid attempts](ws8bm-review230.md). All older checkpoint summaries below are historical and superseded where corrected here.

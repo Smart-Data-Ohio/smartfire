@@ -24,6 +24,10 @@ export async function attachMenu({author,recipient,caseName,fixture}) {
     await actOnVisible(button,'click');
     await actOnVisible(filterVisibleText(menu.locator('[role="menuitem"]'),'From Google Drive'),'click');
     await waitForVisibility(filterVisibleText(page.locator('.drive-share-dialog .drive-share-dialog__file'),'Q3 Planning'));
+  } else if(caseName==='From Google Drive starts the legacy picker flow') {
+    await actOnVisible(button,'click');
+    await actOnVisible(filterVisibleText(menu.locator('button'),'From Google Drive'),'click');
+    await waitForVisibility(filterVisibleText(page.locator('.drive-picker__item'),'Q3 Planning'));
   } else if(caseName==='+ shows both attach options when Drive is available') {
     await actOnVisible(button,'click',{});await expanded(true);
     await waitForVisibility(filterVisibleText(menu.locator('[role="menuitem"]'),'From this device'));

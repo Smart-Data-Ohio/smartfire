@@ -55,7 +55,7 @@ export async function motion({author:page,base,caseName,fixture}) {
   // (at least three, :71-84). This is not a lazy-sidebar readiness wait.
   await waitForCondition(()=>page.locator('turbo-cable-stream-source').evaluateAll(nodes=>nodes.length>=3&&nodes.every(node=>node.hasAttribute('connected'))),{timeout:CABLE_WAIT});
   // Supply only Rails.env.test?'s layout input. The server-emission declaration
-  // remains deferred; it cannot be credited by this browser setup.
+  // is checked separately on actual test hosts, never credited by this setup.
   await page.evaluate(()=>document.documentElement.dataset.testMotion='off');
   const click=locator=>actOnVisible(locator,'click');
   const open=async()=>{await click(page.locator('button[aria-label="Open workspace navigation"]'));await waitForVisibility(page.locator('#sidebar.open'));};

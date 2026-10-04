@@ -65,3 +65,47 @@ test/system/motion_test.rb: 9 named declarations; 6 mapped behaviour passes; 3 d
 test/system/mobile_layout_test.rb: 5 named declarations; 5 mapped behaviour passes; 0 deferred; 0 WS12 blocked
 WS8bm system inventory: 135 named declarations; 127 mapped behaviour passes; 8 deferred; 0 WS12 blocked; no pixel checks
 ```
+
+## Carried into http-4
+
+Http-3's pushed ledger correction `aef598492` is merged into http-4 with a merge commit. JSON conflict resolution preserves all five approved Drive/layout closures from http-4, applies the three disputed reason-only deferrals from http-3, and keeps upload passed. Locked Cargo metadata passes after the merge; no Rust or browser suite is rerun. The same three Python commands above are rerun on this branch.
+
+Raw http-4 regression/helper lines:
+
+```text
+.......
+----------------------------------------------------------------------
+Ran 7 tests in 0.007s
+
+OK
+
+.......................................
+----------------------------------------------------------------------
+Ran 39 tests in 2.397s
+
+OK
+```
+
+Raw http-4 verifier output:
+
+```text
+test/system/boosting_messages_test.rb: 4 named declarations; 4 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/code_highlighting_test.rb: 6 named declarations; 6 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/sending_messages_test.rb: 3 named declarations; 3 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/threads_test.rb: 15 named declarations; 15 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/workspace_markdown_test.rb: 8 named declarations; 8 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/composer_test.rb: 11 named declarations; 11 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/composer_attach_menu_test.rb: 9 named declarations; 9 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/message_interactions_test.rb: 10 named declarations; 9 mapped behaviour passes; 1 deferred; 0 WS12 blocked
+test/system/message_actions_mobile_test.rb: 2 named declarations; 2 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/message_toolbar_test.rb: 13 named declarations; 13 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/message_list_a11y_test.rb: 29 named declarations; 29 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/drive_attachments_test.rb: 3 named declarations; 3 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/unread_divider_test.rb: 5 named declarations; 5 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/search_forward_edit_test.rb: 3 named declarations; 3 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+test/system/motion_test.rb: 9 named declarations; 7 mapped behaviour passes; 2 deferred; 0 WS12 blocked
+test/system/mobile_layout_test.rb: 5 named declarations; 5 mapped behaviour passes; 0 deferred; 0 WS12 blocked
+WS8bm system inventory: 135 named declarations; 132 mapped behaviour passes; 3 deferred; 0 WS12 blocked; no pixel checks
+```
+
+Current http-4 deferrals are exactly release-click (message_interactions_test.rb:55-86,80), scroll preservation (motion_test.rb:177-238), and reopen focus (motion_test.rb:260-292). Http-3 also retains its five stacked Drive/layout deferrals, giving eight. No deferral carries active or historical closure evidence. Metadata correction does not re-certify previous full-suite/browser results. The final cleanup audit creates no Cargo target and starts no browser/app container; no owned resources remain.

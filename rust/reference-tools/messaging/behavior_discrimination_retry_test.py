@@ -46,7 +46,7 @@ class DiscriminationRetryTest(unittest.TestCase):
             second = first[0]
         state = dict(args=SimpleNamespace(negative=negative, keep_going=True, mutant=None, mutant_set=None),
                      jobs=[([name], 'default')] * (1 if negative else 2), retry_attempts={}, invalid_attempts=0, escaped_cases=set(),
-                     env={}, file='message_toolbar', ROOT=path.parents[3], run_env={},
+                     env={}, drive_calls=None, file='message_toolbar', ROOT=path.parents[3], run_env={},
                      failed_cases=[], passed=0, passed_named=set(), command=[],
                      results=iter([CompletedProcess([], 1, '\n'.join(first)), CompletedProcess([], 0, second)]),
                      subprocess=SimpleNamespace(check_output=lambda *args, **kwargs: json.dumps([['default']])), json=json)

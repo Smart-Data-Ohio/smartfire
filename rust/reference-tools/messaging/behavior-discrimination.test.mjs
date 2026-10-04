@@ -18,7 +18,7 @@ test('every registered mutant names an existing intended assertion',()=>{
     for(const spec of mutationTarget(name,variant)) for(const target of [spec,...(spec.phase?[spec.phase]:[])]) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
     count++;
   }
-  assert.equal(count,198);
+  assert.equal(count,203);
 });
 test('earlier Loading timeout earns no delayed-marker rejection credit',()=>{
   const early=failure('behavior-search-forward.mjs',"waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post')");
@@ -142,6 +142,24 @@ test('menu-owner opacity mutation cannot credit an unrelated closed-menu asserti
 test('the served tab-handler witness is syntactically executable JavaScript',()=>{
   const replacement=actionMutations.find(([name])=>name==='the picker shows category tabs and switches between them')[1][2];
   assert.doesNotThrow(()=>new Function(`return class {${replacement}}}`));
+});
+
+test('attachment reply fault requires an actual nonnull reply discarded by the served constructor',()=>{
+  const name='Markdown replies and file attachments remain usable';
+  const error=failure('behavior.mjs',"author.locator('.message[data-message-id] .message__reply-preview'),'A useful point'");
+  const probe={...valid,requiresAttachmentReplyFault:true};
+  assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{originalReplyId:null,forcedReply:null}]},error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{originalReplyId:607264869,forcedReply:null}]},error).valid,true);
+});
+
+test('motion default fault requires removal of a real server-emitted test attribute',()=>{
+  const name='motion is off by default in the test environment';
+  const error=failure('behavior-motion-default.mjs',"assert.equal(state.motion,'off','motion: server test attribute')");
+  const probe={...valid,requiresMotionAttribute:true};
+  assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{before:undefined,after:undefined}]},error).valid,false);
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{before:'off',after:undefined}]},error).valid,true);
 });
 
 test('native motion requires the original off-canvas failure and actual zero-duration HQ drawer',()=>{

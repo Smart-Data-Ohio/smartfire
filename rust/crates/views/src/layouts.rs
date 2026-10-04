@@ -133,6 +133,8 @@ pub fn frame(
 /// app with nothing optional configured.
 #[derive(Clone, Debug, Default)]
 pub struct Chrome {
+    /// Rails.env.test?: the layout disables token-driven motion only in tests.
+    pub test_environment: bool,
     /// `service_worker_auto_register?`: true outside the test environment (the reference runs in
     /// production), or when the `enable_service_worker` cookie is present.
     pub service_worker_auto_register: bool,

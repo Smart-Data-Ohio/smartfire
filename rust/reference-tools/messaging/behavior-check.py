@@ -5,6 +5,8 @@ Each writing case gets independent copies of the seed. Read-only message-list
 regressions share one verified fixture/server but get fresh viewer contexts.
 All cases exercise real HTTP/Action Cable. No pre-existing target/scratch, screenshot or response mask.
 """
+from contextlib import ExitStack
+from behavior_drive_transport import drive_transport
 import argparse
 import hashlib
 import json
@@ -19,6 +21,7 @@ import time
 import textwrap
 import urllib.request
 from behavior_action_rows import assert_action_rows
+from behavior_upload_bytes import uploaded_bytes
 from behavior_server_cleanup import stop_behavior_servers
 from behavior_mutation_jobs import probe_jobs
 from browser_host import build_host
@@ -28,7 +31,8 @@ RUST = ROOT / "rust"
 SCRATCH = ROOT / ".scratch"
 PIN = "d7c7de9264c63015be398001d7a1094e7695a6db"
 CASES = {
-    "motion": ['mobile drawer animates in, lands in place, and returns focus with motion on', 'member selection mode moves no rows and resizes nothing', 'people directory bar shifts no rows when toggling', 'people directory bar stays stuck while scrolling', 'room menu measures at full scale when clamping to the viewport edge', 'mobile drawer keeps the room list scroll position across close and reopen', 'mobile drawer reveals a current room far down the list on first open', 'mobile drawer reopens on the current room when it is already in view'],
+    "drive_attachments": ["attach Drive files from the picker, send textless, and remove through edit", "edit a room message in the composer and remove one of two attachments", "attach a Drive file from the thread composer"],
+    "motion": ["motion is off by default in the test environment",'mobile drawer animates in, lands in place, and returns focus with motion on', 'member selection mode moves no rows and resizes nothing', 'people directory bar shifts no rows when toggling', 'people directory bar stays stuck while scrolling', 'room menu measures at full scale when clamping to the viewport edge', 'mobile drawer keeps the room list scroll position across close and reopen', 'mobile drawer reveals a current room far down the list on first open', 'mobile drawer reopens on the current room when it is already in view'],
     "mobile_layout": ['the profile page fits phone widths without scrolling sideways', 'headers outside the workspace shell stay opaque over scrolled content', 'headers outside the workspace shell never cover the page or its scrollbar', 'pages outside the workspace shell show no drawer toggle that opens nothing', 'every drawer destination has one toggle that opens the drawer on itself'],
     "channel_threads_controller": ['converts a thread to work, assigns an eligible owner, and keeps an audit trail', 'work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable', 'assigned owner can change work status but cannot reassign it', 'only a thread manager can remove work tracking', 'a manager can assign an eligible agent and the agent is notified', 'the owner picker lists eligible agents with profiles and excludes ineligible ones', 'a member who cannot manage the thread cannot assign an agent', 'ordinary thread fields remain separate from work tracking'],
     "sending_messages": ["sending messages between two users", "editing messages", "deleting messages"],
@@ -117,6 +121,7 @@ CASES = {
         "thread drafts persist per thread without touching the channel draft",
     ],
     "composer_attach_menu": [
+        "From Google Drive starts the legacy picker flow",
         "From Google Drive starts the enhanced share flow when sharing is configured",
         "+ shows both attach options when Drive is available",
         "From this device triggers the file input",
@@ -218,11 +223,18 @@ subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"]
 # paused-only case uses TestApp's real binary and needs no second app build.
 # Preserve continuation's upload boundary as well as URL/PR jobs.
 paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable", "workspace follows the system theme and mobile navigation remains reachable"}
-needs_paused_jobs=not args.slice and any(name in paused_job_cases for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case)
+drive_cases=set(CASES["drive_attachments"]+["From Google Drive starts the legacy picker flow"])
+paused_job_cases |= drive_cases
+motion_default="motion is off by default in the test environment"
+test_environment_cases=drive_cases|{motion_default,"Markdown replies and file attachments remain usable"}
+paused_job_cases.add(motion_default)
 selected_names=[name for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case]
+needs_paused_jobs=not args.slice and any(name in paused_job_cases for name in selected_names)
+needs_test_environment=motion_default in selected_names
+needs_drive=any(name in drive_cases for name in selected_names)
 if args.slice or any(name not in paused_job_cases for name in selected_names):
     subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
-test_host=build_host(ROOT,env) if needs_paused_jobs else None
+test_host=build_host(ROOT,env) if needs_paused_jobs or needs_drive or needs_test_environment else None
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
 visibility_atom = subprocess.check_output([
@@ -308,7 +320,7 @@ for file in files:
         batches += [[case for case in selected if case in navigation]]
     batches += [[case] for case in selected if case not in readonly + navigation]
     if file == "composer_attach_menu":
-        enhanced=[case for case in selected if case.startswith("From Google Drive starts the enhanced")]
+        enhanced=[case for case in selected if case.startswith("From Google Drive starts")]
         ordinary=[case for case in selected if case not in enhanced]
         batches=([ordinary] if ordinary else [])+[[case] for case in enhanced] # Distinct server configuration.
     jobs = probe_jobs(batches, selected, negative=args.negative, mutant=args.mutant,
@@ -351,6 +363,9 @@ for file in files:
                 fixture_kind = "composer-typing" if case.startswith("two typers") else "composer-drafts"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            elif file == "drive_attachments" or case == "From Google Drive starts the legacy picker flow":
+                (fixture / "db/google-calendar-test-helper.rb").write_bytes(subprocess.check_output(["git","show",f"{PIN}:test/test_helpers/google_calendar_test_helper.rb"],cwd=ROOT))
+                subprocess.run([reference,"runner","--storage",str(fixture),"--time","2026-03-02T16:00:00Z","--freeze",str(RUST / "reference-tools/messaging/behavior-fixtures.rb"),"drive",case],cwd=ROOT,env=env,check=True)
             elif file == "composer_attach_menu":
                 fixture_kind="attach-share" if case.startswith("From Google Drive starts the enhanced") else "attach-menu"
                 if fixture_kind=="attach-share":
@@ -380,30 +395,51 @@ for file in files:
                 fixture_kind = "highlight-thread" if case.startswith("thread code stays") else "highlight-search" if case.startswith("search results") else "highlight"
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze",
                                 str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), fixture_kind], cwd=ROOT, env=env, check=True)
+            if case in test_environment_cases:
+                shutil.copy2(fixture / "db/production.sqlite3",fixture / "db/test.sqlite3")
             shutil.copytree(fixture / "db", work / "db")
             shutil.copytree(fixture / "storage", work / "files")
+            database_name="test.sqlite3" if case in test_environment_cases else "production.sqlite3"
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if file == "channel_threads_controller" or case in {"workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
+            if file in {"channel_threads_controller","drive_attachments"} or case in {"workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
                 run_env['WS8BM_WORK_DATABASES']=json.dumps({
-                    f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db/production.sqlite3'),
-                    f'http://127.0.0.1:{ports[1]}':str(work / 'db/production.sqlite3'),
+                    f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db' / database_name),
+                    f'http://127.0.0.1:{ports[1]}':str(work / 'db' / database_name),
                 })
             if args.negative or args.mutant_set:
                 run_env["WS8BM_MUTANT"] = variant
-            if file == "composer_attach_menu":
+            if file in {"composer_attach_menu", "drive_attachments"}:
                 run_env.update(GOOGLE_CLIENT_ID="test-client-id", GOOGLE_CLIENT_SECRET="test-client-secret")
             paused_jobs=any(name in paused_job_cases for name in batch)
             if case.startswith("From Google Drive starts the enhanced"):
                 run_env.update(GOOGLE_PICKER_API_KEY="test-picker-key",GOOGLE_CLOUD_PROJECT_NUMBER="123456789012")
             if paused_jobs:
                 run_env["WS8BM_BROWSER_HOST"]="1"
+            if case in test_environment_cases:
+                run_env.update(RAILS_ENV="test",CAMPFIRE_DATABASE_PATH=str(work / "db/test.sqlite3"))
+            if case in drive_cases:
+                run_env.update(WS8BM_DRIVE_PORT=str(port_base+4),WS8BM_DRIVE_STUBS="1",WS8BM_DRIVE_TWO="1" if case.startswith("edit a room message") else "0")
             process = None
-            with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log:
+            with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log, ExitStack() as transports:
                 try:
+                    metadata_path=fixture / "db/browser-fixture.json"
+                    metadata=json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+                    drive_calls=transports.enter_context(drive_transport(metadata["drive_payloads"],port_base+4)) if case in drive_cases else None
                     reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
                     if case.startswith("From Google Drive starts the enhanced"):
                         for key in ["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_PICKER_API_KEY","GOOGLE_CLOUD_PROJECT_NUMBER"]:
                             reference_up += ["-e",key+"="+run_env[key]]
+                    if case in drive_cases:
+                        for key in ["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","WS8BM_DRIVE_STUBS","WS8BM_DRIVE_TWO"]:
+                            reference_up += ["-e",key+"="+run_env[key]]
+                    if case in test_environment_cases:
+                        reference_up += ["-e","RAILS_ENV=test"]
+                        # config/environments/test.rb uses the caller's CI flag
+                        # to eager-load the same models/routes as pinned tests.
+                        if "CI" in run_env:
+                            reference_up += ["-e","CI="+run_env["CI"]]
+                    if case=="Markdown replies and file attachments remain usable":
+                        reference_up += ["-e","WS8BM_TEST_FORGERY_PROTECTION=1"]
                     if paused_jobs:
                         reference_up += ["-e", "WS8BM_TEST_JOB_ADAPTER=1"]
                     subprocess.run(reference_up, cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
@@ -429,6 +465,9 @@ for file in files:
                     command = ["node", str(RUST / "reference-tools/messaging/behavior.mjs"), f"http://127.0.0.1:{ports[0]}", f"http://127.0.0.1:{ports[1]}", file, json.dumps(batch), json.dumps(metadata)]
                     result = subprocess.run(command, cwd=ROOT, env=run_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
                     print(result.stdout, end="", flush=True)
+                    if drive_calls is not None:
+                        print(f"WS8bm outbound Drive calls: {json.dumps(drive_calls)}",flush=True)
+                        assert drive_calls and all(call["valid"] for call in drive_calls), "unregistered external Drive request"
                     if args.negative:
                         # An escape belongs to the entire run, not just this
                         # attempt. Record it before retrying an invalid peer.
@@ -475,6 +514,8 @@ for file in files:
                     if not succeeded:
                         continue
                     databases = [work / f".instances/{ports[0]}/db/production.sqlite3", work / "db/production.sqlite3"]
+                    if case in test_environment_cases:
+                        databases=[path.with_name("test.sqlite3") for path in databases]
                     for database in databases:
                         with sqlite3.connect(database) as conn:
                             if case == "workspace follows the system theme and mobile navigation remains reachable":
@@ -486,6 +527,20 @@ for file in files:
                                 assert mobile==[(773523953,201306877,"Mobile draft\n")]
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]==seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]+2
+                            elif file == "drive_attachments":
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    old_ids={row[0] for row in seed.execute("SELECT id FROM messages")}
+                                rows=conn.execute("SELECT id,creator_id,room_id,thread_id,markdown_source FROM messages ORDER BY id").fetchall()
+                                new=[row for row in rows if row[0] not in old_ids]
+                                assert len(rows)==len(old_ids)+1 and old_ids<= {row[0] for row in rows}, "exact global message count and preserved history"
+                                assert len(new)==1 and new[0][1:3]==(773523953,654632876), "exact global message delta and identity"
+                                row=new[0]
+                                expected_thread=metadata.get("drive_thread_id")
+                                assert row[3]==expected_thread
+                                expected_body="thread file attached" if expected_thread else "the file moved elsewhere" if case.startswith("attach Drive files") else "two files attached"
+                                assert row[4]==expected_body
+                                attachments=conn.execute("SELECT file_id FROM drive_attachments WHERE message_id=? ORDER BY id",(row[0],)).fetchall()
+                                assert attachments==([] if case.startswith("attach Drive files") else [("1AbcDefGhIjKlMnOpQrSt",)]), "exact saved Drive attachment set"
                             elif file == "motion" or file == "mobile_layout" or case.startswith("text fields"):
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     for table in (["messages","channel_threads","users","rooms"] if file == "motion" else ["messages","channel_threads"]):
@@ -545,12 +600,13 @@ for file in files:
                             elif case == "Markdown replies and file attachments remain usable":
                                 parent = conn.execute("SELECT id FROM messages WHERE markdown_source='**A useful point** with `inline code`.'").fetchone()
                                 assert parent is not None
-                                attachments = conn.execute("SELECT messages.reply_notify_author,blobs.filename,blobs.byte_size,blobs.key FROM messages JOIN active_storage_attachments AS attachments ON attachments.record_type='Message' AND attachments.record_id=messages.id JOIN active_storage_blobs AS blobs ON blobs.id=attachments.blob_id WHERE messages.reply_to_message_id=?", (parent[0],)).fetchall()
+                                attachments = conn.execute("SELECT messages.reply_notify_author,blobs.filename,blobs.byte_size,blobs.key,blobs.service_name FROM messages JOIN active_storage_attachments AS attachments ON attachments.record_type='Message' AND attachments.record_id=messages.id JOIN active_storage_blobs AS blobs ON blobs.id=attachments.blob_id WHERE messages.reply_to_message_id=?", (parent[0],)).fetchall()
                                 contents = b"An attachment sent from the Markdown composer.\n"
                                 assert len(attachments) == 1 and attachments[0][:3] == (0, "markdown-workspace-attachment.txt", len(contents))
                                 storage = work / (f".instances/{ports[0]}/storage" if database == databases[0] else "files")
                                 key = attachments[0][3]
-                                assert (storage / key[:2] / key[2:4] / key).read_bytes() == contents
+                                rails_test_port = ports[0] if database == databases[0] and attachments[0][4] == "test" else None
+                                assert uploaded_bytes(storage, key, rails_test_port=rails_test_port) == contents
                             elif case == "mention suggestions select a room member without sending the unfinished message":
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source IN ('@Kev','@[Kevin] ')").fetchone()[0] == 0
                                 assert conn.execute("SELECT COUNT(*) FROM messages WHERE markdown_source='@[Kevin] please review **the layout**.'").fetchone()[0] == 1

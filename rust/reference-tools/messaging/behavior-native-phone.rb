@@ -5,6 +5,12 @@ require "capybara/dsl"
 require "capybara/minitest"
 require "selenium-webdriver"
 require "minitest/autorun"
+location = JSON.parse(File.read("/proof/native-location.json"))
+if location.fetch("label") == "attachment"
+  require "/rails/config/environment"
+  require "active_support/testing/assertions"
+  ActiveRecord::Base.establish_connection(adapter: "sqlite3", database: ENV.fetch("WS8BM_NATIVE_DATABASE"), flags: SQLite3::Constants::Open::READONLY)
+end
 require "/proof/system_test_helper"
 raise "wrong Capybara version" unless Capybara::VERSION == "3.40.0"
 raise "wrong Selenium version" unless Selenium::WebDriver::VERSION == "4.35.0"
@@ -26,6 +32,8 @@ class Ws8bmNativePhoneTest < Minitest::Test
   include Capybara::DSL
   include Capybara::Minitest::Assertions
   include SystemTestHelper
+  include ActiveSupport::Testing::Assertions if defined?(ActiveSupport::Testing::Assertions)
+  include ActionView::RecordIdentifier if defined?(ActionView::RecordIdentifier)
   def setup
     if ENV["WS8BM_NATIVE_PROXY"]
       # Match translated served negatives: fetch the real mutated assets,
@@ -38,20 +46,30 @@ class Ws8bmNativePhoneTest < Minitest::Test
     cookie = JSON.parse(File.read("/proof/sessions.json"))["sessions"].find { |entry| entry["user_name"] == "JZ" }["cookie_header"]
     name, value = cookie.split("=", 2)
     page.driver.browser.manage.add_cookie(name: name, value: value, path: "/")
+    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "attachment"
+      # Remote ChromeDriver shares the mounted file path with Ruby. Match the
+      # pinned local Selenium driver's native file-input action; no /se/file
+      # Grid transfer endpoint or replacement browser write is involved.
+      page.driver.browser.file_detector = ->(_keys) { nil }
+      page.current_window.resize_to(1440, 1000)
+      page.driver.browser.execute_cdp "Emulation.setEmulatedMedia", features: [ { name: "prefers-color-scheme", value: "light" } ]
+    end
     location = JSON.parse(File.read("/proof/native-location.json"))
     visit Capybara.app_host + (location["label"] == "motion" ? "/rooms/201306877" : "/rooms/654632876")
     assert_selector "#composer", wait: 15
     page.document.synchronize(15) do
       raise Capybara::ExpectationNotMet, "Stimulus startup" unless page.evaluate_script('!!window.Stimulus?.getControllerForElementAndIdentifier(document.getElementById("composer"),"composer")')
     end
-    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "motion"
+    if %w[motion attachment].include?(JSON.parse(File.read("/proof/native-location.json"))["label"])
       wait_for_cable_connection
       dismiss_pwa_install_prompt
     else
       assert_selector 'turbo-cable-stream-source[channel="RoomMessagesChannel"][connected]', visible: :all, wait: 15
     end
     # Match Rails.env.test?'s pinned layout input; this is not server parity credit.
-    page.execute_script('document.documentElement.setAttribute("data-test-motion","off")')
+    unless JSON.parse(File.read("/proof/native-location.json"))["label"] == "attachment"
+      page.execute_script('document.documentElement.setAttribute("data-test-motion","off")')
+    end
     page.execute_script(<<~'JS')
       window.__ws8bmPhoneTrace=[];
       const describe=n=>n?{tag:n.tagName,id:n.id,label:n.getAttribute?.('aria-label')}:null;
@@ -62,7 +80,19 @@ class Ws8bmNativePhoneTest < Minitest::Test
     JS
   end
   def teardown
-    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "motion"
+    if JSON.parse(File.read("/proof/native-location.json"))["label"] == "attachment"
+      puts "WS8bm native attachment DOM readback: #{JSON.generate(page.evaluate_script(<<~'JS'))}"
+        [...document.querySelectorAll('.message[data-message-id]')].map(row=>({
+          id:row.dataset.messageId,preview:row.querySelector('.message__reply-preview')?.textContent,
+          body:row.querySelector('.message__body')?.textContent,
+          content:row.querySelector('.message__body-content')?.innerHTML
+        }))
+      JS
+      parent = Message.find_by(markdown_source: "**A useful point** with `inline code`.")
+      attached = parent ? Message.joins(:attachment_blob).where(reply_to_message_id: parent.id).pluck("messages.id", "messages.reply_to_message_id", "messages.reply_notify_author", "active_storage_blobs.filename", "active_storage_blobs.byte_size") : []
+      puts "WS8bm native attachment blob readback: #{JSON.generate(attached)}"
+      puts "WS8bm native attachment saved readback: #{JSON.generate(Message.where("id > ?", 908005739).order(:id).pluck(:id, :reply_to_message_id, :reply_notify_author))}"
+    elsif JSON.parse(File.read("/proof/native-location.json"))["label"] == "motion"
       begin
         begin
           driver=page.driver.browser
@@ -79,6 +109,8 @@ class Ws8bmNativePhoneTest < Minitest::Test
       puts "WS8bm native failures: #{JSON.generate(failures.map { |failure| {assertion: failure.is_a?(Minitest::Assertion),message: failure.message,backtrace: failure.backtrace} })}"
     end
     puts "WS8bm native phone event trace #{Capybara.app_host}: #{JSON.generate(page.evaluate_script('window.__ws8bmPhoneTrace||[]'))}"
+  rescue => error
+    warn "WS8bm native diagnostic failed: #{error.class}: #{error.message}"
   ensure
     Capybara.reset_sessions!
   end
