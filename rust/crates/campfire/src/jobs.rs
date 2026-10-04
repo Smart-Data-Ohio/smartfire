@@ -318,35 +318,28 @@ impl EventSink for Jobs {
     }
 
     fn emit_committed(&self, after: &mut Tx<'_>, event: Event) {
-        use campfire_db::broadcasts::{Broadcast, Partial};
-        let message_id = match &event {
-            Event::Broadcast(request) => request.decode::<Broadcast>().and_then(Result::ok).and_then(|broadcast| match broadcast {
-                Broadcast::Turbo(frame) => match frame.partial {
-                    Some(Partial::Message { message_id } | Partial::MessageReplace { message_id } | Partial::MessagePresentation { message_id }) => Some(message_id),
-                    _ => None,
-                },
-                _ => None,
-            }).or_else(|| request.decode::<campfire_db::models::user::lifecycle::QuietStreamFinal>()
-                .and_then(Result::ok).map(|event| event.message_id)),
-            _ => None,
-        };
+        let message_ids = attachment_render_message_ids(&event);
         self.emit(event);
         // Detached message broadcasts render on the committing thread. Use its connection
         // after the reader is released; enqueueing through Database::write would deadlock.
-        if let Some(id) = message_id {
+        if !message_ids.is_empty() {
             let result = (|| {
-                use rusqlite::OptionalExtension;
-                let blob_id: Option<i64> = after.conn().query_row(
-                    "SELECT a.blob_id FROM active_storage_attachments a
+                // Digest events can render many messages. One bound JSON list keeps recovery
+                // reads flat and respects the same small SQLite bind limit as their renderer.
+                let recoveries = after.conn().prepare(
+                    "SELECT a.record_id,a.blob_id FROM active_storage_attachments a
                      JOIN active_storage_blobs b ON b.id=a.blob_id
                      JOIN messages m ON m.id=a.record_id
-                     WHERE a.record_type='Message' AND a.name='attachment' AND a.record_id=?
+                     WHERE a.record_type='Message' AND a.name='attachment'
+                     AND a.record_id IN (SELECT value FROM json_each(?))
                      AND b.content_type LIKE 'video/%'
                      AND NOT EXISTS(SELECT 1 FROM active_storage_attachments p
                          WHERE p.record_type='ActiveStorage::Blob' AND p.name='preview_image' AND p.record_id=b.id)
-                     LIMIT 1", [id], |row| row.get(0),
-                ).optional()?;
-                if let Some(blob_id) = blob_id {
+                     ORDER BY a.record_id,a.id",
+                )?.query_map([serde_json::json!(message_ids).to_string()], |row| {
+                    Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?))
+                })?.collect::<Result<Vec<_>, _>>()?;
+                for (id, blob_id) in recoveries {
                     campfire_db::models::message_attachment_processing::schedule(after, id, blob_id);
                 }
                 Ok::<_, campfire_db::Error>(())
@@ -370,6 +363,43 @@ impl EventSink for Jobs {
             }
             (None, event) => tracing::warn!(?event, "not a job, dropping event"),
         }
+    }
+}
+
+/// Full attachment/presentation renders in channels::sink. Keep the non-Turbo parent
+/// renderers here too: Rails' Agents::Steps#broadcast_parent renders the whole message.
+/// Component-only events (cards, reactions, thread steps/indicators, room/status/huddle
+/// controls) never render a video or its PR-card collection cache key.
+fn attachment_render_message_ids(event: &Event) -> Vec<i64> {
+    use campfire_db::{
+        Broadcast as _,
+        broadcasts::{Broadcast, Partial},
+        models::{agent_step::StepParentChange, board_automations::DigestNotes,
+            huddle_effects::StageEndedNote, user::lifecycle::QuietStreamFinal},
+    };
+    use crate::integrations::github::notifier::MessageCreated;
+    let Event::Broadcast(request) = event else { return Vec::new(); };
+    match request.kind {
+        Broadcast::KIND => request.decode::<Broadcast>().and_then(Result::ok)
+            .and_then(|broadcast| match broadcast {
+                Broadcast::Turbo(frame) => match frame.partial {
+                    Some(Partial::Message { message_id } | Partial::MessageReplace { message_id }
+                        | Partial::MessagePresentation { message_id }) => Some(message_id),
+                    _ => None,
+                },
+                _ => None,
+            }).into_iter().collect(),
+        StepParentChange::KIND => request.decode::<StepParentChange>().and_then(Result::ok)
+            .and_then(|change| change.message_id).into_iter().collect(),
+        QuietStreamFinal::KIND => request.decode::<QuietStreamFinal>().and_then(Result::ok)
+            .map(|change| change.message_id).into_iter().collect(),
+        MessageCreated::KIND => request.decode::<MessageCreated>().and_then(Result::ok)
+            .map(|change| change.message_id).into_iter().collect(),
+        StageEndedNote::KIND => request.decode::<StageEndedNote>().and_then(Result::ok)
+            .map(|change| change.message_id).into_iter().collect(),
+        DigestNotes::KIND => request.decode::<DigestNotes>().and_then(Result::ok)
+            .map(|notes| notes.message_ids).unwrap_or_default(),
+        _ => Vec::new(),
     }
 }
 

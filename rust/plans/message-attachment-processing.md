@@ -80,8 +80,9 @@ recover using the committing connection, avoiding a recursive writer call.
 Room, thread, search and controller rendering use the shared draining adapters.
 Reactions, quote/thread controls, directory/board rows and other component-only
 renderers do not render an attachment or its PR-card cache key in Rails. The
-notifier, huddle and digest producers create attachment-free notes. Those paths
-retain their existing effects.
+notifier, huddle and digest producers normally create attachment-free notes;
+their full-message event handlers also need recovery when a video is attached.
+The dispatcher follow-up below covers those handlers.
 
 The reuse regression again posts once, performs its real processing job, records
 the JPEG and WebP identities and bytes, and then posts/processes the same source
@@ -137,6 +138,59 @@ the Rust control reported:
 
 ```
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2837 filtered out; finished in 0.47s
+```
+
+## Dispatcher recovery follow-up (#233)
+
+`StepParentChange` rendered the whole parent message but was absent from the
+after-commit recovery dispatch. Creating or updating an agent step on a video
+with no preview therefore published posterless HTML without scheduling its
+preview. Fresh pinned Rails output queues one processing job on both paths,
+with token suffix `0`, a 900-second lease and no poster yet.
+
+The dispatch now recognizes every full-message renderer: ordinary message,
+replacement and presentation partials; step parent changes; quiet-stream
+completion; GitHub notifier messages; digest notes; and stage-ended notes.
+Recovery runs after the renderer releases its reader, on the committing
+connection. A single bound JSON-list query handles digest batches without
+per-message recovery reads or exceeding SQLite's variable limit. Existing
+per-blob claims still prevent duplicate enqueues.
+
+The sweep checked all 21 broadcast kinds in `channels::sink`. The remaining
+handlers render only child cards, badges, directory rows, thread steps,
+thread indicators or room/huddle controls, or send removals/control frames.
+They do not render an attachment or its PR-card collection cache key in Rails.
+Fresh Rails also confirms that a system note can render an attached video and
+must recover it, whereas a thread-indicator replacement must not enqueue.
+
+Test-only commit `c252e077e` added real authenticated step POST/PATCH controls
+and a notifier/digest/system-note/stage-note dispatcher sweep, with a negative
+thread-indicator control. Against `d2623ea89` production sources, all three
+tests failed on missing recovery jobs and NULL leases; HTTP statuses and video
+frames already matched Rails:
+
+```text
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 2844 filtered out; finished in 2.00s
+```
+
+Regenerate the event vector through the same pinned overlay and isolated seed:
+
+```sh
+bash reference-tools/messaging/attachment_processing.sh \
+  reference-tools/messaging/attachment_processing_events.rb \
+  > vectors/message_attachment_processing_events.json
+```
+
+Validation uses the canonical media image, `CI=1`, all three required seeds,
+eight test threads and an immutable test executable. Strict workspace Clippy
+keeps the rustc throttle and two Cargo build jobs. The inherited publication
+before acknowledgement window remains unchanged; replay after a later owner's
+render failure can also republish an earlier owner's completion, as Rails does.
+
+```text
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 2825 filtered out; finished in 5.00s
+test result: ok. 2834 passed; 0 failed; 13 ignored; 0 measured; 0 filtered out; finished in 489.12s
+Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 16s
 ```
 
 ## Validation
