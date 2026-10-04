@@ -73,7 +73,7 @@ async fn run(name: &'static str) {
         .zip(case["responses"].as_array().unwrap())
     {
         let who = step["viewer"].as_i64().unwrap();
-        if !browsers.contains_key(&who) {
+        if let std::collections::btree_map::Entry::Vacant(entry) = browsers.entry(who) {
             let mut browser = if who == DAVID {
                 app.david()
             } else {
@@ -90,7 +90,7 @@ async fn run(name: &'static str) {
                     StatusCode::FOUND
                 );
             }
-            browsers.insert(who, browser);
+            entry.insert(browser);
         }
         let before = observation(&app, case["action"].as_str().unwrap().into())
             .await
