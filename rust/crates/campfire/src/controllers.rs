@@ -1279,3 +1279,6 @@ mod ws12_work_remaining_tests;
 
 #[cfg(test)]
 mod ws12_browser_remaining_tests;
+
+#[cfg(test)]
+mod template_coverage_tests;
