@@ -77,7 +77,8 @@ run_suite() {
       done
       [[ "$ready" == 1 ]] || { cat "$receipts/livekit-server.log"; return 1; }
       docker run --rm --init --network none --ipc host --cpus 2 --user "$(id -u):$(id -g)" \
-        --volume "$repo/rust/parity:$repo/rust/parity:ro" --workdir "$repo/rust/parity" \
+        --volume "$repo/rust/parity:$repo/rust/parity:ro" --volume "$TMPDIR:$TMPDIR" \
+        --env TMPDIR="$TMPDIR" --workdir "$repo/rust/parity" \
         "$WS13_PLAYWRIGHT_IMAGE" node --test --test-concurrency=4 \
         system/ws13-browser-poll.test.mjs system/ws13-media-network.test.mjs
       ignored
