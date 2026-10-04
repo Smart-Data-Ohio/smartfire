@@ -69,7 +69,10 @@ Separate required correctness jobs run Rails differential/rollback, Pebble ACME,
 WS12/WS13 browsers and the gateway Node suite, project-local LiveKit, paired messaging,
 and WS11 agent UI. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
 `ci/ignored_tests.py` rejects any ignored test without a CI owner or a `utility:` reason,
-and verifies that every selected test appears as passed in its JUnit receipt. See
+and verifies that every selected test appears as passed in its JUnit receipt.
+`ci/verify-ignored.sh` also reconciles compiler/nextest-discovered ignores with the
+correctness selectors and explicit compiled utility list; source checks cover
+inactive conditional attributes and the tools-only host. See
 `ci/README.md` for commands, pins, and job names. All builds/tests use at most four slots.
 
 `crates/db/src/schema.sql` (with `schema_migrations.txt`, `schema_sha1.txt` and

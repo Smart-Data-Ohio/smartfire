@@ -3,10 +3,56 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from ignored_tests import ROOT, check, inventory, verify_junit
+from ignored_tests import ROOT, check, check_compiled, inventory, verify_junit
 
 
 class IgnoredTestCoverage(unittest.TestCase):
+    def test_ignore_attribute_mutations_fail_closed(self):
+        mutations = (
+            '#[test] #[ignore]\nfn unowned() {}',
+            '#[test] #[ignore = "requires prerequisite"]\nfn unowned() {}',
+            '#[test]\n#[ignore] fn unowned() {}',
+            '#[test]\n#[cfg_attr(test, ignore)] fn unowned() {}',
+            '#[test]\n#[cfg_attr(test, ignore = "requires prerequisite")] fn unowned() {}',
+            '#[test]\n#[cfg_attr(all(test, unix), cfg_attr(test, ignore = r#"requires prerequisite"#))] fn unowned() {}',
+            '#[test]\n#[cfg_attr(any(), ignore)] fn unowned() {}',
+        )
+        workflow = 'suite: [server]\nbash rust/ci/correctness.sh "$SUITE"'
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            for source in mutations:
+                with self.subTest(source=source):
+                    (root / "test.rs").write_text(source)
+                    self.assertEqual(set(inventory(root)), {("test.rs", "unowned")})
+                    with self.assertRaisesRegex(ValueError, "no CI job"):
+                        check(root, {}, workflow)
+
+    def test_comments_and_literals_do_not_create_ignore_attributes(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            (root / "test.rs").write_text('''
+                /* nested /* #[ignore] */ fn comment() {} */
+                // #[cfg_attr(test, ignore)] fn comment() {}
+                const NORMAL: &str = "#[ignore] fn normal() {}";
+                const RAW: &str = r###"#[cfg_attr(test, ignore)] fn raw() {}"###;
+                #[test] #[cfg_attr(test, ignore = r#"utility: recorder"#)] fn utility() {}
+            ''')
+            self.assertEqual(inventory(root), {("test.rs", "utility"): "utility: recorder"})
+
+    def test_compiler_inventory_rejects_expansion_and_stale_classification(self):
+        def document(names):
+            return {"rust-suites": {"probe": {
+                "package-name": "probe", "binary-name": "probe", "binary-id": "probe", "status": "listed",
+                "testcases": {name: {"ignored": True, "filter-match": {"status": "matches"}} for name in names},
+            }}}
+        record = {"package": "probe", "binary": "probe", "test": "selected"}
+        check_compiled(document(["selected"]), {"server": [record]}, [])
+        for names in ([], ["selected", "macro_generated_ignore"]):
+            with self.subTest(names=names), self.assertRaisesRegex(ValueError, "inventory mismatch"):
+                check_compiled(document(names), {"server": [record]}, [])
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            check_compiled(document(["selected"]), {"server": [record]}, [record])
+
     def test_repository_has_no_unowned_ignored_correctness(self):
         check(ROOT, json.loads((ROOT / "ci/ignored-tests.json").read_text()),
               (ROOT.parent / ".github/workflows/rust.yml").read_text())

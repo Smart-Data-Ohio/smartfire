@@ -10,6 +10,86 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def tokens(source):
+    """Lex attributes without treating comments or Rust literals as attributes."""
+    pattern = re.compile(r'''\s+|//[^\n]*|/\*|(?:br|cr|r)(\#*)"|(?:b|c)?"(?:\\.|[^"\\])*"|(?:b)?'(?:\\.|[^'\\\n])'|(?:r\#)?[A-Za-z_][A-Za-z_0-9]*|.''', re.S)
+    result = []
+    offset = 0
+    while offset < len(source):
+        match = pattern.match(source, offset)
+        value = match[0]
+        offset = match.end()
+        if value.isspace() or value.startswith("//"):
+            continue
+        if value == "/*":
+            depth = 1
+            while depth:
+                comment = re.search(r"/\*|\*/", source[offset:])
+                if not comment:
+                    raise ValueError("unterminated Rust block comment")
+                depth += 1 if comment[0] == "/*" else -1
+                offset += comment.end()
+            continue
+        if match[1] is not None:
+            end = source.find('"' + match[1], offset)
+            if end < 0:
+                raise ValueError("unterminated Rust raw string")
+            value += source[offset:end + 1 + len(match[1])]
+            offset = end + 1 + len(match[1])
+        result.append(value)
+    return result
+
+
+def group_end(items, start):
+    pairs = {"[": "]", "(": ")", "{": "}"}
+    stack = [pairs[items[start]]]
+    for index in range(start + 1, len(items)):
+        value = items[index]
+        if value in pairs:
+            stack.append(pairs[value])
+        elif value in pairs.values():
+            if value != stack.pop():
+                raise ValueError("unbalanced Rust attribute")
+            if not stack:
+                return index
+    raise ValueError("unterminated Rust attribute")
+
+
+def meta_items(items):
+    parts, start, index = [], 0, 0
+    while index < len(items):
+        if items[index] in {"[", "(", "{"}:
+            index = group_end(items, index)
+        elif items[index] == ",":
+            parts.append(items[start:index])
+            start = index + 1
+        index += 1
+    return parts + [items[start:]]
+
+
+def ignore_reasons(attribute):
+    if not attribute:
+        return []
+    if attribute[0] == "ignore":
+        if attribute == ["ignore"]:
+            return [""]
+        if len(attribute) != 3 or attribute[1] != "=":
+            raise ValueError(f"unsupported ignore attribute: {attribute}")
+        literal = attribute[2]
+        if literal.startswith('"'):
+            # Only a literal, nonescaped utility: prefix grants the utility exemption.
+            return [literal[1:-1]]
+        raw = re.fullmatch(r'r(\#*)"(.*)"\1', literal, re.S)
+        if not raw:
+            raise ValueError(f"unsupported ignore reason: {literal}")
+        return [raw[2]]
+    if attribute[0] == "cfg_attr" and attribute[1:2] == ["("]:
+        # Conservatively classify every branch, including inactive/nested cfg_attr.
+        return [reason for part in meta_items(attribute[2:-1])[1:]
+                for reason in ignore_reasons(part)]
+    return []
+
+
 def inventory(root):
     found = {}
     # Every source directory, including tools-only copies; prune generated inputs/outputs.
@@ -19,16 +99,32 @@ def inventory(root):
             if not name.endswith(".rs"):
                 continue
             path = Path(directory) / name
-            source = re.sub(r"/\*.*?\*/", "", path.read_text(), flags=re.S)
-            source = re.sub(r"(?m)^\s*//.*$", "", source)
-            for match in re.finditer(r'^\s*#\[ignore(?:\s*=\s*"([^"\n]*)")?\]', source, re.M):
-                function = re.match(r'\s*(?:#\[[^\]]*\]\s*)*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)', source[match.end():])
-                if not function:
+            items = tokens(path.read_text())
+            index = 0
+            while index < len(items):
+                if items[index:index + 2] != ["#", "["]:
+                    index += 1
+                    continue
+                reasons = []
+                while items[index:index + 2] == ["#", "["]:
+                    end = group_end(items, index + 1)
+                    reasons.extend(ignore_reasons(items[index + 2:end]))
+                    index = end + 1
+                if not reasons:
+                    continue
+                # Attributes bind to the immediately following item, regardless of lines.
+                while index < len(items) and items[index] in {"pub", "async", "unsafe", "extern", "const", "("}:
+                    if items[index] == "(":
+                        index = group_end(items, index)
+                    index += 1
+                    if items[index:index + 1] and items[index].startswith('"'):
+                        index += 1
+                if items[index:index + 1] != ["fn"]:
                     raise ValueError(f"cannot resolve ignored function in {path}")
-                key = (path.relative_to(root).as_posix(), function[1])
+                key = (path.relative_to(root).as_posix(), items[index + 1].removeprefix("r#"))
                 if key in found:
                     raise ValueError(f"duplicate ignored function: {key}")
-                found[key] = match[1] or ""
+                found[key] = next((reason for reason in reasons if not reason.startswith("utility:")), reasons[0])
     return found
 
 
@@ -57,6 +153,35 @@ def check(root, manifest, workflow):
     return len(owners), len(found) - len(owners)
 
 
+def compiled_inventory(document):
+    """Read nextest's compiler-expanded libtest discovery, without source guesses."""
+    found = set()
+    for suite in document["rust-suites"].values():
+        if suite["status"] != "listed":
+            raise ValueError(f"test binary was not enumerated: {suite['binary-id']}")
+        for name, case in suite["testcases"].items():
+            if case["ignored"]:
+                if case["filter-match"]["status"] != "matches":
+                    raise ValueError(f"ignored discovery unexpectedly filtered {name}")
+                key = (suite["package-name"], suite["binary-name"], name)
+                if key in found:
+                    raise ValueError(f"duplicate compiled ignored test: {key}")
+                found.add(key)
+    return found
+
+
+def check_compiled(document, manifest, utilities):
+    correctness = [record for records in manifest.values() for record in records]
+    expected = {(record["package"], record["binary"], record["test"])
+                for record in correctness + utilities}
+    if len(expected) != len(correctness) + len(utilities):
+        raise ValueError("duplicate compiler inventory classification")
+    found = compiled_inventory(document)
+    if found != expected:
+        raise ValueError(f"compiled ignored inventory mismatch: unclassified={sorted(found - expected)}, missing={sorted(expected - found)}")
+    print(f"Compiler ignored-test guard: {len(correctness)} CI correctness tests, {len(utilities)} utilities; 0 unclassified")
+
+
 def expression(records):
     return " or ".join(f'(package(={r["package"]}) and binary(={r["binary"]}) and test(={r["test"]}))' for r in records)
 
@@ -75,10 +200,18 @@ if __name__ == "__main__":
     parser.add_argument("--filter", choices=["database", "acme", "browsers", "livekit"])
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--junit", type=Path)
+    parser.add_argument("--nextest-list", type=Path)
     args = parser.parse_args()
     manifest = json.loads((ROOT / "ci/ignored-tests.json").read_text())
     correctness, utilities = check(ROOT, manifest, (ROOT.parent / ".github/workflows/rust.yml").read_text())
-    if args.package:
+    if args.nextest_list:
+        utilities = json.loads((ROOT / "ci/ignored-utilities.json").read_text())
+        found = inventory(ROOT)
+        for record in utilities:
+            if not found.get((record["path"], record["test"].split("::")[-1]), "").startswith("utility:"):
+                raise ValueError(f"compiled utility lacks a utility: reason: {record}")
+        check_compiled(json.loads(args.nextest_list.read_text()), manifest, utilities)
+    elif args.package:
         if not args.filter:
             parser.error("--package needs --filter")
         packages = {record["package"] for record in manifest[args.filter]}

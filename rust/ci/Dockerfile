@@ -12,12 +12,10 @@ COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-buildx /usr/loca
 COPY --from=browsers /ms-playwright/chromium-1243 /ms-playwright/chromium-1243
 COPY --from=browsers /ms-playwright/chromium_headless_shell-1243 /ms-playwright/chromium_headless_shell-1243
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+COPY ci/install_apt.py ci/apt-amd64.lock.json /opt/ci/
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
     ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
-    apt-get update -qq && apt-get install --no-install-recommends -y \
-      python3 sqlite3 unzip git libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
-      libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
-      libasound2t64 libpango-1.0-0 libcairo2 fonts-liberation && \
+    python3 /opt/ci/install_apt.py /opt/ci/apt-amd64.lock.json && \
     curl --fail --silent --show-error --location \
       https://storage.googleapis.com/chrome-for-testing-public/153.0.8010.12/linux64/chromedriver-linux64.zip \
       --output /tmp/chromedriver.zip && \

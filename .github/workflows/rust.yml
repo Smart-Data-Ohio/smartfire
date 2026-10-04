@@ -76,6 +76,9 @@ jobs:
       - name: Build application binaries with production inputs
         run: bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
 
+      - name: Enumerate compiled ignored tests
+        run: bash rust/ci/verify-ignored.sh
+
       # Build with the same workspace/features as clippy and the following nextest run, then run
       # only the blocking database tests. The workspace filter below avoids executing them twice.
       - name: Tests (campfire_db)

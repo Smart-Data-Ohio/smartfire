@@ -12,7 +12,7 @@ ignored() {
   filter=$(python3 rust/ci/ignored_tests.py --filter "$suite")
   package=$(python3 rust/ci/ignored_tests.py --filter "$suite" --package)
   cargo nextest run --manifest-path rust/Cargo.toml --locked -p "$package" \
-    --profile ci --build-jobs 4 -j 4 --no-fail-fast --run-ignored only --no-tests fail -E "$filter"
+    --profile ci --build-jobs 4 -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
   cp rust/target/nextest/ci/junit.xml "$receipts/$suite-junit.xml"
   python3 rust/ci/ignored_tests.py --filter "$suite" --junit "$receipts/$suite-junit.xml"
 }
