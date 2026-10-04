@@ -753,6 +753,11 @@ pub struct ShellComponents {
 /// bytes, exactly as Rails' `render partial: "messages/message", collection: []` does.
 pub fn room_message_list(ctx: &ViewContext, show: &ShowView) -> h::Html {
     if let Some(html) = &show.shell.message_list {
+        // The mounted list includes the empty invitation expression's whitespace.
+        // A rendered invitation already supplies that boundary (rooms/show.html.erb).
+        if show.invitation && !show.messages.is_empty() {
+            return h::raw(html.strip_prefix("\n    ").unwrap_or(html));
+        }
         return h::raw(html.clone());
     }
     if show.messages.is_empty() {
