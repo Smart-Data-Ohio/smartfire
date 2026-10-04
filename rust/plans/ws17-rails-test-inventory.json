@@ -424,18 +424,56 @@
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "huddle push honors DND with a starred-caller exception",
-      "status": "deferred-exact-scenario",
-      "owner": "WS13/WS13b",
-      "evidence": null,
-      "seam": "Huddle::Grant.issue / InvitationResolver source lifecycle and missed-call ActivityItem after the 46-second group-ring expiry. Invitation/job must emit Notifications::HuddlePushJob PushRequest; WS17 applies DND/caller allowance and atomically claims/enqueues delivery with enqueue_huddle_request. Actual missed-call/grant source path is unmerged."
+      "status": "ported-equivalent",
+      "owner": "WS17 acceptance; merged WS13 source",
+      "evidence": "Pinned Rails vector ws17_huddle_cutover.json, actual grant issuance -> invitation job -> gated durable delivery -> overdue missed-call resolution. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py: both baseline tests pass; removing the actual issuance callback fails both invitation assertions.",
+      "seam": "Closed: real HuddleGrant::issue and huddle_invitations::after_issued are installed. No source adapter is fabricated.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/models/notifications/push_gating_test.rb",
+            "test": "huddle push honors DND with a starred-caller exception",
+            "status": "deferred-exact-scenario",
+            "owner": "WS13/WS13b",
+            "evidence": null,
+            "seam": "Huddle::Grant.issue / InvitationResolver source lifecycle and missed-call ActivityItem after the 46-second group-ring expiry. Invitation/job must emit Notifications::HuddlePushJob PushRequest; WS17 applies DND/caller allowance and atomically claims/enqueues delivery with enqueue_huddle_request. Actual missed-call/grant source path is unmerged."
+          }
+        }
+      ],
+      "rust_test": "tests::huddle_cutover_test::huddle_push_honors_dnd_with_a_starred_caller_exception",
+      "ci": {
+        "execution": "Enabled nextest unit tests added in this branch; not present in historical main run 37200618245."
+      }
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
-      "status": "deferred-exact-scenario",
-      "owner": "WS13/WS13b",
-      "evidence": null,
-      "seam": "Huddle::Grant.issue / InvitationResolver source lifecycle and missed-call ActivityItem after the 46-second group-ring expiry. Invitation/job must emit Notifications::HuddlePushJob PushRequest; WS17 applies DND/caller allowance and atomically claims/enqueues delivery with enqueue_huddle_request. Actual missed-call/grant source path is unmerged."
+      "status": "ported-equivalent",
+      "owner": "WS17 acceptance; merged WS13 source",
+      "evidence": "Rails enables DND and quiet hours before room creation and grant issuance; regenerated ws17_huddle_cutover.json setup_sql preserves that ordering in Rust. Actual grant issuance -> invitation jobs -> gated delivery -> all three overdue missed calls. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py rejects both missing issuance callbacks and policy-conditional missing invitations.",
+      "seam": "Closed: real HuddleGrant::issue and huddle_invitations::after_issued are installed. No source adapter is fabricated.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/models/notifications/push_gating_test.rb",
+            "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
+            "status": "deferred-exact-scenario",
+            "owner": "WS13/WS13b",
+            "evidence": null,
+            "seam": "Huddle::Grant.issue / InvitationResolver source lifecycle and missed-call ActivityItem after the 46-second group-ring expiry. Invitation/job must emit Notifications::HuddlePushJob PushRequest; WS17 applies DND/caller allowance and atomically claims/enqueues delivery with enqueue_huddle_request. Actual missed-call/grant source path is unmerged."
+          }
+        }
+      ],
+      "rust_test": "tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls",
+      "ci": {
+        "execution": "Enabled nextest unit tests added in this branch; not present in historical main run 37200618245."
+      }
     },
     {
       "file": "test/models/room/push_test.rb",
@@ -1259,10 +1297,34 @@
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "one cache per user",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS14g",
-      "evidence": null,
-      "seam": "Calendar::MeetingCache.create!(user:) validated creation must reject a duplicate user_id with RecordInvalid before INSERT; WS17 only exposes existing-row find/read and claim_broadcast(&self, &mut Tx, active)/claim_refresh_followup(&self, &mut Tx, now, window). Raw setup SQL or a unique-index error does not replay the model validation."
+      "evidence": "rust/crates/db/src/models/google_meeting_cache.rs:216; models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/models/calendar/meeting_cache_test.rb",
+            "test": "one cache per user",
+            "status": "deferred-exact-scenario",
+            "owner": "WS14g",
+            "evidence": null,
+            "seam": "Calendar::MeetingCache.create!(user:) validated creation must reject a duplicate user_id with RecordInvalid before INSERT; WS17 only exposes existing-row find/read and claim_broadcast(&self, &mut Tx, active)/claim_refresh_followup(&self, &mut Tx, now, window). Raw setup SQL or a unique-index error does not replay the model validation."
+          }
+        }
+      ],
+      "rust_test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+        "log_line": 1539,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
@@ -1652,34 +1714,130 @@
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "pushes the invitation to the recipient only",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": null,
-      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:56; tests::huddle_invitation_job_test::recipient. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/jobs/huddle/push_invitation_job_test.rb",
+            "test": "pushes the invitation to the recipient only",
+            "status": "deferred-exact-scenario",
+            "owner": "WS13/WS13b",
+            "evidence": null,
+            "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+          }
+        }
+      ],
+      "rust_test": "tests::huddle_invitation_job_test::recipient",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::recipient",
+        "log_line": 2106,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "an opted-out recipient gets no push subscriptions",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": null,
-      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:60; tests::huddle_invitation_job_test::off. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/jobs/huddle/push_invitation_job_test.rb",
+            "test": "an opted-out recipient gets no push subscriptions",
+            "status": "deferred-exact-scenario",
+            "owner": "WS13/WS13b",
+            "evidence": null,
+            "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+          }
+        }
+      ],
+      "rust_test": "tests::huddle_invitation_job_test::off",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::off",
+        "log_line": 2105,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "a connected recipient gets no push",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": null,
-      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:64; tests::huddle_invitation_job_test::connected. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/jobs/huddle/push_invitation_job_test.rb",
+            "test": "a connected recipient gets no push",
+            "status": "deferred-exact-scenario",
+            "owner": "WS13/WS13b",
+            "evidence": null,
+            "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+          }
+        }
+      ],
+      "rust_test": "tests::huddle_invitation_job_test::connected",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::connected",
+        "log_line": 2103,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "missing invitations are ignored",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS13/WS13b",
-      "evidence": null,
-      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+      "evidence": "rust/crates/db/src/tests/huddle_invitation_job_test.rs:68; tests::huddle_invitation_job_test::missing. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/jobs/huddle/push_invitation_job_test.rb",
+            "test": "missing invitations are ignored",
+            "status": "deferred-exact-scenario",
+            "owner": "WS13/WS13b",
+            "evidence": null,
+            "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
+          }
+        }
+      ],
+      "rust_test": "tests::huddle_invitation_job_test::missing",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::missing",
+        "log_line": 2104,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
@@ -2062,10 +2220,33 @@
     {
       "file": "test/system/meeting_status_test.rb",
       "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
-      "status": "deferred-exact-scenario",
-      "owner": "WS14g",
-      "evidence": null,
-      "seam": "Calendar::MeetingRefreshJob { user_id: i64 }, class Calendar::MeetingRefreshJob, default queue/version 1: WS14 Google events fetch/interval filtering and cache completion must run before dispatch_meetings(&Database, Timestamp) and the browser clock advance. Handler is deliberately absent, not a fabricated refresh success."
+      "status": "acceptance-replay-pending",
+      "owner": "WS17 cutover browser receipt",
+      "evidence": "The current Google refresh implementation and interval/broadcast tests pass in CI. The full original toggle -> stubbed busy interval -> injected clock advance -> cleared browser badge sequence has no exact browser receipt here. This is an acceptance gap, not an absent refresh handler.",
+      "seam": "Current code: rust/crates/campfire/src/integrations/google/meeting_refresh.rs; app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails. Next slice must drive the real refresh job and browser with an injected clock; existing native tests alone do not close the declaration.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/system/meeting_status_test.rb",
+            "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
+            "status": "deferred-exact-scenario",
+            "owner": "WS14g",
+            "evidence": null,
+            "seam": "Calendar::MeetingRefreshJob { user_id: i64 }, class Calendar::MeetingRefreshJob, default queue/version 1: WS14 Google events fetch/interval filtering and cache completion must run before dispatch_meetings(&Database, Timestamp) and the browser clock advance. Handler is deliberately absent, not a fabricated refresh success."
+          }
+        }
+      ],
+      "supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails",
+        "log_line": 3008,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/system/meeting_status_test.rb",
@@ -2329,10 +2510,34 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work events notify followed thread members",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": null,
-      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+      "evidence": "rust/crates/db/src/tests/ws12_recorder_remaining_test.rs:173; tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/services/activity_items/recorder_test.rb",
+            "test": "work events notify followed thread members",
+            "status": "deferred-exact-scenario",
+            "owner": "WS12",
+            "evidence": null,
+            "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+          }
+        }
+      ],
+      "rust_test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+        "log_line": 2840,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2358,10 +2563,34 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a member with notifications off gets no work items but a mentions member does",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": null,
-      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::work_room_notifications_off_then_mentions_restores_updates. Real ChannelThread::update_work: tracking and assignment produce no recipient item while room involvement is nothing; changing it to mentions restores one unread work_update sourced by the newest in_progress event. Added for PR #240 review; enabled in the campfire_db nextest CI gate. Historical supporting CI did not execute these newly added assertions; exact-head CI receipt pending.",
+      "seam": "Closed: complete original clauses now execute through real work-event writers and their after-commit Recorder.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/services/activity_items/recorder_test.rb",
+            "test": "a member with notifications off gets no work items but a mentions member does",
+            "status": "deferred-exact-scenario",
+            "owner": "WS12",
+            "evidence": null,
+            "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+          }
+        }
+      ],
+      "rust_test": "tests::work_mutations_test::work_room_notifications_off_then_mentions_restores_updates",
+      "historical_supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2380,18 +2609,66 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": null,
-      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::work_status_update_retains_assignment_for_same_recipient. Real ChannelThread::update_work: the same David recipient retains exactly [work_update, work_assignment]; update identity survives and points to the newest in_progress event, and the complete assignment row is unchanged. Added for PR #240 review; enabled in the campfire_db nextest CI gate. Historical supporting CI did not execute these newly added assertions; exact-head CI receipt pending.",
+      "seam": "Closed: complete original clauses now execute through real work-event writers and their after-commit Recorder.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/services/activity_items/recorder_test.rb",
+            "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
+            "status": "deferred-exact-scenario",
+            "owner": "WS12",
+            "evidence": null,
+            "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+          }
+        }
+      ],
+      "rust_test": "tests::work_mutations_test::work_status_update_retains_assignment_for_same_recipient",
+      "historical_supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+        "log_line": 2771,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work updates for one thread collapse into a single item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": null,
-      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs:534; tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/services/activity_items/recorder_test.rb",
+            "test": "work updates for one thread collapse into a single item",
+            "status": "deferred-exact-scenario",
+            "owner": "WS12",
+            "evidence": null,
+            "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+          }
+        }
+      ],
+      "rust_test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+        "log_line": 2771,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2403,26 +2680,98 @@
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work assigned by an agent honors the recipient's agent_work switch",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": null,
-      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs::agent_work_opt_out_allows_agent_updates_and_human_reassignment. Real WorkThreadEvent::create_for_change and after-commit Recorder: agent assignment is suppressed by agent_work=false; agent status update still notifies; after handling it, human reassignment still creates a new unread unhandled assignment for the former owner. Added for PR #240 review; enabled in the campfire_db nextest CI gate. Historical supporting CI did not execute these newly added assertions; exact-head CI receipt pending.",
+      "seam": "Closed: complete original clauses now execute through real work-event writers and their after-commit Recorder.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/services/activity_items/recorder_test.rb",
+            "test": "work assigned by an agent honors the recipient's agent_work switch",
+            "status": "deferred-exact-scenario",
+            "owner": "WS12",
+            "evidence": null,
+            "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+          }
+        }
+      ],
+      "rust_test": "tests::work_mutations_test::agent_work_opt_out_allows_agent_updates_and_human_reassignment",
+      "historical_supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work assigned by a bot without an agent ignores the agent_work switch",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": null,
-      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+      "evidence": "rust/crates/db/src/tests/work_mutations_test.rs:614; tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/services/activity_items/recorder_test.rb",
+            "test": "work assigned by a bot without an agent ignores the agent_work switch",
+            "status": "deferred-exact-scenario",
+            "owner": "WS12",
+            "evidence": null,
+            "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
+          }
+        }
+      ],
+      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a caller-authorized record skips the source check but keeps idempotency",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS12",
-      "evidence": null,
-      "seam": "ActivityItems::Recorder.record!(recipient:, source:, event_type:, skip_source_check: true): caller-authorized source scope plus grouping and recipient/source unique-index rescue; generic Rust recorder/source authorization is not landed."
+      "evidence": "rust/crates/db/src/tests/ws12_generic_recorder_test.rs:239; tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency. Main CI 37200618245 PASS. Work Recorder mappings supersede the historical owner seam; ws12-rails-cases.json retains the corresponding original declaration.",
+      "seam": "Closed: merged source lifecycle/service and enabled comparison replace the historical absent-owner explanation.",
+      "history": [
+        {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "previous": {
+            "file": "test/services/activity_items/recorder_test.rb",
+            "test": "a caller-authorized record skips the source check but keeps idempotency",
+            "status": "deferred-exact-scenario",
+            "owner": "WS12",
+            "evidence": null,
+            "seam": "ActivityItems::Recorder.record!(recipient:, source:, event_type:, skip_source_check: true): caller-authorized source scope plus grouping and recipient/source unique-index rescue; generic Rust recorder/source authorization is not landed."
+          }
+        }
+      ],
+      "rust_test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+        "log_line": 2812,
+        "result": "PASS"
+      }
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2445,5 +2794,19 @@
       "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
       "evidence": "campfire_db: message_activity_test (message-only named sequences)"
     }
-  ]
+  ],
+  "cutover_reconciliation": {
+    "date": "2026-10-04",
+    "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+    "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+    "closed_from_fifteen": 14,
+    "remaining": 1,
+    "historical_named_total": 347,
+    "current_named_passed": 346,
+    "new_tests_not_in_historical_ci": [
+      "tests::huddle_cutover_test::huddle_push_honors_dnd_with_a_starred_caller_exception",
+      "tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls"
+    ],
+    "partial": true
+  }
 }

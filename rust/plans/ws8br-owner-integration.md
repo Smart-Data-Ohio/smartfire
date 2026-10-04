@@ -1,5 +1,16 @@
 # Room owner integration contract — native full pages and owner seams
 
+## Cutover reconciliation (2026-10-04)
+
+The preceding checkpoint is historical. Main `78b9b1546` has merged the source
+APIs it described as absent. The current, **partial** result is recorded in
+[ledger-ws8br-ws17-ws11ui-report.md](ledger-ws8br-ws17-ws11ui-report.md);
+[the remaining manifest](ledger-ws8br-ws17-ws11ui-remaining.json) enumerates every
+original clause still lacking a verified receipt. No old owner-held paragraph is
+credited as a present missing implementation. Original run/count history below
+is retained; it is not a new cutover execution claim.
+
+
 Main is merged through `65ad0d39` (#167), including WS15e (#166), the shared
 asset-golden helper (#168), board drift (#164/#165), WS17 (#170), attachments (#171),
 and the held-listener deflake (#173). The latest merge commit is `2912fe66`.

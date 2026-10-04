@@ -1,0 +1,549 @@
+{
+  "reference": "d7c7de92",
+  "date": "2026-10-04",
+  "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+  "historical_main_ci": {
+    "run": 37200618245,
+    "url": "https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37200618245",
+    "tests_passed": 4948,
+    "tests_failed": 0,
+    "counts_are_historical": true
+  },
+  "ci_passes": [
+    {
+      "crate": "campfire_db",
+      "test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+      "line": 1539
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::recipient",
+      "line": 2106
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::off",
+      "line": 2105
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::connected",
+      "line": 2103
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::huddle_invitation_job_test::missing",
+      "line": 2104
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails",
+      "line": 3008
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+      "line": 2840
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+      "line": 2782
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+      "line": 2771
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+      "line": 2812
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::activity_items::tests::ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions",
+      "line": 3421
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies",
+      "line": 3615
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::rooms::queue_recovery_tests::queue_decision_keeps_atomic_http_failure_and_recovers_a_rails_tombstone",
+      "line": 4602
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_generic_recorder_test::ws12_generic_budget_notice_uses_the_merged_owner_reader_without_an_adapter_argument",
+      "line": 2810
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::ws12_generic_recorder_test::ws12_budget_notice_batch_reader_and_recorder_reads_at_two_sizes",
+      "line": 2811
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::agent_polling_tests::agent_polling_rest_drive_bytes",
+      "line": 3490
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::agent_polling_tests::agent_polling_mcp_drive_bytes",
+      "line": 3487
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::channel_threads::page_tests::ordinary_work_and_board_posts_render_through_authorized_routes",
+      "line": 3618
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+      "line": 3640
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::first_runs::tests::first_run_http_and_persisted_state_match_all_rails_cases",
+      "line": 3645
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::first_runs::tests::five_concurrent_first_runs_create_one_administrator_and_room",
+      "line": 3641
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+      "line": 5027
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::users::avatars::avatar_image_tests::uploaded_avatar_image_uses_rails_bytes_headers_and_freshness",
+      "line": 4818
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::users::avatars::avatar_image_tests::unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers",
+      "line": 4816
+    },
+    {
+      "crate": "campfire::bin/campfire",
+      "test": "controllers::qr_code::tests::qr_http_matches_rails_bytes_cache_and_capacity_errors",
+      "line": 4353
+    }
+  ],
+  "ws17_closed_records": [
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "huddle push honors DND with a starred-caller exception",
+      "rust_test": "tests::huddle_cutover_test::huddle_push_honors_dnd_with_a_starred_caller_exception",
+      "evidence": "Pinned Rails vector ws17_huddle_cutover.json, actual grant issuance -> invitation job -> gated durable delivery -> overdue missed-call resolution. Complete payloads/recipients/state match. check-ws17-huddle-cutover.py: both baseline tests pass; removing the actual issuance callback fails both invitation assertions."
+    },
+    {
+      "file": "test/models/notifications/push_gating_test.rb",
+      "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
+      "rust_test": "tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls",
+      "evidence": "Rails enables DND and quiet hours before room creation and grant issuance; setup_sql preserves that ordering in Rust. Actual issuance retains all three invitations, only the reachable recipient pushes, and all three become missed calls. Complete payload/recipient/state vector is regenerated from Rails. check-ws17-huddle-cutover.py also rejects a policy-conditional missing-invitation writer."
+    },
+    {
+      "file": "test/models/calendar/meeting_cache_test.rb",
+      "test": "one cache per user",
+      "rust_test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "models::google_meeting_cache::tests::google_meeting_cache_creation_validates_user_and_uniqueness",
+        "log_line": 1539,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "pushes the invitation to the recipient only",
+      "rust_test": "tests::huddle_invitation_job_test::recipient",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::recipient",
+        "log_line": 2106,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "an opted-out recipient gets no push subscriptions",
+      "rust_test": "tests::huddle_invitation_job_test::off",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::off",
+        "log_line": 2105,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "a connected recipient gets no push",
+      "rust_test": "tests::huddle_invitation_job_test::connected",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::connected",
+        "log_line": 2103,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/jobs/huddle/push_invitation_job_test.rb",
+      "test": "missing invitations are ignored",
+      "rust_test": "tests::huddle_invitation_job_test::missing",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::huddle_invitation_job_test::missing",
+        "log_line": 2104,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work events notify followed thread members",
+      "rust_test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::ws12_recorder_remaining_test::ws12_recorder_c205_complete_named_rails_comparison",
+        "log_line": 2840,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a member with notifications off gets no work items but a mentions member does",
+      "rust_test": "tests::work_mutations_test::work_room_notifications_off_then_mentions_restores_updates",
+      "historical_supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      },
+      "evidence": "Real ChannelThread::update_work: tracking and assignment produce no recipient item while room involvement is nothing; changing it to mentions restores one unread work_update sourced by the newest in_progress event. Enabled in the ordinary campfire_db nextest gate; exact-head CI receipt pending."
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
+      "rust_test": "tests::work_mutations_test::work_status_update_retains_assignment_for_same_recipient",
+      "historical_supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+        "log_line": 2771,
+        "result": "PASS"
+      },
+      "evidence": "Real ChannelThread::update_work: the same David recipient retains exactly [work_update, work_assignment]; update identity survives and points to the newest in_progress event, and the complete assignment row is unchanged. Enabled in the ordinary campfire_db nextest gate; exact-head CI receipt pending."
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work updates for one thread collapse into a single item",
+      "rust_test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_updates_repoint_one_unhandled_item_and_handled_updates_start_a_new_item",
+        "log_line": 2771,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work assigned by an agent honors the recipient's agent_work switch",
+      "rust_test": "tests::work_mutations_test::agent_work_opt_out_allows_agent_updates_and_human_reassignment",
+      "historical_supporting_ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      },
+      "evidence": "Real WorkThreadEvent::create_for_change and after-commit Recorder: agent assignment is suppressed by agent_work=false; agent status update still notifies; after handling it, human reassignment still creates a new unread unhandled assignment for the former owner. Enabled in the ordinary campfire_db nextest gate; exact-head CI receipt pending."
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "work assigned by a bot without an agent ignores the agent_work switch",
+      "rust_test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::work_mutations_test::work_recipients_honor_current_room_thread_and_agent_assignment_preferences",
+        "log_line": 2782,
+        "result": "PASS"
+      }
+    },
+    {
+      "file": "test/services/activity_items/recorder_test.rb",
+      "test": "a caller-authorized record skips the source check but keeps idempotency",
+      "rust_test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire_db",
+        "test": "tests::ws12_generic_recorder_test::ws12_generic_recorder_caller_authorized_message_keeps_grouping_and_idempotency",
+        "log_line": 2812,
+        "result": "PASS"
+      }
+    }
+  ],
+  "ws11ui_browser_records": [
+    {
+      "file": "test/system/activity_inbox_test.rb",
+      "test": "handles an item, clears the badge, and receives a later activity",
+      "scenario": "inbox"
+    },
+    {
+      "file": "test/system/activity_inbox_test.rb",
+      "test": "filters by type and saves a notification switch",
+      "scenario": "inbox-filter"
+    },
+    {
+      "file": "test/system/agent_work_assignment_test.rb",
+      "test": "assigns an agent from the update dialog and renders its API status change after refresh",
+      "scenario": "work"
+    }
+  ],
+  "branch_validation": "See accompanying report for fresh branch execution. The two new huddle tests and external browser sequences are not claimed as executions in the historical main run.",
+  "ws8br_broad_closed_records": [
+    {
+      "id": "P0107",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "new is permitted when no other users exit",
+      "rust_test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:27; Both empty-workspace GET success and repeat-account redirect are asserted against the pinned complete signup body.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+        "log_line": 3640,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0108",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "new is not permitted when account exist",
+      "rust_test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:27; After Account::create the GET and POST redirect without another user.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::signup_body_matches_rails_and_is_available_until_account_exists",
+        "log_line": 3640,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0109",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "create",
+      "rust_test": "controllers::first_runs::tests::first_run_http_and_persisted_state_match_all_rails_cases",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:65; Real POST status, redirect, account/user/room/membership/session/audit facts and authenticated cookie match pinned Rails first-run vectors.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::first_run_http_and_persisted_state_match_all_rails_cases",
+        "log_line": 3645,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0110",
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "test": "create is not vulnerable to race conditions",
+      "rust_test": "controllers::first_runs::tests::five_concurrent_first_runs_create_one_administrator_and_room",
+      "evidence": "rust/crates/campfire/src/controllers/first_runs/tests.rs:107; Five concurrent real first-run POSTs leave exactly one account, user and room, with administrator role.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::first_runs::tests::five_concurrent_first_runs_create_one_administrator_and_room",
+        "log_line": 3641,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0111",
+      "file": "test/controllers/welcome_controller_test.rb",
+      "test": "redirects to the first created visible room the user has access to",
+      "rust_test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+      "evidence": "rust/crates/campfire/src/controllers/welcome/tests.rs:9; Actual root redirect is compared with the Rails first-visible-room vector, and an inaccessible last-room cookie falls back to that first room.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+        "log_line": 5027,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0112",
+      "file": "test/controllers/welcome_controller_test.rb",
+      "test": "redirects to the last room visited, if we have one",
+      "rust_test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+      "evidence": "rust/crates/campfire/src/controllers/welcome/tests.rs:9; The original watercooler last_room cookie drives the actual root request; complete Location matches the Rails last-room vector.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::welcome::tests::welcome_redirects_to_original_or_last_visible_room_like_rails",
+        "log_line": 5027,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0204",
+      "file": "test/controllers/users/avatars_controller_test.rb",
+      "test": "show image",
+      "rust_test": "controllers::users::avatars::avatar_image_tests::uploaded_avatar_image_uses_rails_bytes_headers_and_freshness",
+      "evidence": "rust/crates/campfire/src/controllers/users/avatar_image_tests.rs:115; The same moon.jpg fixture is uploaded through the real profile writer, then the real avatar token is served successfully as pinned image/webp bytes and headers.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::users::avatars::avatar_image_tests::uploaded_avatar_image_uses_rails_bytes_headers_and_freshness",
+        "log_line": 4818,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0205",
+      "file": "test/controllers/users/avatars_controller_test.rb",
+      "test": "show initials when image cannot be resized",
+      "rust_test": "controllers::users::avatars::avatar_image_tests::unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers",
+      "evidence": "rust/crates/campfire/src/controllers/users/avatar_image_tests.rs:120; The same unresizable pixel.bmp is uploaded through the real profile writer; success and complete Rails initials SVG/cache bytes are compared, including conditional GETs. The viewer fixture name differs from Kevin, but the same uploaded-image failure/fallback path is exercised.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::users::avatars::avatar_image_tests::unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers",
+        "log_line": 4816,
+        "result": "PASS"
+      }
+    },
+    {
+      "id": "P0277",
+      "file": "test/controllers/qr_code_controller_test.rb",
+      "test": "show renders a QR code as a cacheable SVG image",
+      "rust_test": "controllers::qr_code::tests::qr_http_matches_rails_bytes_cache_and_capacity_errors",
+      "evidence": "rust/crates/campfire/src/controllers/qr_code.rs:101; The original http://example.com URL is present in the pinned corpus. Actual SVG bytes, success, content type and public one-year cache-control are compared exactly.",
+      "ci": {
+        "run": 37200618245,
+        "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+        "crate": "campfire::bin/campfire",
+        "test": "controllers::qr_code::tests::qr_http_matches_rails_bytes_cache_and_capacity_errors",
+        "log_line": 4353,
+        "result": "PASS"
+      }
+    }
+  ],
+  "review240_assertion_tests": [
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_room_notifications_off_then_mentions_restores_updates",
+      "assertions": "Real ChannelThread::update_work: tracking and assignment produce no recipient item while room involvement is nothing; changing it to mentions restores one unread work_update sourced by the newest in_progress event.",
+      "ci_entry_point": "ordinary campfire_db nextest gate",
+      "ci_receipt": "pending exact-head execution"
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::work_status_update_retains_assignment_for_same_recipient",
+      "assertions": "Real ChannelThread::update_work: the same David recipient retains exactly [work_update, work_assignment]; update identity survives and points to the newest in_progress event, and the complete assignment row is unchanged.",
+      "ci_entry_point": "ordinary campfire_db nextest gate",
+      "ci_receipt": "pending exact-head execution"
+    },
+    {
+      "crate": "campfire_db",
+      "test": "tests::work_mutations_test::agent_work_opt_out_allows_agent_updates_and_human_reassignment",
+      "assertions": "Real WorkThreadEvent::create_for_change and after-commit Recorder: agent assignment is suppressed by agent_work=false; agent status update still notifies; after handling it, human reassignment still creates a new unread unhandled assignment for the former owner.",
+      "ci_entry_point": "ordinary campfire_db nextest gate",
+      "ci_receipt": "pending exact-head execution"
+    }
+  ],
+  "ws11ui_browser_ci": {
+    "entry_point": "rust/parity/system/ws12",
+    "job_branch": "rust/ci-full-gate",
+    "tests": [
+      "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions",
+      "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions",
+      "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions"
+    ],
+    "ci_receipt": "pending combined-branch CI execution",
+    "registration": "Existing c221/c222/c223 ignored tests each retain their WS12 comparison and additionally run one paired WS11-UI sequence/control. Already selected by the rust/ci-full-gate browser manifest; no new ignored identity is introduced."
+  },
+  "local_review240_verification": {
+    "native_nextest": {
+      "passed": 1398,
+      "failed": 0,
+      "database_passed": 1384,
+      "credited_application_passed": 14,
+      "workers": 4,
+      "scope": "all enabled campfire_db tests and all 14 application identities in ci_passes; not a full workspace execution"
+    },
+    "credited_native_identities_passed": 30,
+    "ignored_browser_nextest": {
+      "passed": 3,
+      "failed": 0,
+      "workers": 4,
+      "paired_sequences_passed": 3,
+      "writer_defects_rejected": 3,
+      "existing_ws12_sequences_retained": true,
+      "invocation": "existing c221/c222/c223 CI selectors, with current-source reused Cargo build metadata"
+    },
+    "huddle_controls": {
+      "baseline_passed": 2,
+      "missing_issuance_failures_rejected": 2,
+      "policy_conditional_missing_invitation_failures_rejected": 1,
+      "invalid_controls": 0
+    },
+    "rails_huddle_vector": {
+      "scenarios": 2,
+      "failures": 0,
+      "change": "only group_quiet setup_sql changes; policies precede issuance"
+    },
+    "seeds": {
+      "names": [
+        "default",
+        "first_run",
+        "agents_ui"
+      ],
+      "source": "private copies of existing seeds; no seeds rebuilt in this worktree",
+      "rails_validation_passed": 73,
+      "rails_validation_failed": 0
+    },
+    "strict_workspace_clippy": "PASS: --locked --workspace --exclude html5ever --all-targets -- -D warnings",
+    "database_doctests": {
+      "passed": 0,
+      "failed": 0
+    },
+    "ci_receipt": "exact-head native CI and combined-branch browser CI are pending"
+  }
+}
