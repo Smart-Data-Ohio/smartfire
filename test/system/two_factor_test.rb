@@ -123,6 +123,32 @@ class TwoFactorTest < ApplicationSystemTestCase
     page.current_window.resize_to(1400, 1400)
   end
 
+  test "the two-factor action buttons show their whole label at phone width" do
+    enroll_two_factor!(users(:jz))
+    TwoFactorRememberedDevice.create_for!(users(:jz), ip_address: "192.0.2.10", user_agent: "Mozilla/5.0 (iPhone)")
+    sign_in "jz@37signals.com"
+
+    [ 390, 320 ].each do |width|
+      page.current_window.resize_to(width, 844)
+      visit user_profile_url
+
+      %w[ new_backup_codes disable_two_factor revoke_all_devices ].each do |form_id|
+        form = find("##{form_id}")
+        button = form.find("input[type=submit]")
+        field = form.find("input[name=reauth]")
+        label = "#{button.value} at #{width}px"
+
+        # A submit input clips its overflow, so a squeezed one cuts its label off.
+        assert_operator button.evaluate_script("this.scrollWidth"), :<=, button.evaluate_script("this.clientWidth"), "#{label} is clipped"
+        assert_operator button.evaluate_script("this.getBoundingClientRect().right"),
+          :<=, form.evaluate_script("this.getBoundingClientRect().right") + 0.5, "#{label} overflows its row"
+        assert_operator field.evaluate_script("this.getBoundingClientRect().width"), :>=, 150, "#{label} squeezes its field"
+      end
+    end
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
   test "regenerating backup codes from the profile shows a fresh set" do
     credential = enroll_two_factor!(users(:jz))
     old_codes = TwoFactorBackupCode.regenerate_set!(credential)

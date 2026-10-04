@@ -15,12 +15,12 @@
         <%# Full-page post like setup: the response renders the one-time codes
             with a plain 200. %>
         <%= form_with url: two_factor_backup_codes_path, method: :post, data: { turbo: false },
-              html: { id: "new_backup_codes", class: "flex align-center gap" } do |form| %>
+              html: { id: "new_backup_codes", class: "flex flex-wrap align-center gap" } do |form| %>
           <%= render "two_factor/reauth_field", form: form %>
           <%= form.submit "New backup codes", class: "btn txt-small" %>
         <% end %>
         <%= form_with url: two_factor_setup_path, method: :delete,
-              html: { id: "disable_two_factor", class: "flex align-center gap" } do |form| %>
+              html: { id: "disable_two_factor", class: "flex flex-wrap align-center gap" } do |form| %>
           <%= render "two_factor/reauth_field", form: form %>
           <%= form.submit "Disable", class: "btn btn--negative txt-small" %>
         <% end %>
@@ -48,7 +48,7 @@
           <% end %>
         </menu>
         <%= form_with url: two_factor_remembered_devices_path, method: :delete,
-              html: { id: "revoke_all_devices", class: "flex align-center gap" } do |form| %>
+              html: { id: "revoke_all_devices", class: "flex flex-wrap align-center gap" } do |form| %>
           <%= render "two_factor/reauth_field", form: form %>
           <%= form.submit "Revoke all", class: "btn btn--negative txt-small" %>
         <% end %>

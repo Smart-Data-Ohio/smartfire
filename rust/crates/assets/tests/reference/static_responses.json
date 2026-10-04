@@ -109,7 +109,7 @@
       "content-length": "42644",
       "content-type": "application/json"
     },
-    "body_sha256": "b241a572700e330cf590658977921f2582fda80af400d2e19549a671d7a6dd73"
+    "body_sha256": "112b489bdb58faf420e63762ca5b244924b84ade2e28bc2a34e855e190bc33e1"
   },
   {
     "method": "GET",
@@ -1877,15 +1877,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/controllers/workspace_navigation_controller-0a4078bd.js",
+    "path": "/assets/controllers/workspace_navigation_controller-ff25c015.js",
     "env": {},
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "7824",
+      "content-length": "8033",
       "content-type": "text/javascript"
     },
-    "body_sha256": "a0d2d6349fbefc906efc4861fa82f6e5f38e90e410729de1538a21dd72ed2f7c"
+    "body_sha256": "9101d0b124edba5446801218bb0d115a01f36ea2bb34afd7f3966c4d62f908c8"
   },
   {
     "method": "GET",
@@ -4469,15 +4469,15 @@
   },
   {
     "method": "GET",
-    "path": "/assets/profile_settings-ee00efb3.css",
+    "path": "/assets/profile_settings-1143b73d.css",
     "env": {},
     "status": 200,
     "headers": {
       "cache-control": "public, max-age=60, stale-while-revalidate=300",
-      "content-length": "1502",
+      "content-length": "1660",
       "content-type": "text/css"
     },
-    "body_sha256": "9350fa4ca24e68e9adb01ce8f12ba5e5d27f4425fed5ee15669477c410fe9ef0"
+    "body_sha256": "e8bb908e74e8f1e02eaff356359200bf965a031bb98438bba25c3bdff0dd0f36"
   },
   {
     "method": "GET",
