@@ -4,10 +4,24 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from browser_host import prepare_source
+from browser_host import prepare_source, build_host
 
 
 class HostSourceTests(unittest.TestCase):
+    def test_generated_executable_cannot_replace_the_workspace_suite_binary(self):
+        import json
+        from types import SimpleNamespace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'campfire'},
+                        'profile': {'test': True}, 'executable': str(root / 'target/ws8bm-browser-host/debug/deps/host')}
+            result = SimpleNamespace(returncode=0, stdout=json.dumps(artifact))
+            with patch('browser_host.prepare_source', return_value=root / 'generated'), \
+                    patch('browser_host.subprocess.run', return_value=result) as run:
+                self.assertEqual(build_host(root, {'CARGO_TARGET_DIR': str(root / 'target')}), artifact['executable'])
+            self.assertEqual(run.call_args.kwargs['env']['CARGO_TARGET_DIR'], str(root / 'target/ws8bm-browser-host'))
+            self.assertEqual(run.call_args.kwargs['env']['CAMPFIRE_REFERENCE'], str(root))
+
     def test_refreshes_outer_inputs_without_copying_targets_or_old_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

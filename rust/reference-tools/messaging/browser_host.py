@@ -51,8 +51,11 @@ def prepare_source(root):
 def build_host(root, env):
     source = root / "rust"
     generated = prepare_source(root)
-    host_env = dict(env, CAMPFIRE_REFERENCE=str(root),
-                    CARGO_TARGET_DIR=str(Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve()))
+    # A generated package has the same Cargo identity as the workspace app.
+    # Sharing its test executable with nextest replaces a running suite's
+    # binary, despite different source roots. Keep this cache under target/.
+    host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
+    host_env = dict(env, CAMPFIRE_REFERENCE=str(root), CARGO_TARGET_DIR=str(host_target))
     command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2",
                "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
                "--no-run", "--message-format=json"]
