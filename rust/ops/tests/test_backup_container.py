@@ -12,6 +12,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 IMAGE = os.environ.get("WS18_IMAGE")
+REFERENCE = os.environ.get("WS18_REFERENCE_IMAGE", os.environ.get("PARITY_IMAGE", "campfire-reference"))
 
 FAKE_DOCKER = r'''#!/usr/bin/env python3
 import json, os, pathlib, sys
@@ -100,7 +101,7 @@ class BackupContainerTest(unittest.TestCase):
                 calls = [json.loads(line) for line in (work / "docker-trace.jsonl").read_text().splitlines()]
                 self.assertIn(["exec", "once-app-fixture", "/rails/script/admin/prepare-backup"], calls)
                 # Restore checks run against separate disposable copies, with real Docker again.
-                for index, image in enumerate([IMAGE, "ws6-reference-d7c7de92:latest"]):
+                for index, image in enumerate([IMAGE, REFERENCE]):
                     restore = work / f"restore-{index}"
                     result = subprocess.run([str(ROOT / "deploy/backups/restore-check.sh"), "--backup", str(archive),
                         "--work-dir", str(restore), "--age-identity", str(identity), "--image", image,

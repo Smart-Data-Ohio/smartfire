@@ -22,4 +22,4 @@ rows=[]
 end
 Current.reset
 File.write(ARGV.fetch(0), JSON.pretty_generate(reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],rows:rows) + "\n")
-puts "WS8bm room components: #{rows.size} complete list/composer/template goldens; reference d7c7de92"
+puts "WS8bm room components: #{rows.size} complete list/composer/template goldens; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"

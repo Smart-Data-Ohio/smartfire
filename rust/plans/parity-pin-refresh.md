@@ -15,6 +15,9 @@ also records the actual revision for intentional old/new controls.
 producers use the same fail-closed revision check.
 The profile source ledger is produced from the actual image, including the
 native `_two_factor.html.erb` and reauthentication partials.
+Native builds also record their actual checkout revision in the copied app's
+`.parity-reference.sha`; each instance exports that recorded revision to producers.
+An older native build without this record must be rebuilt before running producers.
 
 Removed the attachment-processing image overlay and the approved board, Slack,
 event, profile and UI layout substitutions. Verified test declarations needed by
@@ -36,7 +39,8 @@ captures change only provenance, while their functional output stays identical.
 | Family | Actual output change | Rails commit explaining it |
 |---|---|---|
 | Agent attachment diagnostics | Successful committed state and observed transaction count replace the original crash diagnosis | #226, `2d7c65b7f`, `6b38d1274`, `c75ee7f95` (merge `b06d19114`) |
-| Messaging: thread review, rendered dependencies, paging, legacy/page validators | Missing-file post commits with 201; blob lease columns appear; ActionView dependency digests and their ETags change | #226, `2d7c65b7f`, `6b38d1274`, `c75ee7f95` |
+| Messaging: thread review, rendered dependencies, paging, legacy/page validators | Missing-file post commits with 201; blob lease columns appear | #226, `2d7c65b7f`, `6b38d1274`, `c75ee7f95` |
+| Messaging: ActionView dependency digests and their ETags | Twitter card dependency changes the index and message template digests | #211, `955af4c37` (`app/views/twitter/posts/_card.html.erb:68`) |
 | Room/form pages and agents/history/bots/access UI pages | 99 complete pages change only `people.css` and `profile_card_controller.js` URLs | #163, `8b13a68fd` (merge `2e20b24c3`) |
 | WS17 settings views and status requests | 12 status partial strings use the shared fields' whitespace; five request cases include the additional badge broadcasts | #163, `8b13a68fd` |
 | Profile source ledger | Native two-factor/reauthentication hashes, plus explicit shared-fields/layout/route coverage; rendered profile output already matched | #228, `ef92c656e`; #235, `bc42efa12`; shared fields from #163, `8b13a68fd` |
@@ -53,8 +57,9 @@ helper hash and the exact hash of the simultaneously exported manifest.
 The regenerated manifest SHA-256 and its static-response record both equal
 `e2b8050840b6987af285adbd6ecb654c005d989227f26198e8f7427c13cb14c1`.
 
-Rust now includes the generated index template digest rather than maintaining a
-separate literal. The fresh status-request oracle also exposed an unported #163
+Rust includes the generated index template digest under `crates/`, inside the
+production Docker inputs; its test independently checks the paging oracle.
+The fresh status-request oracle also exposed an unported #163
 callback: successful changes to Rails' four `STATUS_ATTRIBUTES` now announce the
 badge through the existing after-commit event path. The initial workspace control
 failed nine tests (four validators and five status-broadcast cases) before these
@@ -84,6 +89,11 @@ archived Redis arrival-order sample replayed against fresh frame payloads, not a
 new-pin publication-order golden. Likewise the unkeyed web-push encryption sample
 is retained; regenerating its random receiver/sender inputs is a separate opt-in
 operation. Historical reports and discriminator evidence retain their provenance.
+
+Active browser/source tools read `parity/reference.sha`. The refreshed messaging
+system ledger contains 137 declarations with source hashes from that pin; the two
+new upload declarations are deferred pending paired browser evidence. Existing
+pass receipts keep their original evidence, and no new pass credit is claimed.
 
 ## Reproduction and verification
 

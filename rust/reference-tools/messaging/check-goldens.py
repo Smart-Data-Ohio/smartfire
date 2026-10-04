@@ -52,6 +52,7 @@ for name in names:
     files = [f"{name}.json"] + (["message-template-digest.txt"] if name == "rendered-dependencies" else []) + (["index-template-digest.txt"] if name == "paging" else [])
     for file in files:
         target = (ROOT / "rust/crates/views/src/messages/rails-template-digest.txt" if file == "message-template-digest.txt"
+                  else ROOT / "rust/crates/campfire/src/controllers/messages/rails-index-template-digest.txt" if file == "index-template-digest.txt"
                   else ROOT / "rust/vectors/messaging" / file)
         if options.write:
             shutil.copyfile(SCRATCH / "out" / file, target)

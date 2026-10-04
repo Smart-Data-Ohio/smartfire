@@ -55,4 +55,4 @@ frames.clear
 client.patch("/rooms/closeds/#{room.id}",params:{room:{name:'Audit failed revision'},user_ids:[127326141,712064548]},headers:{'X-CSRF-Token'=>token})
 cases['failed_revision']=snapshot(client,room,frames)
 puts JSON.pretty_generate({reference:ENV.fetch("PARITY_REFERENCE_SHA")[0, 8],cases:cases})
-warn "Rails room audit oracle: #{cases.size} committed HTTP transitions; reference d7c7de92"
+warn "Rails room audit oracle: #{cases.size} committed HTTP transitions; reference #{ENV.fetch('PARITY_REFERENCE_SHA')}"
