@@ -210,3 +210,6 @@ pub(super) fn csv_body(entries: &[AuditLog], zone: &Zone) -> String {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod original_tests;

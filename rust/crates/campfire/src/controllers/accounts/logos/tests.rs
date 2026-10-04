@@ -63,6 +63,22 @@ async fn stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_hea
             "{name:?} {} complete Rails PNG bytes",
             case["size"]
         );
+        let size = if case["size"] == "small" {
+            192_u32
+        } else {
+            512_u32
+        };
+        assert_eq!(&response.body[..8], b"\x89PNG\r\n\x1a\n");
+        assert_eq!(
+            u32::from_be_bytes(response.body[16..20].try_into().unwrap()),
+            size,
+            "original logo width"
+        );
+        assert_eq!(
+            u32::from_be_bytes(response.body[20..24].try_into().unwrap()),
+            size,
+            "original logo height"
+        );
         assert_eq!(
             response.header("etag"),
             case["etag"].as_str(),
@@ -112,24 +128,28 @@ async fn logo_upload_replacement_deletion_audits_and_cache_validation_match_rail
         assert_eq!((row.0,row.1,row.2.as_str()),(DAVID,account.id,"Account"));assert_eq!(serde_json::from_str::<Value>(&row.3).unwrap(),serde_json::json!({"logo":{"before":false,"after":true}}));
         assert_eq!(c.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='account.settings.change'",[],|r|r.get::<_,i64>(0))?,1);assert!(attachments::attached_blob(c,"Account",account.id,"logo")?.is_some());Ok(())
     }).await.unwrap();
+    let removed = browser
+        .write(Req::new(Method::DELETE, "/account/logo"))
+        .await;
+    assert_eq!(removed.status, StatusCode::FOUND);
     assert_eq!(
-        browser
-            .write(Req::new(Method::DELETE, "/account/logo"))
-            .await
-            .location(),
+        removed.location(),
         Some("http://campfire.test/account/edit")
     );
     app.db()
         .read(|c| {
             let account = Account::first(c)?.unwrap();
             assert!(attachments::attached_blob(c, "Account", account.id, "logo")?.is_none());
+            let details:String=c.query_row("SELECT details FROM audit_logs WHERE action='account.settings.change' ORDER BY id DESC LIMIT 1",[],|r|r.get(0))?;
+            assert_eq!(serde_json::from_str::<Value>(&details).unwrap(),serde_json::json!({"logo":{"before":true,"after":false}}),"original logo removal audit pair");
             assert_eq!(
                 c.query_row(
                     "SELECT COUNT(*) FROM audit_logs WHERE action='account.settings.change'",
                     [],
                     |r| r.get::<_, i64>(0)
                 )?,
-                2
+                2,
+                "original delete adds exactly one logo settings audit after the first upload"
             );
             Ok(())
         })

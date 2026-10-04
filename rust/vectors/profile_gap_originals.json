@@ -1,0 +1,54 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "cases": [
+    {
+      "name": "meeting_error",
+      "params": null,
+      "notice_html": "Google Calendar couldn&#39;t be reached; calendar status will retry.",
+      "response": {
+        "status": 200,
+        "notice": true
+      }
+    },
+    {
+      "name": "connected_email",
+      "params": null,
+      "notice_html": null,
+      "response": {
+        "status": 200,
+        "connected_email": true,
+        "disconnect": true
+      }
+    },
+    {
+      "name": "email_change",
+      "params": {
+        "email_address": "david@smartdata.net",
+        "current_password": "secret123456"
+      },
+      "notice_html": null,
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "email": "david@smartdata.net",
+        "name": "David",
+        "marker": "2026-03-02T16:00:00Z"
+      }
+    },
+    {
+      "name": "email_case",
+      "params": {
+        "name": "Dave",
+        "email_address": "David@37signals.com"
+      },
+      "notice_html": null,
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/users/me/profile",
+        "email": "David@37signals.com",
+        "name": "Dave",
+        "marker": null
+      }
+    }
+  ]
+}

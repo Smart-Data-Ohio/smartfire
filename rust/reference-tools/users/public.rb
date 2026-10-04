@@ -11,6 +11,7 @@ Rails.application.config.hosts.clear
 keys = %w[LEGAL_OPERATOR_NAME LEGAL_CONTACT_EMAIL LEGAL_EFFECTIVE_DATE]
 states = {
   default: {},
+  original_configured: {"LEGAL_OPERATOR_NAME" => "Acme Widgets", "LEGAL_CONTACT_EMAIL" => "privacy@example.com"},
   configured: { "LEGAL_OPERATOR_NAME" => "  Acme & Widgets  ", "LEGAL_CONTACT_EMAIL" => " privacy+chat@example.test ", "LEGAL_EFFECTIVE_DATE" => " October 1, 2026 " },
   hostile: { "LEGAL_OPERATOR_NAME" => "<script>alert(1)</script>", "LEGAL_CONTACT_EMAIL" => 'privacy@example.test"><script>alert(1)</script>', "LEGAL_EFFECTIVE_DATE" => "<script>today</script>" },
   unicode: { "LEGAL_OPERATOR_NAME" => "\u00a0Org\u00a0", "LEGAL_CONTACT_EMAIL" => "\u00a0mail@example.test\u00a0", "LEGAL_EFFECTIVE_DATE" => "Été 2026" },

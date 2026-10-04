@@ -212,3 +212,9 @@ mod stars_tests;
 
 #[cfg(test)]
 mod cutover_receipts_tests;
+
+#[cfg(test)]
+mod sidebar_original_tests;
+
+#[cfg(test)]
+mod profile_gap_original_tests;

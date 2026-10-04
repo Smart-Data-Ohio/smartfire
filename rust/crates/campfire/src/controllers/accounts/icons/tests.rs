@@ -210,13 +210,15 @@ async fn upload_normalizes_attaches_and_records_one_creation_audit() {
         let icon=WorkspaceIcon::find_by_name(c,"acme_corp")?.unwrap();assert_eq!(icon.creator_id,DAVID);assert_eq!(icon.title,"Acme Corp");
         assert!(attachments::attached_blob(c,"WorkspaceIcon",icon.id,"image")?.is_some());
         let (count,actor,target,label,details):(i64,i64,String,String,String)=c.query_row("SELECT COUNT(*),actor_id,target_type,target_label,details FROM audit_logs WHERE action='workspace_icon.create' AND target_id=?",[icon.id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?)))?;
-        assert_eq!((count,actor,target.as_str(),label.as_str()),(1,DAVID,"WorkspaceIcon","acme_corp"));assert_eq!(serde_json::from_str::<Value>(&details).unwrap(),serde_json::json!({"name":"acme_corp","title":"Acme Corp"}));Ok(())
+        assert_eq!((count,actor,target.as_str(),label.as_str()),(1,DAVID,"WorkspaceIcon",":acme_corp:"));assert_eq!(serde_json::from_str::<Value>(&details).unwrap(),serde_json::json!({"name":"acme_corp","title":"Acme Corp"}));Ok(())
     }).await.unwrap();
 }
 #[tokio::test]
 async fn invalid_and_duplicate_uploads_return_inline_errors_without_rows_or_audits() {
     let app = TestApp::boot_frozen().await.expect("seed required");
+    let before=app.db().read(|c|Ok(WorkspaceIcon::ordered(c)?.len())).await.unwrap();
     let bad = upload(&app, "openai", "", "script.svg").await;
+    assert_eq!(app.db().read(|c|Ok(WorkspaceIcon::ordered(c)?.len())).await.unwrap(),before,"original invalid icon row count");
     assert_eq!(bad.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(bad.text().contains("already taken by a built-in icon"));
     upload(&app, "acme", "Acme Corp", "clean.svg").await;
@@ -288,13 +290,11 @@ async fn destroy_removes_attachment_and_blob_and_records_one_snapshot_audit() {
         })
         .await
         .unwrap();
-    assert_eq!(
-        app.david()
-            .write(Req::new(Method::DELETE, &format!("/account/icons/{id}")))
-            .await
-            .location(),
-        Some("http://campfire.test/account/icons")
-    );
+    let (before_icons,before_blobs)=app.db().read(|c|Ok((WorkspaceIcon::ordered(c)?.len(),c.query_row("SELECT COUNT(*) FROM active_storage_blobs",[],|r|r.get::<_,i64>(0))?))).await.unwrap();
+    let removed = app.david()
+        .write(Req::new(Method::DELETE, &format!("/account/icons/{id}"))).await;
+    assert_eq!(removed.status, StatusCode::FOUND);
+    assert_eq!(removed.location(), Some("http://campfire.test/account/icons"));
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
     loop {
         let exists = app
@@ -317,7 +317,7 @@ async fn destroy_removes_attachment_and_blob_and_records_one_snapshot_audit() {
         );
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
-    app.db().read(move |c|{assert!(WorkspaceIcon::ordered(c)?.is_empty());assert_eq!(c.query_row("SELECT COUNT(*) FROM active_storage_blobs WHERE id=?",[blob],|r|r.get::<_,i64>(0))?,0);assert_eq!(c.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='workspace_icon.destroy' AND target_id=? AND actor_id=? AND target_label='acme'",rusqlite::params![id,DAVID],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
+    app.db().read(move |c|{assert_eq!(WorkspaceIcon::ordered(c)?.len(),before_icons-1,"original icon destroy count delta");assert_eq!(c.query_row("SELECT COUNT(*) FROM active_storage_blobs",[],|r|r.get::<_,i64>(0))?,before_blobs-1,"original blob destroy count delta");assert!(WorkspaceIcon::ordered(c)?.is_empty());assert_eq!(c.query_row("SELECT COUNT(*) FROM active_storage_blobs WHERE id=?",[blob],|r|r.get::<_,i64>(0))?,0);assert_eq!(c.query_row("SELECT COUNT(*) FROM audit_logs WHERE action='workspace_icon.destroy' AND target_id=? AND actor_id=? AND target_label=':acme:'",rusqlite::params![id,DAVID],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
 }
 #[tokio::test]
 async fn serving_svg_and_png_uses_private_bytes_and_checksum_conditionals() {
@@ -328,23 +328,29 @@ async fn serving_svg_and_png_uses_private_bytes_and_checksum_conditionals() {
     ] {
         upload(&app, name, "Icon", file).await;
         let path = format!("/icons/{name}");
-        let response = app.david().get(&path).await;
+        let response = app.sign_in(773523953).await.get(&path).await;
         assert_eq!(response.status, StatusCode::OK);
         assert_eq!(response.body, bytes(file));
-        assert!(response.content_type().unwrap().starts_with(mime));
+        assert_eq!(response.content_type().unwrap().split(';').next().unwrap(),mime);
         assert_eq!(
             response.header("cache-control"),
             Some("max-age=3600, private")
         );
         assert_eq!(response.header("x-content-type-options"), Some("nosniff"));
+        assert_eq!(response.header("content-disposition").unwrap().split(';').next(),Some("inline"));
+        let key=name.to_string();
+        let checksum=app.db().read(move|c|{let icon=WorkspaceIcon::find_by_name(c,&key)?.unwrap();Ok(attachments::attached_blob(c,"WorkspaceIcon",icon.id,"image")?.unwrap().checksum.unwrap())}).await.unwrap();
+        assert_eq!(response.header("etag"),Some(format!("\"{checksum}\"").as_str()));
         if name == "acme" {
             assert_eq!(
                 response.header("content-security-policy"),
                 Some("default-src 'none'; style-src 'unsafe-inline'")
             );
+        } else {
+            assert!(response.header("content-security-policy").unwrap().contains("script-src 'self'"));
         }
         let cached = app
-            .david()
+            .sign_in(773523953).await
             .send(
                 Req::new(Method::GET, &path)
                     .header("if-none-match", response.header("etag").unwrap()),
@@ -358,7 +364,7 @@ async fn serving_svg_and_png_uses_private_bytes_and_checksum_conditionals() {
         );
     }
     assert_eq!(
-        app.david().get("/icons/nope").await.status,
+        app.david().get("/icons/nope_not_real").await.status,
         StatusCode::NOT_FOUND
     );
 }

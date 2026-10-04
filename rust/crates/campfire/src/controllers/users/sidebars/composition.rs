@@ -158,6 +158,19 @@ fn row(
     call.favorite_position = membership.favorite_position;
     call.category_id = membership.room_category_id;
     call.can_delete = user.is_administrator() || (!group && room.creator_id == user.id);
+    // app/views/users/sidebars/show.html.erb: a peer rename is outside this
+    // collection key; a sighting changes participant IDs and invalidates it.
+    let direct_cache_key = if room.direct() {
+        let record = campfire_views::fragment_cache::cache_key_with_version(
+            "memberships", membership.id, membership.updated_at.jiff());
+        let participants = call.participants.iter().map(|p| p.id).collect::<Vec<_>>();
+        let membership_key = campfire_views::fragment_cache::keys::sidebar_membership(
+            &record, Some(&participants), user.is_administrator());
+        Some(campfire_views::fragment_cache::keys::fragment(
+            "users/sidebars/rooms/_direct",
+            &campfire_views::fragment_cache::digest(&[include_str!("../../../../../views/templates/users/sidebars/composition/_direct.html")]),
+            &membership_key, &campfire_views::time::Zone::utc()))
+    } else { None };
     Ok(Row {
         id: room.id,
         kind: presenters::accounts::room_param_key(room.room_type)
@@ -167,6 +180,7 @@ fn row(
         raw_name: room.name.clone(),
         category_row: false,
         epoch: presenters::epoch_string(room.updated_at.jiff()),
+        direct_cache_key,
         members: members.iter().map(|u| person(app, u)).collect(),
         call,
     })
@@ -241,6 +255,7 @@ pub(crate) fn neutral(app: &App, conn: &Connection, room: &Room) -> campfire_db:
     call.membership = false;
     call.can_delete = false;
     Ok(Row {
+        direct_cache_key: None,
         id: room.id,
         kind: presenters::accounts::room_param_key(room.room_type)
             .trim_start_matches("rooms_")

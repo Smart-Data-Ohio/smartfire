@@ -23,6 +23,9 @@ pub struct Row {
     #[serde(default)]
     pub category_row: bool,
     pub epoch: String,
+    /// Rails collection cache keys only the membership, participant IDs and admin flag.
+    #[serde(default)]
+    pub direct_cache_key: Option<String>,
     pub members: Vec<Person>,
     pub call: crate::rooms::calls::CallRow,
 }
@@ -127,13 +130,12 @@ impl Row {
             };
         }
         if self.kind == "direct" {
-            Direct {
-                ctx,
-                row: self,
-                configured,
-                collection,
-            }
-            .render()
+            let render = || Direct { ctx, row: self, configured, collection }
+                .render().expect("direct sidebar row renders");
+            return match self.direct_cache_key.as_ref() {
+                Some(key) => crate::fragment_cache::fetch(|| key.clone(), render),
+                None => render(),
+            };
         } else {
             Shared {
                 ctx,
@@ -208,16 +210,7 @@ impl Shell<'_> {
         self.sidebar
             .direct
             .iter()
-            .map(|row| {
-                Direct {
-                    ctx: self.ctx,
-                    row,
-                    configured: self.sidebar.configured,
-                    collection: true,
-                }
-                .render()
-                .unwrap()
-            })
+            .map(|row| row.render_fragment(self.ctx, self.sidebar.configured))
             .collect()
     }
 

@@ -1708,6 +1708,920 @@
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0275",
       "assertion_count": 5,
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0239",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "admins can browse the log",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_admin_browse_labels_and_export_link"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0239",
+      "assertion_count": 6,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0240",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "members are forbidden",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_members_forbidden"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0240",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0241",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "visitors are sent to sign in",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_visitors_redirect_to_sign_in"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0241",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0242",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "visitors cannot export CSV",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_visitors_cannot_export"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0242",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0243",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "members cannot export CSV",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_members_cannot_export"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0243",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0244",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "filtering by actor matches names and emails in labels",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_actor_filter_matches_label_email"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0244",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0245",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "filtering by action and target type",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_action_and_target_type_filters"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0245",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0246",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "unknown filter values are ignored",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_unknown_filters_are_ignored"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0246",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0247",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "filtering by date range",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_date_range_excludes_the_other_action"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0247",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0248",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "paging walks older entries",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_paging_links_and_row_count"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0248",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0249",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "CSV export carries headers and the filtered rows",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_filtered_csv_headers_labels_changes_and_ip"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0249",
+      "assertion_count": 10,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0250",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "CSV export neutralizes formula injection",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_formula_target_is_quoted"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0250",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0253",
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "test": "CSV export neutralizes formula injection in request columns",
+      "rust_tests": [
+        "controllers::accounts::audit_logs::original_tests::original_formula_request_column_is_quoted"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0253",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0230",
+      "file": "test/controllers/accounts/users_controller_test.rb",
+      "test": "update",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_admin_self_role_is_preserved"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0230",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0231",
+      "file": "test/controllers/accounts/users_controller_test.rb",
+      "test": "destroy",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_self_removal_active_count_and_lookup"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0231",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0232",
+      "file": "test/controllers/accounts/users_controller_test.rb",
+      "test": "non-admins cannot perform actions",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_member_cannot_change_admin_role",
+        "controllers::accounts::original_control_tests::original_member_cannot_remove_admin"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0232",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0254",
+      "file": "test/controllers/accounts/custom_styles_controller_test.rb",
+      "test": "edit",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_styles_edit_success"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0254",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0255",
+      "file": "test/controllers/accounts/custom_styles_controller_test.rb",
+      "test": "update",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_styles_exact_value_is_saved"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0255",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0256",
+      "file": "test/controllers/accounts/custom_styles_controller_test.rb",
+      "test": "non-admins cannot update",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_member_styles_refused"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0256",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0263",
+      "file": "test/controllers/accounts/join_codes_controller_test.rb",
+      "test": "create new join code",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_join_code_changes_and_redirects"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0263",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0264",
+      "file": "test/controllers/accounts/join_codes_controller_test.rb",
+      "test": "only administrators can create new join codes",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_jz_cannot_reset_join_code"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0264",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0214",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "create bans user and creates ban records from sessions",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_ban_has_two_exact_ip_records"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0214",
+      "assertion_count": 4,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0215",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "create destroys user sessions",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_ban_destroys_the_single_session"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0215",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0219",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "non-admins cannot ban users",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_kevin_cannot_ban_jz"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0219",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0220",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "destroy removes ban records and sets user to active",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_unban_deletes_record_and_activates"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0220",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0221",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "non-admins cannot unban users",
+      "rust_tests": [
+        "controllers::accounts::original_control_tests::original_kevin_cannot_unban_jz"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0221",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0216",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "create succeeds when the user has a pending two-factor setup secret",
+      "rust_tests": [
+        "controllers::users::ban_lifecycle_tests::banning_a_user_removes_pending_two_factor_setup_and_sessions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0216",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0217",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "create enqueues RemoveBannedContentJob",
+      "rust_tests": [
+        "controllers::users::ban_lifecycle_tests::ban_http_enqueue_is_atomic_and_writes_one_durable_remove_job"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0217",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0218",
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "test": "RemoveBannedContentJob deletes messages",
+      "rust_tests": [
+        "controllers::users::ban_lifecycle_tests::ban_http_removes_the_users_messages_through_the_real_runner"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0218",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0233",
+      "file": "test/controllers/accounts/icons_controller_test.rb",
+      "test": "index lists icons with previews shortcodes titles and uploaders",
+      "rust_tests": [
+        "controllers::accounts::icons::original_tests::original_acme_upload_list_and_audit_shortcodes"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0233",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0234",
+      "file": "test/controllers/accounts/icons_controller_test.rb",
+      "test": "create uploads an icon",
+      "rust_tests": [
+        "controllers::accounts::icons::original_tests::original_acme_upload_list_and_audit_shortcodes"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0234",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0088",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "workspace icon create and destroy are recorded",
+      "rust_tests": [
+        "controllers::accounts::icons::original_tests::original_acme_upload_list_and_audit_shortcodes"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0088",
+      "assertion_count": 7,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0238",
+      "file": "test/controllers/accounts/icons_controller_test.rb",
+      "test": "members get forbidden on list create and delete",
+      "rust_tests": [
+        "controllers::accounts::icons::original_tests::original_jz_cannot_list_create_or_remove_the_existing_icon"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0238",
+      "assertion_count": 4,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0235",
+      "file": "test/controllers/accounts/icons_controller_test.rb",
+      "test": "create renders validation errors inline",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::invalid_and_duplicate_uploads_return_inline_errors_without_rows_or_audits"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0235",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0236",
+      "file": "test/controllers/accounts/icons_controller_test.rb",
+      "test": "create reports a name that raced past validation as taken",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::uniqueness_index_races_render_taken_and_roll_back_upload_and_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0236",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0237",
+      "file": "test/controllers/accounts/icons_controller_test.rb",
+      "test": "destroy removes the icon and its blob",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::destroy_removes_attachment_and_blob_and_records_one_snapshot_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0237",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0265",
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "test": "serves an SVG with the documented headers",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::serving_svg_and_png_uses_private_bytes_and_checksum_conditionals"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0265",
+      "assertion_count": 8,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0266",
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "test": "serves a PNG without the SVG-only headers",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::serving_svg_and_png_uses_private_bytes_and_checksum_conditionals"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0266",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0267",
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "test": "supports conditional GETs with the blob checksum",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::serving_svg_and_png_uses_private_bytes_and_checksum_conditionals"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0267",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0268",
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "test": "returns not found for unknown names",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::serving_svg_and_png_uses_private_bytes_and_checksum_conditionals"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0268",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0269",
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "test": "returns not found for signed-out users",
+      "rust_tests": [
+        "controllers::accounts::icons::tests::serving_svg_and_png_uses_private_bytes_and_checksum_conditionals"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0269",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0270",
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "test": "unenrolled sessions are sent to setup instead of served the icon",
+      "rust_tests": [
+        "controllers::accounts::icons::original_tests::original_password_session_enrollment_and_stale_icon_access"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0270",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0271",
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "test": "stale enrolled sessions are signed out instead of served the icon",
+      "rust_tests": [
+        "controllers::accounts::icons::original_tests::original_password_session_enrollment_and_stale_icon_access"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0271",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0257",
+      "file": "test/controllers/accounts/logos_controller_test.rb",
+      "test": "show stock",
+      "rust_tests": [
+        "controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0257",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0258",
+      "file": "test/controllers/accounts/logos_controller_test.rb",
+      "test": "show stock small size",
+      "rust_tests": [
+        "controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0258",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0259",
+      "file": "test/controllers/accounts/logos_controller_test.rb",
+      "test": "show custom",
+      "rust_tests": [
+        "controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0259",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0260",
+      "file": "test/controllers/accounts/logos_controller_test.rb",
+      "test": "show custom small size",
+      "rust_tests": [
+        "controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0260",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0261",
+      "file": "test/controllers/accounts/logos_controller_test.rb",
+      "test": "show stock when custom logo cannot be resized",
+      "rust_tests": [
+        "controllers::accounts::logos::tests::stock_uploaded_and_unresizable_logo_responses_match_rails_bytes_and_headers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0261",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0262",
+      "file": "test/controllers/accounts/logos_controller_test.rb",
+      "test": "destroy",
+      "rust_tests": [
+        "controllers::accounts::logos::tests::logo_upload_replacement_deletion_audits_and_cache_validation_match_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0262",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0085",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "logo removal is recorded",
+      "rust_tests": [
+        "controllers::accounts::logos::tests::logo_upload_replacement_deletion_audits_and_cache_validation_match_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0085",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0072",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "room create is recorded",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_open_creation_actor_target_label_and_details"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0072",
+      "assertion_count": 6,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0073",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "failed room create writes no row",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_refused_closed_creation_has_no_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0073",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0074",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "opening an existing direct room writes no row",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_group_creation_then_reopening_has_one_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0074",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0075",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "room destroy is recorded with the room name",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_room_destroy_label_and_actor"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0075",
+      "assertion_count": 4,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0076",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "admin membership changes are recorded with names",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_membership_granted_and_revoked_names"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0076",
+      "assertion_count": 4,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0077",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "re-saving unchanged membership writes no row",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_unchanged_membership_has_no_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0077",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0078",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "adding group members is recorded with the added users",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_group_add_jz_has_actor_and_granted_name"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0078",
+      "assertion_count": 4,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0079",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "adding no new members writes no row",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_group_add_existing_jason_has_no_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0079",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0080",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "the last member out destroys the group and records it",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_last_leaver_kevin_destroys_weekend_plans"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0080",
+      "assertion_count": 4,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0081",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "leaving without destroying the group writes no row",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_other_leaver_has_no_destroy_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0081",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0082",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "leaving a channel is recorded with the leaver as actor",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_jz_channel_leave_actor_label_and_revocation"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0082",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0083",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "leaving a group without destroying it is recorded",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_group_leave_david_actor_and_revocation"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0083",
+      "assertion_count": 4,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0084",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "account settings changes are recorded",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_combined_account_settings_audit_fields"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0084",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0086",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "custom styles changes are recorded as size and digest",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_styles_audit_sizes_and_digests"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0086",
+      "assertion_count": 6,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0087",
+      "file": "test/controllers/audit_log/rooms_audit_test.rb",
+      "test": "unchanged custom styles write no row",
+      "rust_tests": [
+        "controllers::rooms::original_audit_tests::original_same_styles_have_no_audit"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0087",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0278",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::ws15e_rails_composer_create"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0278",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0279",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create strips markup from the title and description",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::ws15e_rails_composer_encoded_markup"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0279",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0280",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create with missing opengraph meta tags",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::ws15e_rails_composer_missing_tags"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0280",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0281",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create returns no content when the title and description are only a markup tag",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::ws15e_rails_composer_only_markup"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0281",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0282",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create for a GitHub PR URL returns no content (PR cards render instead)",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::original_github_pr_has_no_unfurl"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0282",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0283",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create for a Fizzy card URL returns no content (Fizzy cards render instead)",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::original_fizzy_card_has_no_unfurl"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0283",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0284",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create with a missing URL",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::ws15e_rails_composer_missing_url"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0284",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0285",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create for twitter.com",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::ws15e_rails_composer_twitter"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0285",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0286",
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "test": "create for x.com",
+      "rust_tests": [
+        "controllers::unfurl_links::rails_tests::ws15e_rails_composer_x"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0286",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0203",
+      "file": "test/controllers/users/avatars_controller_test.rb",
+      "test": "show initials",
+      "rust_tests": [
+        "controllers::users::avatars::original_tests::original_kevin_initials_text"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0203",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0206",
+      "file": "test/controllers/users/avatars_controller_test.rb",
+      "test": "show image with invalid token responds 404",
+      "rust_tests": [
+        "controllers::users::avatars::original_tests::original_invalid_avatar_token_is_not_found"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0206",
+      "assertion_count": 1,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0102",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "configured installation names the operator and contact",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0102",
+      "assertion_count": 5,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0176",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "linking a github login strips and downcases it",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::original_github_login_normalizes_david_gh"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0176",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0186",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "clearing a github login unlinks it",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::original_linked_github_login_is_cleared"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0186",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0154",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows the meeting fetch notice when a refresh failed",
+      "rust_tests": [
+        "controllers::users::profile_gap_original_tests::original_meeting_unreachable_notice"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0154",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0165",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows the connected account with a disconnect button",
+      "rust_tests": [
+        "controllers::users::profile_gap_original_tests::original_connected_david_gmail_email"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0165",
+      "assertion_count": 2,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0190",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "changing email with the current password records a self-change",
+      "rust_tests": [
+        "controllers::users::profile_gap_original_tests::original_email_change_with_current_password_marks_now"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0190",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+    },
+    {
+      "id": "P0191",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "other profile edits and case-only email edits need no password and record nothing",
+      "rust_tests": [
+        "controllers::users::profile_gap_original_tests::original_case_only_email_and_dave_name_leave_marker_null"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0191",
+      "assertion_count": 3,
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
     }
   ],
   "review240_assertion_tests": [
@@ -1840,6 +2754,188 @@
         "P0191",
         "P0276"
       ]
+    },
+    {
+      "date": "2026-10-04",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+      "previous_broad_closed_count": 121,
+      "broad_closures": [
+        "P0239",
+        "P0240",
+        "P0241",
+        "P0242",
+        "P0243",
+        "P0244",
+        "P0245",
+        "P0246",
+        "P0247",
+        "P0248",
+        "P0249",
+        "P0250",
+        "P0253",
+        "P0230",
+        "P0231",
+        "P0232",
+        "P0254",
+        "P0255",
+        "P0256",
+        "P0263",
+        "P0264",
+        "P0214",
+        "P0215",
+        "P0219",
+        "P0220",
+        "P0221",
+        "P0216",
+        "P0217",
+        "P0218",
+        "P0233",
+        "P0234",
+        "P0088",
+        "P0238",
+        "P0235",
+        "P0236",
+        "P0237",
+        "P0265",
+        "P0266",
+        "P0267",
+        "P0268",
+        "P0269",
+        "P0270",
+        "P0271",
+        "P0257",
+        "P0258",
+        "P0259",
+        "P0260",
+        "P0261",
+        "P0262",
+        "P0085",
+        "P0072",
+        "P0073",
+        "P0074",
+        "P0075",
+        "P0076",
+        "P0077",
+        "P0078",
+        "P0079",
+        "P0080",
+        "P0081",
+        "P0082",
+        "P0083",
+        "P0084",
+        "P0086",
+        "P0087",
+        "P0278",
+        "P0279",
+        "P0280",
+        "P0281",
+        "P0282",
+        "P0283",
+        "P0284",
+        "P0285",
+        "P0286",
+        "P0203",
+        "P0206",
+        "P0102",
+        "P0176",
+        "P0186",
+        "P0154",
+        "P0165",
+        "P0190",
+        "P0191"
+      ],
+      "sidebar_closures": [
+        "S0054",
+        "S0073",
+        "S0092",
+        "S0106",
+        "S0119",
+        "S0147",
+        "S0181",
+        "S0193"
+      ]
+    }
+  ],
+  "ws8br_sidebar_closed_records": [
+    {
+      "id": "S0054",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "channel row shows the live huddle stack with names and count",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_channel_live_stack_names_count_and_attributes"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0054",
+      "assertion_count": 6
+    },
+    {
+      "id": "S0073",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "board row shows the live huddle stack with names and count",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_board_live_stack_names_count_and_attributes"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0073",
+      "assertion_count": 6
+    },
+    {
+      "id": "S0092",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "direct row shows the live huddle stack when the peer is in the call",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_direct_live_stack_peer_count_and_attributes"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0092",
+      "assertion_count": 5
+    },
+    {
+      "id": "S0106",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "quiet rows keep an empty stack target with no visible presence",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_quiet_rows_have_empty_hidden_stack_targets"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0106",
+      "assertion_count": 5
+    },
+    {
+      "id": "S0119",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "direct row re-renders when a participant joins",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0119",
+      "assertion_count": 9
+    },
+    {
+      "id": "S0147",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "group direct rooms render member names and a huddle stack",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_group_direct_name_and_live_stack"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0147",
+      "assertion_count": 5
+    },
+    {
+      "id": "S0181",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "no channel or DM stacks without huddle configuration",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_unconfigured_huddle_has_no_stacks_or_presence_controllers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0181",
+      "assertion_count": 4
+    },
+    {
+      "id": "S0193",
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "test": "sidebar query count does not grow with quiet channels, DMs, boards, and stages",
+      "rust_tests": [
+        "controllers::users::sidebar_original_tests::original_mixed_quiet_sidebar_read_counts_stay_flat_with_one_grants_query"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#S0193",
+      "assertion_count": 4
     }
   ]
 }

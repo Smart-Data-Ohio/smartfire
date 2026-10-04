@@ -180,13 +180,27 @@ async fn appearance_partial_matches_all_pinned_rails_bytes() {
 
 #[tokio::test]
 async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
+    run_profile_vectors(None).await;
+}
+
+#[tokio::test]
+async fn original_github_login_normalizes_david_gh() {
+    run_profile_vectors(Some("original_github_normalize")).await;
+}
+
+#[tokio::test]
+async fn original_linked_github_login_is_cleared() {
+    run_profile_vectors(Some("original_github_unlink")).await;
+}
+
+async fn run_profile_vectors(selected: Option<&str>) {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let cases: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../vectors/users_profile_settings.json"
     ))
     .unwrap();
     let mut browser = app.david();
-    for case in cases["profiles"].as_array().unwrap() {
+    for case in cases["profiles"].as_array().unwrap().iter().filter(|case| selected.is_none_or(|name| case["name"] == name)) {
         let setup = case.clone();
         app.db().write(move |tx|{
             let case=&setup;

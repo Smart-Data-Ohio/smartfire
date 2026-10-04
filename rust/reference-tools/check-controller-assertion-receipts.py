@@ -8,12 +8,13 @@ import subprocess
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--manifest', type=Path, default=Path('rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json'))
 parser.add_argument('--nextest-list', type=Path, required=True)
 parser.add_argument('--native-log', type=Path, required=True)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
 rust = root / 'rust'
-manifest = json.loads((rust / 'plans/ledger-ws8br-ws17-ws11ui-b-receipts.json').read_text())
+manifest = json.loads((args.manifest if args.manifest.is_absolute() else root / args.manifest).read_text())
 listing = json.loads(args.nextest_list.read_text())
 active = {name for suite in listing['rust-suites'].values()
           for name, info in suite['testcases'].items() if not info['ignored']}
@@ -50,6 +51,10 @@ for record in records:
         for extra in assertion.get('additional_assertion_sources', []):
             path, line = extra['path'].rsplit(':', 1)
             assert (root / path).read_text().splitlines()[int(line)-1].strip() == extra['anchor'], f"stale additional assertion source: {extra}"
+    for helper in record.get('helper_expansion', []):
+        assert source.splitlines()[helper['line']-1].strip() == helper['ruby']
+        path, line = helper['rust_assertion']['path'].rsplit(':', 1)
+        assert (root/path).read_text().splitlines()[int(line)-1].strip() == helper['rust_assertion']['anchor']
     for name in record['rust_tests']:
         assert name in active, f'missing or ignored: {name}'
         assert name in passed, f'no actual pass receipt: {name}'

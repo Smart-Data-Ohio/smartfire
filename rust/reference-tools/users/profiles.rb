@@ -25,6 +25,8 @@ cases=[
  ["bad_voice",{voice_mode:"unknown"}], ["long_key",{push_to_talk_key:"x"*21}],
  ["inbox",{inbox_preferences:{github_review_requests:"0",agent_work:true,unknown:false}}],
  ["bad_inbox",{inbox_preferences:{agent_work:"maybe"}}],
+ ["original_github_normalize",{github_login:"  David-GH  "}],
+ ["original_github_unlink",{github_login:" "},{github_login:"david-gh"}],
  ["github",{github_login:"  Fixture-Login  "}], ["github_clear",{github_login:" "}],
  ["foreign_path",{theme:"light",user_id:149087659}],
  ["settings_and_name_rollback",{theme:"neon",name:"must not save"}],
