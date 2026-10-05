@@ -94,3 +94,46 @@ pub(super) async fn request_with_accept(
 pub(super) fn sudo() -> Value {
     json!({"sudo_verified_at":1767268800})
 }
+
+/// Rails' `post sudo_url, params: { password: ... }` submits form parameters.
+pub(super) async fn request_form(
+    fresh: &Fresh,
+    method: &str,
+    path: &str,
+    fields: &[(&str, &str)],
+    mut values: Value,
+) -> (u16, HeaderMap, String) {
+    let raw = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, [7u8; 32]);
+    values["_csrf_token"] = json!(raw);
+    let token = campfire_kit::csrf::mask(&[7u8; 32], [9u8; 32]);
+    let body = url::form_urlencoded::Serializer::new(String::new())
+        .extend_pairs(fields.iter().copied())
+        .finish();
+    let response = fresh
+        .router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(method)
+                .uri(path)
+                .header("Host", "example.org")
+                .header("Cookie", session(fresh, &values))
+                .header("X-CSRF-Token", token)
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Accept", "text/html")
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let status = response.status().as_u16();
+    let headers = response.headers().clone();
+    let body = String::from_utf8(
+        axum::body::to_bytes(response.into_body(), 1024 * 1024)
+            .await
+            .unwrap()
+            .to_vec(),
+    )
+    .unwrap();
+    (status, headers, body)
+}

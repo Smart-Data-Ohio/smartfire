@@ -107,5 +107,24 @@ if args.browser_log:
     assert selected, 'requested browser scope has no registered tests'
     assert selected <= passed, f'current registered browser tests did not pass: {sorted(selected-passed)}'
     print(f'Cutover browser scope {args.browser_scope}: {len(selected)} registered ignored tests passed with paired original browser sequences')
+ws14 = load('ledger-ws14-ws15.json')
+if ws14.get('cutover_d'):
+    closure = ws14['cutover_d']
+    current = {r['id']: r for r in ws14['records']}
+    registry = json.loads((root / 'ci/ignored-tests.json').read_text())
+    registered = {row['test'] for rows in registry.values() for row in rows}
+    names = set()
+    for rid in closure['records']:
+        row = current[rid]
+        assert row['disposition'] == 'implemented' and row['continuation'] == 'rust/ledger-ws14-ws15-d', rid
+        name = row['evidence']['test'].split(' ', 1)[1]
+        names.add(name)
+        assert name in active | ignored, ('missing D closure test', rid, name)
+        if name in ignored:
+            assert name in registered, ('unowned D browser closure', rid, name)
+    assert len(closure['records']) == closure['closed_records']
+    assert closure['remaining_records'] == sum(r['disposition'] == 'unsupported_assertion' for r in ws14['records'])
+    print(f'WS14/WS15 D: {closure["closed_records"]} exact declarations; {len(names)} compiled receipt tests; '
+          f'{closure["remaining_records"]} remaining; every ignored receipt registered')
 print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; {14+calendar_closed} WS17 closures; {len(browser_tests|d_tests)} ignored browser registrations checked; {len(receipts['ws8br_broad_closed_records'])} broad WS8 closures; 1 approved queue supersession; 0 inconsistent records")
 print(f'Cutover active remainder: {len(remaining["ws8br_broad_original_receipts"])} broad; {len(remaining["ws8br_sidebar_original_receipts"])} sidebar; {len(remaining["ws8br2_original_criteria"])} overlapping criteria; {len(remaining["ws8br_muted_browser"])} muted; {len(remaining["ws17_calendar_browser"])} Calendar; {len(remaining["excluded_geometry"])} existing geometry exclusions')

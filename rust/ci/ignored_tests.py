@@ -197,7 +197,7 @@ def verify_junit(records, path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--filter", choices=["database", "acme", "browsers", "livekit"])
+    parser.add_argument("--filter", choices=["database", "acme", "browsers", "livekit", "messaging"])
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--junit", type=Path)
     parser.add_argument("--nextest-list", type=Path)

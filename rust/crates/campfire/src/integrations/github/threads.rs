@@ -86,6 +86,14 @@ impl PullRequestThread {
         room_id: i64,
         channel_thread_id: i64,
     ) -> Result<Self> {
+        #[cfg(test)]
+        let injected = test_creation_race::take();
+        #[cfg(test)]
+        let creation = match injected {
+            Some(create) => create(tx),
+            None => Self::create(tx, pull_request_id, room_id, channel_thread_id),
+        };
+        #[cfg(not(test))]
         let creation = Self::create(tx, pull_request_id, room_id, channel_thread_id);
         Self::recover_creation(tx, pull_request_id, room_id, channel_thread_id, creation)
     }
@@ -147,4 +155,20 @@ pub fn discuss(
         }));
     }
     Ok(mapping)
+}
+
+// The pinned Rails race test replaces create! once, inserts a real winner through
+// the original model and then raises either uniqueness exception. Keep precisely
+// that producer boundary on the database writer thread; all HTTP/recovery code runs.
+#[cfg(test)]
+pub(crate) mod test_creation_race {
+    use super::*;
+    type Create = Box<dyn for<'a> FnOnce(&mut Tx<'a>) -> Result<PullRequestThread>>;
+    std::thread_local! {static CREATE: std::cell::RefCell<Option<Create>> = const { std::cell::RefCell::new(None) };}
+    pub(crate) fn set(create: Create) {
+        CREATE.with(|cell| *cell.borrow_mut() = Some(create));
+    }
+    pub(super) fn take() -> Option<Create> {
+        CREATE.with(|cell| cell.borrow_mut().take())
+    }
 }

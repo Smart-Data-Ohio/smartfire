@@ -1,0 +1,53 @@
+{
+  "production_restored": true,
+  "source_hashes": {
+    "rust/crates/campfire/src/controllers/sudos.rs": "2aef1c161db2af3d5063c1ffbd90ad35ff73dfd1f5d9c729d7cc1b22b9235ccb"
+  },
+  "results": [
+    {
+      "id": "WS15g-011",
+      "test": "controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.200s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:72:5:"
+      ],
+      "log": "WS15g-011.log",
+      "log_sha256": "c2ad8622fea1394d790aaa08c0886588c0d11c578f3ecb2669f806c436b08549",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 72
+        }
+      ]
+    }
+  ],
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "base_head": "89b05e16555630f25bc53df3cefbb3ad19a5c723",
+  "attempts": 1,
+  "killed_attempts": 1,
+  "killed_closures": 1,
+  "manifest": "rust/reference-tools/cutover/d-review252-form-mutations.json",
+  "manifest_sha256": "04aded97bdb022d7d05d526756f98fc3b6cc699f41aab59d5056c858a7cdfe78",
+  "raw_receipt": "rust/target/ledger-d-tools/review252-form-mutations/results.json",
+  "raw_receipt_sha256": "14fca30ce72de047cc599e762c86138e58d45d35d4c43fca4d5e2415ed041345",
+  "description": "Form-specific valid sudo password rejection fails the exact mapped redirect assertion; JSON requests are unaffected."
+}

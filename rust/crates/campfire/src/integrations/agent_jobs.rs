@@ -44,11 +44,16 @@ async fn deliver(app: App, job: Delivery, _: Execution) -> JobResult {
     Ok(Outcome::Done)
 }
 async fn post(app: App, job: EventWebhook, execution: Execution) -> JobResult {
-    post_deferred_with_network(&app, job, execution.id, &Network::system()).await?;
+    post_deferred_with_network(&app, job, execution.id, &app.subscription_network).await?;
     Ok(Outcome::Done)
 }
 
-async fn post_deferred_with_network(app: &App, job: EventWebhook, job_id: i64, net: &Network) -> anyhow::Result<()> {
+async fn post_deferred_with_network(
+    app: &App,
+    job: EventWebhook,
+    job_id: i64,
+    net: &Network,
+) -> anyhow::Result<()> {
     use rusqlite::OptionalExtension;
     let job = match job {
         EventWebhook::Published(job) => Some(job),
@@ -68,7 +73,9 @@ async fn post_deferred_with_network(app: &App, job: EventWebhook, job_id: i64, n
             }))
         }).await?,
     };
-    if let Some(job)=job { post_with_network(app,job,net).await?; }
+    if let Some(job) = job {
+        post_with_network(app, job, net).await?;
+    }
     Ok(())
 }
 
@@ -120,11 +127,16 @@ async fn post_event(app: &App, e: &AgentEvent, net: &Network) -> AttemptOutcome 
         Ok(ids) => ids,
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
     };
-    let access_result = if campfire_db::models::agent_delivery::MESSAGE_TYPES.contains(&e.event_type.as_str()) {
-        app.agent_repositories.resolve_messages(&app.db,id,threads).await
-    } else {
-        app.agent_repositories.resolve_work(&app.db,id,threads).await
-    };
+    let access_result =
+        if campfire_db::models::agent_delivery::MESSAGE_TYPES.contains(&e.event_type.as_str()) {
+            app.agent_repositories
+                .resolve_messages(&app.db, id, threads)
+                .await
+        } else {
+            app.agent_repositories
+                .resolve_work(&app.db, id, threads)
+                .await
+        };
     let access = match access_result {
         Ok(access) => access,
         Err(error) => return AttemptOutcome::Retry(error.to_string(), None),
@@ -568,15 +580,33 @@ mod tests {
     #[tokio::test]
     async fn ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox() {
         use campfire_db::{AgentApproval, NewApproval};
-        let test=TestApp::boot().await.expect("default seed");
-        let db=test.db().clone();
+        let test = TestApp::boot().await.expect("default seed");
+        let db = test.db().clone();
         // Inspect durable enqueue before any worker can consume the committed job.
-        test.booted.jobs.shutdown(std::time::Duration::from_secs(1)).await;
-        let approval=db.write(|tx| {
-            let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
-            AgentApproval::create(tx,NewApproval {agent_id,action:"deploy".into(),summary:"Ship".into(),..Default::default()})
-        }).await.unwrap();
-        let id=approval.id;
+        test.booted
+            .jobs
+            .shutdown(std::time::Duration::from_secs(1))
+            .await;
+        let approval = db
+            .write(|tx| {
+                let agent_id = tx.conn().query_row(
+                    "SELECT id FROM agents WHERE user_id=?",
+                    [BENDER],
+                    |r| r.get(0),
+                )?;
+                AgentApproval::create(
+                    tx,
+                    NewApproval {
+                        agent_id,
+                        action: "deploy".into(),
+                        summary: "Ship".into(),
+                        ..Default::default()
+                    },
+                )
+            })
+            .await
+            .unwrap();
+        let id = approval.id;
         db.write(|tx| {
             tx.conn().execute_batch("CREATE TRIGGER ws11_reject_decision_webhook BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected decision webhook'); END;")?;
             Ok(())
@@ -732,7 +762,11 @@ fn ws11_retry_after_and_response_policy_match_rails_vectors() {
 #[tokio::test]
 async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
     use crate::controllers::presenters::test_support::{BENDER, TestApp};
-    let test = TestApp::boot().await.expect("default seed").without_job_runner().await;
+    let test = TestApp::boot()
+        .await
+        .expect("default seed")
+        .without_job_runner()
+        .await;
     let db = test.db();
     let (first,second)=db.write(|tx| {
         let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;

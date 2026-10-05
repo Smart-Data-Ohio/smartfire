@@ -1,0 +1,179 @@
+require "application_system_test_case"
+
+class DriveAttachmentsTest < ApplicationSystemTestCase
+  include GoogleCalendarTestHelper
+  include WebMockSystemTestHelper
+
+  FILE_ID = "1AbcDefGhIjKlMnOpQrSt"
+  FILE_TWO = "2BcdEfgHiJkLmNoPqRsTu"
+
+  test "attach Drive files from the picker, send textless, and remove through edit" do
+    connect_google!(users(:jz), scopes: DRIVE_SCOPES)
+    stub_google_drive_list
+    stub_google_drive_file(FILE_ID)
+    sign_in "jz@37signals.com"
+    join_room rooms(:designers)
+
+    choose_drive_from_attach_menu
+    assert_selector ".drive-picker__item", text: "Q3 Planning"
+
+    within('[role="dialog"][aria-label="Find a Drive file"]') do
+      assert_selector 'li[role="presentation"] > button[role="option"]'
+      assert_selector 'li[role="presentation"] > button.drive-picker__attach'
+      assert_no_selector '[role="option"] button'
+    end
+
+    attach_from_picker "Q3 Planning"
+    assert_selector ".composer__drive-attachments .drive-attachment-chip", text: "Q3 Planning"
+    assert_no_selector '[role="dialog"][aria-label="Find a Drive file"]'
+
+    choose_drive_from_attach_menu
+    attach_from_picker "Budget 2026"
+    assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 2
+
+    chip_remove_size = page.evaluate_script(<<~JS)
+      (() => {
+        const button = document.querySelector(".drive-attachment-chip__remove");
+        const rect = button.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      })()
+    JS
+    assert_operator chip_remove_size["width"], :>=, 24, "expected the Drive chip remove button to be at least 24px wide"
+    assert_operator chip_remove_size["height"], :>=, 24, "expected the Drive chip remove button to be at least 24px tall"
+
+    # Dropping a pending chip keeps it out of the sent message.
+    within_chip("Budget 2026") { find("button").click }
+    assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 1
+
+    click_on "Send Message"
+
+    assert_no_selector ".composer__drive-attachments .drive-attachment-chip"
+    assert_selector "a.drive-attachment[href='https://drive.google.com/open?id=#{FILE_ID}']"
+    assert_selector ".drive-attachments .drive-chip__name", text: "Q3 Planning"
+    assert_equal [ FILE_ID ], Message.last.drive_attachments.map(&:file_id)
+
+    visit edit_room_message_path(rooms(:designers), Message.last)
+    assert_selector ".drive-attachment-chip", text: "Google Drive file"
+
+    # The message is textless, so dropping its only attachment needs replacement text.
+    fill_in "Message", with: "the file moved elsewhere"
+    click_on "Remove Google Drive file"
+    assert_no_selector ".drive-attachment-chip"
+
+    click_on "Save changes"
+
+    # The edit frame swaps the form for the rendered message body
+    # without navigating, and the form page carries chips rather than
+    # attachment links — so the no-attachment assertion below passes
+    # vacuously until the PATCH lands. Wait for the saved text first
+    # (the frame holds the body without the list's .message wrapper):
+    # the removal saves synchronously with the message, so once the
+    # rendered body proves the save completed, the database assertion
+    # is deterministic.
+    assert_selector ".message__body", text: "the file moved elsewhere", wait: 10
+
+    assert_no_selector "a.drive-attachment"
+    assert_empty Message.last.drive_attachments
+  end
+
+  test "edit a room message in the composer and remove one of two attachments" do
+    connect_google!(users(:jz), scopes: DRIVE_SCOPES)
+    stub_google_drive_list
+    stub_google_drive_file(FILE_ID)
+    stub_google_drive_file(FILE_TWO, body: drive_file_payload(name: "Budget 2026", mime_type: "application/vnd.google-apps.spreadsheet"))
+    sign_in "jz@37signals.com"
+    join_room rooms(:designers)
+
+    choose_drive_from_attach_menu
+    attach_from_picker "Q3 Planning"
+    choose_drive_from_attach_menu
+    attach_from_picker "Budget 2026"
+    fill_in "Write a message", with: "two files attached"
+    click_on "Send Message"
+
+    assert_selector "a.drive-attachment", count: 2
+    assert_selector ".drive-attachments .drive-chip__name", text: "Q3 Planning"
+    assert_selector ".drive-attachments .drive-chip__name", text: "Budget 2026"
+
+    within_message(Message.last) do
+      right_click_message
+    end
+    assert_message_menu_open
+    click_button "Edit message"
+
+    assert_selector "[data-composer-target='contextLabel']", text: "Editing Message", wait: 10
+    assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 2
+    within_chip("Budget 2026") { find("button").click }
+    assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 1
+    click_on "Send Message"
+
+    assert_selector "a.drive-attachment", count: 1
+    assert_selector "a.drive-attachment[href='https://drive.google.com/open?id=#{FILE_ID}']"
+    assert_selector "[data-composer-target='context'][hidden]", visible: false
+    assert_equal [ FILE_ID ], Message.last.drive_attachments.map(&:file_id)
+  end
+
+  test "attach a Drive file from the thread composer" do
+    connect_google!(users(:jz), scopes: DRIVE_SCOPES)
+    stub_google_drive_list
+    stub_google_drive_file(FILE_ID)
+    sign_in "jz@37signals.com"
+
+    room = rooms(:designers)
+    thread = ChannelThread.create!(room:, creator: users(:jz), name: "Drive thread")
+    ThreadMembership.join!(thread, users(:jz))
+    join_room room
+    visit room_url(room, thread: thread.id)
+
+    assert_selector "#thread-panel [data-thread-panel-target='conversation']", visible: true, wait: 10
+    within("#thread-panel") do
+      find("button.composer__attachment-btn", wait: 10)
+      wait_for_thread_panel_settled
+      choose_drive_from_attach_menu
+      assert_selector '[role="dialog"][aria-label="Find a Drive file"]', visible: true, wait: 10
+      assert_selector ".drive-picker__item", text: "Q3 Planning", wait: 10
+      attach_from_picker "Q3 Planning"
+      assert_selector ".composer__drive-attachments .drive-attachment-chip", text: "Q3 Planning"
+      fill_in "Write a thread reply", with: "thread file attached"
+      click_button "Send Reply"
+    end
+
+    assert_selector "#thread-panel a.drive-attachment[href='https://drive.google.com/open?id=#{FILE_ID}']", wait: 10
+    assert_equal [ FILE_ID ], thread.messages.order(:id).last.drive_attachments.map(&:file_id)
+  end
+
+  private
+    # The + button owns the Drive flow now: open its menu, then choose
+    # From Google Drive, exactly as the old Drive button click did.
+    def choose_drive_from_attach_menu
+      find("button.composer__attachment-btn").click
+      click_button "From Google Drive"
+    end
+
+    # The thread drawer slides in over a 220ms transform transition while its
+    # content mounts from a deep link, so the Drive button can exist (and be
+    # found) while still translating. Clicking mid-slide can miss the moving
+    # target and silently no-op, leaving the picker closed. Poll the settled
+    # state the click depends on instead of racing the transition.
+    def wait_for_thread_panel_settled(timeout: 10)
+      page.document.synchronize(timeout, errors: [ Capybara::ExpectationNotMet ]) do
+        unless thread_panel_settled?
+          raise Capybara::ExpectationNotMet, "expected the thread panel slide transition to settle"
+        end
+      end
+    end
+
+    def thread_panel_settled?
+      page.evaluate_script("getComputedStyle(document.querySelector('#thread-panel .thread-panel__surface')).transform === 'none'")
+    end
+
+    def attach_from_picker(name)
+      item = find(".drive-picker__item", text: name)
+      item.hover
+      item.find("button.drive-picker__attach").click
+    end
+
+    def within_chip(name, &block)
+      within find(".drive-attachment-chip", text: name), &block
+    end
+end

@@ -179,13 +179,16 @@ struct ZoneBoundary {
     last_offset: Option<i64>,
     last_previous_offset: Option<i64>,
 }
-fn boundary_offset(zone: &jiff::tz::TimeZone, seconds: i64, local: bool) -> Option<i64> {
+fn zone_boundary(zone: &jiff::tz::TimeZone) -> Option<&'static ZoneBoundary> {
     static ZONES: std::sync::LazyLock<std::collections::HashMap<String, ZoneBoundary>> =
         std::sync::LazyLock::new(|| {
             serde_json::from_str(include_str!("date_zone_boundaries.json"))
                 .expect("pinned TZInfo boundaries")
         });
-    let boundary = ZONES.get(zone.iana_name().unwrap_or("UTC"))?;
+    ZONES.get(zone.iana_name().unwrap_or("UTC"))
+}
+fn boundary_offset(zone: &jiff::tz::TimeZone, seconds: i64, local: bool) -> Option<i64> {
+    let boundary = zone_boundary(zone)?;
     if let Some(offset) = boundary.offset {
         return Some(offset);
     }
@@ -213,6 +216,22 @@ fn boundary_offset(zone: &jiff::tz::TimeZone, seconds: i64, local: bool) -> Opti
         return boundary.last_offset;
     }
     None
+}
+/// The reference's first/last finite TZInfo period, including its abbreviation.
+/// A calendar proxy supplies calendar fields, never a timezone period.
+pub fn boundary_period(zone: &jiff::tz::TimeZone, seconds: i64) -> Option<(i64, String)> {
+    let boundary = zone_boundary(zone)?;
+    let (offset, sample) = if let Some(offset) = boundary.offset {
+        (offset, 0)
+    } else if seconds < boundary.first_at? {
+        (boundary.first_offset?, boundary.first_at?.checked_sub(1)?)
+    } else if seconds >= boundary.last_at? {
+        (boundary.last_offset?, boundary.last_at?)
+    } else {
+        return None;
+    };
+    let sample = jiff::Timestamp::from_second(sample).ok()?;
+    Some((offset, zone.to_offset_info(sample).abbreviation().to_owned()))
 }
 /// Extended-year rendering uses the same pinned zone periods as the request cast.
 fn local_parts<T: TimeValue>(at: T, zone: &jiff::tz::TimeZone) -> (jiff::Zoned, I512, i64, bool) {

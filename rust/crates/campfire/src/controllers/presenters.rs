@@ -368,7 +368,7 @@ impl<'a> Presenter<'a> {
             render_zone: self.render_zone.clone(),
             users: RefCell::default(),
             room_names: RefCell::default(),
-            render_account: RefCell::default(),
+            render_account: self.render_account.clone(),
             search_preloads: Some(data),
             link_fetches: self.link_fetches.clone(),
             twitter_fetches: self.twitter_fetches.clone(),

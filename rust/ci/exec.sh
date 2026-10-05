@@ -30,6 +30,7 @@ docker run --rm --init --network host --user "$(id -u):$(id -g)" \
   --env WS12_BROWSER_SCRATCH="$scratch/ws12" --env WS13_BROWSER_SCRATCH="$scratch/ws13" \
   --env WS11UI_BROWSER_SCRATCH="$scratch/ws11ui" \
   --env WS8BM_BROWSER_SCRATCH="$scratch/ws8bm" \
+  --env WS14_BROWSER_SCRATCH="$scratch/ws14" \
   --env PARITY_IMAGE="${PARITY_IMAGE:-ws19b-ci-reference}" --env PARITY_CAPTURE_RUNTIME=docker \
   --env WS8BM_PINNED_BROWSER=1 \
   "${RUST_CORRECTNESS_IMAGE:-campfire-correctness}" "$@"

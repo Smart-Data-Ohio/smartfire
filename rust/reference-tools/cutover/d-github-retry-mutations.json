@@ -1,0 +1,48 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "mutations": [
+    {
+      "id": "WS15g-034",
+      "closure": "WS15g-034",
+      "package": "campfire",
+      "file": "rust/crates/db/src/models/message.rs",
+      "old": "pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {",
+      "new": "pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {\n        if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-034\") { return Ok(()); }",
+      "test": "controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 387,
+          "end_line": 387,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, quote).await)"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-037",
+      "closure": "WS15g-037",
+      "package": "campfire",
+      "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+      "old": ".flat_map(|c| c.pins.iter().map(|t| t.jiff()))",
+      "new": ".filter(|_| !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-037\"))).flat_map(|c| c.pins.iter().map(|t| t.jiff()))",
+      "test": "controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 492,
+          "end_line": 492,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(before, pinned)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 521,
+          "end_line": 525,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+        }
+      ]
+    }
+  ]
+}

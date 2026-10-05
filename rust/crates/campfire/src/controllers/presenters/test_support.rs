@@ -12,6 +12,82 @@ use tower::ServiceExt;
 use crate::app::{Booted, boot_with_services};
 use crate::config::Config;
 
+/// The pinned Rails `test/support/test_session_controller.rb` GET bridge. Only tests
+/// mount it; credential verification, the verified session and cookies use real producers.
+pub fn test_session_router(app: &crate::app::App) -> axum::Router {
+    let kit = campfire_kit::Kit::new(
+        campfire_kit::KitConfig::production(app.config.disable_ssl),
+        std::sync::Arc::new(campfire_kit::RailsCrypto::new(app.secrets.clone())),
+        app.clock.clone(),
+        app.clone(),
+    );
+    axum::Router::new()
+        .route(
+            "/test_session",
+            axum::routing::get(campfire_kit::action(create_test_session)),
+        )
+        .with_state(kit.clone())
+        .layer(axum::middleware::from_fn_with_state(
+            kit,
+            campfire_kit::adapter::rails_middleware,
+        ))
+}
+
+async fn create_test_session(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+    crate::concerns::before_actions(
+        c,
+        crate::concerns::Before::default().allow_unauthenticated_access(),
+    )
+    .await?;
+    let email = c.param_str("email_address").unwrap_or_default().to_owned();
+    let password = c.param_str("password").unwrap_or_default().to_owned();
+    if let Some(user) = crate::concerns::authenticate_by(c, email, password).await? {
+        crate::concerns::start_new_verified_session_for(c, user).await?;
+        let location = crate::concerns::post_authenticating_url(c);
+        c.redirect_to(&location)
+    } else {
+        Ok(c.render_as(StatusCode::UNAUTHORIZED, "text/plain", "Unauthorized"))
+    }
+}
+
+/// `SessionTestHelper#sign_in`: GET with the fixture password and require the issued cookie.
+pub async fn sign_in_for_tests(app: &crate::app::App, user_id: i64) -> String {
+    let email = app
+        .db
+        .read(move |conn| Ok(campfire_db::User::find(conn, user_id)?.email_address))
+        .await
+        .unwrap()
+        .unwrap();
+    let path = format!(
+        "/test_session?email_address={}&password=secret123456",
+        encode(&email)
+    );
+    let response = test_session_router(app)
+        .oneshot(
+            Request::builder()
+                .method(Method::GET)
+                .uri(path)
+                .header(header::HOST, "example.org")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let cookies = response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .map(|value| value.to_str().unwrap().split(';').next().unwrap())
+        .collect::<Vec<_>>();
+    assert!(cookies.iter().any(|cookie| {
+        cookie
+            .strip_prefix("session_token=")
+            .is_some_and(|value| !value.is_empty())
+    }));
+    cookies.join("; ")
+}
+
+
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 
 /// Failure artifacts are output, never fixture inputs. Create their parent and a private
@@ -226,6 +302,19 @@ impl TestApp {
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
         Self::boot_with_clients("default", clock, network, extra, None).await
+    }
+
+    /// All real GitHub clients use the caller's isolated external-service transport.
+    pub async fn boot_with_github_network_clock_and_env(
+        network: crate::integrations::net::Network,
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services(
+            "default", clock, network.clone(), extra, crate::huddle::Config::default(),
+            Some(crate::integrations::github::client::AppClient::with_network(None, None, network.clone())),
+            Some(crate::integrations::github::client::ReadClient::with_network(None, network)),
+        ).await
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
@@ -446,6 +535,13 @@ impl TestApp {
             app: self,
             cookies: BTreeMap::new(),
         }
+    }
+
+    pub async fn sign_in_for_tests(&self, user_id: i64) -> Browser<'_> {
+        let cookie = sign_in_for_tests(&self.booted.app, user_id).await;
+        let mut browser = self.anonymous();
+        browser.absorb_cookie_header(&cookie);
+        browser
     }
 
     /// A browser signed in as `user_id` with a new session of its own (two-factor verified, as

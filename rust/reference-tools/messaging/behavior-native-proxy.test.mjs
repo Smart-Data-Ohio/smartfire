@@ -44,3 +44,24 @@ test('native JavaScript fault leaves the real metadata and writes intact',async(
     assert.equal(probe.applied,1);assert.deepEqual(probe.networkFailures,[]);
   }finally{await proxy.close();await new Promise(resolve=>app.close(resolve));}
 });
+test('same-origin mutation transport rejects external HTTP and tunnels before dialing',async()=>{
+  let externalRequests=0;
+  const app=http.createServer((request,response)=>response.end('same-origin'));
+  const external=http.createServer((request,response)=>{externalRequests++;response.end('external');});
+  await Promise.all([new Promise(resolve=>app.listen(0,'127.0.0.1',resolve)),new Promise(resolve=>external.listen(0,'127.0.0.1',resolve))]);
+  const base=`http://127.0.0.1:${app.address().port}`,outside=`http://127.0.0.1:${external.address().port}`;
+  const probe={applied:0,networkFailures:[]},proxy=await nativeAssetProxy(base,null,probe,{sameOriginOnly:true});
+  const send=(path,method='GET',headers={})=>new Promise((resolve,reject)=>{
+    const request=http.request(proxy.url,{method,path,headers},response=>{response.resume();response.on('end',()=>resolve(response.statusCode));});
+    request.on('connect',(response,socket)=>{socket.destroy();resolve(response.statusCode);});
+    request.on('error',reject);request.end();
+  });
+  try {
+    assert.equal(await send(base+'/up'),200);
+    assert.equal(await send(outside+'/external'),502);
+    assert.equal(await send(new URL(outside).host,'CONNECT'),502);
+    assert.equal(await send(outside+'/cable','GET',{Connection:'Upgrade',Upgrade:'websocket'}),502);
+    assert.equal(externalRequests,0);
+    assert.equal(probe.networkFailures.length,3);
+  }finally{await proxy.close();await Promise.all([new Promise(resolve=>app.close(resolve)),new Promise(resolve=>external.close(resolve))]);}
+});

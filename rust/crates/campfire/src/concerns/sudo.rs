@@ -1,6 +1,6 @@
 //! `SudoMode` and the WS14 hand-off for Google re-authentication.
 use super::{require_current_user, session_keys};
-use campfire_db::AuthAudit;
+use campfire_db::{AuthAudit, Connection, TwoFactorCredential, Tx};
 use campfire_kit::{Ctx, Response, Result, halt};
 use std::sync::{Arc, RwLock};
 
@@ -35,6 +35,51 @@ impl State {
         Self {
             google: RwLock::new(self.google.read().unwrap_or_else(|p| p.into_inner()).clone()),
             extra_verifiers: RwLock::new(self.extra_verifiers()),
+        }
+    }
+
+    /// The registered verifier's model API, shared by the prompt and confirmation action.
+    pub fn verifier_available(
+        &self,
+        conn: &Connection,
+        name: &str,
+        user_id: i64,
+    ) -> campfire_db::Result<bool> {
+        Ok(name == "totp"
+            && self
+                .extra_verifiers()
+                .iter()
+                .any(|registered| registered == name)
+            && TwoFactorCredential::for_user(conn, user_id)?
+                .is_some_and(|credential| credential.enabled()))
+    }
+
+    /// None is Rails' :unsupported; a rejected credential is Some(false).
+    pub fn verify_totp(
+        &self,
+        tx: &mut Tx<'_>,
+        user_id: i64,
+        secrets: &rails_compat::Secrets,
+        code: &str,
+    ) -> campfire_db::Result<Option<bool>> {
+        let Some(mut credential) = TwoFactorCredential::for_user(tx.conn(), user_id)?
+            .filter(|credential| credential.enabled())
+        else {
+            return Ok(None);
+        };
+        if credential.locked_out(tx.now()) {
+            return Ok(Some(false));
+        }
+        if credential.verify_code(
+            tx,
+            &rails_compat::ar_encryption::ArEncryption::new(secrets),
+            code,
+        )? {
+            credential.register_challenge_success(tx)?;
+            Ok(Some(true))
+        } else {
+            credential.register_challenge_failure(tx)?;
+            Ok(Some(false))
         }
     }
 

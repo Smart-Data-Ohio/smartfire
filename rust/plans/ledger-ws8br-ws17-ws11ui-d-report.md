@@ -196,9 +196,13 @@ python rust/ci/ignored_tests.py
 
 **25 Python tests passed** after merging main (1 fixture reset, 24 generated-host cases,
 including this branch's include-input case on main's #251 include audit). The ignored
-registry has **25 correctness tests and 7 compiled workspace utilities, zero unowned
-ignores** (the source guard prints 8 because it also counts
-`ws8bm_browser_host_without_jobs`, which only the generated messaging host compiles). A fresh
+registry had **25 correctness tests and 7 compiled workspace utilities, zero unowned
+ignores** on this branch (78 correctness tests after merging #252). The source guard
+prints 8 utilities because it also counts `ws8bm_browser_host_without_jobs`, which only
+the generated messaging host compiles. Merging #251 and #252 changed `app.rs`,
+`concerns/sudo.rs` and `presenters.rs` (main's additions only), so the receipts'
+`implementation_sha256` for those three files were refreshed and the four wrappers
+re-ran on the merged head in the dispatched correctness matrix. A fresh
 generated build tree carries all **934 literal crate include sites** (933 inside
 `rust/`, referencing 651 distinct inputs, plus the root `public/500.html` fixture),
 including plan/receipt inputs outside the old whitelist; a filtered generated host compile

@@ -49,6 +49,9 @@ pub enum Error {
     Rejected(String),
     #[error(transparent)]
     Storage(#[from] campfire_db::Error),
+    /// An exception escaping a client operation (distinct from a classified HTTP response).
+    #[error(transparent)]
+    JsonParser(#[from] serde_json::Error),
 }
 impl Error {
     pub fn unavailable(&self) -> bool {

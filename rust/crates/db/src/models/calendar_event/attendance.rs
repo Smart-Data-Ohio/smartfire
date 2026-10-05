@@ -33,6 +33,55 @@ impl EventAttendance {
             Self::from_row,
         )
     }
+    /// EventAttendance#create!: unlike Event#respond!, creation rejects an
+    /// existing attendance instead of updating that member's response.
+    pub fn create(tx: &mut Tx<'_>, event_id: i64, user_id: i64, response: &str) -> Result<Self> {
+        tx.savepoint(|tx| {
+            if Self::find_for(tx.conn(), event_id, user_id)?.is_some() {
+                let mut errors = Errors::default();
+                errors.add("user_id", "has already been taken");
+                errors.into_result()?;
+            }
+            let event = CalendarEvent::find(tx.conn(), event_id)?;
+            Self::save_response(tx, &event, user_id, response, true)
+        })
+    }
+    /// EventAttendance#update!: unrelated timestamp saves run validation but
+    /// enqueue calendar synchronization only when the response changes.
+    pub fn update(
+        tx: &mut Tx<'_>,
+        id: i64,
+        response: Option<&str>,
+        updated_at: Option<Timestamp>,
+    ) -> Result<Self> {
+        tx.savepoint(|tx| {
+            let previous = query_one(
+                tx.conn(),
+                "SELECT * FROM event_attendances WHERE id=?",
+                [id],
+                Self::from_row,
+            )?
+            .ok_or(crate::Error::RecordNotFound("EventAttendance"))?;
+            let event = CalendarEvent::find(tx.conn(), previous.event_id)?;
+            let saved = Self::save_response(
+                tx,
+                &event,
+                previous.user_id,
+                response.unwrap_or(&previous.response),
+                true,
+            )?;
+            if let Some(stamp) = updated_at {
+                tx.conn().execute(
+                    "UPDATE event_attendances SET updated_at=? WHERE id=?",
+                    params![stamp, saved.id],
+                )?;
+            }
+            Ok(
+                Self::find_for(tx.conn(), saved.event_id, saved.user_id)?
+                    .expect("saved attendance"),
+            )
+        })
+    }
     pub fn for_event(conn: &Connection, event_id: i64) -> Result<Vec<Self>> {
         query_all(
             conn,

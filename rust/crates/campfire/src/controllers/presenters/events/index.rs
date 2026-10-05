@@ -154,8 +154,8 @@ impl Facts {
                     .ok_or(campfire_db::Error::RecordNotFound("User"))?
                     .name
                     .clone(),
-                starts_at: e.starts_at.jiff(),
-                ends_at: e.ends_at.map(|t| t.jiff()),
+                starts_at: super::calendar_time(e.starts_at),
+                ends_at: e.ends_at.map(super::calendar_time),
                 time_zone: e.time_zone.clone(),
                 series: e.series(),
                 cancelled: e.cancelled(),

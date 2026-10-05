@@ -1,0 +1,172 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "mutations": [
+    {
+      "id": "WS14g-010",
+      "file": "rust/crates/campfire/src/concerns/sudo.rs",
+      "old": "state.register_verifier(\"totp\");",
+      "new": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-010\")) { state.register_verifier(\"totp\"); }",
+      "test": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 19
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 38
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "id": "WS14g-016",
+      "file": "rust/crates/campfire/src/controllers/sudos.rs",
+      "old": "if verified {\n        let now = c.now();",
+      "new": "if verified || std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-016\") {\n        let now = c.now();",
+      "test": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 91
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 92
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 95
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 97
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 98
+        }
+      ]
+    },
+    {
+      "id": "WS14g-021",
+      "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+      "old": "SudoContinuation::Redirect(path)",
+      "new": "SudoContinuation::Redirect(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-021\") { root_path.into() } else { path })",
+      "test": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+      "scope": "pub fn continue_after_sudo(",
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 106
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 107
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 111
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 112
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 117
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 118
+        }
+      ]
+    },
+    {
+      "id": "WS14g-023",
+      "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+      "old": "verified_at > now - SUDO_TIMEOUT",
+      "new": "verified_at > now - (if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-023\") { SignedDuration::from_mins(13) } else if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-024\") { SignedDuration::from_mins(17) } else { SUDO_TIMEOUT })",
+      "test": "cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 151
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 152
+        }
+      ]
+    },
+    {
+      "id": "WS14g-024",
+      "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+      "reuse": true,
+      "test": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 160
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 161
+        }
+      ]
+    },
+    {
+      "id": "WS14g-108",
+      "file": "rust/crates/campfire/src/integrations/google/meeting_refresh.rs",
+      "old": "store_error(app, user_id, now, UNREACHABLE, true).await?;",
+      "new": "store_error(app, user_id, now, UNREACHABLE, !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-108\"))).await?;",
+      "test": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 258
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 265
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 266
+        }
+      ]
+    },
+    {
+      "id": "WS14g-181",
+      "file": "rust/crates/db/src/models/google_account.rs",
+      "old": "if Self::for_user(conn, grant.user_id)?.is_some() {",
+      "new": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-181\")) && Self::for_user(conn, grant.user_id)?.is_some() {",
+      "test": "cutover_d_duplicate_google_account_is_invalid_before_persistence",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 181
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 182
+        }
+      ]
+    }
+  ]
+}

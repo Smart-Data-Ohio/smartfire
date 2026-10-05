@@ -1,0 +1,861 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "reviewed_head": "9172466d49e27467dcf01ac3176c4c2fa89fa066",
+  "attempts": 9,
+  "killed_attempts": 9,
+  "killed_closures": 9,
+  "helper_affected_closures_killed": 8,
+  "card_scope_closures_killed": 1,
+  "remaining_surviving_closures": [],
+  "production_restored": true,
+  "source_hashes": {
+    "rust/crates/campfire/src/concerns.rs": "0b8ea117b55774226894ab8a59575cb022838a1f475130ac5d9eaed76e9b30be",
+    "rust/crates/campfire/src/controllers/sudos.rs": "2aef1c161db2af3d5063c1ffbd90ad35ff73dfd1f5d9c729d7cc1b22b9235ccb",
+    "rust/crates/campfire/src/integrations/github/actions.rs": "f4a8efa8091472babe70c267f58e73b9f98e7ed8b8a0f8a5b71e15df93c9307c",
+    "rust/crates/views/src/github.rs": "d369703e0a9583cafaaf0713ba0dc78d729e6d67820de6984ecc526a3d16b913"
+  },
+  "manifest": "rust/reference-tools/cutover/d-review252-mutations.json",
+  "manifest_sha256": "735c46bc22fd960043ee50f7ceb13a91a01cbbf8df778af487df680268f1e172",
+  "raw_receipt": "rust/target/ledger-d-tools/review252-mutations/results.json",
+  "raw_receipt_sha256": "dd07b914a11f57f51e399971b02414dd4ee41fbd1e7a0296af1973dcd24e5a4a",
+  "helper_inventory_before": {
+    "records": 127,
+    "required": 142,
+    "mapped": 107,
+    "missing": 35,
+    "records_with_gaps": 27
+  },
+  "helper_omissions": [
+    {
+      "id": "WS14e-102",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS14e-103",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS14e-104",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS14e-105",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-016",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-021",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-023",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-024",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-009",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-010",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-011",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-012",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-013",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-014",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-015",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-016",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-017",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-018",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-023",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-024",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        },
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect",
+          "helper": "grant_sudo_access"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-042",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-043",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-047",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-048",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-049",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-050",
+      "missing": [
+        {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?",
+          "helper": "sign_in"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-058",
+      "missing": [
+        {
+          "file": "test/jobs/github/perform_agent_action_job_test.rb",
+          "line": 515,
+          "text": "assert action.valid?, action.errors.full_messages.to_sentence",
+          "helper": "build_approval"
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "id": "WS14e-102",
+      "test": "controllers::rooms::events::tests::cutover::d_cards::cutover_d_cards_room_http_scopes_single_card_title_time_venue_organizer_and_attendance_frame",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::rooms::events::tests::cutover::d_cards::cutover_d_cards_room_http_scopes_single_card_title_time_venue_organizer_and_attendance_frame)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.521s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/presenters/test_support.rs:82:5:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS14e-102.log",
+      "log_sha256": "df3655c11b8846ee0cd36dd0d91a1395ebe246328518edf00eb469e04de8c5f6",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+          "line": 82
+        }
+      ],
+      "mutation": {
+        "id": "WS14e-102",
+        "package": "campfire",
+        "test": "controllers::rooms::events::tests::cutover::d_cards::cutover_d_cards_room_http_scopes_single_card_title_time_venue_organizer_and_attendance_frame",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+            "line": 82
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?"
+        },
+        "file": "rust/crates/campfire/src/concerns.rs",
+        "old": "c.cookies.set_signed(\"session_token\", cookie)",
+        "new": "if matches!(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref(), Some(\"WS14e-102\") | Some(\"WS14g-016\") | Some(\"WS14g-021\") | Some(\"WS15g-011\")) { Ok(()) } else { c.cookies.set_signed(\"session_token\", cookie) }",
+        "description": "Suppress the real verified-session authentication cookie writer"
+      }
+    },
+    {
+      "id": "WS14g-016",
+      "test": "app::cutover_d_tests::cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(app::cutover_d_tests::cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.470s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/presenters/test_support.rs:82:5:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS14g-016.log",
+      "log_sha256": "0fb4a61eb45f83f47e0bd5f6aac0393b1958180f1f4b89344baaae56a2ad40cb",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+          "line": 82
+        }
+      ],
+      "mutation": {
+        "id": "WS14g-016",
+        "package": "campfire",
+        "test": "app::cutover_d_tests::cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+            "line": 82
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?"
+        },
+        "reuse": true
+      }
+    },
+    {
+      "id": "WS14g-021",
+      "test": "app::cutover_d_tests::cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(app::cutover_d_tests::cutover_d_gated_audit_csv_get_continues_and_returns_csv)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.464s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/presenters/test_support.rs:82:5:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS14g-021.log",
+      "log_sha256": "eb321d8421a80a3677b83f45e0d410a38eca77254683f4e04f20a825a0ce988b",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+          "line": 82
+        }
+      ],
+      "mutation": {
+        "id": "WS14g-021",
+        "package": "campfire",
+        "test": "app::cutover_d_tests::cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+            "line": 82
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?"
+        },
+        "reuse": true
+      }
+    },
+    {
+      "id": "WS15g-011",
+      "test": "controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.826s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/presenters/test_support.rs:82:5:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS15g-011.log",
+      "log_sha256": "e64c11668b70b49b8470c81ebd2f73bbae17790f79ce5f20a344128325f87764",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+          "line": 82
+        }
+      ],
+      "mutation": {
+        "id": "WS15g-011",
+        "package": "campfire",
+        "test": "controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+            "line": 82
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 9,
+          "text": "assert cookies[:session_token].present?"
+        },
+        "reuse": true
+      }
+    },
+    {
+      "id": "WS14g-023",
+      "test": "app::cutover_d_tests::cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(app::cutover_d_tests::cutover_d_fourteen_minute_confirmation_allows_real_join_code_post)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.735s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:143:5:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS14g-023.log",
+      "log_sha256": "339a7e307e0706bbef3504cb1e4cc86566756bca464409aa5de86851c0f6615f",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 143
+        }
+      ],
+      "mutation": {
+        "id": "WS14g-023",
+        "package": "campfire",
+        "test": "app::cutover_d_tests::cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+            "line": 143
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect"
+        },
+        "file": "rust/crates/campfire/src/controllers/sudos.rs",
+        "scope": "pub async fn continue_after_sudo",
+        "old": "c.redirect_to(&path)",
+        "new": "if matches!(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref(), Some(\"WS14g-023\") | Some(\"WS14g-024\") | Some(\"WS15g-023\")) { Ok(c.head(StatusCode::OK)) } else { c.redirect_to(&path) }",
+        "description": "Return real sudo confirmation HTTP 200 instead of the required redirect"
+      }
+    },
+    {
+      "id": "WS14g-024",
+      "test": "app::cutover_d_tests::cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(app::cutover_d_tests::cutover_d_sixteen_minute_confirmation_gates_real_join_code_post)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.762s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:143:5:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS14g-024.log",
+      "log_sha256": "8f880e1b67737d8daa41a078842cbec8a16d47fa7c4bd82d3ea3fbff05a39f87",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 143
+        }
+      ],
+      "mutation": {
+        "id": "WS14g-024",
+        "package": "campfire",
+        "test": "app::cutover_d_tests::cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+            "line": 143
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect"
+        },
+        "reuse": true
+      }
+    },
+    {
+      "id": "WS15g-023",
+      "test": "controllers::github::cutover_d_tests::cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.116s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:72:5:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS15g-023.log",
+      "log_sha256": "8ecfa1a75dc4ec969343a259d25c0d32c2cfe33f15723861a783c3949bfa73ce",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 72
+        }
+      ],
+      "mutation": {
+        "id": "WS15g-023",
+        "package": "campfire",
+        "test": "controllers::github::cutover_d_tests::cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+            "line": 72
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/test_helpers/session_test_helper.rb",
+          "line": 16,
+          "text": "assert_response :redirect"
+        },
+        "reuse": true
+      }
+    },
+    {
+      "id": "WS15g-058",
+      "test": "controllers::github::cutover_d_tests::cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.854s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:1124:9:",
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:1126:14:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS15g-058.log",
+      "log_sha256": "f516e5e0b16c6b1faab519bc61631c9589e7eaaf8b96e93cbccce98f837abd23",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1124
+        }
+      ],
+      "mutation": {
+        "id": "WS15g-058",
+        "package": "campfire",
+        "test": "controllers::github::cutover_d_tests::cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+            "line": 1124
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/jobs/github/perform_agent_action_job_test.rb",
+          "line": 515,
+          "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+        },
+        "file": "rust/crates/campfire/src/integrations/github/actions.rs",
+        "old": "pub fn errors(&self) -> Errors {",
+        "new": "pub fn errors(&self) -> Errors {\n        if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"WS15g-058\") {\n            let mut errors = Errors::default();\n            errors.add(\"kind\", \"mutation rejects valid comment\");\n            return errors;\n        }",
+        "description": "Reject the actual valid approval action through the real model errors API"
+      }
+    },
+    {
+      "id": "WS15g-048",
+      "test": "controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   2.315s] 1 test run: 0 passed, 1 failed, 3146 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:723:17:"
+      ],
+      "log": "rust/target/ledger-d-tools/review252-mutations/WS15g-048.log",
+      "log_sha256": "19277199c4b72f137df75b1fda25e01b1f7b2755cb57335ad76ef8213d9bbc4b",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 723
+        }
+      ],
+      "mutation": {
+        "id": "WS15g-048",
+        "package": "campfire",
+        "test": "controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+        "expected_assertions": [
+          {
+            "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+            "line": 723
+          }
+        ],
+        "rails_assertion": {
+          "file": "test/integration/github_pr_threads_test.rb",
+          "line": 87,
+          "text": "assert_select \".github-pr-thread-header .github-pr-card\", count: 1"
+        },
+        "file": "rust/crates/views/src/github.rs",
+        "scope": "pub fn thread_header",
+        "old": "if pr.private == Some(false) {",
+        "new": "if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"WS15g-048\") && pr.private == Some(false) && !pr.files_loaded {\n        html.push_str(\"</div><div>\");\n    }\n    if pr.private == Some(false) {",
+        "description": "Close the real header before rendering the loading PR card, moving it to a sibling container"
+      }
+    }
+  ],
+  "note": "Only exact mapped assertion failures count. These nine follow-up executions are separate from the preserved original 34 attempts across 32 closures. All real producer bytes are restored; raw logs preserve execution-time assertion locations."
+}
