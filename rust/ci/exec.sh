@@ -4,6 +4,9 @@ repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 : "${RUNNER_TEMP:?Set RUNNER_TEMP to a disk-backed scratch directory}"
 scratch="$RUNNER_TEMP/rust-correctness"
 mkdir -p "$scratch"
+# The same CI profile and Cargo home as cargo.sh (see cargo-config.toml).
+mkdir -p "$repo/rust/.cargo-home"
+install -m 644 "$repo/rust/ci/cargo-config.toml" "$repo/rust/.cargo-home/config.toml"
 git_mount=()
 git_common=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)
 if [[ "$git_common" != "$repo/"* ]]; then
