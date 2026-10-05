@@ -14,13 +14,15 @@ fi
 # Expose only our scratch directory, never the runner's file-command channels.
 # Native Selenium isolates its driver with unprivileged user/network/PID
 # namespaces. Docker's default syscall/profile restrictions forbid that setup.
+# Give the container a short, disk-backed home: the original managed Chrome
+# profile under ~/.cache must leave room for its 108-byte SingletonSocket path.
 docker run --rm --init --network host --user "$(id -u):$(id -g)" \
   --security-opt seccomp=unconfined --security-opt "apparmor=${RUST_CI_APPARMOR_PROFILE:-unconfined}" \
   --group-add "$(stat -c %g /var/run/docker.sock)" \
   --volume /var/run/docker.sock:/var/run/docker.sock \
   "${git_mount[@]}" \
-  --volume "$repo:$repo" --volume "$scratch:$scratch" --workdir "$repo" \
-  --env HOME="$scratch" --env TMPDIR="$scratch" --env CI=true \
+  --volume "$repo:$repo" --volume "$scratch:$scratch" --volume "$scratch:/ci-home" --workdir "$repo" \
+  --env HOME=/ci-home --env TMPDIR="$scratch" --env CI=true \
   --env CAMPFIRE_CARGO=cargo --env RUST_TEST_THREADS=4 --env CARGO_BUILD_JOBS=4 \
   --env CARGO_HOME="$repo/rust/.cargo-home" --env CARGO_TARGET_DIR="$repo/rust/target" \
   --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
