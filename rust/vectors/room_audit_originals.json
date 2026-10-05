@@ -1,0 +1,621 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "cases": [
+    {
+      "name": "create",
+      "action": "room.create",
+      "setup": null,
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/rooms/opens",
+          "params": {
+            "room": {
+              "name": "Audited Room"
+            }
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 699448333,
+              "target_type": "Room",
+              "target_label": "Audited Room",
+              "details": {
+                "name": "Audited Room"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "failed",
+      "action": "room.create",
+      "setup": null,
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/rooms/closeds",
+          "params": {
+            "room": {
+              "name": "Iconic",
+              "icon_name": ":notanicon:"
+            },
+            "user_ids": [
+              127326141
+            ]
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 0,
+          "entries": [],
+          "status": 422
+        }
+      ]
+    },
+    {
+      "name": "direct_reuse",
+      "action": "room.create",
+      "setup": null,
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/rooms/directs",
+          "params": {
+            "user_ids": [
+              127326141,
+              149087659,
+              712064548
+            ]
+          },
+          "viewer": 127326141
+        },
+        {
+          "method": "POST",
+          "path": "/rooms/directs",
+          "params": {
+            "user_ids": [
+              127326141,
+              149087659,
+              712064548
+            ]
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 699448333,
+              "target_type": "Room",
+              "target_label": null,
+              "details": {
+                "name": null
+              }
+            }
+          ]
+        },
+        {
+          "delta": 0,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 699448333,
+              "target_type": "Room",
+              "target_label": null,
+              "details": {
+                "name": null
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "destroy",
+      "action": "room.destroy",
+      "setup": {
+        "type": "closed",
+        "name": "Doomed",
+        "members": [
+          127326141
+        ]
+      },
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/rooms/699448333",
+          "params": {},
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 699448333,
+              "target_type": "Room",
+              "target_label": "Doomed",
+              "details": {
+                "name": "Doomed"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "membership",
+      "action": "room.membership.change",
+      "setup": {
+        "designers": true,
+        "replace": true,
+        "removed": 149087659,
+        "existing": [
+          127326141,
+          149087659,
+          773523953,
+          773523955,
+          773523956
+        ],
+        "changed": [
+          127326141,
+          773523953,
+          773523955,
+          773523956,
+          712064548
+        ]
+      },
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/rooms/closeds/654632876",
+          "params": {
+            "room": {
+              "name": "Designers"
+            },
+            "user_ids": [
+              127326141,
+              773523953,
+              773523955,
+              773523956,
+              712064548
+            ]
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 654632876,
+              "target_type": "Room",
+              "target_label": "Designers",
+              "details": {
+                "granted": [
+                  "Kevin"
+                ],
+                "revoked": [
+                  "Jason"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unchanged",
+      "action": "room.membership.change",
+      "setup": {
+        "designers": true,
+        "existing": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956
+        ]
+      },
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/rooms/closeds/654632876",
+          "params": {
+            "room": {
+              "name": "Designers"
+            },
+            "user_ids": [
+              127326141,
+              149087659,
+              712064548,
+              773523953,
+              773523955,
+              773523956
+            ]
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 0,
+          "entries": []
+        }
+      ]
+    },
+    {
+      "name": "add",
+      "action": "room.membership.change",
+      "setup": {
+        "type": "direct",
+        "members": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/rooms/directs/699448333/add_members",
+          "params": {
+            "user_ids": [
+              773523953
+            ]
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 699448333,
+              "target_type": "Room",
+              "target_label": null,
+              "details": {
+                "granted": [
+                  "JZ"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "add_none",
+      "action": "room.membership.change",
+      "setup": {
+        "type": "direct",
+        "members": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/rooms/directs/699448333/add_members",
+          "params": {
+            "user_ids": [
+              149087659
+            ]
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 0,
+          "entries": []
+        }
+      ]
+    },
+    {
+      "name": "last_leave",
+      "action": "room.destroy",
+      "setup": {
+        "type": "direct",
+        "name": "Weekend Plans",
+        "members": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/rooms/directs/699448333/leave",
+          "params": {},
+          "viewer": 127326141
+        },
+        {
+          "method": "DELETE",
+          "path": "/rooms/directs/699448333/leave",
+          "params": {},
+          "viewer": 149087659
+        },
+        {
+          "method": "DELETE",
+          "path": "/rooms/directs/699448333/leave",
+          "params": {},
+          "viewer": 712064548
+        }
+      ],
+      "responses": [
+        {
+          "delta": 0,
+          "entries": []
+        },
+        {
+          "delta": 0,
+          "entries": []
+        },
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 712064548,
+              "actor_label": "Kevin <kevin@37signals.com>",
+              "target_id": 699448333,
+              "target_type": "Room",
+              "target_label": "Weekend Plans",
+              "details": {
+                "name": "Weekend Plans"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "leave_no_destroy",
+      "action": "room.destroy",
+      "setup": {
+        "type": "direct",
+        "members": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/rooms/directs/699448333/leave",
+          "params": {},
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 0,
+          "entries": []
+        }
+      ]
+    },
+    {
+      "name": "leave_channel",
+      "action": "room.membership.change",
+      "setup": {
+        "designers": true,
+        "existing": [
+          127326141,
+          149087659,
+          712064548,
+          773523953,
+          773523955,
+          773523956
+        ]
+      },
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/rooms/654632876/leave",
+          "params": {},
+          "viewer": 773523953
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 773523953,
+              "actor_label": "JZ <jz@37signals.com>",
+              "target_id": 654632876,
+              "target_type": "Room",
+              "target_label": "Designers",
+              "details": {
+                "revoked": [
+                  "JZ"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "leave_group",
+      "action": "room.membership.change",
+      "setup": {
+        "type": "direct",
+        "members": [
+          127326141,
+          149087659,
+          712064548
+        ]
+      },
+      "requests": [
+        {
+          "method": "DELETE",
+          "path": "/rooms/directs/699448333/leave",
+          "params": {},
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 699448333,
+              "target_type": "Room",
+              "target_label": null,
+              "details": {
+                "revoked": [
+                  "David"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "settings",
+      "action": "account.settings.change",
+      "setup": null,
+      "requests": [
+        {
+          "method": "PATCH",
+          "path": "/account",
+          "params": {
+            "account": {
+              "name": "Renamed Account",
+              "settings": {
+                "restrict_room_creation_to_administrators": true
+              }
+            }
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 873240054,
+              "target_type": "Account",
+              "target_label": "Renamed Account",
+              "details": {
+                "name": {
+                  "before": "37signals",
+                  "after": "Renamed Account"
+                },
+                "restrict_room_creation_to_administrators": {
+                  "before": false,
+                  "after": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "styles",
+      "action": "account.custom_styles.change",
+      "setup": null,
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/account/custom_styles",
+          "params": {
+            "account": {
+              "custom_styles": "body { color: red; }"
+            }
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 1,
+          "entries": [
+            {
+              "actor_id": 127326141,
+              "actor_label": "David <david@37signals.com>",
+              "target_id": 873240054,
+              "target_type": "Account",
+              "target_label": "37signals",
+              "details": {
+                "custom_styles": {
+                  "before": {
+                    "size": 0,
+                    "digest": "e3b0c44298fc"
+                  },
+                  "after": {
+                    "size": 20,
+                    "digest": "5de625c36355"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "styles_same",
+      "action": "account.custom_styles.change",
+      "setup": {
+        "styles": "body { color: red; }"
+      },
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/account/custom_styles",
+          "params": {
+            "account": {
+              "custom_styles": "body { color: red; }"
+            }
+          },
+          "viewer": 127326141
+        }
+      ],
+      "responses": [
+        {
+          "delta": 0,
+          "entries": []
+        }
+      ]
+    }
+  ]
+}

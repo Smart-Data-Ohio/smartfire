@@ -1,0 +1,25 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "cases": [
+    {
+      "name": "past",
+      "response": {
+        "notice": true,
+        "truncated": true,
+        "filename_cap": true,
+        "rows": 2,
+        "matches_table": false
+      }
+    },
+    {
+      "name": "within",
+      "response": {
+        "notice": false,
+        "truncated": false,
+        "filename_cap": false,
+        "rows": 3,
+        "matches_table": true
+      }
+    }
+  ]
+}

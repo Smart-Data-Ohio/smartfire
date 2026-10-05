@@ -1,0 +1,214 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "cases": [
+    {
+      "name": "role_self",
+      "viewer": 127326141,
+      "method": "PUT",
+      "path": "/account/users/127326141",
+      "params": {
+        "user": {
+          "role": "administrator"
+        }
+      },
+      "ips": [],
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/account/edit",
+        "admin_before": true,
+        "admin_after": true
+      }
+    },
+    {
+      "name": "remove_self",
+      "viewer": 127326141,
+      "method": "DELETE",
+      "path": "/account/users/127326141",
+      "params": {},
+      "ips": [],
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/account/edit",
+        "active_delta": -1,
+        "david_active": false
+      }
+    },
+    {
+      "name": "member_role",
+      "viewer": 712064548,
+      "method": "PUT",
+      "path": "/account/users/127326141",
+      "params": {
+        "user": {
+          "role": "administrator"
+        }
+      },
+      "ips": [],
+      "response": {
+        "status": 403,
+        "location": null
+      }
+    },
+    {
+      "name": "member_remove",
+      "viewer": 712064548,
+      "method": "DELETE",
+      "path": "/account/users/127326141",
+      "params": {},
+      "ips": [],
+      "response": {
+        "status": 403,
+        "location": null
+      }
+    },
+    {
+      "name": "styles_edit",
+      "viewer": 127326141,
+      "method": "GET",
+      "path": "/account/custom_styles/edit",
+      "params": {},
+      "ips": [],
+      "response": {
+        "status": 200,
+        "location": null
+      }
+    },
+    {
+      "name": "styles",
+      "viewer": 127326141,
+      "method": "PUT",
+      "path": "/account/custom_styles",
+      "params": {
+        "account": {
+          "custom_styles": ":root { --color-text: red; }"
+        }
+      },
+      "ips": [],
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/account/custom_styles/edit",
+        "admin_before": true,
+        "styles": ":root { --color-text: red; }"
+      }
+    },
+    {
+      "name": "member_styles",
+      "viewer": 712064548,
+      "method": "PUT",
+      "path": "/account/custom_styles",
+      "params": {
+        "account": {
+          "custom_styles": ":root { --color-text: red; }"
+        }
+      },
+      "ips": [],
+      "response": {
+        "status": 403,
+        "location": null,
+        "member_before": true
+      }
+    },
+    {
+      "name": "join",
+      "viewer": 127326141,
+      "method": "POST",
+      "path": "/account/join_code",
+      "params": {},
+      "ips": [],
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/account/edit",
+        "code_changed": true
+      }
+    },
+    {
+      "name": "member_join",
+      "viewer": 773523953,
+      "method": "POST",
+      "path": "/account/join_code",
+      "params": {},
+      "ips": [],
+      "response": {
+        "status": 403,
+        "location": null
+      }
+    },
+    {
+      "name": "ban_two",
+      "viewer": 127326141,
+      "method": "POST",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "ips": [
+        "203.0.113.1",
+        "203.0.113.2"
+      ],
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/users/712064548",
+        "ban_delta": 2,
+        "ips": [
+          "203.0.113.1",
+          "203.0.113.2"
+        ]
+      }
+    },
+    {
+      "name": "ban_session",
+      "viewer": 127326141,
+      "method": "POST",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "ips": [
+        "203.0.113.1"
+      ],
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/users/712064548",
+        "session_delta": -1
+      }
+    },
+    {
+      "name": "unban",
+      "viewer": 127326141,
+      "method": "DELETE",
+      "path": "/users/712064548/ban",
+      "params": {},
+      "ips": [
+        "203.0.113.1"
+      ],
+      "response": {
+        "status": 302,
+        "location": "http://campfire.test/users/712064548",
+        "banned_before": true,
+        "bans_before": 1,
+        "ban_delta": -1,
+        "kevin_active": true
+      }
+    },
+    {
+      "name": "member_ban",
+      "viewer": 712064548,
+      "method": "POST",
+      "path": "/users/773523953/ban",
+      "params": {},
+      "ips": [],
+      "response": {
+        "status": 403,
+        "location": null
+      }
+    },
+    {
+      "name": "member_unban",
+      "viewer": 712064548,
+      "method": "DELETE",
+      "path": "/users/773523953/ban",
+      "params": {},
+      "ips": [],
+      "response": {
+        "status": 403,
+        "location": null
+      }
+    }
+  ]
+}

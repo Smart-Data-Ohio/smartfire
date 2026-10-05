@@ -96,7 +96,7 @@ pub async fn create(c: &mut Ctx) -> Result {
                             target: Some(Target {
                                 record_type: "WorkspaceIcon".into(),
                                 id: icon.id,
-                                label: Some(icon.name.clone()),
+                                label: Some(format!(":{}:", icon.name)),
                             }),
                             changes: Some(serde_json::json!({"name":icon.name,"title":icon.title})),
                             ..Default::default()
@@ -184,7 +184,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
                     target: Some(Target {
                         record_type: "WorkspaceIcon".into(),
                         id,
-                        label: Some(icon.name.clone()),
+                        label: Some(format!(":{}:", icon.name)),
                     }),
                     changes: Some(serde_json::json!({"name":icon.name})),
                     ..Default::default()
@@ -206,3 +206,6 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 }
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod original_tests;

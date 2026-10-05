@@ -1,0 +1,59 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "review_base": "f50d735d181be0f88032d07d37eb01548919ca4b",
+  "merged_b": "7263ad8af7d7fbd2944966dd01abd91317798584",
+  "records": [
+    {
+      "name": "picker-frame",
+      "rails_scope": "test/system/people_group_dms_test.rb:188",
+      "rust_helper": "rust/reference-tools/users/browser_scopes.mjs:2",
+      "affected_scripts": [
+        "original_browser_assertions.mjs",
+        "browser_picker.mjs"
+      ],
+      "control": "run_original_browser_assertions.py pickers --mutation picker-scope",
+      "before_exit": 0,
+      "after_exit": 1,
+      "actual_input": {
+        "inside_frame_rows": 0,
+        "outside_frame_rows": 8
+      },
+      "rejection": "test/system/people_group_dms_test.rb:192: original assertion"
+    },
+    {
+      "name": "tour-key-card",
+      "rails_scope": "test/system/first_run_tour_test.rb:101",
+      "rust_helper": "rust/reference-tools/users/browser_scopes.mjs:7",
+      "affected_scripts": [
+        "original_browser_assertions.mjs",
+        "browser_tour.mjs"
+      ],
+      "control": "run_original_browser_assertions.py tours --mutation tour-key-scope",
+      "before_exit": 0,
+      "after_exit": 1,
+      "actual_input": "Real next button outside .tour__card but inside #tour; move its keydown action with it, retaining the real producer and completion HTTP save.",
+      "rejection": "locator.press waits for .tour__card [data-tour-target='next']"
+    },
+    {
+      "name": "status-fields-card",
+      "rails_scope": [
+        "test/system/status_popup_test.rb:19",
+        "test/system/status_popup_test.rb:65"
+      ],
+      "rust_helper": "rust/reference-tools/users/browser_scopes.mjs:8",
+      "affected_scripts": [
+        "browser_status.mjs"
+      ],
+      "control": "env WS8BR2_BROWSER_SCOPE_CONTROL=status-field python3 rust/reference-tools/users/browser_people.py --status",
+      "before_exit": 0,
+      "after_exit": 1,
+      "actual_input": "Real custom-status text field outside #user_card, with explicit form association retained; real Save persists On a train under the old helper.",
+      "rejection": "locator('#user_card').locator('#status_popup_custom_status_text')"
+    }
+  ],
+  "guard": "rust/reference-tools/users/check_scope_mutation_receipts.py --evidence DIRECTORY",
+  "raw_logs": "rust/.scratch/review248-r2/{picker,tour,status}-{before,after}.log",
+  "mutation_boundary": "Runtime relocation of actual rendered elements and producer actions. Original expected responses/predicates are unchanged; no stubbed HTTP or controller logic. Transport/startup failures are invalid.",
+  "additional_receipt_correction": "Tour persistence cites current-pin assert_not_nil line 96 instead of closing end at 95.",
+  "ci_scope": "Seven wrappers remain registered; this round executes only picker/tour wrappers (18 paired case executions). Legacy picker/tour/status helpers additionally run as external paired receipts (28 case executions). No new declaration/criterion closure is claimed."
+}

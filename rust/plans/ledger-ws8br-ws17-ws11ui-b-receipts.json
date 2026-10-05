@@ -2078,7 +2078,7 @@
         },
         {
           "line": 69,
-          "ruby": "assert_match \"OpenAI \u00b7 Codex CLI 0.9\", response.body",
+          "ruby": "assert_match \"OpenAI · Codex CLI 0.9\", response.body",
           "rust_test": "controllers::users::agent_profile_tests::original_identity_and_two_room_visibility_match_rails",
           "checks": "Actual viewer GET; complete routed profile-section DOM equals the pinned full-byte fragment oracle. Every tag, text, link/action, status class, room count and management control is retained; only the randomized CSRF value is excluded from the additional DOM comparison. Separate detached comparison checks every original fragment byte.",
           "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
@@ -2086,7 +2086,7 @@
           "oracle_cases": [
             "original_identity"
           ],
-          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_match \"OpenAI \u00b7 Codex CLI 0.9\", response.body",
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_match \"OpenAI · Codex CLI 0.9\", response.body",
           "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
           "assertion_anchor": "fragment(actual),",
           "assertion_scope": "shared complete-fragment comparator"
@@ -2967,7 +2967,7 @@
         },
         {
           "line": 218,
-          "ruby": "assert_equal \"\u2605\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
+          "ruby": "assert_equal \"★\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
           "rust_test": "controllers::users::people_tests::directories_match_complete_rails_body_and_starred_order",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
           "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
@@ -2975,7 +2975,7 @@
           "oracle_cases": [
             "directories"
           ],
-          "observation": "Saved state / response value: assert_equal \"\u2605\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
+          "observation": "Saved state / response value: assert_equal \"★\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
           "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
           "assertion_anchor": "fragment(actual),",
           "assertion_scope": "shared complete-fragment comparator"
@@ -3308,13 +3308,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_profile"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -3323,13 +3323,13 @@
           "ruby": "assert_equal \"John Doe\", users(:david).reload.name",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_profile"
           ],
           "observation": "Saved state / response value: assert_equal \"John Doe\", users(:david).reload.name",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -3338,13 +3338,13 @@
           "ruby": "assert_equal \"Acrobat\", users(:david).bio",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_profile"
           ],
           "observation": "Saved state / response value: assert_equal \"Acrobat\", users(:david).bio",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -3353,13 +3353,13 @@
           "ruby": "assert_equal \"david@37signals.com\", users(:david).email_address",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:284",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_profile"
           ],
           "observation": "Saved state / response value: assert_equal \"david@37signals.com\", users(:david).email_address",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:284",
           "assertion_anchor": "assert_eq!(campfire_db::User::find(conn, DAVID)?.email_address.as_deref(), Some(\"david@37signals.com\"));",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -3382,13 +3382,13 @@
           "ruby": "assert_equal \"Jason\", users(:jason).reload.name",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_foreign_name"
           ],
           "observation": "Saved state / response value: assert_equal \"Jason\", users(:jason).reload.name",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -4926,13 +4926,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original form-encoded PUT and PATCH with CSRF; exact redirect and persisted state equal independently recorded Rails. Clear starts with david-gh; linking uses the original spaced David-GH input. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_github"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -4948,8 +4948,8 @@
           "observation": "Saved state / response value: assert_equal \"david-gh\", users(:david).reload.github_login",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281"
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295"
         }
       ],
       "rust_tests": [
@@ -5440,13 +5440,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_voice"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5455,13 +5455,13 @@
           "ruby": "assert_equal \"push_to_talk\", user.voice_mode",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_voice"
           ],
           "observation": "Saved state / response value: assert_equal \"push_to_talk\", user.voice_mode",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5470,13 +5470,13 @@
           "ruby": "assert_equal \"CapsLock\", user.push_to_talk_key",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_voice"
           ],
           "observation": "Saved state / response value: assert_equal \"CapsLock\", user.push_to_talk_key",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -5543,13 +5543,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original form-encoded PUT and PATCH with CSRF; exact redirect and persisted state equal independently recorded Rails. Clear starts with david-gh; linking uses the original spaced David-GH input. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_github_clear"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -5565,8 +5565,8 @@
           "observation": "Saved state / response value: assert_nil users(:david).reload.github_login",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281"
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295"
         }
       ],
       "rust_tests": [
@@ -6124,13 +6124,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_theme_zone"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6139,13 +6139,13 @@
           "ruby": "assert_equal \"dark\", users(:david).reload.theme",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_theme_zone"
           ],
           "observation": "Saved state / response value: assert_equal \"dark\", users(:david).reload.theme",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6154,13 +6154,13 @@
           "ruby": "assert_equal \"Pacific Time (US & Canada)\", users(:david).time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "original_form_theme_zone"
           ],
           "observation": "Saved state / response value: assert_equal \"Pacific Time (US & Canada)\", users(:david).time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -6257,13 +6257,13 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_original_receipts.json",
           "oracle_cases": [
             "pages[America/New_York]"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6362,14 +6362,14 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6378,14 +6378,14 @@
           "ruby": "assert_equal \"America/New_York\", users(:david).reload.time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Saved state / response value: assert_equal \"America/New_York\", users(:david).reload.time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6394,14 +6394,14 @@
           "ruby": "assert users(:david).time_zone_explicit?",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Exact condition: assert users(:david).time_zone_explicit?",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6410,14 +6410,14 @@
           "ruby": "assert_redirected_to user_profile_url",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "HTTP Location",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "assertion_anchor": "response.location(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6426,14 +6426,14 @@
           "ruby": "assert_nil users(:david).reload.time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH vectors start not_set with America/New_York already saved; full persisted state must clear it and retain the explicit flag. Additional real select/detect/clear sequence checks (None, true) directly. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Saved state / response value: assert_nil users(:david).reload.time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "additional_assertion_sources": [
@@ -6449,14 +6449,14 @@
           "ruby": "assert users(:david).time_zone_explicit?",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real PATCH vectors start not_set with America/New_York already saved; full persisted state must clear it and retain the explicit flag. Additional real select/detect/clear sequence checks (None, true) directly. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "appearance",
             "not_set"
           ],
           "observation": "Exact condition: assert users(:david).time_zone_explicit?",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "additional_assertion_sources": [
@@ -6531,7 +6531,7 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -6539,7 +6539,7 @@
             "bad_text"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6548,7 +6548,7 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -6556,7 +6556,7 @@
             "bad_text"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6565,7 +6565,7 @@
           "ruby": "assert_response :unprocessable_entity",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -6573,7 +6573,7 @@
             "bad_text"
           ],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "assertion_anchor": "response.status.as_u16(),",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6582,7 +6582,7 @@
           "ruby": "assert_equal \"system\", users(:david).reload.theme",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -6590,7 +6590,7 @@
             "bad_text"
           ],
           "observation": "Saved state / response value: assert_equal \"system\", users(:david).reload.theme",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6599,7 +6599,7 @@
           "ruby": "assert_equal \"default\", users(:david).text_size",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -6607,7 +6607,7 @@
             "bad_text"
           ],
           "observation": "Saved state / response value: assert_equal \"default\", users(:david).text_size",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         },
@@ -6616,7 +6616,7 @@
           "ruby": "assert_nil users(:david).time_zone",
           "rust_test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
           "checks": "Real original PUT and PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Both PUT (Rails original) and PATCH are executed; their independently generated Rails vector responses/states are identical.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "oracle": "rust/vectors/users_profile_settings.json",
           "oracle_cases": [
             "bad_theme",
@@ -6624,7 +6624,7 @@
             "bad_text"
           ],
           "observation": "Saved state / response value: assert_nil users(:david).time_zone",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "manual_profile_settings_match_pinned_rails_patch_vectors"
         }
@@ -7178,7 +7178,7 @@
         },
         {
           "line": 44,
-          "ruby": "assert_select \".user-status-badge__custom\", text: \"\ud83d\ude82 On a train\"",
+          "ruby": "assert_select \".user-status-badge__custom\", text: \"🚂 On a train\"",
           "rust_test": "controllers::users::people_tests::card_shows_presence_dot_and_custom_status_badge",
           "checks": "Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained.",
           "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",

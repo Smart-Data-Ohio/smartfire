@@ -33,6 +33,8 @@ async fn banning_a_user_removes_pending_two_factor_setup_and_sessions() {
     let session_id = app
         .db()
         .write(move |tx| {
+            tx.conn()
+                .execute("DELETE FROM sessions WHERE user_id=?", [KEVIN])?;
             let session = Session::start(tx, KEVIN, Some("Test"), Some("203.0.113.1"))?;
             TwoFactorSetupSecret::issue_for(
                 tx,
@@ -43,6 +45,14 @@ async fn banning_a_user_removes_pending_two_factor_setup_and_sessions() {
         })
         .await
         .unwrap();
+    assert_eq!(
+        app.db()
+            .read(|c| Session::count_for_user(c, KEVIN))
+            .await
+            .unwrap(),
+        1,
+        "original single target session before ban"
+    );
     assert_eq!(
         app.db()
             .read(move |conn| Ok(conn.query_row(
@@ -82,7 +92,11 @@ async fn banning_a_user_removes_pending_two_factor_setup_and_sessions() {
 
 #[tokio::test]
 async fn ban_http_enqueue_is_atomic_and_writes_one_durable_remove_job() {
-    let app = TestApp::boot_frozen().await.expect("seed required");
+    let app = TestApp::boot_frozen()
+        .await
+        .expect("seed required")
+        .without_job_runner()
+        .await;
     let mut browser = confirm(&app).await;
     app.db().write(|tx| {
         tx.conn().execute_batch("CREATE TABLE ws8br2_job_inserts(class TEXT, queue TEXT, arguments TEXT); \
@@ -204,6 +218,7 @@ async fn ban_http_removes_the_users_messages_through_the_real_runner() {
         );
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
+    assert_eq!(count().await.unwrap(), 0, "original all banned-user messages are removed");
     assert!(
         app.db()
             .read(move |conn| Message::find_by_id(conn, message_id))

@@ -1,0 +1,42 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "review_base": "ed3882c2bf84735ae1c4dbd6ac5226069e3afca2",
+  "declaration": "P0368",
+  "rails_geometry": [
+    "test/system/people_group_dms_test.rb:302",
+    "test/system/people_group_dms_test.rb:304"
+  ],
+  "shared_predicate": "rust/reference-tools/users/browser_scopes.mjs:13",
+  "actual_producer_mutation": "CSS display:none on the first real .dm-picker__row:not([hidden]) after filtering j; a later matching row remains visible and valid. No fake response or assertion substitute.",
+  "actual_input": {
+    "matched": 2,
+    "height": 0,
+    "avatar": 0,
+    "nextHeight": 44,
+    "nextAvatar": 32
+  },
+  "controls": [
+    {
+      "name": "original",
+      "command": "python3 rust/reference-tools/users/run_original_browser_assertions.py pickers --mutation phone-first-row",
+      "before_exit": 0,
+      "after_exit": 1,
+      "rejection": "test/system/people_group_dms_test.rb:303: original assertion"
+    },
+    {
+      "name": "legacy",
+      "command": "WS8BR2_BROWSER_SCOPE_CONTROL=phone-first-row python3 rust/reference-tools/users/browser_people.py --picker",
+      "before_exit": 0,
+      "after_exit": 1,
+      "rejection": "browser_picker.mjs:69:12: assert.ok(rect.height>=44)"
+    }
+  ],
+  "evidence_checker": "python3 rust/reference-tools/users/check_geometry_mutation_receipts.py --evidence rust/.scratch/review248-r3",
+  "log_files": [
+    "original-before.log",
+    "original-after.log",
+    "legacy-before.log",
+    "legacy-after.log"
+  ],
+  "result": "2 survivors before; 2 intended geometry rejections after; 0 invalid controls. Baseline paired Rails/Rust picker cases separately pass."
+}

@@ -549,6 +549,60 @@
       }
     },
     {
+      "name": "original_github_normalize",
+      "path": "/users/me/profile",
+      "params": {
+        "github_login": "  David-GH  "
+      },
+      "before": {},
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "David",
+        "bio": null,
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "voice_mode": null,
+        "push_to_talk_key": null,
+        "inbox_preferences": null,
+        "github_login": "david-gh",
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    },
+    {
+      "name": "original_github_unlink",
+      "path": "/users/me/profile",
+      "params": {
+        "github_login": " "
+      },
+      "before": {
+        "github_login": "david-gh"
+      },
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "David",
+        "bio": null,
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "voice_mode": null,
+        "push_to_talk_key": null,
+        "inbox_preferences": null,
+        "github_login": null,
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      }
+    },
+    {
       "name": "github",
       "path": "/users/me/profile",
       "params": {
