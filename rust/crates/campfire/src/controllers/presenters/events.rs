@@ -29,7 +29,11 @@ pub(crate) fn for_messages(
     let mut users = HashMap::new();
     // One message can reference more events than the callback's message batch.
     for ids in organizers.chunks(crate::integrations::message_batches::SIZE) {
-        users.extend(User::where_ids(conn, ids)?.into_iter().map(|user| (user.id, user)));
+        users.extend(
+            User::where_ids(conn, ids)?
+                .into_iter()
+                .map(|user| (user.id, user)),
+        );
     }
     let venue_ids: Vec<_> = events
         .values()
@@ -40,7 +44,11 @@ pub(crate) fn for_messages(
         .collect();
     let mut venues = HashMap::new();
     for ids in venue_ids.chunks(crate::integrations::message_batches::SIZE) {
-        venues.extend(Room::for_ids(conn, ids)?.into_iter().map(|room| (room.id, room)));
+        venues.extend(
+            Room::for_ids(conn, ids)?
+                .into_iter()
+                .map(|room| (room.id, room)),
+        );
     }
     events
         .into_iter()
@@ -57,8 +65,8 @@ pub(crate) fn for_messages(
                             .ok_or(campfire_db::Error::RecordNotFound("User"))?
                             .name
                             .clone(),
-                        starts_at: e.starts_at.jiff(),
-                        ends_at: e.ends_at.map(|t| t.jiff()),
+                        starts_at: calendar_time(e.starts_at),
+                        ends_at: e.ends_at.map(calendar_time),
                         time_zone: e.time_zone.clone(),
                         series: e.series(),
                         cancelled: e.cancelled(),
@@ -80,7 +88,8 @@ pub(crate) fn for_messages(
 pub fn cards(conn: &Connection, message_id: i64) -> Result<String> {
     let message = Message::find(conn, message_id)?;
     Ok(cards_for_messages(conn, std::slice::from_ref(&message))?
-        .remove(&message_id).expect("requested message rendered"))
+        .remove(&message_id)
+        .expect("requested message rendered"))
 }
 
 pub(crate) fn cards_for_messages(
@@ -90,18 +99,31 @@ pub(crate) fn cards_for_messages(
     use askama::Template;
     let cards = for_messages(conn, messages)?;
     let zone = super::page::renderer_time_zone();
-    messages.iter().map(|message| {
-        let events = cards.get(&message.id).map(Vec::as_slice).unwrap_or_default();
-        let entries = campfire_views::events::card_entries(events, &message.id.to_string(), &zone);
-        let html = campfire_views::events::Cards {
-            message_key: &message.client_message_id,
-            entries: &entries,
-        }.render().map_err(|error| campfire_db::Error::Other(error.to_string()))?;
-        Ok((message.id, html))
-    }).collect()
+    messages
+        .iter()
+        .map(|message| {
+            let events = cards
+                .get(&message.id)
+                .map(Vec::as_slice)
+                .unwrap_or_default();
+            let entries =
+                campfire_views::events::card_entries(events, &message.id.to_string(), &zone);
+            let html = campfire_views::events::Cards {
+                message_key: &message.client_message_id,
+                entries: &entries,
+            }
+            .render()
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
+            Ok((message.id, html))
+        })
+        .collect()
 }
 
 use campfire_db::Timestamp;
+pub(super) fn calendar_time(time: Timestamp) -> campfire_views::time::CalendarTime {
+    let (proxy, shift) = time.calendar_proxy();
+    campfire_views::time::CalendarTime::new(proxy, shift)
+}
 use campfire_views::events::pages::{AttendeeView, IndexView, PageEvent, ShowView, VenueView};
 
 pub fn room_name(conn: &Connection, room: &Room, user: &User) -> Result<String> {
@@ -158,8 +180,8 @@ pub fn page_event(
             room_id: e.room_id,
             title: e.title.clone(),
             organizer_name: User::find(conn, e.organizer_id)?.name,
-            starts_at: e.starts_at.jiff(),
-            ends_at: e.ends_at.map(|t| t.jiff()),
+            starts_at: calendar_time(e.starts_at),
+            ends_at: e.ends_at.map(calendar_time),
             time_zone: e.time_zone.clone(),
             series: e.series(),
             cancelled: e.cancelled(),
@@ -239,7 +261,7 @@ fn simple_format(text: &str) -> Result<String> {
 }
 mod index;
 pub fn index(conn: &Connection, room: &Room, user: &User, now: Timestamp) -> Result<IndexView> {
-    index::load(conn,room,user,now)
+    index::load(conn, room, user, now)
 }
 pub fn show(conn: &Connection, room: &Room, user: &User, e: &CalendarEvent) -> Result<ShowView> {
     Ok(ShowView {
@@ -321,8 +343,12 @@ pub fn form(
         title: a.title.clone(),
         title_value,
         description: a.description.clone(),
-        starts_at: a.starts_at.map(|t| zone.format(t.jiff(), "%Y-%m-%dT%H:%M")),
-        ends_at: a.ends_at.map(|t| zone.format(t.jiff(), "%Y-%m-%dT%H:%M")),
+        starts_at: a
+            .starts_at
+            .map(|t| rails_compat::datetime::format(t, zone.tz(), "%Y-%m-%dT%H:%M")),
+        ends_at: a
+            .ends_at
+            .map(|t| rails_compat::datetime::format(t, zone.tz(), "%Y-%m-%dT%H:%M")),
         time_zone: a.time_zone.clone(),
         venue_room_id: a.venue_room_id,
         recurrence_rule: a.recurrence_rule.clone(),

@@ -1,0 +1,26 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "base_head": "89b05e16555630f25bc53df3cefbb3ad19a5c723",
+  "mutations": [
+    {
+      "id": "WS15g-011",
+      "package": "campfire",
+      "test": "controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 72
+        }
+      ],
+      "rails_assertion": {
+        "file": "test/test_helpers/session_test_helper.rb",
+        "line": 16,
+        "text": "assert_response :redirect"
+      },
+      "file": "rust/crates/campfire/src/controllers/sudos.rs",
+      "old": "            (\n                Some(\n                    tokio::task::spawn_blocking(move || user.authenticate(&password))",
+      "new": "            let password = if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").ok().as_deref() == Some(\"WS15g-011\") && c.request.headers.get(\"content-type\").and_then(|value| value.to_str().ok()) == Some(\"application/x-www-form-urlencoded\") { String::new() } else { password };\n            (\n                Some(\n                    tokio::task::spawn_blocking(move || user.authenticate(&password))",
+      "description": "Reject the valid sudo password only for real application/x-www-form-urlencoded requests; JSON requests remain accepted"
+    }
+  ]
+}

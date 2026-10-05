@@ -5509,7 +5509,8 @@
           }
         ]
       },
-      "review_disposition": "reopened"
+      "review_disposition": "reopened",
+      "superseded_by": "rust/plans/ledger-ws14-ws15-d-assertions.json"
     },
     {
       "id": "WS14e-106",

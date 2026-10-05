@@ -1,5 +1,6 @@
 """A cold generated host must supply the tracked outer test inputs."""
 from pathlib import Path
+import re
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -8,6 +9,37 @@ from browser_host import prepare_source, build_host, include_inputs, audit_build
 
 
 class HostSourceTests(unittest.TestCase):
+    def test_generated_pwa_module_keeps_its_real_relative_compile_inputs(self):
+        project = Path(__file__).resolve().parents[3]
+        module = Path("rust/crates/campfire/src/controllers/pwa.rs")
+        content = (project / module).read_bytes()
+        includes = re.findall(r'\binclude_(?:str|bytes)!\s*\(\s*"([^"]+)"', content.decode())
+        self.assertTrue(includes, "the real PWA module must exercise compile-time inputs")
+        inputs = {module: content, Path("public/500.html"): (project / "public/500.html").read_bytes()}
+        for include in includes:
+            path = (project / module.parent / include).resolve().relative_to(project)
+            inputs[path] = (project / path).read_bytes()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for relative, original in inputs.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(original)
+            with patch("browser_host.subprocess.check_output", return_value="\0".join(map(str, inputs))):
+                generated = prepare_source(root)
+                copied_module = generated / module.relative_to("rust")
+                self.assertEqual(copied_module.read_bytes(), content)
+                for include in includes:
+                    with self.subTest(include=include):
+                        original = (root / module.parent / include).resolve()
+                        copied = (copied_module.parent / include).resolve()
+                        self.assertEqual(copied.read_bytes(), original.read_bytes())
+                        updated = original.read_bytes() + b"\n// refreshed compile-time input\n"
+                        original.write_bytes(updated)
+                        copied.write_bytes(b"stale generated input")
+                        prepare_source(root)
+                        self.assertEqual(copied.read_bytes(), updated)
+
     def test_generated_executable_cannot_replace_the_workspace_suite_binary(self):
         import json
         from types import SimpleNamespace

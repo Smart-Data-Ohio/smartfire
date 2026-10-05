@@ -162,6 +162,30 @@ impl GoogleAccount {
         }
         errors.into_result()
     }
+    /// Validate a new record before persistence, including Rails' user_id uniqueness.
+    pub fn validate_new(conn: &Connection, grant: &ConnectionGrant) -> Result<crate::Errors> {
+        let mut errors = crate::Errors::default();
+        if User::find_by_id(conn, grant.user_id)?.is_none() {
+            errors.add("user", "must exist");
+        }
+        if campfire_richtext::ruby::is_blank(&grant.email) {
+            errors.add("email", "can't be blank");
+        }
+        if Self::for_user(conn, grant.user_id)?.is_some() {
+            errors.add("user_id", "has already been taken");
+        }
+        Ok(errors)
+    }
+
+    /// Direct model creation is distinct from OAuth's connection upsert.
+    pub fn create(tx: &Tx<'_>, enc: &ArEncryption, grant: ConnectionGrant) -> Result<Self> {
+        Self::validate_new(tx.conn(), &grant)?.into_result()?;
+        let now = tx.now();
+        let access = grant.access_token.as_deref().map(|s| enc.encrypt(s));
+        let refresh = grant.refresh_token.as_deref().map(|s| enc.encrypt(s));
+        tx.conn().execute("INSERT INTO google_accounts(user_id,email,access_token,access_token_expires_at,refresh_token,scopes,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)", params![grant.user_id,grant.email,access,grant.access_token_expires_at,refresh,grant.scopes,now,now])?;
+        Ok(Self::for_user(tx.conn(), grant.user_id)?.expect("created account"))
+    }
     /// Callback assignment preserves an existing refresh token/scope when Google omits them.
     pub fn save_connection(
         tx: &Tx<'_>,
@@ -170,6 +194,12 @@ impl GoogleAccount {
     ) -> Result<Self> {
         Self::validate(tx, grant.user_id, &grant.email)?;
         let old = Self::for_user(tx.conn(), grant.user_id)?;
+        if old.is_none() {
+            let mut grant = grant;
+            grant.refresh_token = grant.refresh_token.filter(|s| !campfire_richtext::ruby::is_blank(s));
+            grant.scopes = grant.scopes.filter(|s| !campfire_richtext::ruby::is_blank(s));
+            return Self::create(tx, enc, grant);
+        }
         if let Some(account) = old.as_ref() {
             let refresh_unchanged = grant
                 .refresh_token

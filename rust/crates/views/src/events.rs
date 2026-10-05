@@ -11,8 +11,8 @@ pub struct CardView {
     pub room_id: i64,
     pub title: String,
     pub organizer_name: String,
-    pub starts_at: jiff::Timestamp,
-    pub ends_at: Option<jiff::Timestamp>,
+    pub starts_at: crate::time::CalendarTime,
+    pub ends_at: Option<crate::time::CalendarTime>,
     pub time_zone: String,
     pub series: bool,
     pub cancelled: bool,
@@ -23,14 +23,13 @@ impl CardView {
     pub fn path(&self) -> String {
         format!("/rooms/{}/events/{}", self.room_id, self.id)
     }
-    fn datetime(&self, viewer_zone: &Zone, time: jiff::Timestamp) -> h::Html {
+    fn datetime(&self, viewer_zone: &Zone, time: crate::time::CalendarTime) -> h::Html {
         let zone = Zone::for_user(Some(&self.time_zone));
-        h::local_datetime_tag(
-            viewer_zone,
-            time,
+        crate::time::local_datetime_tag_iso(
+            &time.iso8601(viewer_zone),
             "datetime",
             h::attrs(),
-            &h::escape(&zone.format(time, "%B %-d, %Y at %-I:%M %p")),
+            &h::escape(&time.format(&zone, "%B %-d, %Y at %-I:%M %p")),
         )
     }
     pub fn start_tag(&self, viewer_zone: &Zone) -> h::Html {

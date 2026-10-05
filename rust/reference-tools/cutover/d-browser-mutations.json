@@ -1,0 +1,164 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "records": [
+    {
+      "id": "WS14g-232",
+      "producer": "controllers/drive_share_controller-",
+      "before": "include_granted_scopes: false",
+      "after": "include_granted_scopes: true",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 139,
+        "text": "assert_equal false, init_calls.first[\"include_granted_scopes\"]"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 139,
+        "end_line": 139,
+        "function": "original_browser_ws14g_232",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 139
+        },
+        "text": "assert_equal false, init_calls.first[\"include_granted_scopes\"]"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_232)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "36c2961dc4c0f36288c8f089a6de2626bcd5b4b8697739bd6969ccfee1bae42e",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-232.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes"
+    },
+    {
+      "id": "WS14g-233",
+      "producer": "controllers/drive_share_controller-",
+      "before": "const result = pinDriveAttachment(this.attachmentsStrip, review)",
+      "after": "const result = \"pinned\"",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 157,
+        "text": "assert_selector \".composer__drive-attachments .drive-attachment-chip\", text: \"Q3 Planning\""
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 157,
+        "end_line": 157,
+        "function": "original_browser_ws14g_233",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 157
+        },
+        "text": "assert_selector \".composer__drive-attachments .drive-attachment-chip\", text: \"Q3 Planning\""
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_233)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "c7efa3500c3b012c5ef5e8db32957d651b660601b7898f1dddaf6f4615bf05e5",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-233.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes"
+    },
+    {
+      "id": "WS14g-238",
+      "producer": "controllers/drive_share_controller-",
+      "before": "target?.focus({ preventScroll: true })\n  }\n\n  #armOutsideDismiss()",
+      "after": "this.form?.querySelector(\"textarea\")?.focus({ preventScroll: true })\n  }\n\n  #armOutsideDismiss()",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 296,
+        "text": "assert_attach_button_focused"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 296,
+        "end_line": 296,
+        "function": "original_browser_ws14g_238",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 296
+        },
+        "text": "assert_attach_button_focused"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_238)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "cdca4a4639a5458631eed1987015f5aee9cf85ef5037a2f2a838ad574d85b0c4",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-238.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes"
+    },
+    {
+      "id": "WS14g-252",
+      "producer": "drive-",
+      "before": ".drive-share-dialog {",
+      "after": ".drive-share-dialog { transform: translateX(-30px) !important;",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 583,
+        "text": "assert_operator geometry[\"left\"], :>=, 0"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 583,
+        "end_line": 583,
+        "function": "original_browser_ws14g_252",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 583
+        },
+        "text": "assert_operator geometry[\"left\"], :>=, 0"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_252)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "b2a16ba7b097cc8227e4e0655a2364cc8864fb4adf5fe76475e12f21d0e3ba55",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-252.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes"
+    },
+    {
+      "id": "WS14g-262",
+      "producer": "drive-",
+      "before": ".drive-share-dialog__recipient-name {",
+      "after": ".drive-share-dialog__recipient-name { overflow-wrap: normal !important;",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 849,
+        "text": "assert_equal \"anywhere\", styles[\"nameWrap\"]"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 849,
+        "end_line": 849,
+        "function": "original_browser_ws14g_262",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 849
+        },
+        "text": "assert_equal \"anywhere\", styles[\"nameWrap\"]"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_262)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "040c75a3bb7ca38e2fbe9dd5c77c27483445d27694685529ea2c1ab36f066f2d",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-262.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes"
+    }
+  ],
+  "attempted": 5,
+  "killed": 5,
+  "survived": 0,
+  "note": "Every mutation changes the actual producer asset delivered to native Chromium. Positive bodies, scoped selectors and original geometry remain byte-identical. Mutation proxies close after each declaration; no producer file is edited."
+}

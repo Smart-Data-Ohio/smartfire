@@ -1,0 +1,408 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "mutations": [
+    {
+      "id": "WS14g-010",
+      "file": "rust/crates/campfire/src/concerns/sudo.rs",
+      "old": "state.register_verifier(\"totp\");",
+      "new": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-010\")) { state.register_verifier(\"totp\"); }",
+      "test": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 19
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 38
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 45
+        }
+      ]
+    },
+    {
+      "id": "WS14g-016",
+      "file": "rust/crates/campfire/src/controllers/sudos.rs",
+      "old": "if verified {\n        let now = c.now();",
+      "new": "if verified || std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-016\") {\n        let now = c.now();",
+      "test": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 91
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 92
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 95
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 97
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 98
+        }
+      ]
+    },
+    {
+      "id": "WS14g-021",
+      "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+      "old": "SudoContinuation::Redirect(path)",
+      "new": "SudoContinuation::Redirect(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-021\") { root_path.into() } else { path })",
+      "test": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+      "scope": "pub fn continue_after_sudo(",
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 106
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 107
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 111
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 112
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 117
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 118
+        }
+      ]
+    },
+    {
+      "id": "WS14g-023",
+      "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+      "old": "verified_at > now - SUDO_TIMEOUT",
+      "new": "verified_at > now - (if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-023\") { SignedDuration::from_mins(13) } else if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-024\") { SignedDuration::from_mins(17) } else { SUDO_TIMEOUT })",
+      "test": "cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 151
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 152
+        }
+      ]
+    },
+    {
+      "id": "WS14g-024",
+      "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+      "reuse": true,
+      "test": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 160
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 161
+        }
+      ]
+    },
+    {
+      "id": "WS14g-108",
+      "file": "rust/crates/campfire/src/integrations/google/meeting_refresh.rs",
+      "old": "store_error(app, user_id, now, UNREACHABLE, true).await?;",
+      "new": "store_error(app, user_id, now, UNREACHABLE, !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-108\"))).await?;",
+      "test": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 258
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 265
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 266
+        }
+      ]
+    },
+    {
+      "id": "WS14g-181",
+      "file": "rust/crates/db/src/models/google_account.rs",
+      "old": "if Self::for_user(conn, grant.user_id)?.is_some() {",
+      "new": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-181\")) && Self::for_user(conn, grant.user_id)?.is_some() {",
+      "test": "cutover_d_duplicate_google_account_is_invalid_before_persistence",
+      "scope": null,
+      "package": "campfire",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 181
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 182
+        }
+      ]
+    },
+    {
+      "id": "WS14e-015",
+      "file": "rust/crates/db/src/models/calendar_event/attendance.rs",
+      "old": "                errors.into_result()?;",
+      "new": "                if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-015\") {\n                    return Ok(Self::find_for(tx.conn(), event_id, user_id)?.expect(\"existing attendance\"));\n                }\n                errors.into_result()?;",
+      "test": "cutover_d_attendance_member_holds_one_response_and_duplicate_creation_is_invalid",
+      "closure": "WS14e-015",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 72,
+        "function": "cutover_d_attendance_member_holds_one_response_and_duplicate_creation_is_invalid",
+        "text": "assert!(matches!(\n        t.try_write(|tx| EventAttendance::create(tx, id(\"launch_party\"), id(\"jason\"), \"maybe\")),\n        Err(Error::RecordInvalid(_))\n    ))"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 62
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 65
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 72
+        }
+      ]
+    },
+    {
+      "id": "WS14e-031",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "            if previous.is_some_and(|e| start <= e.starts_at)",
+      "new": "            if (!(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-031\")) && previous.is_some_and(|e| start <= e.starts_at))",
+      "test": "cutover_d_recurrence_strictly_before_previous_rejects_both_scopes_and_preserves_series",
+      "closure": "WS14e-031",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 133,
+        "function": "cutover_d_recurrence_strictly_before_previous_rejects_both_scopes_and_preserves_series",
+        "text": "assert!(matches!(&result, Err(Error::RecordInvalid(_))))"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 133
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 138
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 144
+        }
+      ]
+    },
+    {
+      "id": "WS14e-034",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "                if series_ids.contains(&source) {",
+      "new": "                if series_ids.contains(&source) && !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-034\")) {",
+      "test": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+      "closure": "WS14e-034",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 241,
+        "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+        "text": "assert_eq!(unread.len(), 1)"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 226
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 241
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 243
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 245
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 249
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 251
+        }
+      ]
+    },
+    {
+      "id": "WS14e-035",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "            for user in self\n                .notification_recipient_ids(tx.conn())?\n                .into_iter()\n                .filter(|u| Some(*u) != actor)\n            {",
+      "new": "            for user in self\n                .notification_recipient_ids(tx.conn())?\n                .into_iter()\n                .filter(|u| Some(*u) != actor)\n                .chain((std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-035\")).then_some(712064548))\n            {",
+      "test": "cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+      "closure": "WS14e-035",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 284,
+        "function": "cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+        "text": "assert_eq!(t.read(|c|Ok(c.query_row(\"SELECT COUNT(*) FROM activity_items WHERE user_id=? AND source_type='Event' AND source_id=? AND event_type='event_cancelled'\",params![id(\"kevin\"),excess.id],|r|r.get::<_,i64>(0))?)),0)"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 260
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 277
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 279
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 284
+        }
+      ]
+    },
+    {
+      "id": "WS14e-045",
+      "file": "rust/crates/db/src/models/calendar_event/reminders.rs",
+      "old": "                    if reminders_enabled(&preferences) {",
+      "new": "                    if reminders_enabled(&preferences) || std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-045\") {",
+      "test": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+      "closure": "WS14e-045",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 334,
+        "function": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+        "text": "assert_eq!(\n        item(&t, e.id, \"jason\").unwrap().event_type,\n        \"event_invitation\"\n    )"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 329
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 334
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 339
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 350
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 356
+        }
+      ]
+    },
+    {
+      "id": "WS14g-075",
+      "file": "rust/crates/db/src/models/calendar_event/attendance.rs",
+      "old": "            Self::save_response(tx, &event, user_id, response, true)",
+      "new": "            Self::save_response(tx, &event, user_id, response, !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-075\")))",
+      "test": "cutover_d_calendar_direct_attendance_creation_enqueues_exact_event_and_kevin",
+      "closure": "WS14g-075",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 394,
+        "function": "cutover_d_calendar_direct_attendance_creation_enqueues_exact_event_and_kevin",
+        "text": "assert_eq!(\n        jobs(&t),\n        vec![(\n            \"Calendar::SyncEntryJob\".into(),\n            json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"kevin\")})\n        )]\n    )"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 394
+        }
+      ]
+    },
+    {
+      "id": "WS14g-076",
+      "file": "rust/crates/db/src/models/calendar_event/attendance.rs",
+      "old": "            if let Some(stamp) = updated_at {",
+      "new": "            if let Some(stamp) = updated_at {\n                if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-076\") {\n                    tx.emit_after_commit(crate::Event::job(&SyncEntryJob { event_id: saved.event_id, user_id: saved.user_id }));\n                }",
+      "test": "cutover_d_calendar_direct_response_update_enqueues_but_timestamp_only_save_does_not",
+      "closure": "WS14g-076",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 429,
+        "function": "cutover_d_calendar_direct_response_update_enqueues_but_timestamp_only_save_does_not",
+        "text": "assert!(jobs(&t).is_empty())"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 412
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 429
+        }
+      ]
+    },
+    {
+      "id": "WS14g-081",
+      "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+      "old": "        for user_id in query_all(\n            tx.conn(),\n            \"SELECT user_id FROM event_calendar_entries WHERE event_id=? ORDER BY id\",\n            [self.id],\n            |r| r.get::<_, i64>(0),\n        )? {",
+      "new": "        for user_id in query_all(\n            tx.conn(),\n            \"SELECT user_id FROM event_calendar_entries WHERE event_id=? ORDER BY id\",\n            [self.id],\n            |r| r.get::<_, i64>(0),\n        )?.into_iter().take(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-081\") { 1 } else { usize::MAX }) {",
+      "test": "cutover_d_calendar_singleton_cancel_enqueues_each_of_two_distinct_users_entries",
+      "closure": "WS14g-081",
+      "assertion": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 447,
+        "function": "cutover_d_calendar_singleton_cancel_enqueues_each_of_two_distinct_users_entries",
+        "text": "assert_eq!(\n        jobs(&t),\n        vec![\n            (\n                \"Calendar::SyncEntryJob\".into(),\n                json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"david\")})\n            ),\n            (\n                \"Calendar::SyncEntryJob\".into(),\n                json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"jason\")})\n            )\n        ]\n    )"
+      },
+      "package": "campfire_db",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 447
+        }
+      ]
+    }
+  ]
+}

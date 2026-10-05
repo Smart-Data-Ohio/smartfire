@@ -1,0 +1,4003 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "records": [
+    {
+      "id": "WS15g-002",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 30,
+            "text": "assert_difference -> { @agent.agent_events.where(event_type: \"github_action_completed\").count }, 1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1267,
+              "end_line": 1267,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(after, before + 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 36,
+            "text": "assert_equal \"delivered\", event.outcome"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1268,
+              "end_line": 1268,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(event.2, \"delivered\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 37,
+            "text": "assert_equal @room, event.room"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1269,
+              "end_line": 1269,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(event.1, id(\"watercooler\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 38,
+            "text": "assert_nil event.message_id"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1270,
+              "end_line": 1270,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(event.3, None)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 39,
+            "text": "assert_equal("
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1282,
+              "end_line": 1282,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(event.4, expected)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-003",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 58,
+            "text": "assert_equal("
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1282,
+              "end_line": 1282,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(event.4, expected)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-004",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 78,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1290,
+              "end_line": 1290,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 80,
+            "text": "assert row, \"expected a github_action_completed row in #{response.parsed_body[\"events\"].inspect}\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1296,
+              "end_line": 1296,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(row.is_some(), \"completion absent from {poll}\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 81,
+            "text": "assert_equal \"delivered\", row[\"outcome\"]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1299,
+              "end_line": 1299,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(row[\"outcome\"], \"delivered\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 82,
+            "text": "assert_nil row[\"message\"]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1300,
+              "end_line": 1300,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(row[\"message\"].is_null())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 83,
+            "text": "assert_equal("
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1301,
+              "end_line": 1301,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(row[\"github_action\"], expected)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 92,
+            "text": "assert_equal @room.id, row.dig(\"room\", \"id\")"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1302,
+              "end_line": 1302,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(row[\"room\"][\"id\"], id(\"watercooler\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-005",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 106,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1290,
+              "end_line": 1290,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 108,
+            "text": "assert row, \"expected a github_action_completed row in #{response.parsed_body[\"events\"].inspect}\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1296,
+              "end_line": 1296,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(row.is_some(), \"completion absent from {poll}\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 109,
+            "text": "assert_equal \"failed\", row.dig(\"github_action\", \"status\")"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1380,
+              "end_line": 1380,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(row[\"github_action\"][\"status\"], \"failed\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 110,
+            "text": "assert_equal \"Agent is no longer a member of the room\", row.dig(\"github_action\", \"message\")"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1381,
+              "end_line": 1384,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(\n                row[\"github_action\"][\"message\"],\n                \"Agent is no longer a member of the room\"\n            )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 111,
+            "text": "assert_not row[\"github_action\"].key?(\"url\")"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1385,
+              "end_line": 1390,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(\n                !row[\"github_action\"]\n                    .as_object()\n                    .unwrap()\n                    .contains_key(\"url\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-006",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 124,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1376,
+              "end_line": 1376,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 125,
+            "text": "assert_equal \"acknowledged\", response.parsed_body[\"outcome\"]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1377,
+              "end_line": 1377,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(body[\"outcome\"], \"acknowledged\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 126,
+            "text": "assert_equal \"acknowledged\", event.reload.outcome"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1378,
+              "end_line": 1378,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(completion(&f, approval).await.2, \"acknowledged\")"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-007",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 138,
+            "text": "assert_requested stub, times: 2 # the approval decision plus the completion"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1792,
+              "end_line": 1792,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(requests.len(), 2)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 140,
+            "text": "assert_requested :post, webhooks(:bender).url, body: hash_including("
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1800,
+              "end_line": 1800,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(matched.len(), 1)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1802,
+              "end_line": 1802,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(matched[0].method, \"POST\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1803,
+              "end_line": 1803,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(matched[0].target, \"/bender\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1804,
+              "end_line": 1804,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(body[\"agent\"][\"id\"], agent)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1805,
+              "end_line": 1805,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(body[\"agent\"][\"name\"], \"Bender Bot\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1806,
+              "end_line": 1806,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(body[\"agent\"][\"delivery_id\"], completion.0)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1807,
+              "end_line": 1810,
+              "function": "cutover_d_approval_completion_webhook_has_exact_agent_and_action",
+              "text": "assert_eq!(\n        body[\"github_action\"],\n        json!({\"approval_id\":approval,\"action\":\"github.comment\",\"status\":\"completed\",\"url\":\"https://github.com/rails/rails/pull/12#issuecomment-1\"})\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-008",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 159,
+            "text": "assert_includes @agent.agent_events.readable_by(@agent).to_a, event"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1307,
+              "end_line": 1311,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(\n                        campfire_db::models::agent_event_access::readable_page(c, agent, 0, None)?\n                            .iter()\n                            .any(|e| e.id == event_id)\n                    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 165,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1352,
+              "end_line": 1352,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 166,
+            "text": "assert_empty response.parsed_body[\"events\"].select { |entry| entry[\"event_type\"] == \"github_action_completed\" }"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1353,
+              "end_line": 1359,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(\n                poll[\"events\"]\n                    .as_array()\n                    .unwrap()\n                    .iter()\n                    .all(|r| r[\"event_type\"] != \"github_action_completed\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 169,
+            "text": "assert_response :not_found"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1367,
+              "end_line": 1367,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(status, 404)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 170,
+            "text": "assert_equal \"delivered\", event.reload.outcome"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1368,
+              "end_line": 1368,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(completion(&f, approval).await.2, \"delivered\")"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-009",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 183,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1400,
+              "end_line": 1400,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 184,
+            "text": "assert_match \"github_action_completed\", response.body"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1402,
+              "end_line": 1402,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(html.contains(\"github_action_completed\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 185,
+            "text": "assert_match \"GitHub github.comment: completed\", response.body"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1403,
+              "end_line": 1403,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(html.contains(\"GitHub github.comment: completed\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-010",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 197,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1400,
+              "end_line": 1400,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 198,
+            "text": "assert_match \"GitHub github.comment: failed\", response.body"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1405,
+              "end_line": 1405,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(html.contains(\"GitHub github.comment: failed\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 199,
+            "text": "assert_match \"Agent is no longer a member of the room\", response.body"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1406,
+              "end_line": 1406,
+              "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+              "text": "assert!(html.contains(\"Agent is no longer a member of the room\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/agents/github_action_delivery_test.rb",
+            "line": 211,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-011",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 75,
+            "text": "assert_select \"input[name=?][disabled]\", \"user[github_login]\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 836,
+              "end_line": 836,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert!(input.contains(\"disabled\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 78,
+            "text": "assert_redirected_to user_profile_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 845,
+              "end_line": 845,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert_eq!(status, 302)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 846,
+              "end_line": 846,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert_eq!(headers[\"location\"], \"http://example.org/users/me/profile\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 79,
+            "text": "assert_equal \"octocat\", users(:david).reload.github_login"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 851,
+              "end_line": 859,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert_eq!(\n                c.query_row(\n                    \"SELECT github_login FROM users WHERE id=?\",\n                    [id(\"david\")],\n                    |r| r.get::<_, Option<String>>(0)\n                )?\n                .as_deref(),\n                Some(\"octocat\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 80,
+            "text": "assert_equal \"Dave\", users(:david).name"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 860,
+              "end_line": 860,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert_eq!(u.name, \"Dave\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 82,
+            "text": "assert_not users(:david).update(github_login: \"someone-else\")"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 876,
+              "end_line": 876,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert!(rejected.is_err())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 83,
+            "text": "assert_includes users(:david).errors[:github_login], \"is set by your linked GitHub account\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 880,
+              "end_line": 883,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert!(\n                e.on(\"github_login\")\n                    .contains(&\"is set by your linked GitHub account\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 72,
+              "end_line": 72,
+              "function": "grant_sudo_access",
+              "text": "assert!((300..400).contains(&status))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-012",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 92,
+            "text": "assert_redirected_to user_profile_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 904,
+              "end_line": 904,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert_eq!(status, 302)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 905,
+              "end_line": 905,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert_eq!(headers[\"location\"], \"http://example.org/users/me/profile\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 93,
+            "text": "assert_equal \"david-gh\", users(:david).reload.github_login"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 909,
+              "end_line": 917,
+              "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+              "text": "assert_eq!(\n                c.query_row(\n                    \"SELECT github_login FROM users WHERE id=?\",\n                    [id(\"david\")],\n                    |r| r.get::<_, Option<String>>(0)\n                )?\n                .as_deref(),\n                Some(\"david-gh\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 72,
+              "end_line": 72,
+              "function": "grant_sudo_access",
+              "text": "assert!((300..400).contains(&status))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-013",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_request_logs_filter_link_comment_and_review_credentials",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 152,
+            "text": "assert_includes log.string, \"github/connection\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1589,
+              "end_line": 1593,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert!(\n            logs.text().contains(&path),\n            \"missing request log: {}\",\n            logs.text()\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 153,
+            "text": "assert_not_includes log.string, \"github_pat_secret_xyz\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1594,
+              "end_line": 1594,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert!(!logs.text().contains(token))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 72,
+              "end_line": 72,
+              "function": "grant_sudo_access",
+              "text": "assert!((300..400).contains(&status))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-014",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_request_logs_filter_link_comment_and_review_credentials",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/connections_controller_test.rb",
+            "line": 159,
+            "text": "assert_equal \"[FILTERED]\", filter.filter(access_token: \"github_pat_secret_xyz\")[:access_token]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1596,
+              "end_line": 1600,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert_eq!(\n        crate::security::parameter_filter()\n            .filter(&json!({\"access_token\":\"github_pat_secret_xyz\"}))[\"access_token\"],\n        \"[FILTERED]\"\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 72,
+              "end_line": 72,
+              "function": "grant_sudo_access",
+              "text": "assert!((300..400).contains(&status))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-015",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_request_logs_filter_link_comment_and_review_credentials",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_comments_controller_test.rb",
+            "line": 167,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1587,
+              "end_line": 1587,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_comments_controller_test.rb",
+            "line": 168,
+            "text": "assert_includes log.string, \"pull_request_comments\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1589,
+              "end_line": 1593,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert!(\n            logs.text().contains(&path),\n            \"missing request log: {}\",\n            logs.text()\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_comments_controller_test.rb",
+            "line": 169,
+            "text": "assert_not_includes log.string, \"user-token-secret-xyz\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1594,
+              "end_line": 1594,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert!(!logs.text().contains(token))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-016",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_request_logs_filter_link_comment_and_review_credentials",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_review_requests_controller_test.rb",
+            "line": 221,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1587,
+              "end_line": 1587,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_review_requests_controller_test.rb",
+            "line": 222,
+            "text": "assert_includes log.string, \"pull_request_review_requests\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1589,
+              "end_line": 1593,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert!(\n            logs.text().contains(&path),\n            \"missing request log: {}\",\n            logs.text()\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_review_requests_controller_test.rb",
+            "line": 223,
+            "text": "assert_not_includes log.string, \"user-token-secret-xyz\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1594,
+              "end_line": 1594,
+              "function": "cutover_d_request_logs_filter_link_comment_and_review_credentials",
+              "text": "assert!(!logs.text().contains(token))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-017",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The create! race boundary mirrors Rails simulate_mapping_race: inserts the real winning message/thread/membership/mapping before the one-shot uniqueness error; the real HTTP producer removes the loser. assert_mapping_race_loser_cleaned_up calls the three original helper assertions, each separately cited below. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 58,
+            "text": "assert_difference -> { Github::PullRequestThread.count }, 1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1709,
+              "end_line": 1716,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    c.query_row(\n                        \"SELECT COUNT(*) FROM github_pull_request_threads\",\n                        [],\n                        |r| r.get::<_, i64>(0)\n                    )?,\n                    1\n                )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 63,
+            "text": "assert_mapping_race_loser_cleaned_up(thread_ids_before)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1709,
+              "end_line": 1716,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    c.query_row(\n                        \"SELECT COUNT(*) FROM github_pull_request_threads\",\n                        [],\n                        |r| r.get::<_, i64>(0)\n                    )?,\n                    1\n                )"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1704,
+              "end_line": 1704,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(status, 303, \"index={index}: {body}\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1733,
+              "end_line": 1740,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n            headers[\"location\"],\n            format!(\n                \"http://example.org/rooms/{}/threads/{}\",\n                id(\"designers\"),\n                mapping.channel_thread_id\n            )\n        )"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1722,
+              "end_line": 1727,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    ids.into_iter()\n                        .filter(|i| !before.contains(i))\n                        .collect::<Vec<_>>(),\n                    vec![mapping.channel_thread_id]\n                )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 143,
+            "text": "assert_equal 1, Github::PullRequestThread.count"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1709,
+              "end_line": 1716,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    c.query_row(\n                        \"SELECT COUNT(*) FROM github_pull_request_threads\",\n                        [],\n                        |r| r.get::<_, i64>(0)\n                    )?,\n                    1\n                )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 145,
+            "text": "assert_redirected_to room_thread_path(@room, mapping.channel_thread)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1704,
+              "end_line": 1704,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(status, 303, \"index={index}: {body}\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1733,
+              "end_line": 1740,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n            headers[\"location\"],\n            format!(\n                \"http://example.org/rooms/{}/threads/{}\",\n                id(\"designers\"),\n                mapping.channel_thread_id\n            )\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 146,
+            "text": "assert_equal [ mapping.channel_thread_id ], ChannelThread.ids - thread_ids_before"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1722,
+              "end_line": 1727,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    ids.into_iter()\n                        .filter(|i| !before.contains(i))\n                        .collect::<Vec<_>>(),\n                    vec![mapping.channel_thread_id]\n                )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-018",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The create! race boundary mirrors Rails simulate_mapping_race: inserts the real winning message/thread/membership/mapping before the one-shot uniqueness error; the real HTTP producer removes the loser. assert_mapping_race_loser_cleaned_up calls the three original helper assertions, each separately cited below. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 72,
+            "text": "assert_difference -> { Github::PullRequestThread.count }, 1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1709,
+              "end_line": 1716,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    c.query_row(\n                        \"SELECT COUNT(*) FROM github_pull_request_threads\",\n                        [],\n                        |r| r.get::<_, i64>(0)\n                    )?,\n                    1\n                )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 77,
+            "text": "assert_mapping_race_loser_cleaned_up(thread_ids_before)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1709,
+              "end_line": 1716,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    c.query_row(\n                        \"SELECT COUNT(*) FROM github_pull_request_threads\",\n                        [],\n                        |r| r.get::<_, i64>(0)\n                    )?,\n                    1\n                )"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1704,
+              "end_line": 1704,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(status, 303, \"index={index}: {body}\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1733,
+              "end_line": 1740,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n            headers[\"location\"],\n            format!(\n                \"http://example.org/rooms/{}/threads/{}\",\n                id(\"designers\"),\n                mapping.channel_thread_id\n            )\n        )"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1722,
+              "end_line": 1727,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    ids.into_iter()\n                        .filter(|i| !before.contains(i))\n                        .collect::<Vec<_>>(),\n                    vec![mapping.channel_thread_id]\n                )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 143,
+            "text": "assert_equal 1, Github::PullRequestThread.count"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1709,
+              "end_line": 1716,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    c.query_row(\n                        \"SELECT COUNT(*) FROM github_pull_request_threads\",\n                        [],\n                        |r| r.get::<_, i64>(0)\n                    )?,\n                    1\n                )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 145,
+            "text": "assert_redirected_to room_thread_path(@room, mapping.channel_thread)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1704,
+              "end_line": 1704,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(status, 303, \"index={index}: {body}\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1733,
+              "end_line": 1740,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n            headers[\"location\"],\n            format!(\n                \"http://example.org/rooms/{}/threads/{}\",\n                id(\"designers\"),\n                mapping.channel_thread_id\n            )\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/pull_request_threads_controller_test.rb",
+            "line": 146,
+            "text": "assert_equal [ mapping.channel_thread_id ], ChannelThread.ids - thread_ids_before"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1722,
+              "end_line": 1727,
+              "function": "cutover_d_mapping_race_recovers_unique_index_and_validation_losers_over_http",
+              "text": "assert_eq!(\n                    ids.into_iter()\n                        .filter(|i| !before.contains(i))\n                        .collect::<Vec<_>>(),\n                    vec![mapping.channel_thread_id]\n                )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-020",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_webhook_signed_fetch_updates_and_broadcasts_once_to_its_room",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 32,
+            "text": "assert_broadcasts stream, 1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2246,
+              "end_line": 2253,
+              "function": "cutover_d_webhook_signed_fetch_updates_and_broadcasts_once_to_its_room",
+              "text": "assert_eq!(\n        publications\n            .take()\n            .iter()\n            .filter(|(stream, _)| stream == &room)\n            .count(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 38,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2242,
+              "end_line": 2242,
+              "function": "cutover_d_webhook_signed_fetch_updates_and_broadcasts_once_to_its_room",
+              "text": "assert_eq!(webhook_post(&f,json!({\"repository\":{\"full_name\":\"rails/rails\"},\"pull_request\":{\"number\":123,\"base\":{\"repo\":{\"full_name\":\"rails/rails\"}}}}),\"d-valid-fetch\").await,200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 39,
+            "text": "assert_equal \"Add shiny things\", @pull_request.reload.title"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2257,
+              "end_line": 2260,
+              "function": "cutover_d_webhook_signed_fetch_updates_and_broadcasts_once_to_its_room",
+              "text": "assert_eq!(\n                PullRequest::find(c, pr)?.title.as_deref(),\n                Some(\"Add shiny things\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-021",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 224,
+            "text": "assert_enqueued_jobs 1, only: Github::DeliverSubscriptionEventJob do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2292,
+              "end_line": 2292,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(jobs.len() as i64,job_before+1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 226,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2289,
+              "end_line": 2289,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(webhook_post(&f, body.clone(), \"d-subscription\").await, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 229,
+            "text": "assert_difference -> { @room.messages.count }, 1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2297,
+              "end_line": 2297,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(c.query_row(\"SELECT COUNT(*) FROM messages WHERE room_id=?\",[id(\"designers\")],|r|r.get::<_,i64>(0))?,before+1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 234,
+            "text": "assert_equal User.active_bots.find_by!(name: \"GitHub\"), message.creator"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2300,
+              "end_line": 2300,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(bot.name,\"GitHub\")"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2301,
+              "end_line": 2301,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert!(bot.is_bot()&&bot.is_active())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 235,
+            "text": "assert_includes message.markdown_source, \"https://github.com/rails/rails/pull/12\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2302,
+              "end_line": 2302,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert!(message.markdown_source.as_deref().unwrap().contains(\"https://github.com/rails/rails/pull/12\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 236,
+            "text": "assert_equal [ 12 ], message.github_pull_requests.map(&:number)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2303,
+              "end_line": 2303,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(PullRequest::for_message(c,message.id)?.iter().map(|p|p.number).collect::<Vec<_>>(),vec![12])"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-022",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 245,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2289,
+              "end_line": 2289,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(webhook_post(&f, body.clone(), \"d-subscription\").await, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 247,
+            "text": "assert_equal 1, @room.messages.where(\"markdown_source LIKE ?\", \"%opened pull request%\").count"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2304,
+              "end_line": 2304,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(c.query_row(\"SELECT COUNT(*) FROM messages WHERE room_id=? AND markdown_source LIKE '%opened pull request%'\",[id(\"designers\")],|r|r.get::<_,i64>(0))?,1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 249,
+            "text": "assert_no_enqueued_jobs only: Github::DeliverSubscriptionEventJob do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2310,
+              "end_line": 2310,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(jobs_after, jobs_before)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/github/webhooks_controller_test.rb",
+            "line": 251,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2308,
+              "end_line": 2308,
+              "function": "cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
+              "text": "assert_eq!(webhook_post(&f, body, \"d-subscription\").await, 200)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-023",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 109,
+            "text": "assert_redirected_to user_profile_path"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1846,
+              "end_line": 1846,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(status, 302)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1847,
+              "end_line": 1847,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(headers[\"location\"], \"http://example.org/users/me/profile\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 116,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1854,
+              "end_line": 1854,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 117,
+            "text": "assert_select \".github-pr-card\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1855,
+              "end_line": 1855,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(class_count(&html, \"github-pr-card\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 126,
+            "text": "assert_redirected_to user_profile_path"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1869,
+              "end_line": 1869,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(status, 302)"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1870,
+              "end_line": 1870,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(headers[\"location\"], \"http://example.org/users/me/profile\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 132,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1877,
+              "end_line": 1877,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 133,
+            "text": "assert_select \".github-pr-card__title\", text: \"Secret plans\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1878,
+              "end_line": 1878,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert!(html.contains(\"class=\\\"github-pr-card__title\\\">Secret plans</p>\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 135,
+            "text": "assert_requested :get, \"https://api.github.com/repos/acme/secret\", times: 2"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1879,
+              "end_line": 1886,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(\n            f.server\n                .received()\n                .iter()\n                .filter(|r| r.method == \"GET\" && r.target == \"/repos/acme/secret\")\n                .count(),\n            2\n        )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 72,
+              "end_line": 72,
+              "function": "grant_sudo_access",
+              "text": "assert!((300..400).contains(&status))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-024",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 146,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1854,
+              "end_line": 1854,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 147,
+            "text": "assert_select \".github-pr-card\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1855,
+              "end_line": 1855,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(class_count(&html, \"github-pr-card\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 148,
+            "text": "assert_not_includes response.body, \"Secret plans\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1857,
+              "end_line": 1857,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert!(!html.contains(\"Secret plans\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 157,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1877,
+              "end_line": 1877,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/rooms/github/pull_request_cards_controller_test.rb",
+            "line": 158,
+            "text": "assert_select \".github-pr-card__title\", text: \"Secret plans\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1878,
+              "end_line": 1878,
+              "function": "cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached",
+              "text": "assert!(html.contains(\"class=\\\"github-pr-card__title\\\">Secret plans</p>\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 72,
+              "end_line": 72,
+              "function": "grant_sudo_access",
+              "text": "assert!((300..400).contains(&status))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-025",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_no_pr_key_matches_original_slots",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 36,
+            "text": "assert_equal [ messages(:first), nil, nil, nil, nil, false, false, nil, nil, nil, MessagesHelper::PRESENTATION_CACHE_VERSION ], message_with_pr_cards_cache_key(messages(:first))"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 165,
+              "end_line": 165,
+              "function": "cutover_d_cache_no_pr_key_matches_original_slots",
+              "text": "assert_eq!(actual, format!(\"{record}/////false/false////3\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-026",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 50,
+            "text": "assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(parent.id))"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 228,
+              "end_line": 232,
+              "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+              "text": "assert_ne!(\n            before,\n            key(&f, parent).await,\n            \"frozen reply-count dependency delete={delete}\"\n        )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-027",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 63,
+            "text": "assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(parent.id))"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 228,
+              "end_line": 232,
+              "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+              "text": "assert_ne!(\n            before,\n            key(&f, parent).await,\n            \"frozen reply-count dependency delete={delete}\"\n        )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-028",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 73,
+            "text": "assert_no_queries(include_schema: false) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 283,
+              "end_line": 283,
+              "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+              "text": "assert_eq!(reads.load(std::sync::atomic::Ordering::SeqCst), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 74,
+            "text": "assert_includes message_with_pr_cards_cache_key(loaded), 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 282,
+              "end_line": 282,
+              "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+              "text": "assert!(key.split('/').any(|slot| slot == \"1\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-029",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 86,
+            "text": "assert_not_equal before, message_with_pr_cards_cache_key(message.reload)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 303,
+              "end_line": 303,
+              "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+              "text": "assert_ne!(before, key(&f, first).await)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-030",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 100,
+            "text": "assert_not_equal before, message_with_pr_cards_cache_key(message.reload)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 340,
+              "end_line": 340,
+              "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+              "text": "assert_ne!(before, key(&f, step_message).await)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-034",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 164,
+            "text": "assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 376,
+              "end_line": 376,
+              "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+              "text": "assert_ne!(before, key(&f, quote).await)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-035",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 178,
+            "text": "assert_not_equal before, voted_key"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 419,
+              "end_line": 419,
+              "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+              "text": "assert_ne!(before, voted)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 183,
+            "text": "assert_not_equal voted_key, message_with_pr_cards_cache_key(message.reload)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 427,
+              "end_line": 427,
+              "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+              "text": "assert_ne!(voted, key(&f, question).await)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-036",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 190,
+            "text": "assert_includes message_with_pr_cards_cache_key(note), true"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 448,
+              "end_line": 448,
+              "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+              "text": "assert_eq!(key(&f, note).await.rsplit('/').nth(5), Some(\"true\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 191,
+            "text": "assert_includes message_with_pr_cards_cache_key(messages(:first)), false"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 449,
+              "end_line": 449,
+              "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+              "text": "assert_eq!(key(&f, first).await.rsplit('/').nth(5), Some(\"false\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-037",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 203,
+            "text": "assert_not_equal before, pinned_key"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 481,
+              "end_line": 481,
+              "function": "cutover_d_cache_pins_and_newer_card_unpin",
+              "text": "assert_ne!(before, pinned)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 208,
+            "text": "assert_not_equal pinned_key, message_with_pr_cards_cache_key(message.reload)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 510,
+              "end_line": 514,
+              "function": "cutover_d_cache_pins_and_newer_card_unpin",
+              "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-038",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 224,
+            "text": "assert_not_equal pinned_key, message_with_pr_cards_cache_key(message.reload)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 510,
+              "end_line": 514,
+              "function": "cutover_d_cache_pins_and_newer_card_unpin",
+              "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 508,
+              "end_line": 508,
+              "function": "cutover_d_cache_pins_and_newer_card_unpin",
+              "text": "assert_ne!(before_unpin, key(&f, message).await)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-039",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 238,
+            "text": "assert_not_equal before, message_with_pr_cards_cache_key(message.reload)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 553,
+              "end_line": 553,
+              "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+              "text": "assert_ne!(before, key(&f, message).await)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-040",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/helpers/github_pull_requests_helper_test.rb",
+            "line": 252,
+            "text": "assert_not_equal before, message_with_pr_cards_cache_key(message.reload)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 576,
+              "end_line": 576,
+              "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+              "text": "assert_ne!(before, key(&f, message).await)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-042",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_room_http_query_count_stays_flat_for_two_then_six_pr_messages",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/github_pr_cards_test.rb",
+            "line": 162,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1906,
+              "end_line": 1909,
+              "function": "cutover_d_room_http_query_count_stays_flat_for_two_then_six_pr_messages",
+              "text": "assert_eq!(\n        request(&f, \"GET\", &path, Value::Null, json!({})).await.0,\n        200\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_cards_test.rb",
+            "line": 169,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1915,
+              "end_line": 1915,
+              "function": "cutover_d_room_http_query_count_stays_flat_for_two_then_six_pr_messages",
+              "text": "assert_eq!(small.0, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_cards_test.rb",
+            "line": 174,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1933,
+              "end_line": 1933,
+              "function": "cutover_d_room_http_query_count_stays_flat_for_two_then_six_pr_messages",
+              "text": "assert_eq!(large.0, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_cards_test.rb",
+            "line": 176,
+            "text": "assert_equal small, large,"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1934,
+              "end_line": 1937,
+              "function": "cutover_d_room_http_query_count_stays_flat_for_two_then_six_pr_messages",
+              "text": "assert_eq!(\n        small_queries, large_queries,\n        \"room SELECTs with two/six PR messages\"\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-043",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_open_room_join_page_omits_card_and_offers_join",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/github_pr_cards_test.rb",
+            "line": 268,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 796,
+              "end_line": 796,
+              "function": "cutover_d_open_room_join_page_omits_card_and_offers_join",
+              "text": "assert_eq!(status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_cards_test.rb",
+            "line": 269,
+            "text": "assert_select \".github-pr-card\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 797,
+              "end_line": 797,
+              "function": "cutover_d_open_room_join_page_omits_card_and_offers_join",
+              "text": "assert_eq!(class_count(&html, \"github-pr-card\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_cards_test.rb",
+            "line": 270,
+            "text": "assert_select \"button\", text: \"Join channel\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 798,
+              "end_line": 798,
+              "function": "cutover_d_open_room_join_page_omits_card_and_offers_join",
+              "text": "assert!(html.contains(\"Join channel</button>\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-047",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 73,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 685,
+              "end_line": 685,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(status, 200, \"{case}\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 74,
+            "text": "assert_select \".github-pr-files__file\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 719,
+              "end_line": 719,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(class_count(&html, \"github-pr-files__file\"), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 75,
+            "text": "assert_select \".github-pr-files__more\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 720,
+              "end_line": 720,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(class_count(&html, \"github-pr-files__more\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-048",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The card count uses actual descendants of parsed full-response header nodes, preserving .github-pr-thread-header .github-pr-card ancestry.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 86,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 685,
+              "end_line": 685,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(status, 200, \"{case}\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 87,
+            "text": "assert_select \".github-pr-thread-header .github-pr-card\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 723,
+              "end_line": 723,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(scoped(\"github-pr-card\").len(), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 88,
+            "text": "assert_select \".github-pr-files__loading\", text: /Loading files/"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 726,
+              "end_line": 732,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert!(dom.descendants(root).into_iter().any(|node| {\n                    dom.attr(node, \"class\").is_some_and(|classes| {\n                        classes\n                            .split_whitespace()\n                            .any(|class| class == \"github-pr-files__loading\")\n                    }) && dom.text_content(node).contains(\"Loading files\")\n                }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 89,
+            "text": "assert_select \".github-pr-files__file\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 733,
+              "end_line": 733,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(class_count(&html, \"github-pr-files__file\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-049",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 101,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 685,
+              "end_line": 685,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(status, 200, \"{case}\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 102,
+            "text": "assert_select \".github-pr-thread-header\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 687,
+              "end_line": 687,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(class_count(&html, \"github-pr-thread-header\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-050",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 117,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 685,
+              "end_line": 685,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(status, 200, \"{case}\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 118,
+            "text": "assert_select \".github-pr-files__path\", text: malicious_name"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 738,
+              "end_line": 739,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert!(paths.iter().any(|&path| dom.text_content(path)\n                    == \"<img src=x onerror=\\\"window.__prFilesXss = true\\\">\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/github_pr_threads_test.rb",
+            "line": 119,
+            "text": "assert_select \".github-pr-files__path img\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 740,
+              "end_line": 747,
+              "function": "cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
+              "text": "assert_eq!(\n                    paths\n                        .iter()\n                        .flat_map(|&path| dom.descendants(path))\n                        .filter(|&node| dom.local_name(node) == Some(\"img\"))\n                        .count(),\n                    0\n                )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-053",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 80,
+            "text": "assert_difference -> { ActivityItem.where(user: users(:kevin), event_type: \"pr_review_request\").count }, 1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1989,
+              "end_line": 1989,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!(items,before_items+1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 85,
+            "text": "assert_equal \"**bob** requested a review from **Kevin-GH** on #12: Fix login\\nhttps://github.com/rails/rails/pull/12\", message.markdown_source"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1990,
+              "end_line": 1990,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!(message.1,\"**bob** requested a review from **Kevin-GH** on #12: Fix login\\nhttps://github.com/rails/rails/pull/12\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 88,
+            "text": "assert_equal message, item.source"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1994,
+              "end_line": 1994,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!((item.source_type.as_str(),item.source_id),(\"Message\",message.0))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 89,
+            "text": "assert_includes ActivityItem.accessible_to(users(:kevin)), item"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1996,
+              "end_line": 1996,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert!(campfire_db::ActivityItem::accessible_to(tx.conn(),&kevin)?.iter().any(|i|i.id==item.id))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 92,
+            "text": "assert_not ActivityItem.accessible_to(users(:kevin)).exists?(item.id)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1999,
+              "end_line": 1999,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert!(campfire_db::ActivityItem::find_accessible(tx.conn(),&kevin,item.id)?.is_none())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-054",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 114,
+            "text": "assert_difference -> { @room.messages.count }, 1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1983,
+              "end_line": 1983,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!(count,before_messages+1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 115,
+            "text": "assert_no_difference -> { ActivityItem.where(event_type: \"pr_review_request\").count } do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1985,
+              "end_line": 1985,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!(items,before_items)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 125,
+            "text": "assert_equal \"mention\", ActivityItem.find_by!(user: users(:kevin), source: mention).event_type"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1987,
+              "end_line": 1987,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!(campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),id(\"kevin\"),\"Message\",mention.id)?.unwrap().event_type,\"mention\")"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-055",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 296,
+            "text": "assert_equal \"**bob** requested a review from **Kevin-GH** on #12: Fix login\\nhttps://github.com/rails/rails/pull/12\", reply.markdown_source"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1990,
+              "end_line": 1990,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!(message.1,\"**bob** requested a review from **Kevin-GH** on #12: Fix login\\nhttps://github.com/rails/rails/pull/12\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 299,
+            "text": "assert_equal reply, item.source"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1994,
+              "end_line": 1994,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert_eq!((item.source_type.as_str(),item.source_id),(\"Message\",message.0))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/deliver_subscription_event_job_test.rb",
+            "line": 300,
+            "text": "assert_includes ActivityItem.accessible_to(users(:kevin)), item"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1996,
+              "end_line": 1996,
+              "function": "cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
+              "text": "assert!(campfire_db::ActivityItem::accessible_to(tx.conn(),&kevin)?.iter().any(|i|i.id==item.id))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-056",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/fetch_pull_request_job_test.rb",
+            "line": 322,
+            "text": "assert header_stream, \"expected a thread header replace stream, got: #{fragment.to_html}\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2164,
+              "end_line": 2164,
+              "function": "cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
+              "text": "assert_eq!(header_streams.len(), 1, \"{html}\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/fetch_pull_request_job_test.rb",
+            "line": 323,
+            "text": "assert_equal 1, header_stream.css(\".github-pr-card\").size"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2166,
+              "end_line": 2166,
+              "function": "cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
+              "text": "assert_eq!(class_nodes(&dom, header_stream, \"github-pr-card\").len(), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/fetch_pull_request_job_test.rb",
+            "line": 324,
+            "text": "assert_includes header_stream.at_css(\".github-pr-card__title\").text, \"Add shiny things\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2167,
+              "end_line": 2170,
+              "function": "cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
+              "text": "assert!(\n                dom.text_content(class_nodes(&dom, header_stream, \"github-pr-card__title\")[0])\n                    .contains(\"Add shiny things\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/fetch_pull_request_job_test.rb",
+            "line": 325,
+            "text": "assert_includes header_stream.at_css(\".github-pr-files__path\").text, \"app/models/user.rb\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2171,
+              "end_line": 2174,
+              "function": "cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
+              "text": "assert!(\n                dom.text_content(class_nodes(&dom, header_stream, \"github-pr-files__path\")[0])\n                    .contains(\"app/models/user.rb\")\n            )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-057",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/fetch_pull_request_job_test.rb",
+            "line": 334,
+            "text": "Turbo::StreamsChannel.expects(:broadcast_replace_to).never"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 2187,
+              "end_line": 2187,
+              "function": "cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
+              "text": "assert!(publications.take().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-058",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/perform_agent_action_job_test.rb",
+            "line": 37,
+            "text": "assert_enqueued_with(job: Github::PerformAgentActionJob, args: [ approvable.id ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1419,
+              "end_line": 1419,
+              "function": "cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action",
+              "text": "assert_eq!(jobs, vec![json!({\"approval_id\":approve})])"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/github/perform_agent_action_job_test.rb",
+            "line": 42,
+            "text": "assert_no_enqueued_jobs only: Github::PerformAgentActionJob do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1422,
+              "end_line": 1422,
+              "function": "cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action",
+              "text": "assert_eq!(denied, jobs)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/perform_agent_action_job_test.rb",
+            "line": 515,
+            "text": "assert action.valid?, action.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1124,
+              "end_line": 1124,
+              "function": "approval",
+              "text": "assert!(a.errors().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-059",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/github/perform_agent_action_job_test.rb",
+            "line": 81,
+            "text": "assert_no_enqueued_jobs only: Github::PerformAgentActionJob do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1425,
+              "end_line": 1425,
+              "function": "cutover_d_approval_enqueues_exact_argument_only_for_approved_github_action",
+              "text": "assert_eq!(non_github, jobs)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-061",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_write_timeout_logs_warning_without_member_token",
+      "note": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/github/write_client_test.rb",
+            "line": 107,
+            "text": "error = assert_raises(Github::WriteClient::Error) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1636,
+              "end_line": 1639,
+              "function": "cutover_d_write_timeout_logs_warning_without_member_token",
+              "text": "assert_eq!(\n        error.kind,\n        crate::integrations::github::client::ErrorKind::Other\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/github/write_client_test.rb",
+            "line": 110,
+            "text": "assert_match(/Could not reach GitHub/, error.message)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1640,
+              "end_line": 1640,
+              "function": "cutover_d_write_timeout_logs_warning_without_member_token",
+              "text": "assert!(error.message.contains(\"Could not reach GitHub\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/github/write_client_test.rb",
+            "line": 113,
+            "text": "assert_includes log.string, \"Github::WriteClient request failed\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1641,
+              "end_line": 1641,
+              "function": "cutover_d_write_timeout_logs_warning_without_member_token",
+              "text": "assert!(logs.text().contains(\"Github::WriteClient request failed\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/github/write_client_test.rb",
+            "line": 114,
+            "text": "assert_not_includes log.string, \"user-token-123\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+              "line": 1642,
+              "end_line": 1642,
+              "function": "cutover_d_write_timeout_logs_warning_without_member_token",
+              "text": "assert!(!logs.text().contains(\"user-token-123\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-062",
+      "test": "campfire::bin/campfire controllers::ws15_original_github_browser_tests::original_browser_ws15g_062",
+      "note": "The byte-identical original Rails test body executes in native Capybara/Selenium against real Rust HTTP, Turbo forms and rendered markup. Original account, message and GitHub fixture setup and exact WebMock request assertions are preserved.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 40,
+            "text": "assert_selector \".github-pr-thread-header .github-pr-card__title\", text: \"Fix login\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 40,
+              "end_line": 40,
+              "function": "original_browser_ws15g_062",
+              "text": "assert_selector \".github-pr-thread-header .github-pr-card__title\", text: \"Fix login\", wait: 10",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 40
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 47,
+            "text": "assert_selector \".github-pr-write__notice\", text: \"Comment posted on GitHub as @jz\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 47,
+              "end_line": 47,
+              "function": "original_browser_ws15g_062",
+              "text": "assert_selector \".github-pr-write__notice\", text: \"Comment posted on GitHub as @jz\", wait: 10",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 47
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 48,
+            "text": "assert_field \"Comment on GitHub\", with: \"\""
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 48,
+              "end_line": 48,
+              "function": "original_browser_ws15g_062",
+              "text": "assert_field \"Comment on GitHub\", with: \"\"",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 48
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 49,
+            "text": "assert_requested stub"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 49,
+              "end_line": 49,
+              "function": "original_browser_ws15g_062",
+              "text": "assert_requested stub",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 49
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/system_test_helper.rb",
+            "line": 65,
+            "text": "assert_selector \"a.btn\", text: \"Designers\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/test_helpers/system_test_helper.rb",
+              "line": 65,
+              "end_line": 65,
+              "function": "original_browser_ws15g_062",
+              "text": "assert_selector \"a.btn\", text: \"Designers\", wait: 10",
+              "kind": "original_browser_helper",
+              "original": {
+                "file": "test/test_helpers/system_test_helper.rb",
+                "line": 65
+              },
+              "helper": "sign_in"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-063",
+      "test": "campfire::bin/campfire controllers::ws15_original_github_browser_tests::original_browser_ws15g_063",
+      "note": "The byte-identical original Rails test body executes in native Capybara/Selenium against real Rust HTTP, Turbo forms and rendered markup. Original account, message and GitHub fixture setup and exact WebMock request assertions are preserved.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 86,
+            "text": "assert_selector \".github-pr-thread-header .github-pr-card__title\", text: \"Fix login\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 86,
+              "end_line": 86,
+              "function": "original_browser_ws15g_063",
+              "text": "assert_selector \".github-pr-thread-header .github-pr-card__title\", text: \"Fix login\", wait: 10",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 86
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 93,
+            "text": "assert_selector \".github-pr-write__notice\", text: \"Requested review from @alice, @bob on GitHub as @jz\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 93,
+              "end_line": 93,
+              "function": "original_browser_ws15g_063",
+              "text": "assert_selector \".github-pr-write__notice\", text: \"Requested review from @alice, @bob on GitHub as @jz\", wait: 10",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 93
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 94,
+            "text": "assert_field \"GitHub usernames\", with: \"\""
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 94,
+              "end_line": 94,
+              "function": "original_browser_ws15g_063",
+              "text": "assert_field \"GitHub usernames\", with: \"\"",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 94
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 95,
+            "text": "assert_requested stub"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 95,
+              "end_line": 95,
+              "function": "original_browser_ws15g_063",
+              "text": "assert_requested stub",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 95
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/system_test_helper.rb",
+            "line": 65,
+            "text": "assert_selector \"a.btn\", text: \"Designers\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/test_helpers/system_test_helper.rb",
+              "line": 65,
+              "end_line": 65,
+              "function": "original_browser_ws15g_063",
+              "text": "assert_selector \"a.btn\", text: \"Designers\", wait: 10",
+              "kind": "original_browser_helper",
+              "original": {
+                "file": "test/test_helpers/system_test_helper.rb",
+                "line": 65
+              },
+              "helper": "sign_in"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS15g-064",
+      "test": "campfire::bin/campfire controllers::ws15_original_github_browser_tests::original_browser_ws15g_064",
+      "note": "The byte-identical original Rails test body executes in native Capybara/Selenium against real Rust HTTP, Turbo forms and rendered markup. Original account, message and GitHub fixture setup and exact WebMock request assertions are preserved.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 123,
+            "text": "assert_selector \".github-pr-thread-header .github-pr-card__title\", text: \"Fix login\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 123,
+              "end_line": 123,
+              "function": "original_browser_ws15g_064",
+              "text": "assert_selector \".github-pr-thread-header .github-pr-card__title\", text: \"Fix login\", wait: 10",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 123
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 124,
+            "text": "assert_selector \".github-pr-write__connect\", text: /Connect GitHub/, wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 124,
+              "end_line": 124,
+              "function": "original_browser_ws15g_064",
+              "text": "assert_selector \".github-pr-write__connect\", text: /Connect GitHub/, wait: 10",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 124
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/system/github_pr_write_actions_test.rb",
+            "line": 125,
+            "text": "assert_no_selector \".github-pr-write__comment\""
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/system/github_pr_write_actions_test.rb",
+              "line": 125,
+              "end_line": 125,
+              "function": "original_browser_ws15g_064",
+              "text": "assert_no_selector \".github-pr-write__comment\"",
+              "kind": "original_browser",
+              "original": {
+                "file": "test/system/github_pr_write_actions_test.rb",
+                "line": 125
+              }
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/system_test_helper.rb",
+            "line": 65,
+            "text": "assert_selector \"a.btn\", text: \"Designers\", wait: 10"
+          },
+          "rust": [
+            {
+              "file": "rust/reference-tools/users/original_browser/test/test_helpers/system_test_helper.rb",
+              "line": 65,
+              "end_line": 65,
+              "function": "original_browser_ws15g_064",
+              "text": "assert_selector \"a.btn\", text: \"Designers\", wait: 10",
+              "kind": "original_browser_helper",
+              "original": {
+                "file": "test/test_helpers/system_test_helper.rb",
+                "line": 65
+              },
+              "helper": "sign_in"
+            },
+            {
+              "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
+              "line": 197,
+              "end_line": 202,
+              "function": "original",
+              "text": "assert!(\n        output.status.success(),\n        \"{key}: exact original browser declaration failed\\n{}\\n{}\",\n        String::from_utf8_lossy(&output.stdout),\n        String::from_utf8_lossy(&output.stderr)\n    );"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    }
+  ],
+  "helper_inventory_version": 1
+}

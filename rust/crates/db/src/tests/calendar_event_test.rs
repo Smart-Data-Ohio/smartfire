@@ -14,6 +14,7 @@ mod cutover_event_test;
 mod cutover_entry_test;
 mod cutover_timeline_test;
 mod cutover_recurrence_test;
+mod cutover_d_events_test;
 
 fn frozen() -> TestDb {
     TestDb::with_clock(

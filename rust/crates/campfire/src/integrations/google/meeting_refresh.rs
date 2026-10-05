@@ -36,7 +36,39 @@ pub enum Result {
 pub const NOT_CONNECTED: &str = "Connect Google Calendar to show calendar status.";
 pub const RECONNECT: &str = "Google Calendar needs reconnecting before calendar status can update.";
 pub const UNREACHABLE: &str = "Google Calendar couldn't be reached; calendar status will retry.";
+/// The Google::Client#list_events boundary. Production uses Api; original-case
+/// tests can inject an escaping client error without changing HTTP classification.
+pub trait EventLister: Send + Sync {
+    fn list<'a>(
+        &'a self,
+        app: &'a App,
+        user_id: i64,
+        start: Timestamp,
+        end: Timestamp,
+        now: Timestamp,
+    ) -> crate::integrations::net::BoxFuture<'a, api::Result<serde_json::Value>>;
+}
+impl EventLister for api::Api {
+    fn list<'a>(
+        &'a self,
+        app: &'a App,
+        user_id: i64,
+        start: Timestamp,
+        end: Timestamp,
+        now: Timestamp,
+    ) -> crate::integrations::net::BoxFuture<'a, api::Result<serde_json::Value>> {
+        Box::pin(self.list_events(&app.db, &app.secrets, user_id, start, end, now))
+    }
+}
 pub async fn refresh(app: &App, user_id: i64, now: Timestamp) -> api::Result<Result> {
+    refresh_with_client(app, user_id, now, app.google.api().as_ref()).await
+}
+pub async fn refresh_with_client(
+    app: &App,
+    user_id: i64,
+    now: Timestamp,
+    client: &dyn EventLister,
+) -> api::Result<Result> {
     let settings=app.db.read(move|conn|{use rusqlite::OptionalExtension;Ok(conn.query_row("SELECT status,meeting_status_enabled,ooo_calendar_enabled,time_zone FROM users WHERE id=?",[user_id],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,bool>(1)?,r.get::<_,bool>(2)?,r.get::<_,Option<String>>(3)?))).optional()?)}).await?;
     let Some((0, meeting, ooo, zone)) = settings.filter(|(_, meeting, ooo, _)| *meeting || *ooo)
     else {
@@ -56,12 +88,9 @@ pub async fn refresh(app: &App, user_id: i64, now: Timestamp) -> api::Result<Res
             .await?;
         return Ok(Result::Fresh);
     }
-    match app
-        .google
-        .api()
-        .list_events(
-            &app.db,
-            &app.secrets,
+    match client
+        .list(
+            app,
             user_id,
             now.ago(jiff::SignedDuration::from_hours(1)),
             now.since(jiff::SignedDuration::from_hours(if ooo {

@@ -32,10 +32,21 @@ async fn render_show(
     c.respond_to(&[&format::HTML])?;
     if let Some((changes, _)) = &settings_error {
         let id = user.id;
-        let mut rendered = c.app().db.read(move |conn| campfire_db::UserStatusSettings::find(conn, id)).await.map_err(Error::internal)?;
-        if let Some(value) = &changes.theme { rendered.theme = value.clone(); }
-        if let Some(value) = &changes.text_size { rendered.text_size = value.clone(); }
-        if let Some(value) = &changes.time_zone { rendered.time_zone = Some(value.clone()); }
+        let mut rendered = c
+            .app()
+            .db
+            .read(move |conn| campfire_db::UserStatusSettings::find(conn, id))
+            .await
+            .map_err(Error::internal)?;
+        if let Some(value) = &changes.theme {
+            rendered.theme = value.clone();
+        }
+        if let Some(value) = &changes.text_size {
+            rendered.text_size = value.clone();
+        }
+        if let Some(value) = &changes.time_zone {
+            rendered.time_zone = Some(value.clone());
+        }
         c.set_current(presenters::view_context::RenderedSettings(rendered));
     }
     let has_password = user
@@ -61,16 +72,39 @@ async fn render_show(
     };
     let id = user.id;
     let now = c.now();
-    let rendered = c.current::<presenters::view_context::RenderedSettings>().cloned();
+    let rendered = c
+        .current::<presenters::view_context::RenderedSettings>()
+        .cloned();
     let owned = match rendered {
         Some(data) => data.0,
-        None => c.app().db.read(move |conn| campfire_db::UserStatusSettings::find(conn, id)).await.map_err(Error::internal)?,
+        None => c
+            .app()
+            .db
+            .read(move |conn| campfire_db::UserStatusSettings::find(conn, id))
+            .await
+            .map_err(Error::internal)?,
     };
-    let owned_errors = c.current::<RenderedErrors>().map(|data| data.0.clone()).unwrap_or_default();
+    let owned_errors = c
+        .current::<RenderedErrors>()
+        .map(|data| data.0.clone())
+        .unwrap_or_default();
     let source = owned.clone();
     let failures = owned_errors.clone();
     let configured = c.app().google.api().config.configured();
-    let settings_form = c.app().db.read(move |conn| presenters::status_settings::forms(conn, &source, failures, campfire_db::Timestamp::from_jiff(now), configured)).await.map_err(Error::internal)?;
+    let settings_form = c
+        .app()
+        .db
+        .read(move |conn| {
+            presenters::status_settings::forms(
+                conn,
+                &source,
+                failures,
+                campfire_db::Timestamp::from_jiff(now),
+                configured,
+            )
+        })
+        .await
+        .map_err(Error::internal)?;
 
     let google = c.app().google.sign_in().config.configured();
     let google_reauthentication = c.app().two_factor.google().is_some();
@@ -80,8 +114,12 @@ async fn render_show(
         .read(move |conn| campfire_db::models::user::profile_settings::appearance(conn, id))
         .await
         .map_err(Error::internal)?;
-    if c.current::<presenters::view_context::RenderedSettings>().is_some() {
-        appearance.theme = owned.theme.clone(); appearance.text_size = owned.text_size.clone(); appearance.time_zone = owned.time_zone.clone();
+    if c.current::<presenters::view_context::RenderedSettings>()
+        .is_some()
+    {
+        appearance.theme = owned.theme.clone();
+        appearance.text_size = owned.text_size.clone();
+        appearance.time_zone = owned.time_zone.clone();
     }
     let preview_settings = settings_error.as_ref().map(|(changes, _)| changes.clone());
     let errors = if let Some((changes, errors)) = settings_error {
@@ -154,16 +192,27 @@ async fn render_show(
     // Google profile controls use the same injected providers as their endpoints.
     sections.google.sign_in_configured = google;
     sections.google.calendar_configured = c.app().google.api().config.configured();
-    sections.status = presenters::profile_sections::status_fields(&owned, &owned_errors, campfire_db::Timestamp::from_jiff(now));
-    sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));
+    sections.status = presenters::profile_sections::status_fields(
+        &owned,
+        &owned_errors,
+        campfire_db::Timestamp::from_jiff(now),
+    );
+    sections.status.fetch_error = settings_form
+        .fetch_error
+        .clone()
+        .filter(|s| !campfire_richtext::ruby::is_blank(s));
     if let Some(fields) = status_preview {
         sections.status = fields;
     }
     if let Some(changes) = preview_settings {
         presenters::profile_sections::preview(&mut sections, &changes, &errors);
     }
-    sections.fizzy = presenters::fizzy_profile::connection(c.app(), user.id).await.map_err(Error::internal)?;
-    let github = presenters::github::connection(c.app(), user.id).await.map_err(Error::internal)?;
+    sections.fizzy = presenters::fizzy_profile::connection(c.app(), user.id)
+        .await
+        .map_err(Error::internal)?;
+    let github = presenters::github::connection(c.app(), user.id)
+        .await
+        .map_err(Error::internal)?;
     let zone = presenters::view_context::time_zone(c).await?;
     let user = presenters::user_summary_in_zone(&secrets, &user, &zone);
     framed_page!(c, status, |ctx| users::ProfileShow {
@@ -213,13 +262,28 @@ pub async fn update(c: &mut Ctx) -> Result {
         permit_keys(campfire_db::models::user::profile_settings::INBOX_KEYS),
     ));
     let params = c.params.require("user")?.permit(&permitted);
+    let github_verified = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok(
+                crate::integrations::github::accounts::Account::for_user(conn, user.id)?
+                    .is_some_and(|account| account.connected()),
+            )
+        })
+        .await
+        .map_err(Error::internal)?;
     let settings = campfire_db::models::user::profile_settings::Changes {
         theme: compact_string(&params, "theme"),
         text_size: compact_string(&params, "text_size"),
         time_zone: compact_string(&params, "time_zone"),
         voice_mode: compact_string(&params, "voice_mode"),
         push_to_talk_key: compact_string(&params, "push_to_talk_key"),
-        github_login: compact_string(&params, "github_login"),
+        github_login: if github_verified {
+            None
+        } else {
+            compact_string(&params, "github_login")
+        },
         inbox_preferences: params
             .get("inbox_preferences")
             .filter(|p| !p.is_null())
@@ -314,7 +378,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         })
         .await;
     match result {
-        Ok(()) => {},
+        Ok(()) => {}
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             c.set_current(concerns::CurrentUser(error_user.clone()));
             return render_show(
@@ -359,14 +423,22 @@ fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> 
     string_attribute(params, key).flatten()
 }
 
-
 #[derive(Clone)]
 struct RenderedErrors(campfire_db::Errors);
-pub(super) async fn render_settings(c: &mut Ctx, status: StatusCode, settings: campfire_db::UserStatusSettings, errors: campfire_db::Errors) -> Result {
+pub(super) async fn render_settings(
+    c: &mut Ctx,
+    status: StatusCode,
+    settings: campfire_db::UserStatusSettings,
+    errors: campfire_db::Errors,
+) -> Result {
     if !errors.is_empty() && settings.user.role != campfire_db::Role::Bot {
         let id = settings.user.id;
         let enabled = c.app().db.read(move |conn| Ok(conn.query_row("SELECT EXISTS(SELECT 1 FROM two_factor_credentials WHERE user_id=? AND confirmed_at IS NOT NULL)", [id], |r| r.get::<_, bool>(0))?)).await.map_err(Error::internal)?;
-        if enabled { return Err(Error::internal(anyhow::anyhow!("profiles/two_factor: undefined method any? for nil remembered devices"))); }
+        if enabled {
+            return Err(Error::internal(anyhow::anyhow!(
+                "profiles/two_factor: undefined method any? for nil remembered devices"
+            )));
+        }
     }
     let user = settings.user.clone();
     c.set_current(presenters::view_context::RenderedSettings(settings));
