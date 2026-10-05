@@ -15,6 +15,48 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      rails: ${{ steps.scope.outputs.rails }}
+    steps:
+      - name: Checkout PR history
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Decide whether Rails tests are needed
+        id: scope
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          rails = True
+          if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
+              with open(os.environ["GITHUB_EVENT_PATH"]) as event_file:
+                  pr = json.load(event_file)["pull_request"]
+              # Use the PR merge base and include both sides of renames. Unknown
+              # files and empty diffs keep full coverage; Git errors fail the gate.
+              diff = subprocess.check_output([
+                  "git", "diff", "--no-renames", "--name-only", "-z",
+                  f'{pr["base"]["sha"]}...{pr["head"]["sha"]}', "--",
+              ])
+              paths = [path for path in diff.split(b"\0") if path]
+              rails = not paths or any(
+                  not (path.startswith((b"rust/", b".claude/")) or path.endswith(b".md"))
+                  for path in paths
+              )
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"rails={str(rails).lower()}\n")
+          print("Run Rails tests" if rails else "Rust/docs-only PR: skip Rails tests")
+          PY
+
   scan:
     runs-on: ubuntu-latest
     permissions:
@@ -81,47 +123,76 @@ jobs:
 
   test_gateway:
     name: Huddle authorization gateway
+    needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
+      - name: Require successful change detection
+        env:
+          CHANGE_RESULT: ${{ needs.changes.result }}
+        run: test "$CHANGE_RESULT" = success
+
+      - name: Skip gateway tests for Rust/docs-only PR
+        if: needs.changes.outputs.rails == 'false'
+        run: echo "No Rails or gateway inputs changed."
+
       - name: Checkout code
+        if: needs.changes.outputs.rails == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Node
+        if: needs.changes.outputs.rails == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: Install gateway dependencies
+        if: needs.changes.outputs.rails == 'true'
         run: npm ci --ignore-scripts --prefix script/livekit-gateway
 
       - name: Test authorization and connection races
+        if: needs.changes.outputs.rails == 'true'
         run: npm test --prefix script/livekit-gateway
 
   test:
+    needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     services:
       redis:
-        image: redis # zizmor: ignore[unpinned-images] -- version tag is fine for service containers
+        image: ${{ needs.changes.outputs.rails == 'true' && 'redis' || '' }} # zizmor: ignore[unpinned-images] -- version tag is fine for service containers
         ports:
           - 6379:6379
         options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
+      - name: Require successful change detection
+        env:
+          CHANGE_RESULT: ${{ needs.changes.result }}
+        run: test "$CHANGE_RESULT" = success
+
+      - name: Skip Rails tests for Rust/docs-only PR
+        if: needs.changes.outputs.rails == 'false'
+        run: echo "No Rails inputs changed."
+
       - name: Install packages
+        if: needs.changes.outputs.rails == 'true'
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsqlite3-0 libvips curl ffmpeg
 
       - name: Checkout code
+        if: needs.changes.outputs.rails == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Ruby
+        if: needs.changes.outputs.rails == 'true'
         uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
         env:
           REDIS_URL: redis://localhost:6379/0
@@ -130,9 +201,12 @@ jobs:
           bundler-cache: true
 
       - name: Run tests
+        if: needs.changes.outputs.rails == 'true'
         run: bin/rails db:setup test
 
   test_system_shard:
+    needs: changes
+    if: needs.changes.outputs.rails == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -231,12 +305,18 @@ jobs:
   test_system:
     runs-on: ubuntu-latest
     permissions: {}
-    needs: [ test_system_shard ]
+    needs: [ changes, test_system_shard ]
     if: always()
     steps:
-      - name: Fail if any browser shard failed
+      - name: Require browser coverage or an intentional Rust/docs-only skip
+        env:
+          CHANGE_RESULT: ${{ needs.changes.result }}
+          RAILS: ${{ needs.changes.outputs.rails }}
+          SHARD_RESULT: ${{ needs.test_system_shard.result }}
         run: |
-          if [ "${{ needs.test_system_shard.result }}" != "success" ]; then
-            echo "Browser shard result: ${{ needs.test_system_shard.result }}"
-            exit 1
-          fi
+          test "$CHANGE_RESULT" = success
+          case "$RAILS:$SHARD_RESULT" in
+            true:success) echo "All browser shards passed." ;;
+            false:skipped) echo "Rust/docs-only PR: no browser tests needed." ;;
+            *) echo "::error::Unexpected browser coverage result: $RAILS:$SHARD_RESULT"; exit 1 ;;
+          esac
