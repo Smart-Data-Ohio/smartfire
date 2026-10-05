@@ -1323,9 +1323,18 @@
     }
   ],
   "ci_browser_handoff": {
-    "owner": "PR #237 (rust/ci-full-gate)",
-    "status": "future-ci-registration-pending",
+    "owner": "Rust correctness (browsers)",
+    "status": "registered",
     "manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-c-ci-handoff.json",
-    "reason": "Seven wrappers have executed local paired receipts and producer controls. Current main toolchain CI skips them. The future correctness job must register their exact names and build the normal binary first. A four-worker host startup exit was not reproduced after adding retained diagnostics; its cause remains unconfirmed."
-  }
+    "reason": "All seven exact ignored selectors belong to the browsers suite. It builds the normal binary and exports WS11UI_BROWSER_BINARY before running nextest at -j 4; the JUnit guard requires every selected test to pass. Current execution results are retained by that job and PR #248 checks. The historical unretained picker startup log remains unconfirmed; the reviewed port-lease fix and repeated zero-startup-failure receipts are preserved in the C review report.",
+    "registry": "rust/ci/ignored-tests.json:browsers"
+  },
+  "ci_browser_handoff_history": [
+    {
+      "owner": "PR #237 (rust/ci-full-gate)",
+      "status": "future-ci-registration-pending",
+      "manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-c-ci-handoff.json",
+      "reason": "Seven wrappers have executed local paired receipts and producer controls. Current main toolchain CI skips them. The future correctness job must register their exact names and build the normal binary first. A four-worker host startup exit was not reproduced after adding retained diagnostics; its cause remains unconfirmed."
+    }
+  ]
 }

@@ -1,13 +1,13 @@
 {
-  "owner": "PR #237, rust/ci-full-gate",
-  "status": "future-ci-registration-pending",
-  "current_main_toolchain_ci": "Ignored wrappers are skipped; the completed local paired receipt is credited, not a completed CI browser run.",
+  "owner": "Rust correctness (browsers), rust/ci/correctness.sh",
+  "status": "registered",
+  "current_main_toolchain_ci": "Ordinary tests skip the seven wrappers; Rust correctness (browsers) selects all seven exactly and requires their successful JUnit records. Current execution results are retained by that job and PR #248 checks.",
   "required_prerequisites": [
     "CI default seed and pinned Rails reference image",
     "Pinned Playwright image built as for the existing browsers suite",
     "Build the normal binary before ignored tests: cargo build --locked -p campfire --bin campfire; set WS11UI_BROWSER_BINARY to the target directory/debug/campfire"
   ],
-  "registry": "Append these records to rust/ci/ignored-tests.json browsers; do not change existing records.",
+  "registry": "These seven records are registered in rust/ci/ignored-tests.json browsers, alongside the existing nine records.",
   "scheduling": "Seven explicit ignored functions; kernel-coordinated three-port leases in 24000-24191, outside the outbound ephemeral range. Four nextest -j 4 runs: 28/28 wrappers passed, 0 startup failures. No retries or longer deadlines.",
   "records": [
     {

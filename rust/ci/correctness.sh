@@ -59,6 +59,10 @@ run_suite() {
       ;;
     browsers)
       browser_images
+      # The paired original-assertion wrappers launch the normal server, which
+      # nextest's cfg(test) harness does not build.
+      cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire
+      export WS11UI_BROWSER_BINARY="$repo/rust/target/debug/campfire"
       export CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499
       ignored
       ;;
