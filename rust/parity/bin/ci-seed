@@ -27,6 +27,8 @@ case "${1:-}" in
     rm -rf "$CAMPFIRE_REFERENCE"
     mkdir -p "$CAMPFIRE_REFERENCE"
     git -C "$ROOT/.." archive "$PIN" | tar -x -C "$CAMPFIRE_REFERENCE"
+    # Pin the build runtime without changing the Rails oracle's source checkout.
+    sed -i 's|FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base|FROM docker.io/library/ruby:$RUBY_VERSION-slim@sha256:b573616eed67613e1d380ebb777d87aa094fad7505bdbc2d1b45dca9dd9116b9 AS base|' "$CAMPFIRE_REFERENCE/Dockerfile"
     # Keep the behavior oracle pinned, but prepare seeds with the schema this
     # Rust build requires. Rails owns migrations; the port never applies them.
     cp "$ROOT/../db/schema.rb" "$CAMPFIRE_REFERENCE/db/schema.rb"

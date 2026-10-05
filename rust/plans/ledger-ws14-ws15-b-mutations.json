@@ -11,10 +11,10 @@
     {
       "id": "organizer_bot",
       "test": "cutover_event_rejects_bot_and_nonmember_organizers",
-      "exit_code": 1,
+      "exit_code": 100,
       "killed": true,
       "summary": [
-        "     Summary [   0.171s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+        "     Summary [   0.926s] 1 test run: 0 passed, 1 failed, 5107 skipped"
       ],
       "panic": [
         "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:87:5:"
@@ -256,5 +256,5 @@
       "log": "preload_n1.log"
     }
   ],
-  "execution_note": "Each sample has a retained raw nextest failure and a panic at its mapped Rust assertion. Temporary production branches were enabled one at a time. All source bytes were restored; the runner recheck verifies their SHA-256 hashes."
+  "execution_note": "19 distinct native tests. Eighteen original raw runs are retained; organizer_bot was rerun after the complete parent audit merge and redirect assertion strengthening. All nineteen fail at the mapped assertion; compilation/setup failures are excluded. Production SHA-256 hashes are unchanged."
 }

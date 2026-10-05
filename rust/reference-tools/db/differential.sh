@@ -14,7 +14,7 @@
 # Databases land in OUT (default target/db-differential). CONTAINER_PREFIX, when set, names the
 # reference containers (for a shared Docker host).
 set -euo pipefail
-ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 OUT=${OUT:-$ROOT/target/db-differential}
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$ROOT/target/db-differential/cargo}
 rm -f "$OUT"/*.sqlite3 "$OUT"/*.sql "$OUT"/*.bot_key "$OUT"/*.json; mkdir -p "$OUT"
@@ -46,6 +46,9 @@ reference '
   bin/rails runner /tools/scenario.rb
   sqlite3 $db "PRAGMA wal_checkpoint(TRUNCATE)" >/dev/null && cp $db /out/scenario_ruby.sqlite3
   bin/rails runner /tools/save_touches.rb /out/save_touches_ruby.json'
+
+# CI uses nextest's exact ignored-only manifest after both reference workflows prepare inputs.
+if [[ "${1:-}" == --prepare-only ]]; then exit 0; fi
 
 echo "== campfire_db differential tests"
 export CAMPFIRE_RUBY_FIXTURES_DB=$OUT/fixtures_ruby.sqlite3

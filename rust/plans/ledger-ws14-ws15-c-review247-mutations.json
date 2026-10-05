@@ -1,0 +1,74 @@
+{
+  "reviewed_head": "af543814eea99a1e2210a80420045dbc3ece565c",
+  "reference_sha": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/review247-mutations.json rust/target/review247-fixes/{before,after} -- rust/target/review247-fixes/mutation-cargo.sh",
+  "cargo_command": "cargo nextest run --workspace --exclude html5ever -j 4 --no-fail-fast -E test(<test>) --success-output immediate",
+  "environment": {
+    "CI": "true",
+    "CARGO_BUILD_JOBS": "2",
+    "toolchain": "Rust 1.98.1; campfire-toolchain-ci-rust-speedups:latest; existing machine-wide compiler throttle"
+  },
+  "before_test_sha256": "3547cdbeff2f984153e4ad391f3c98acb4762c243ce2a22b178ec0a998bd4c66",
+  "after_test_sha256": "e56e576cfc4c5d863613b432fe46260498099cedf2f29ebbed3a55e453435ccf",
+  "mutations": [
+    {
+      "id": "WS14g-074-scope",
+      "test": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+      "before": {
+        "exit_code": 0,
+        "summary": [
+          "     Summary [   0.573s] 1 test run: 1 passed, 5107 skipped"
+        ],
+        "killed": false
+      },
+      "fault_activation": "WS14g-074-scope moved entry 1 from series event 439674038 to unrelated event 390339825",
+      "after": {
+        "exit_code": 100,
+        "summary": [
+          "     Summary [   0.721s] 1 test run: 0 passed, 1 failed, 5107 skipped"
+        ],
+        "killed": true,
+        "panic": [
+          "crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs:623:5:"
+        ]
+      },
+      "before_log_sha256": "94d69386450ac32859023b82b5d55bbee79b44800b1933eaac32912af7b81d8e",
+      "after_log_sha256": "ca797f57308acf9f88b6922e3444a40b37d790b10fece88e86fa0019e3fd5415"
+    },
+    {
+      "id": "WS14g-080-scope",
+      "test": "cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
+      "before": {
+        "exit_code": 0,
+        "summary": [
+          "     Summary [   0.588s] 1 test run: 1 passed, 5107 skipped"
+        ],
+        "killed": false
+      },
+      "fault_activation": "WS14g-080-scope enqueued Calendar::MeetLinkJob on unchanged save for event 390339825",
+      "after": {
+        "exit_code": 100,
+        "summary": [
+          "     Summary [   0.454s] 1 test run: 0 passed, 1 failed, 5107 skipped"
+        ],
+        "killed": true,
+        "panic": [
+          "crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs:788:5:"
+        ]
+      },
+      "before_log_sha256": "b4f28ecfdb25ca57b30b21387b2abfbd93a768ccd91c95bb4a6ea743b8f99437",
+      "after_log_sha256": "2d01f91df2d9dbc54fefcd57343483604a516d6eff0936174c306079b3fdf234"
+    }
+  ],
+  "production_restored": true,
+  "production_sha256": {
+    "rust/crates/db/src/models/google_entry.rs": "2ce4f9d8df054e712c424d29b7b05fe7799a30d8d5bb3e109931b31a514e6c6a",
+    "rust/crates/db/src/models/calendar_event/changes.rs": "9f74d0ed46eeca675a89147ad57de1dad524a3c29d839f844c62f97516d14537"
+  },
+  "scope_scan": {
+    "records": 50,
+    "other_records": 48,
+    "additional_findings": [],
+    "evidence": "rust/plans/ledger-ws14-ws15-c-scope-review.md"
+  }
+}

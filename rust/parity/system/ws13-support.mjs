@@ -90,6 +90,21 @@ async function visitRoom(page,room) {
 async function text(page, selector, value, timeout=2000) {
   await page.locator(selector).filter({hasText:value}).first().waitFor({state:'visible',timeout});
 }
+export async function connected(page) {
+  try {
+    await page.locator('#channel-huddle[data-state="connected"]').waitFor({timeout:20000});
+  } catch (error) {
+    // Describe the failed join without printing credentials or WebSocket query strings.
+    const state = await page.evaluate(() => ({
+      state: document.getElementById('channel-huddle')?.dataset.state,
+      status: document.querySelector('[data-huddle-target="status"]')?.textContent,
+      credentials: window.huddleTestCredentials?.length,
+      sockets: window.huddleTestWebSocketUrls?.map(url => new URL(url).pathname),
+    }));
+    error.message += '; huddle join ' + JSON.stringify(state);
+    throw error;
+  }
+}
 async function absent(page,selector,timeout=2000) {
   await page.locator(selector).waitFor({state:'hidden',timeout});
 }

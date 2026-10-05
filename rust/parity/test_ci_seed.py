@@ -29,7 +29,7 @@ class SeedCoverageTests(unittest.TestCase):
         script = (ROOT / "parity/bin/ci-seed").read_text()
         built = set(shlex.split(re.search(r'"\$ROOT/parity/bin/seed" build ([^\n]+)', script)[1]))
         validated = set(shlex.split(re.search(r"for seed in ([^;]+); do", script)[1]))
-        workflow = (ROOT.parent / ".github/workflows/rust.yml").read_text()
+        workflow = (ROOT.parent / ".github/actions/rust-setup/action.yml").read_text()
         for seed in sorted(required):
             with self.subTest(seed=seed):
                 self.assertIn(seed, built, f"CI does not build the {seed} test seed")

@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+cd "$repo"
+suite=${1:?Expected database, acme, browsers, livekit, messaging, or agents-ui}
+receipts="$repo/rust/target/ci-receipts"
+mkdir -p "$receipts"
+started=$(date +%s)
+
+ignored() {
+  local filter package
+  filter=$(python3 rust/ci/ignored_tests.py --filter "$suite")
+  package=$(python3 rust/ci/ignored_tests.py --filter "$suite" --package)
+  cargo nextest run --manifest-path rust/Cargo.toml --locked -p "$package" \
+    --profile ci --build-jobs 4 -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
+  cp rust/target/nextest/ci/junit.xml "$receipts/$suite-junit.xml"
+  python3 rust/ci/ignored_tests.py --filter "$suite" --junit "$receipts/$suite-junit.xml"
+}
+
+browser_images() {
+  local ws12_hash ws13_hash
+  ws12_hash=$(cat rust/parity/Dockerfile.playwright rust/parity/package.json rust/parity/package-lock.json | sha256sum | cut -c1-12)
+  ws13_hash=$(cat rust/parity/Dockerfile.playwright rust/parity/package-lock.json | sha256sum | cut -c1-12)
+  docker build -f rust/parity/Dockerfile.playwright -t "ws12-playwright:$ws12_hash" \
+    -t "ws13-parity-playwright:$ws13_hash" -t "ws11ui-system-parity-playwright:$ws13_hash" rust/parity
+  export WS13_PLAYWRIGHT_IMAGE="ws13-parity-playwright:$ws13_hash"
+}
+
+run_suite() {
+  python3 rust/ci/ignored_tests.py
+  case "$suite" in
+    database)
+      export OUT="$repo/rust/target/ci-differential"
+      # Nonzero microseconds retain Rails' six-digit DB timestamp representation.
+      export CAMPFIRE_FIXTURES_NOW='2026-03-02 16:00:00.123456'
+      bash rust/reference-tools/db/differential.sh --prepare-only
+      export CAMPFIRE_RUBY_FIXTURES_DB="$OUT/fixtures_ruby.sqlite3"
+      export CAMPFIRE_RUBY_SCENARIO_DB="$OUT/scenario_ruby.sqlite3"
+      export WS9_ROLLBACK_DIR="$repo/rust/target/ci-rollback"
+      export WS9_REFERENCE_IMAGE="$PARITY_IMAGE"
+      bash rust/reference-tools/auth/rollback.sh --prepare-only
+      ignored
+      ;;
+    acme)
+      local pebble="campfire-ci-pebble-$$"
+      trap "docker rm -f '$pebble' >/dev/null 2>&1 || true" EXIT
+      docker run -d --name "$pebble" --network host --add-host campfire.test:127.0.0.1 \
+        --env PEBBLE_VA_NOSLEEP=1 --env PEBBLE_WFE_NONCEREJECT=0 \
+        ghcr.io/letsencrypt/pebble:2.8.0@sha256:d9080f68f6cb6af8d82134ab26de0aaaf312ac9cba42aecc6d3aede6cb63007b
+      export PEBBLE_MINICA="$TMPDIR/pebble.minica.pem"
+      docker cp "$pebble:/test/certs/pebble.minica.pem" "$PEBBLE_MINICA"
+      local ready=0
+      for _ in $(seq 1 100); do
+        if curl -fsS --cacert "$PEBBLE_MINICA" https://localhost:14000/dir >/dev/null 2>&1; then ready=1; break; fi
+        sleep .1
+      done
+      [[ "$ready" == 1 ]] || { docker logs "$pebble"; return 1; }
+      ignored
+      ;;
+    browsers)
+      browser_images
+      export CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499
+      ignored
+      ;;
+    livekit)
+      browser_images
+      # Start the private media server after the cold compile so its lifetime
+      # and logs cover the browser run rather than several minutes of rustc.
+      cargo test --manifest-path rust/Cargo.toml --locked -p campfire --no-run -j 4
+      bin/livekit-local setup
+      # Only this job's private signaling server is needed; the test owns its gateway.
+      bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
+      local livekit_pid=$!
+      trap "kill $livekit_pid 2>/dev/null || true; wait $livekit_pid 2>/dev/null || true" EXIT
+      source .bundle/livekit/env
+      local ready=0
+      for _ in $(seq 1 100); do
+        if curl -fsS http://127.0.0.1:7880/ >/dev/null 2>&1; then ready=1; break; fi
+        sleep .1
+      done
+      [[ "$ready" == 1 ]] || { cat "$receipts/livekit-server.log"; return 1; }
+      docker run --rm --init --network none --ipc host --cpus 2 --user "$(id -u):$(id -g)" \
+        --volume "$repo/rust/parity:$repo/rust/parity:ro" --volume "$TMPDIR:$TMPDIR" \
+        --env TMPDIR="$TMPDIR" --workdir "$repo/rust/parity" \
+        "$WS13_PLAYWRIGHT_IMAGE" node --test --test-concurrency=4 \
+        system/ws13-browser-poll.test.mjs system/ws13-media-network.test.mjs system/ws13-gateway-readiness.test.mjs
+      ignored
+      ;;
+    messaging)
+      # The scripted paired-browser runner owns its fixture/paused-job seeds and checks rows.
+      # These listeners stay outside Linux's ephemeral outbound-client range.
+      export WS8BM_BROWSER_PORT_BASE=22020 WS8BM_CHROMEDRIVER_PORT=22023
+      node rust/ci/native-network-smoke.mjs
+      python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
+      npm ci --prefix rust/parity
+      node --test --test-concurrency=4 rust/reference-tools/messaging/*.test.mjs
+      python3 rust/reference-tools/messaging/behavior-check.py --keep-going
+      ;;
+    agents-ui)
+      browser_images
+      cargo build --manifest-path rust/Cargo.toml --locked -j 4 -p campfire --bin campfire
+      python3 rust/reference-tools/views/agents_ui/system_behavior.py \
+        --binary "$repo/rust/target/debug/campfire" --scenario all
+      ;;
+    *) echo "Unknown correctness suite: $suite" >&2; return 1 ;;
+  esac
+}
+
+# A separate shell preserves errexit inside the suite (a function on the left of an
+# OR-list would silently disable it for prerequisite commands).
+if [[ "${2:-}" == --execute ]]; then
+  run_suite
+  exit 0
+fi
+status=0
+bash "$0" "$suite" --execute 2>&1 | tee "$receipts/$suite.log" || status=$?
+python3 - "$suite" "$started" "$status" "$receipts/$suite.json" <<'PY'
+import json, subprocess, sys, time
+from pathlib import Path
+suite, started, status, output = sys.argv[1:]
+Path(output).write_text(json.dumps(dict(suite=suite, head=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+                                      duration_seconds=int(time.time())-int(started), exit_code=int(status)), indent=2)+'\n')
+PY
+exit "$status"

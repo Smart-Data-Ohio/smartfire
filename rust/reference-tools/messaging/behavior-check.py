@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import socket
 import sqlite3
 import subprocess
@@ -235,10 +236,12 @@ needs_paused_jobs=not args.slice and any(name in paused_job_cases for name in se
 needs_test_environment=motion_default in selected_names
 needs_drive=any(name in drive_cases for name in selected_names)
 if args.slice or any(name not in paused_job_cases for name in selected_names):
-    subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 test_host=build_host(ROOT,env) if needs_paused_jobs or needs_drive or needs_test_environment else None
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
-subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
+# CI supplies Chromium and the matching ChromeDriver from pinned inputs.
+if os.environ.get("WS8BM_PINNED_BROWSER") != "1":
+    subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
 visibility_atom = subprocess.check_output([
     "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
     "exec", "ruby", "-rselenium-webdriver", "-e",
@@ -407,7 +410,7 @@ for file in files:
             shutil.copytree(fixture / "storage", work / "files")
             database_name="test.sqlite3" if case in test_environment_cases else "production.sqlite3"
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if case in new_upload_cases or file in {"channel_threads_controller","drive_attachments"} or case in {"a release click landing on the just-opened menu does not activate it", "workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
+            if file in {"channel_threads_controller","drive_attachments"} or any(name in new_upload_cases | {"a release click landing on the just-opened menu does not activate it", "workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"} for name in batch):
                 run_env['WS8BM_WORK_DATABASES']=json.dumps({
                     f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db' / database_name),
                     f'http://127.0.0.1:{ports[1]}':str(work / 'db' / database_name),
@@ -424,13 +427,16 @@ for file in files:
             if case in test_environment_cases:
                 run_env.update(RAILS_ENV="test",CAMPFIRE_DATABASE_PATH=str(work / "db/test.sqlite3"))
             if case in drive_cases:
-                run_env.update(WS8BM_DRIVE_PORT=str(port_base+4),WS8BM_DRIVE_STUBS="1",WS8BM_DRIVE_TWO="1" if case.startswith("edit a room message") else "0")
+                run_env.update(WS8BM_DRIVE_STUBS="1",WS8BM_DRIVE_TWO="1" if case.startswith("edit a room message") else "0")
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log, ExitStack() as transports:
                 try:
                     metadata_path=fixture / "db/browser-fixture.json"
                     metadata=json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-                    drive_calls=transports.enter_context(drive_transport(metadata["drive_payloads"],port_base+4)) if case in drive_cases else None
+                    # Hold the OS-assigned mock listener through the whole case.
+                    drive_calls=transports.enter_context(drive_transport(metadata["drive_payloads"])) if case in drive_cases else None
+                    if drive_calls is not None:
+                        run_env["WS8BM_DRIVE_PORT"]=str(drive_calls.port)
                     reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
                     if case.startswith("From Google Drive starts the enhanced"):
                         for key in ["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_PICKER_API_KEY","GOOGLE_CLOUD_PROJECT_NUMBER"]:
