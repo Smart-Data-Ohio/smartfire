@@ -194,3 +194,40 @@ cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnin
 ```
 
 Both commands exit 0. All 50 C tests and all 78 B tests have named PASS receipts after the assertion corrections. The 20 skips are the existing ignored cases. The current validation is recorded separately from the preserved historical receipt; every retained ledger closure has a current named PASS receipt. Compact execution logs, runtime wrappers and mutation logs remain under `rust/target/review247-fixes/`. Generated reference/seed directories are removed after verification; no file outside `rust/` is edited.
+
+
+## PR #243 parent review integration
+
+Merge commit `5f5d8ae6a8d09c02f2db1db9cc6decc4fddf05e8` integrates pushed B head `91200f3403b668583c0968c5e319a08368b1bf32`. It preserves both PR #247 job-scope fixes, all 50 C closures and the prior execution/mutation history. B now uses rendered HTML requests for WS14e-099/100 and explicitly reopens WS14e-101's actual-browser assertions at `test/system/events_test.rb:136,137`. Its partial frame-target test catches `_top` without claiming browser navigation proof. The complete [B review receipt](ledger-ws14-ws15-b-report.md#pr-243-rendered-interaction-correction) and three before/after mutation results are retained.
+
+The two generated-ledger conflicts are resolved from C's precise records plus B's three reviewed records. **130 continuation records are closed; 127 remain explicitly open.** The combined maps contain 131 records / 412 original assertion calls / 2 unmapped browser calls in one reopened record; none is silently waived. Current original inventory, structured ledger and remaining list agree. All 81 B records remain visible as historical/partial or implemented evidence, alongside all 50 C records.
+
+The separate B worktree has been removed after its push and after archiving compact raw logs, scripts and receipts under `rust/target/review243-fixes/`. Its generated reference inputs, seeds and runtime scratch were removed with it. C reuses the three validated seeds because B and C schema/seed source inputs are identical. The inherited C scratch is preserved. No production rendering changes, asset changes, stash, real Google requests or browser/pixel run are introduced.
+
+
+Validation cache correction: the first C invocation reported an inventory of 5,080, omitting C's eight Drive DB tests. The shared `/src` target reused B's DB test binary because the unchanged C source timestamps predated B's newer fingerprints. This incomplete run was stopped and is explicitly discarded; no pass/failure counts from it are credited. The changed C crate inputs were touched (mtime only, with no source-byte changes), and both DB and app binaries rebuilt. The existing machine compiler throttle remains unchanged. The accepted run below must list all 5,088 cases and all 128 mapped B/C native names, including each of those eight DB cases. The discarded log/disposition is retained under `rust/target/review243-fixes/discarded-c-stale-db/`.
+
+
+### Accepted merged-C validation
+
+Verified native source `5f5d8ae6a8d09c02f2db1db9cc6decc4fddf05e8`; only receipt/report metadata follows. The rebuilt inventory is 5,088 runnable tests plus the existing 20 ignores. All 128 unique native tests in the B/C maps ran and passed, including the eight C Drive DB cases. All 317 retained ledger closures have exact named PASS receipts. The canonical logo/PNG comparison passes on both B and C. No timing failure appeared; five slow-test notices are informational. No timeout, tolerance or concurrency setting changed.
+
+Canonical Rust 1.98.1/libvips, `CI=true`, two build jobs, unchanged shared rustc throttle and nextest workers 4. Strict clippy checked the current C sources after the timestamp refresh; source bytes are unchanged between that check and the accepted full suite. The older C and B verification records remain in `verification_history`, with the latest C result recorded separately.
+
+```sh
+cargo nextest run --locked --workspace --exclude html5ever -j 4 --no-fail-fast
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+python3 rust/reference-tools/cutover/assertion-maps.py rust/plans/ledger-ws14-ws15-b-assertions.json rust/plans/ledger-ws14-ws15-c-assertions.json --pass-log rust/target/review243-fixes/c-nextest.log
+python3 rust/reference-tools/cutover/check-ws14-ws15.py --nextest-log rust/target/review243-fixes/c-nextest.log
+```
+
+```text
+     Summary [1607.026s] 5088 tests run: 5088 passed (5 slow), 20 skipped
+    Finished `dev` profile [unoptimized] target(s) in 42.26s
+Assertion maps: 131 records; 412 original Rails assertion calls; 2 unmapped
+Acceptance ledger: 445 records checked; 86 baseline-CI passed; 231 current implementation receipts; 1 test-only outside gate; 127 explicitly open
+Full closure audit: 220 records; 555 Rails assertions/predicates; 487 mapped; 78 strengthened closures; 32 reopened
+Final local run: 5088 distinct PASS entries; 0 FAIL entries; 20 skipped; all 317 retained closures have named PASS receipts
+```
+
+Both Cargo commands exit 0. The three B mutation receipts recheck as 3/3 killed on the merged source, and the two earlier C scope-mutation receipts recheck as 2/2 killed; all production hashes match their restored bytes. Generated C seed input is removed after validation. Only compact logs/receipts/scripts remain in the shared target; inherited scratch and unrelated target output are preserved.
