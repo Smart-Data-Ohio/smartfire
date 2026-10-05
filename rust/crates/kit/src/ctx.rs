@@ -128,8 +128,9 @@ impl Ctx {
         self.unread_body = Some(body);
     }
 
-    /// Take an [`crate::unparsed_action`]'s validated upload as a rewound file, without buffering
-    /// it in memory. Parsed actions use their already-buffered `raw_post` instead.
+    /// Take a validated upload without buffering it in memory. Unparsed actions rewind
+    /// it; spooled actions retain Rails' position after parameter parsing. Buffered
+    /// actions use their already-buffered `raw_post` instead.
     pub async fn take_body_file(&mut self) -> std::io::Result<std::fs::File> {
         use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 

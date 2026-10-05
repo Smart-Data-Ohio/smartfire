@@ -12,6 +12,9 @@ use crate::format;
 use crate::params::{self, ParamError, ParamMap, RawPair, UploadedFile};
 use crate::request::media_type;
 
+mod spooled;
+pub(crate) use spooled::parse_spooled;
+
 /// `Rack::Utils.multipart_total_part_limit` / `multipart_file_limit`.
 pub const MULTIPART_PART_LIMIT: usize = 4096;
 /// The most of a non-multipart body read into memory (forms are limited to 4 MB after that, as in
@@ -40,6 +43,8 @@ impl ParsedBody {
 
 #[derive(Debug, thiserror::Error)]
 pub enum BodyError {
+    #[error("Error occurred while parsing request parameters")]
+    Parse,
     #[error("request body too large")]
     TooLarge,
     #[error("error reading request body: {0}")]
@@ -52,7 +57,7 @@ impl BodyError {
     pub fn status(&self) -> StatusCode {
         match self {
             BodyError::TooLarge => StatusCode::PAYLOAD_TOO_LARGE,
-            BodyError::Read(_) => StatusCode::BAD_REQUEST,
+            BodyError::Read(_) | BodyError::Parse => StatusCode::BAD_REQUEST,
             BodyError::Storage(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -71,7 +76,7 @@ pub async fn parse(
 
     if matches!(media.as_deref(), Some("multipart/form-data" | "multipart/related" | "multipart/mixed"))
         && let Some(boundary) = content_type.and_then(|ct| multer::parse_boundary(ct).ok()) {
-            return parse_multipart(body, boundary, limit).await;
+            return parse_multipart(body, boundary, limit, params::DEPTH_LIMIT).await;
         }
 
     // Everything but multipart (whose files spool to disk) is read into memory, so it's bounded
@@ -93,7 +98,7 @@ pub async fn parse(
     Ok(ParsedBody { raw, params })
 }
 
-async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>) -> Result<ParsedBody, BodyError> {
+async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, depth_limit: usize) -> Result<ParsedBody, BodyError> {
     let limit = limit.unwrap_or(usize::MAX).min(usize::try_from(MULTIPART_BYTESIZE_LIMIT).unwrap_or(usize::MAX));
     // Multer stops at the MIME boundary, which may precede the HTTP body's end. Keep the
     // limited stream here so even bytes multer buffers or leaves unread count toward the cap.
@@ -153,7 +158,7 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>) -> 
         Err(Stop::TooLarge) => return Err(BodyError::TooLarge),
         Err(Stop::Read(error)) => return Err(error),
         Err(Stop::Params(error)) => Err(error),
-        Ok(()) => params::from_pairs(pairs),
+        Ok(()) => params::from_pairs_with_depth_limit(pairs, depth_limit),
     };
     drop(multipart);
     // Validate the epilogue before exposing params to an action. Discard each chunk instead of

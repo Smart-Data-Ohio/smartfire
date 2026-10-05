@@ -57,7 +57,8 @@ impl DiskService {
     }
 
     /// `upload(key, io, checksum:)`: stage beside the blob, verify MD5, then atomically
-    /// publish. A failed upload removes its staging file and preserves any completed blob.
+    /// publish. Rails deletes the blob on checksum mismatch and leaves copied bytes on
+    /// a copy failure; other failures remove the staging file without publishing it.
     pub fn upload(&self, key: &str, mut reader: impl Read, checksum: Option<&str>) -> Result<()> {
         let path = self.make_path_for(key)?;
         let mut builder = tempfile::Builder::new();
@@ -70,11 +71,18 @@ impl DiskService {
         }
         // NamedTempFile removes the staged path on every error, including persist failure.
         let mut file = builder.tempfile_in(path.parent().expect("blob path has a parent"))?;
-        io::copy(&mut reader, &mut file)?;
+        if let Err(error) = io::copy(&mut reader, &mut file) {
+            // DiskService#upload's IO.copy_stream leaves the destination bytes on I/O
+            // failure. Publish that partial copy, but still remove staging if rename fails.
+            file.persist(&path).map_err(|error| error.error)?;
+            return Err(error.into());
+        }
         file.flush()?;
         if let Some(checksum) = checksum
             && checksum_file(file.path())? != checksum
         {
+            // DiskService#ensure_integrity_of deletes even a previously completed blob.
+            self.delete(key)?;
             return Err(Error::Integrity);
         }
         file.persist(&path).map_err(|error| error.error)?;

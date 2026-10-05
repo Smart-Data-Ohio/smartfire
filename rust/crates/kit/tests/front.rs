@@ -459,6 +459,7 @@ fn kit_app() -> Router {
     let router = Router::new()
         .route("/report", post(campfire_kit::unparsed_action(report)))
         .route("/file", post(campfire_kit::unparsed_action(file)))
+        .route("/spooled", post(campfire_kit::spooled_action(file)))
         .route("/parsed", post(campfire_kit::action(parsed)));
     let kit = campfire_kit::Kit::new(campfire_kit::KitConfig::default(), campfire_kit::testing::crypto(), campfire_kit::testing::frozen_clock(), ());
     campfire_kit::app(router, kit)
@@ -469,9 +470,11 @@ fn kit_app() -> Router {
 /// returns the reply's status.
 async fn post_chunked(port: u16, path: &str, total: usize, end: bool) -> u16 {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-    let head = format!("POST {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/csp-report\r\nTransfer-Encoding: chunked\r\n\r\n");
+    let content_type = if path == "/spooled" { "application/json" } else { "application/csp-report" };
+    let head = format!("POST {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: {content_type}\r\nTransfer-Encoding: chunked\r\n\r\n");
     stream.write_all(head.as_bytes()).await.unwrap();
-    let chunk = vec![b' '; 64 * 1024];
+    if path == "/spooled" { stream.write_all(b"1\r\n\"\r\n").await.unwrap(); }
+    let chunk = vec![if path == "/spooled" { b'x' } else { b' ' }; 64 * 1024];
     let mut sent = 0;
     while sent < total {
         let n = (total - sent).min(chunk.len());
@@ -482,6 +485,7 @@ async fn post_chunked(port: u16, path: &str, total: usize, end: bool) -> u16 {
         sent += n;
     }
     if end {
+        if path == "/spooled" { stream.write_all(b"1\r\n\"\r\n").await.unwrap(); }
         let _ = stream.write_all(b"0\r\n\r\n").await;
     }
     let mut raw = Vec::new();
@@ -505,6 +509,18 @@ async fn raw_file_uploads_are_spooled_with_bounded_memory_and_keep_configured_li
         assert_eq!(post_chunked(port, "/file", 4096, true).await, 200);
     }
     limited.stop().await;
+}
+
+#[tokio::test]
+async fn spooled_json_validates_large_strings_with_bounded_memory() {
+    let server = Server::start(&[], kit_app()).await;
+    const SIZE: usize = 100_000_000;
+    for port in [server.http, server.target] {
+        let (status, rise) = allocation_rise(post_chunked(port, "/spooled", SIZE, true)).await;
+        assert_eq!(status, 200, "port {port}");
+        assert!(rise < SIZE / 4, "{rise} bytes retained validating a {SIZE}-byte JSON string on port {port}");
+    }
+    server.stop().await;
 }
 
 /// MAX_REQUEST_BODY is enforced as the upload streams through validation, never held whole
