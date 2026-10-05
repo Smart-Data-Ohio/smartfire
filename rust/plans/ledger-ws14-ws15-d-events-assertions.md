@@ -2,6 +2,8 @@
 
 Reference: `78b9b1546bdab4c6c1c9b8ddb94512f661289112`. Each row names an original Rails assertion call, its discriminating Rust assertion and the real test that executes it. Shared helper assertions and repeated loop cases are cited explicitly. These tables retain compiler checks as compiler checks; they do not claim matching exception classes between Ruby and the Rust type system.
 
+Helper policy: independently derived pinned-source inventory v1.
+
 ## WS14e-015
 
 Rails declaration: `test/models/event_attendance_test.rb:8` — a member holds a single response per event
@@ -170,7 +172,7 @@ Rails declaration: `test/integration/event_cards_test.rb:9` — a room member se
 
 Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::d_cards::cutover_d_cards_room_http_scopes_single_card_title_time_venue_organizer_and_attendance_frame`.
 
-Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.
+Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -184,6 +186,7 @@ Exact original Rails setup through persisted model writes and signed-in room HTT
 | [test/integration/event_cards_test.rb:32](../../test/integration/event_cards_test.rb#L32)<br>`assert_select ".event-card__venue", text: /Lounge/` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:344](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L344)<br>`assert!( by_class(&dom, container, "event-card__venue") .iter() .any(\|&n\| text(&dom, n).contains("Lounge")) )` |
 | [test/integration/event_cards_test.rb:33](../../test/integration/event_cards_test.rb#L33)<br>`assert_select ".event-card__organizer", text: /David/` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:350](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L350)<br>`assert!( by_class(&dom, container, "event-card__organizer") .iter() .any(\|&n\| text(&dom, n).contains("David")) )` |
 | [test/integration/event_cards_test.rb:34](../../test/integration/event_cards_test.rb#L34)<br>`assert_select "turbo-frame[src=?]",` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:357](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L357)<br>`assert_eq!( dom.descendants(container) .into_iter() .filter(\|&n\| dom.local_name(n) == Some("turbo-frame") && dom.attr(n, "src") == Some(src.as_str())) .count(), 1 )` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
 
 ## WS14e-103
 
@@ -191,7 +194,7 @@ Rails declaration: `test/integration/event_cards_test.rb:39` — the card shows 
 
 Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::d_cards::cutover_d_cards_room_http_voice_venue_has_no_join_or_live_dot`.
 
-Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.
+Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -200,6 +203,7 @@ Exact original Rails setup through persisted model writes and signed-in room HTT
 | [test/integration/event_cards_test.rb:55](../../test/integration/event_cards_test.rb#L55)<br>`assert_select ".event-card", text: /Lounge/` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:383](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L383)<br>`assert!(cards.iter().any(\|&n\| text(&dom, n).contains("Lounge")))` |
 | [test/integration/event_cards_test.rb:56](../../test/integration/event_cards_test.rb#L56)<br>`assert_select ".event-card a", text: "Join", count: 0` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:385](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L385)<br>`assert_eq!( cards .iter() .flat_map(\|&n\| dom.descendants(n)) .filter(\|&n\| dom.local_name(n) == Some("a") && text(&dom, n) == "Join") .count(), 0 )` |
 | [test/integration/event_cards_test.rb:57](../../test/integration/event_cards_test.rb#L57)<br>`assert_select ".event-card .sidebar-item__icon", count: 0` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:394](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L394)<br>`assert_eq!( cards .iter() .map(\|&n\| by_class(&dom, n, "sidebar-item__icon").len()) .sum::<usize>(), 0 )` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
 
 ## WS14e-104
 
@@ -207,12 +211,13 @@ Rails declaration: `test/integration/event_cards_test.rb:60` — a repeating eve
 
 Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::d_cards::cutover_d_cards_room_http_real_recurring_event_has_repeating_eyebrow`.
 
-Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.
+Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
 | [test/integration/event_cards_test.rb:73](../../test/integration/event_cards_test.rb#L73)<br>`assert_response :success` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:411](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L411)<br>`assert_eq!(reply.status, StatusCode::OK)` |
 | [test/integration/event_cards_test.rb:74](../../test/integration/event_cards_test.rb#L74)<br>`assert_select ".event-card__eyebrow", text: "Repeating event"` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:415](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L415)<br>`assert!( by_class(&dom, root, "event-card__eyebrow") .iter() .any(\|&n\| text(&dom, n) == "Repeating event") )` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
 
 ## WS14e-105
 
@@ -220,13 +225,14 @@ Rails declaration: `test/integration/event_cards_test.rb:77` — a cancelled eve
 
 Executed test: `campfire::bin/campfire controllers::rooms::events::tests::cutover::d_cards::cutover_d_cards_room_http_model_cancelled_event_renders_cancelled_card_and_state`.
 
-Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.
+Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
 | [test/integration/event_cards_test.rb:91](../../test/integration/event_cards_test.rb#L91)<br>`assert_response :success` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:442](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L442)<br>`assert_eq!(reply.status, StatusCode::OK)` |
 | [test/integration/event_cards_test.rb:92](../../test/integration/event_cards_test.rb#L92)<br>`assert_select ".event-card--cancelled", minimum: 1` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:446](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L446)<br>`assert!(!by_class(&dom, root, "event-card--cancelled").is_empty())` |
 | [test/integration/event_cards_test.rb:93](../../test/integration/event_cards_test.rb#L93)<br>`assert_select ".event-card__state", text: "Cancelled"` | [rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs:448](../../rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs#L448)<br>`assert!( by_class(&dom, root, "event-card__state") .iter() .any(\|&n\| text(&dom, n) == "Cancelled") )` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
 
 ## WS14g-075
 

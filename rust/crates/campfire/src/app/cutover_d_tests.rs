@@ -60,7 +60,7 @@ async fn cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated() {
         })
         .await
         .unwrap();
-    let mut b = a.sign_in(DAVID).await;
+    let mut b = a.sign_in_for_tests(DAVID).await;
     let before = a
         .db()
         .read(|conn| {
@@ -101,7 +101,7 @@ async fn cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated() {
 #[tokio::test]
 async fn cutover_d_gated_audit_csv_get_continues_and_returns_csv() {
     let a = cutover_c_tests::app().await;
-    let mut b = a.sign_in(DAVID).await;
+    let mut b = a.sign_in_for_tests(DAVID).await;
     let gated = b.get("/account/audit_log.csv").await;
     assert_eq!(gated.status, StatusCode::FOUND);
     assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"));
@@ -136,7 +136,7 @@ async fn sudo_at_minutes(minutes: i64) -> crate::controllers::presenters::test_s
         .without_job_runner()
         .await;
     load_fixtures(&a).await;
-    let mut b = a.sign_in(DAVID).await;
+    let mut b = a.sign_in_for_tests(DAVID).await;
     let confirmed = b
         .write(Req::new(Method::POST, "/sudo").form(&[("password", "secret123456")]))
         .await;

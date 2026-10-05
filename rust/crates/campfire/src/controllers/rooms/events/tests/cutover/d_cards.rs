@@ -97,7 +97,7 @@ async fn socket(
 ) {
     use crate::channels::tests::support::{Client, bind_listener, identifier};
     use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-    let cookie = app.sign_in(JASON).await.cookie_header();
+    let cookie = app.sign_in_for_tests(JASON).await.cookie_header();
     let listener = bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = app.booted.router.clone();
@@ -290,7 +290,7 @@ async fn cutover_d_cards_room_http_scopes_single_card_title_time_venue_organizer
     let voice = venue(&app, RoomType::Voice, "Lounge", DAVID, &[DAVID, JASON]).await;
     let e = create_event(&app, "Planning session", Some(voice), false, true).await;
     let message = link(&app, e.id, id("designers"), JASON, "see", "evt-card-1").await;
-    let mut david = app.sign_in(DAVID).await;
+    let mut david = app.sign_in_for_tests(DAVID).await;
     let reply = david.get(&format!("/rooms/{}", id("designers"))).await;
     // Rails 23
     assert_eq!(reply.status, StatusCode::OK);
@@ -370,7 +370,7 @@ async fn cutover_d_cards_room_http_voice_venue_has_no_join_or_live_dot() {
     let voice = venue(&app, RoomType::Voice, "Lounge", DAVID, &[DAVID]).await;
     let e = create_event(&app, "Venue meetup", Some(voice), false, false).await;
     link(&app, e.id, id("designers"), DAVID, "see", "evt-card-venue").await;
-    let mut david = app.sign_in(DAVID).await;
+    let mut david = app.sign_in_for_tests(DAVID).await;
     let reply = david.get(&format!("/rooms/{}", id("designers"))).await;
     // Rails 53
     assert_eq!(reply.status, StatusCode::OK);
@@ -405,7 +405,7 @@ async fn cutover_d_cards_room_http_real_recurring_event_has_repeating_eyebrow() 
     let app = app().await;
     let e = create_event(&app, "Weekly planning", None, true, false).await;
     link(&app, e.id, id("designers"), DAVID, "see", "evt-card-series").await;
-    let mut david = app.sign_in(DAVID).await;
+    let mut david = app.sign_in_for_tests(DAVID).await;
     let reply = david.get(&format!("/rooms/{}", id("designers"))).await;
     // Rails 73
     assert_eq!(reply.status, StatusCode::OK);
@@ -436,7 +436,7 @@ async fn cutover_d_cards_room_http_model_cancelled_event_renders_cancelled_card_
         .write(move |tx| CalendarEvent::cancel_with_scope(tx, e.id, "this_event", Some(DAVID)))
         .await
         .unwrap();
-    let mut david = app.sign_in(DAVID).await;
+    let mut david = app.sign_in_for_tests(DAVID).await;
     let reply = david.get(&format!("/rooms/{}", id("designers"))).await;
     // Rails 91
     assert_eq!(reply.status, StatusCode::OK);
@@ -464,7 +464,7 @@ async fn cutover_d_wide_calendar_form_http_preserves_year_and_exact_event_and_vi
         })
         .await
         .unwrap();
-    let mut david = app.sign_in(DAVID).await;
+    let mut david = app.sign_in_for_tests(DAVID).await;
     // The first input is the exact datetime-local payload Chrome submitted in
     // original EventsTest:102. The summer case distinguishes the real final
     // Rails TZInfo period (EST) from the calendar proxy's extrapolated EDT.

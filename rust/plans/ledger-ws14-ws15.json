@@ -5405,7 +5405,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14e_101",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 234
+          "line": 211
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -5535,7 +5535,7 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs",
           "line": 287
         },
-        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.",
+        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "source": {
             "file": "test/integration/event_cards_test.rb",
@@ -5680,7 +5680,7 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs",
           "line": 368
         },
-        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.",
+        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "source": {
             "file": "test/integration/event_cards_test.rb",
@@ -5785,7 +5785,7 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs",
           "line": 404
         },
-        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.",
+        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "source": {
             "file": "test/integration/event_cards_test.rb",
@@ -5866,7 +5866,7 @@
           "file": "rust/crates/campfire/src/controllers/rooms/events/tests/cutover/d_cards.rs",
           "line": 423
         },
-        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher.",
+        "detail": "Exact original Rails setup through persisted model writes and signed-in room HTTP or real subscribed Cable publications. DOM assertions use parsed markup; selectors and counts retain the original scope. Broadcast checks execute the real post-commit presenter and Cable publisher. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "source": {
             "file": "test/integration/event_cards_test.rb",
@@ -6872,7 +6872,7 @@
           "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
           "line": 49
         },
-        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "source": {
             "file": "test/controllers/sudos_controller_test.rb",
@@ -7178,7 +7178,7 @@
           "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
           "line": 102
         },
-        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "source": {
             "file": "test/controllers/sudos_controller_test.rb",
@@ -7299,7 +7299,7 @@
           "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
           "line": 149
         },
-        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "source": {
             "file": "test/controllers/sudos_controller_test.rb",
@@ -7369,7 +7369,7 @@
           "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
           "line": 158
         },
-        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+        "detail": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "source": {
             "file": "test/controllers/sudos_controller_test.rb",
@@ -17425,7 +17425,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_224",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 240
+          "line": 217
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17471,7 +17471,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_225",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 246
+          "line": 223
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17517,7 +17517,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_226",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 252
+          "line": 229
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17563,7 +17563,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_227",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 258
+          "line": 235
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17609,7 +17609,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_228",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 264
+          "line": 241
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17655,7 +17655,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_229",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 270
+          "line": 247
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17701,7 +17701,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_230",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 276
+          "line": 253
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17747,7 +17747,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_231",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 282
+          "line": 259
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17793,7 +17793,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_232",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 288
+          "line": 265
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17839,7 +17839,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_233",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 294
+          "line": 271
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17885,7 +17885,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_234",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 300
+          "line": 277
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17931,7 +17931,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_235",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 306
+          "line": 283
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -17977,7 +17977,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_236",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 312
+          "line": 289
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18023,7 +18023,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_237",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 318
+          "line": 295
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18069,7 +18069,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_238",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 324
+          "line": 301
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18115,7 +18115,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_239",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 330
+          "line": 307
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18161,7 +18161,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_240",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 336
+          "line": 313
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18207,7 +18207,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_241",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 342
+          "line": 319
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18253,7 +18253,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_242",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 348
+          "line": 325
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18299,7 +18299,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_243",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 354
+          "line": 331
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18345,7 +18345,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_244",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 360
+          "line": 337
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18391,7 +18391,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_245",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 366
+          "line": 343
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18437,7 +18437,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_246",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 372
+          "line": 349
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18483,7 +18483,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_247",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 378
+          "line": 355
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18529,7 +18529,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_248",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 384
+          "line": 361
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18575,7 +18575,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_249",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 390
+          "line": 367
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18621,7 +18621,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_250",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 396
+          "line": 373
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18667,7 +18667,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_251",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 402
+          "line": 379
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18713,7 +18713,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_252",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 408
+          "line": 385
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18759,7 +18759,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_253",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 414
+          "line": 391
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18805,7 +18805,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_254",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 420
+          "line": 397
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18851,7 +18851,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_255",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 426
+          "line": 403
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18897,7 +18897,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_256",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 432
+          "line": 409
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18943,7 +18943,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_257",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 438
+          "line": 415
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -18989,7 +18989,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_258",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 444
+          "line": 421
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19035,7 +19035,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_259",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 450
+          "line": 427
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19081,7 +19081,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_260",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 456
+          "line": 433
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19127,7 +19127,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_261",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 462
+          "line": 439
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19173,7 +19173,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_262",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 468
+          "line": 445
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19219,7 +19219,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_263",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 474
+          "line": 451
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19265,7 +19265,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_264",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 480
+          "line": 457
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19311,7 +19311,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_265",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 486
+          "line": 463
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19357,7 +19357,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_266",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 492
+          "line": 469
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19403,7 +19403,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_267",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 498
+          "line": 475
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19488,7 +19488,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_269",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 504
+          "line": 481
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19534,7 +19534,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_270",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 510
+          "line": 487
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19580,7 +19580,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_271",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 516
+          "line": 493
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19626,7 +19626,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_272",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 522
+          "line": 499
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -19672,7 +19672,7 @@
         "test": "campfire::bin/campfire controllers::ws14_original_browser_tests::original_browser_ws14g_273",
         "source": {
           "file": "rust/crates/campfire/src/controllers/ws14_original_browser_tests.rs",
-          "line": 528
+          "line": 505
         },
         "detail": "The named wrapper runs this exact, byte-identical pinned Capybara declaration and its original helpers against the real Rust router, assets, Turbo, Cable and private fixture DB. Every cited original assertion emits a physical-line execution receipt. The original fixture model setup and DB readbacks share that DB; only external Google exchanges use the original WebMock stubs through the injected Rust Google Client. The wrapper rejects zero tests, skipped tests, any failed assertion and any missing original assertion receipt. Original setup sign-in and every reachable nested helper assertion run byte-identical, and the wrapper validates each helper file:line receipt too.",
         "baseline_receipt": {
@@ -20216,7 +20216,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1207
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: the ledger page lists the completion with its status. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20262,7 +20262,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1207
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: the ledger page lists failures with their reason. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20306,9 +20306,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 810
+          "line": 801
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: the profile cannot edit the login while a verified account is linked. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20352,9 +20352,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 810
+          "line": 801
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: the profile edits the login again once the link is disconnected. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20400,7 +20400,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1481
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: linking never logs the pasted token. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20446,7 +20446,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1481
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: the token parameter is filtered from request logs. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20492,7 +20492,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1481
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: posting never logs the member's token. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20538,7 +20538,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1481
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: requesting never logs the member's token. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20584,7 +20584,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1645
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The create! race boundary mirrors Rails simulate_mapping_race: inserts the real winning message/thread/membership/mapping before the one-shot uniqueness error; the real HTTP producer removes the loser. assert_mapping_race_loser_cleaned_up calls the three original helper assertions, each separately cited below.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The create! race boundary mirrors Rails simulate_mapping_race: inserts the real winning message/thread/membership/mapping before the one-shot uniqueness error; the real HTTP producer removes the loser. assert_mapping_race_loser_cleaned_up calls the three original helper assertions, each separately cited below. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: discuss reuses the winner and drops the loser when the race is lost at the unique index. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20630,7 +20630,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1645
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The create! race boundary mirrors Rails simulate_mapping_race: inserts the real winning message/thread/membership/mapping before the one-shot uniqueness error; the real HTTP producer removes the loser. assert_mapping_race_loser_cleaned_up calls the three original helper assertions, each separately cited below.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The create! race boundary mirrors Rails simulate_mapping_race: inserts the real winning message/thread/membership/mapping before the one-shot uniqueness error; the real HTTP producer removes the loser. assert_mapping_race_loser_cleaned_up calls the three original helper assertions, each separately cited below. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: discuss reuses the winner and drops the loser when the race is lost at the validation. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20717,7 +20717,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_webhook_signed_fetch_updates_and_broadcasts_once_to_its_room",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 2218
+          "line": 2219
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -20763,7 +20763,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 2267
+          "line": 2268
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -20809,7 +20809,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_webhook_subscription_queues_posts_and_deduplicates_redelivery",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 2267
+          "line": 2268
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -20857,7 +20857,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1813
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: a cached denial no longer applies after the member relinks. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20903,7 +20903,7 @@
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
           "line": 1813
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: a transport error renders the empty frame and caches nothing. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -20947,7 +20947,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_no_pr_key_matches_original_slots",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 158
+          "line": 147
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -20993,7 +20993,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 179
+          "line": 168
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21069,7 +21069,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 179
+          "line": 168
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21115,7 +21115,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 179
+          "line": 168
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21161,7 +21161,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 301
+          "line": 290
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21207,7 +21207,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 301
+          "line": 290
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21364,7 +21364,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 301
+          "line": 290
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21410,7 +21410,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 301
+          "line": 290
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21456,7 +21456,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 301
+          "line": 290
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21502,7 +21502,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 463
+          "line": 452
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21548,7 +21548,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 463
+          "line": 452
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21621,7 +21621,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 529
+          "line": 518
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21667,7 +21667,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 529
+          "line": 518
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -21750,9 +21750,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_room_http_query_count_stays_flat_for_two_then_six_pr_messages",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 1889
+          "line": 1890
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: rendering a room page costs no extra queries per message with a PR link. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -21796,9 +21796,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_open_room_join_page_omits_card_and_offers_join",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 776
+          "line": 767
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: the open-room join page leaks no card content to non-members. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -22063,9 +22063,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 680
+          "line": 655
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: the files summary omits the more line when everything is shown. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -22109,9 +22109,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 680
+          "line": 655
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The card count uses actual descendants of parsed full-response header nodes, preserving .github-pr-thread-header .github-pr-card ancestry.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: a PR thread without fetched files shows a loading summary. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -22155,9 +22155,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 680
+          "line": 655
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: an ordinary thread shows no PR header. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -22201,9 +22201,9 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 680
+          "line": 655
         },
-        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
+        "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
         "baseline_receipt": {
           "detail": "Discriminating domain/HTTP assertion still required for: file paths from the API render as text. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count.",
           "source": {
@@ -22358,7 +22358,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 1963
+          "line": 1964
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -22457,7 +22457,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 1963
+          "line": 1964
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -22542,7 +22542,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_review_notification_registered_job_scopes_access_preference_and_thread_source",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 1963
+          "line": 1964
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -22627,7 +22627,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 2080
+          "line": 2081
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -22673,7 +22673,7 @@
         "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_fetch_registered_job_replaces_mapped_header_and_is_silent_without_references",
         "source": {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 2080
+          "line": 2081
         },
         "detail": "Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary.",
         "baseline_receipt": {
@@ -23750,14 +23750,24 @@
           "failed": 0,
           "skipped": 158,
           "elapsed": "0.108s"
+        },
+        {
+          "command": "CI=true CARGO_BUILD_JOBS=2 WS14_BROWSER_RUBY_IMAGE=ws8bm-browser-reference-78b9b1546 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -p campfire_db -j 4 -E 'test(cutover_d_) | test(controller_time_and_parameter_casts_match_pinned_rails) | test(unicode_parity_manual_github_login_uses_downcase_without_folding) | test(controllers::ws14_original_browser_tests::) | test(controllers::ws15_original_github_browser_tests::)' --run-ignored all --no-fail-fast --success-output immediate --failure-output immediate",
+          "cwd": "rust",
+          "raw_log": "rust/target/ledger-d-tools/review252-final.log",
+          "raw_log_sha256": "2322c5f717e0dc27f0a64a5a896c767ba6bf7719fc49a294c738372a83443638",
+          "passed": 104,
+          "failed": 0,
+          "skipped": 4500,
+          "elapsed": "125.341s"
         }
       ],
       "clippy": {
         "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo clippy --locked -p campfire -p campfire_db -p campfire_views -p rails_compat --all-targets -- -D warnings",
         "cwd": "rust",
         "exit_code": 0,
-        "raw_log": "rust/target/ledger-d-tools/clippy-main-merged.log",
-        "raw_log_sha256": "26d15a94b9306380f2f480374db444aab97a2044942d53b9f46430d4793604eb"
+        "raw_log": "rust/target/ledger-d-tools/review252-clippy.log",
+        "raw_log_sha256": "cddbe165918925805914ae59e63b4da65a0907697cab9c7a43153d536056e0cb"
       },
       "mutation_receipt": "rust/plans/ledger-ws14-ws15-d-mutations.json",
       "mutation_attempts": 34,
@@ -23766,7 +23776,7 @@
         "file": "rust/plans/ledger-ws14-ws15-d-assertions.json",
         "declarations": 127,
         "direct_calls": 547,
-        "helper_calls": 107,
+        "helper_calls": 142,
         "unmapped": 0
       },
       "review": "Independent Astra source review of all 127 closures, producer fixes, scopes, HTTP variants, helper calls, query counts, and corrected Rails clock restoration; all findings corrected.",
@@ -23789,6 +23799,47 @@
         "source_correctness_tests": 74,
         "source_utilities": 7,
         "manual_producer_edits": false
+      },
+      "review252": {
+        "reviewed_head": "9172466d49e27467dcf01ac3176c4c2fa89fa066",
+        "helper_omissions_fixed": 35,
+        "helper_affected_closures": 27,
+        "helper_inventory_version": 1,
+        "required_helpers": 142,
+        "mapped_helpers": 142,
+        "helper_inventory_regressions_passed": 10,
+        "mutation_receipt": "rust/plans/ledger-ws14-ws15-d-review252-mutations.json",
+        "mutation_attempts": 9,
+        "mutation_killed_closures": 9,
+        "helper_affected_closures_killed": 8,
+        "scope_fixes": [
+          "WS15g-048",
+          "WS15g-046 (supplemental)",
+          "WS15g-051 (supplemental)"
+        ],
+        "supplemental_dom_cleanup": [
+          "WS15g-044",
+          "WS15g-045"
+        ],
+        "report": "rust/plans/ledger-ws14-ws15-d-review252-report.md",
+        "independent_review": "Astra source review approved; all 35 helper-removal checks and 10 historical-pin downgrade checks rejected. Direct lifecycle callback inventory limit fixed with an additional regression.",
+        "restored_targeted_nextest": {
+          "command": "CI=true CARGO_BUILD_JOBS=2 WS14_BROWSER_RUBY_IMAGE=ws8bm-browser-reference-78b9b1546 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -p campfire_db -j 4 -E 'test(cutover_d_) | test(controller_time_and_parameter_casts_match_pinned_rails) | test(unicode_parity_manual_github_login_uses_downcase_without_folding) | test(controllers::ws14_original_browser_tests::) | test(controllers::ws15_original_github_browser_tests::)' --run-ignored all --no-fail-fast --success-output immediate --failure-output immediate",
+          "cwd": "rust",
+          "raw_log": "rust/target/ledger-d-tools/review252-final.log",
+          "raw_log_sha256": "2322c5f717e0dc27f0a64a5a896c767ba6bf7719fc49a294c738372a83443638",
+          "passed": 104,
+          "failed": 0,
+          "skipped": 4500,
+          "elapsed": "125.341s"
+        }
+      },
+      "pre_review252_clippy": {
+        "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo clippy --locked -p campfire -p campfire_db -p campfire_views -p rails_compat --all-targets -- -D warnings",
+        "cwd": "rust",
+        "exit_code": 0,
+        "raw_log": "rust/target/ledger-d-tools/clippy-main-merged.log",
+        "raw_log_sha256": "26d15a94b9306380f2f480374db444aab97a2044942d53b9f46430d4793604eb"
       }
     }
   }

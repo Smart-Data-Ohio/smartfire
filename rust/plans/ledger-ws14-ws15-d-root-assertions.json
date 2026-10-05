@@ -62,7 +62,7 @@
     {
       "id": "WS14g-016",
       "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
-      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
       "assertions": [
         {
           "rails": {
@@ -139,12 +139,31 @@
           ],
           "disposition": "covered"
         }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
       ]
     },
     {
       "id": "WS14g-021",
       "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_gated_audit_csv_get_continues_and_returns_csv",
-      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.",
       "assertions": [
         {
           "rails": {
@@ -228,12 +247,31 @@
           ],
           "disposition": "covered"
         }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        }
       ]
     },
     {
       "id": "WS14g-023",
       "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
-      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
       "assertions": [
         {
           "rails": {
@@ -259,12 +297,48 @@
           ],
           "disposition": "covered"
         }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 143,
+              "end_line": 143,
+              "function": "sudo_at_minutes",
+              "text": "assert_eq!(confirmed.status, StatusCode::FOUND)"
+            }
+          ],
+          "disposition": "covered"
+        }
       ]
     },
     {
       "id": "WS14g-024",
       "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
-      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.",
       "assertions": [
         {
           "rails": {
@@ -286,6 +360,42 @@
               "end_line": 161,
               "function": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
               "text": "assert_eq!(response.location(), Some(\"http://campfire.test/sudo/new\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ],
+      "helper_assertions": [
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 9,
+            "text": "assert cookies[:session_token].present?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/controllers/presenters/test_support.rs",
+              "line": 82,
+              "end_line": 86,
+              "function": "sign_in_for_tests",
+              "text": "assert!(cookies.iter().any(|cookie| {\n        cookie\n            .strip_prefix(\"session_token=\")\n            .is_some_and(|value| !value.is_empty())\n    }))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/test_helpers/session_test_helper.rb",
+            "line": 16,
+            "text": "assert_response :redirect"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 143,
+              "end_line": 143,
+              "function": "sudo_at_minutes",
+              "text": "assert_eq!(confirmed.status, StatusCode::FOUND)"
             }
           ],
           "disposition": "covered"
@@ -391,5 +501,6 @@
         }
       ]
     }
-  ]
+  ],
+  "helper_inventory_version": 1
 }

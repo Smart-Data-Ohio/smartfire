@@ -1,8 +1,5 @@
 //! Exact open WS15g declarations, using reference fixtures and production callers.
-use super::{
-    card_tests::Fresh,
-    test_support::{request, sudo},
-};
+use super::{card_tests::Fresh, test_support::request};
 use crate::controllers::presenters::Presenter;
 use crate::integrations::{
     github::{
@@ -15,9 +12,8 @@ use crate::integrations::{
 };
 use campfire_db::{
     Agent, AgentApproval, AgentGrant, ChannelThread, Message, NewApproval, NewChannelThread,
-    NewGrant, NewMessage, NewSession, Session, User, fixtures::identify as id,
+    NewGrant, NewMessage, User, fixtures::identify as id,
 };
-use campfire_kit::Crypto;
 use campfire_richtext::dom::{Dom, NodeId};
 use rusqlite::params;
 use serde_json::{Value, json};
@@ -46,42 +42,35 @@ async fn fixture(routes: Vec<Route>) -> Fresh {
         .await
 }
 async fn clean_fixture(mut f: Fresh) -> Fresh {
-    let token = f.app.db.write(|tx| { tx.conn().execute_batch("DELETE FROM github_pull_request_threads WHERE github_pull_request_id=816; DELETE FROM github_pull_request_references WHERE github_pull_request_id=816; DELETE FROM channel_threads WHERE id=817; DELETE FROM messages WHERE id IN(818,828); DELETE FROM memberships WHERE room_id IN(815,825); DELETE FROM rooms WHERE id IN(815,825); DELETE FROM sessions WHERE user_id=811; DELETE FROM users WHERE id IN(811,812); DELETE FROM github_pull_requests WHERE id=816;")?; Ok(Session::start_with(tx,id("david"),NewSession{two_factor_verified:true,..Default::default()})?.token)}).await.unwrap();
-    let cookie = campfire_kit::RailsCrypto::new(f.app.secrets.clone()).sign_cookie(
-        "session_token",
-        &token,
-        None,
-    );
-    f.cookie = format!("session_token={}", campfire_kit::cookies::escape(&cookie));
+    f.app.db.write(|tx| {
+        tx.conn().execute_batch("DELETE FROM github_pull_request_threads WHERE github_pull_request_id=816; DELETE FROM github_pull_request_references WHERE github_pull_request_id=816; DELETE FROM channel_threads WHERE id=817; DELETE FROM messages WHERE id IN(818,828); DELETE FROM memberships WHERE room_id IN(815,825); DELETE FROM rooms WHERE id IN(815,825); DELETE FROM sessions WHERE user_id=811; DELETE FROM users WHERE id IN(811,812); DELETE FROM github_pull_requests WHERE id=816;")?;
+        Ok(())
+    }).await.unwrap();
+    as_user(&mut f, id("david")).await;
     f
 }
 async fn as_user(f: &mut Fresh, user: i64) {
-    let token = f
-        .app
-        .db
-        .write(move |tx| {
-            Ok(Session::start_with(
-                tx,
-                user,
-                NewSession {
-                    two_factor_verified: true,
-                    ..Default::default()
-                },
-            )?
-            .token)
-        })
-        .await
-        .unwrap();
-    f.cookie = format!(
-        "session_token={}",
-        campfire_kit::cookies::escape(
-            &campfire_kit::RailsCrypto::new(f.app.secrets.clone()).sign_cookie(
-                "session_token",
-                &token,
-                None
-            )
-        )
-    );
+    let cookies =
+        crate::controllers::presenters::test_support::sign_in_for_tests(&f.app, user).await;
+    // `request` supplies its deterministic CSRF/session cookie; keep the issued
+    // authentication and device cookies without a second Rails session key.
+    f.cookie = cookies
+        .split("; ")
+        .filter(|cookie| !cookie.starts_with("_campfire_session="))
+        .collect::<Vec<_>>()
+        .join("; ");
+}
+async fn grant_sudo_access(f: &Fresh) -> Value {
+    let (status, headers, _) = request(
+        f,
+        "POST",
+        "/sudo",
+        json!({"password":"secret123456"}),
+        json!({}),
+    )
+    .await;
+    assert!((300..400).contains(&status));
+    super::test_support::response_session(f, &headers)
 }
 fn create_message(
     tx: &mut campfire_db::Tx<'_>,
@@ -586,14 +575,6 @@ async fn cutover_d_cache_x_and_link_fetch_dependencies() {
     f.clock.set(base_time);
     assert_ne!(before, key(&f, message).await); // WS15g-040
 }
-fn header(html: &str) -> &str {
-    html.split("class=\"github-pr-thread-header\"")
-        .nth(1)
-        .unwrap()
-        .split("<turbo-frame class=\"github-pr-write\"")
-        .next()
-        .unwrap()
-}
 #[tokio::test]
 async fn cutover_d_thread_card_discuss_button_and_link_are_room_scoped() {
     for mapped in [false, true] {
@@ -629,50 +610,44 @@ async fn cutover_d_thread_card_discuss_button_and_link_are_room_scoped() {
         )
         .await;
         assert_eq!(status, 200); // WS15g-044,045
-        let card = html
-            .split("<article class=\"github-pr-card ")
-            .nth(1)
-            .unwrap()
-            .split("</article>")
-            .next()
-            .unwrap();
+        let (dom, root) = parse_markup(&html);
+        let cards = class_nodes(&dom, root, "github-pr-card");
+        let links = cards
+            .iter()
+            .flat_map(|&card| class_nodes(&dom, card, "github-pr-card__discuss"))
+            .filter(|&node| dom.local_name(node) == Some("a"))
+            .collect::<std::collections::HashSet<_>>();
+        let forms = class_nodes(&dom, root, "github-pr-card__discuss-form");
         if let Some(thread) = thread {
-            assert_eq!(card.matches(&format!("class=\"github-pr-card__discuss\" data-turbo-frame=\"_top\" href=\"/rooms/{}/threads/{thread}\">Discuss</a>",id("designers"))).count(),1); // WS15g-045 link href+count
-            assert_eq!(class_count(&html, "github-pr-card__discuss-form"), 0); // WS15g-045
-        } else {
+            let href = format!("/rooms/{}/threads/{thread}", id("designers"));
             assert_eq!(
-                card.matches("class=\"github-pr-card__discuss-form\"")
+                links
+                    .iter()
+                    .filter(|&&node| dom.attr(node, "href") == Some(href.as_str())
+                        && dom.text_content(node) == "Discuss")
                     .count(),
                 1
-            ); // WS15g-044 form count
-            let form = card
-                .split("class=\"github-pr-card__discuss-form\"")
-                .nth(1)
-                .unwrap()
-                .split("</form>")
-                .next()
-                .unwrap();
-            assert!(form.contains(&format!(
-                "action=\"/rooms/{}/github/pull_request_threads\"",
-                id("designers")
-            ))); // WS15g-044 action
+            ); // WS15g-045 link href+text+count
+            assert_eq!(forms.len(), 0); // WS15g-045
+        } else {
+            assert_eq!(forms.len(), 1); // WS15g-044 form count
+            let action = format!("/rooms/{}/github/pull_request_threads", id("designers"));
+            let scoped_forms = forms
+                .iter()
+                .copied()
+                .filter(|&node| dom.attr(node, "action") == Some(action.as_str()))
+                .collect::<Vec<_>>();
+            assert_eq!(scoped_forms.len(), 1); // WS15g-044 action
             assert_eq!(
-                form.matches(
-                    "<button class=\"github-pr-card__discuss\" type=\"submit\">Discuss</button>"
-                )
-                .count(),
+                scoped_forms
+                    .iter()
+                    .flat_map(|&form| class_nodes(&dom, form, "github-pr-card__discuss"))
+                    .filter(|&node| dom.local_name(node) == Some("button")
+                        && dom.text_content(node) == "Discuss")
+                    .count(),
                 1
             ); // WS15g-044 nested button
-            assert_eq!(
-                {
-                    let (dom, root) = parse_markup(card);
-                    class_nodes(&dom, root, "github-pr-card__discuss")
-                        .into_iter()
-                        .filter(|&node| dom.local_name(node) == Some("a"))
-                        .count()
-                },
-                0
-            ); // WS15g-044 no link
+            assert_eq!(links.len(), 0); // WS15g-044 no link
         }
     }
 }
@@ -712,11 +687,22 @@ async fn cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private() 
             assert_eq!(class_count(&html, "github-pr-thread-header"), 0);
             continue;
         } // WS15g-049
-        let h = header(&html);
+        let (dom, root) = parse_markup(&html);
+        let headers = class_nodes(&dom, root, "github-pr-thread-header");
+        let scoped = |name: &str| {
+            headers
+                .iter()
+                .flat_map(|&header| class_nodes(&dom, header, name))
+                .collect::<std::collections::HashSet<_>>()
+        };
         match case {
             "loaded" => {
-                assert_eq!(class_count(h, "github-pr-card"), 1); // WS15g-046 card scope
-                assert!(h.contains("class=\"github-pr-card__title\">Add shiny things</p>")); // WS15g-046 title scope
+                assert_eq!(scoped("github-pr-card").len(), 1); // WS15g-046 card scope
+                assert!(
+                    scoped("github-pr-card__title")
+                        .iter()
+                        .any(|&node| dom.text_content(node) == "Add shiny things")
+                ); // WS15g-046 title scope
                 assert!(html.contains("class=\"github-pr-files__heading\">Files changed</h2>")); // WS15g-046 heading
                 assert_eq!(class_count(&html, "github-pr-files__file"), 2); // WS15g-046 files
                 assert!(html.contains("class=\"github-pr-files__path\">app/models/user.rb</span>")); // WS15g-046 path
@@ -734,7 +720,7 @@ async fn cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private() 
                 assert_eq!(class_count(&html, "github-pr-files__more"), 0); // WS15g-047 no more
             }
             "loading" => {
-                assert_eq!(class_count(h, "github-pr-card"), 1); // WS15g-048 card
+                assert_eq!(scoped("github-pr-card").len(), 1); // WS15g-048 card
                 let mut dom = campfire_richtext::dom::Dom::new();
                 let root = dom.parse_fragment(&html).unwrap();
                 assert!(dom.descendants(root).into_iter().any(|node| {
@@ -762,9 +748,14 @@ async fn cutover_d_thread_files_loaded_exact_loading_ordinary_xss_and_private() 
             }
             "private" => {
                 let pr=f.app.db.read(move|c|Ok(PullRequestThread::for_room_pr(c,id("designers"),c.query_row("SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=?",[thread],|r|r.get::<_,i64>(0))?)?.unwrap().pull_request_id)).await.unwrap();
-                assert_eq!(class_count(h, "github-pr-card"), 0); // WS15g-051 scoped no card
-                assert_eq!(class_count(h, "github-pr-files"), 0); // WS15g-051 scoped no files
-                assert_eq!(h.matches(&format!("<turbo-frame loading=\"lazy\" class=\"github-pr-card-frame\" id=\"card_for_thread_{thread}_github_pull_request_{pr}\" src=\"/rooms/{}/github/pull_requests/{pr}/card?thread_id={thread}\"></turbo-frame>",id("designers"))).count(),1); // WS15g-051 exact lazy frame
+                assert_eq!(scoped("github-pr-card").len(), 0); // WS15g-051 scoped no card
+                assert_eq!(scoped("github-pr-files").len(), 0); // WS15g-051 scoped no files
+                assert_eq!(scoped("github-pr-card-frame").iter().filter(|&&node| {
+                    dom.local_name(node) == Some("turbo-frame")
+                        && dom.attr(node, "loading") == Some("lazy")
+                        && dom.attr(node, "id") == Some(format!("card_for_thread_{thread}_github_pull_request_{pr}").as_str())
+                        && dom.attr(node, "src") == Some(format!("/rooms/{}/github/pull_requests/{pr}/card?thread_id={thread}", id("designers")).as_str())
+                }).count(), 1); // WS15g-051 exact lazy frame
                 assert!(!html.contains("Add shiny things")); // WS15g-051 no title
                 assert!(!html.contains("app/models/secret.rb")); // WS15g-051 no filename
             }
@@ -809,6 +800,7 @@ async fn cutover_d_open_room_join_page_omits_card_and_offers_join() {
 #[tokio::test]
 async fn cutover_d_profile_verified_login_rejects_edit_until_disconnected() {
     let f = fixture(vec![]).await;
+    let sudo = grant_sudo_access(&f).await;
     f.app
         .db
         .write(|tx| {
@@ -828,7 +820,7 @@ async fn cutover_d_profile_verified_login_rejects_edit_until_disconnected() {
         })
         .await
         .unwrap();
-    let (_, _, html) = request(&f, "GET", "/users/me/profile", Value::Null, sudo()).await;
+    let (_, _, html) = request(&f, "GET", "/users/me/profile", Value::Null, sudo.clone()).await;
     let input = html
         .split("<input")
         .find(|tag| {
@@ -847,7 +839,7 @@ async fn cutover_d_profile_verified_login_rejects_edit_until_disconnected() {
         "PUT",
         "/users/me/profile",
         json!({"user":{"github_login":"someone-else","name":"Dave"}}),
-        sudo(),
+        sudo.clone(),
     )
     .await;
     assert_eq!(status, 302); // WS15g-011 redirect
@@ -893,13 +885,20 @@ async fn cutover_d_profile_verified_login_rejects_edit_until_disconnected() {
         })
         .await
         .unwrap();
-    request(&f, "DELETE", "/github/connection", Value::Null, sudo()).await;
+    request(
+        &f,
+        "DELETE",
+        "/github/connection",
+        Value::Null,
+        sudo.clone(),
+    )
+    .await;
     let (status, headers, _) = request(
         &f,
         "PUT",
         "/users/me/profile",
         json!({"user":{"github_login":"david-gh"}}),
-        sudo(),
+        sudo.clone(),
     )
     .await;
     assert_eq!(status, 302); // WS15g-012 redirect
@@ -1014,6 +1013,7 @@ async fn cutover_d_profile_connected_login_claim_conflict_preserves_model_guard(
 async fn cutover_d_profile_connected_whitespace_reason_ignores_manual_login_and_saves_name() {
     for reason in ["\t", "\u{a0}"] {
         let f = fixture(vec![]).await;
+        let sudo = grant_sudo_access(&f).await;
         f.app
             .db
             .write(move |tx| {
@@ -1044,7 +1044,7 @@ async fn cutover_d_profile_connected_whitespace_reason_ignores_manual_login_and_
             "PUT",
             "/users/me/profile",
             json!({"user":{"github_login":"someone-else", "name":"Dave"}}),
-            sudo(),
+            sudo.clone(),
         )
         .await;
         assert_eq!(status, 302, "reason={reason:?}");
@@ -1441,7 +1441,7 @@ impl Logs {
     }
 }
 async fn front_post(f: &Fresh, path: &str, body: Value) -> u16 {
-    let mut values = sudo();
+    let mut values = grant_sudo_access(f).await;
     let raw = base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD, [7u8; 32]);
     values["_csrf_token"] = json!(raw);
     let request = axum::http::Request::builder()
@@ -1827,6 +1827,7 @@ async fn cutover_d_private_card_relink_retires_denial_and_transport_error_is_not
             first,
         ])
         .await;
+        let sudo = grant_sudo_access(&f).await;
         let (message,pr)=f.app.db.write(move|tx|{
             let m=create_message(tx,id("designers"),id("david"),"card-frame-1","review https://github.com/acme/secret/pull/7")?;let p=PullRequest::for_message(tx.conn(),m.id)?.remove(0);
             tx.conn().execute("UPDATE github_pull_requests SET private=1,title='Secret plans',author_login='alice',state='open',base_branch='main',head_branch='secret',review_decision='approved',check_status='passing',html_url='https://github.com/acme/secret/pull/7',github_updated_at=?,fetched_at=?,fetch_error=NULL,fetch_requested_at=NULL WHERE id=?",params![tx.now().ago(jiff::SignedDuration::from_hours(1)),tx.now(),p.id])?;
@@ -1839,7 +1840,7 @@ async fn cutover_d_private_card_relink_retires_denial_and_transport_error_is_not
                 "POST",
                 "/github/connection",
                 json!({"access_token":"alpha-link"}),
-                sudo(),
+                sudo.clone(),
             )
             .await;
             assert_eq!(status, 302); // WS15g-023 first link redirect
@@ -1862,7 +1863,7 @@ async fn cutover_d_private_card_relink_retires_denial_and_transport_error_is_not
                 "POST",
                 "/github/connection",
                 json!({"access_token":"alpha-link"}),
-                sudo(),
+                sudo.clone(),
             )
             .await;
             assert_eq!(status, 302); // WS15g-023 relink redirect

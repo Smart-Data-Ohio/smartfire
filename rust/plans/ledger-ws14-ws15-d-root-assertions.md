@@ -2,6 +2,8 @@
 
 Reference: `78b9b1546bdab4c6c1c9b8ddb94512f661289112`. Each row names an original Rails assertion call, its discriminating Rust assertion and the real test that executes it. Shared helper assertions and repeated loop cases are cited explicitly. These tables retain compiler checks as compiler checks; they do not claim matching exception classes between Ruby and the Rust type system.
 
+Helper policy: independently derived pinned-source inventory v1.
+
 ## WS14g-010
 
 Rails declaration: `test/controllers/sudos_controller_test.rb:61` — totp is registered at boot but unsupported without enrollment
@@ -22,7 +24,7 @@ Rails declaration: `test/controllers/sudos_controller_test.rb:118` — confirmin
 
 Executed test: `campfire::bin/campfire app::cutover_d_tests::cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated`.
 
-Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.
+Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -30,6 +32,7 @@ Pinned Rails fixtures and starting state; real production model API or HTTP rout
 | [test/controllers/sudos_controller_test.rb:126](../../test/controllers/sudos_controller_test.rb#L126)<br>`assert_response :unauthorized` | [rust/crates/campfire/src/app/cutover_d_tests.rs:92](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L92)<br>`assert_eq!(rejected.status, StatusCode::UNAUTHORIZED)` |
 | [test/controllers/sudos_controller_test.rb:127](../../test/controllers/sudos_controller_test.rb#L127)<br>`assert_equal "totp", AuditLog.where(action: "sudo.confirm.failure").order(:id).last.details["verifier"]` | [rust/crates/campfire/src/app/cutover_d_tests.rs:95](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L95)<br>`assert_eq!(verifier, "totp")` |
 | [test/controllers/sudos_controller_test.rb:130](../../test/controllers/sudos_controller_test.rb#L130)<br>`assert_redirected_to new_sudo_url` | [rust/crates/campfire/src/app/cutover_d_tests.rs:97](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L97)<br>`assert_eq!(gated.status, StatusCode::FOUND)`<br><br>[rust/crates/campfire/src/app/cutover_d_tests.rs:98](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L98)<br>`assert_eq!(gated.location(), Some("http://campfire.test/sudo/new"))` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
 
 ## WS14g-021
 
@@ -37,7 +40,7 @@ Rails declaration: `test/controllers/sudos_controller_test.rb:196` — a gated G
 
 Executed test: `campfire::bin/campfire app::cutover_d_tests::cutover_d_gated_audit_csv_get_continues_and_returns_csv`.
 
-Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.
+Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -45,6 +48,7 @@ Pinned Rails fixtures and starting state; real production model API or HTTP rout
 | [test/controllers/sudos_controller_test.rb:203](../../test/controllers/sudos_controller_test.rb#L203)<br>`assert_redirected_to account_audit_log_url(format: :csv)` | [rust/crates/campfire/src/app/cutover_d_tests.rs:111](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L111)<br>`assert_eq!(confirmed.status, StatusCode::FOUND)`<br><br>[rust/crates/campfire/src/app/cutover_d_tests.rs:112](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L112)<br>`assert_eq!( confirmed.location(), Some("http://campfire.test/account/audit_log.csv") )` |
 | [test/controllers/sudos_controller_test.rb:206](../../test/controllers/sudos_controller_test.rb#L206)<br>`assert_response :success` | [rust/crates/campfire/src/app/cutover_d_tests.rs:117](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L117)<br>`assert_eq!(csv.status, StatusCode::OK)` |
 | [test/controllers/sudos_controller_test.rb:207](../../test/controllers/sudos_controller_test.rb#L207)<br>`assert_equal "text/csv", response.media_type` | [rust/crates/campfire/src/app/cutover_d_tests.rs:118](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L118)<br>`assert_eq!( csv.headers .get("content-type") .unwrap() .to_str() .unwrap() .split(';') .next() .unwrap(), "text/csv" )` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
 
 ## WS14g-023
 
@@ -52,11 +56,13 @@ Rails declaration: `test/controllers/sudos_controller_test.rb:218` — a fresh c
 
 Executed test: `campfire::bin/campfire app::cutover_d_tests::cutover_d_fourteen_minute_confirmation_allows_real_join_code_post`.
 
-Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.
+Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
 | [test/controllers/sudos_controller_test.rb:224](../../test/controllers/sudos_controller_test.rb#L224)<br>`assert_redirected_to edit_account_url` | [rust/crates/campfire/src/app/cutover_d_tests.rs:151](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L151)<br>`assert_eq!(response.status, StatusCode::FOUND)`<br><br>[rust/crates/campfire/src/app/cutover_d_tests.rs:152](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L152)<br>`assert_eq!( response.location(), Some("http://campfire.test/account/edit") )` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
+| [test/test_helpers/session_test_helper.rb:16](../../test/test_helpers/session_test_helper.rb#L16)<br>`assert_response :redirect` | [rust/crates/campfire/src/app/cutover_d_tests.rs:143](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L143)<br>`assert_eq!(confirmed.status, StatusCode::FOUND)` |
 
 ## WS14g-024
 
@@ -64,11 +70,13 @@ Rails declaration: `test/controllers/sudos_controller_test.rb:228` — a stale c
 
 Executed test: `campfire::bin/campfire app::cutover_d_tests::cutover_d_sixteen_minute_confirmation_gates_real_join_code_post`.
 
-Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.
+Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
 | [test/controllers/sudos_controller_test.rb:234](../../test/controllers/sudos_controller_test.rb#L234)<br>`assert_redirected_to new_sudo_url` | [rust/crates/campfire/src/app/cutover_d_tests.rs:160](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L160)<br>`assert_eq!(response.status, StatusCode::FOUND)`<br><br>[rust/crates/campfire/src/app/cutover_d_tests.rs:161](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L161)<br>`assert_eq!(response.location(), Some("http://campfire.test/sudo/new"))` |
+| [test/test_helpers/session_test_helper.rb:9](../../test/test_helpers/session_test_helper.rb#L9)<br>`assert cookies[:session_token].present?` | [rust/crates/campfire/src/controllers/presenters/test_support.rs:82](../../rust/crates/campfire/src/controllers/presenters/test_support.rs#L82)<br>`assert!(cookies.iter().any(\|cookie\| { cookie .strip_prefix("session_token=") .is_some_and(\|value\| !value.is_empty()) }))` |
+| [test/test_helpers/session_test_helper.rb:16](../../test/test_helpers/session_test_helper.rb#L16)<br>`assert_response :redirect` | [rust/crates/campfire/src/app/cutover_d_tests.rs:143](../../rust/crates/campfire/src/app/cutover_d_tests.rs#L143)<br>`assert_eq!(confirmed.status, StatusCode::FOUND)` |
 
 ## WS14g-108
 

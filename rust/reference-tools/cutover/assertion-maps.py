@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Validate physical citations and complete, manually reviewed assertion maps.
 
-This checks integrity, not semantic equivalence. Each mapping is reviewed against
-the real setup/path and sampled with behavior mutations. --render writes the
-human-readable tables; --pass-log verifies that every named native test ran.
+Current maps declare helper_inventory_version: 1 and must match the independent
+pinned-source helper inventory. Registered historical B/C snapshots retain their
+declaration-only policy. This checks integrity, not semantic equivalence. Each
+mapping is reviewed against the real setup/path and sampled with behavior
+mutations. --render writes the tables; --pass-log checks named test execution.
 """
 import argparse
 import hashlib
@@ -12,6 +14,8 @@ import pathlib
 import re
 import subprocess
 
+from helper_inventory import VERSION, completeness_errors, from_pin
+
 root = pathlib.Path(__file__).resolve().parents[3]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('maps', nargs='+', type=pathlib.Path)
@@ -19,6 +23,39 @@ parser.add_argument('--render', action='store_true')
 parser.add_argument('--pass-log', type=pathlib.Path)
 args = parser.parse_args()
 ledger = {r['id']: r for r in json.loads((root / 'rust/plans/ledger-ws14-ws15.json').read_text())['records']}
+reference = (root / 'rust/parity/reference.sha').read_text().strip()
+maps = [(path, json.loads(path.read_text())) for path in args.maps]
+# B/C are historical declaration-only maps. Preserve their explicit reopened
+# and superseded records, but never let a new map opt out by changing its pin.
+historical = {}
+for name in ('b', 'c'):
+    data = json.loads((root / f'rust/plans/ledger-ws14-ws15-{name}-assertions.json').read_text())
+    for record in data['records']:
+        historical[data['reference'], record['id']] = record
+strict_maps = []
+for path, data in maps:
+    if data['reference'] == reference or 'helper_inventory_version' in data:
+        if type(data.get('helper_inventory_version')) is not int or data['helper_inventory_version'] != VERSION or data['reference'] != reference:
+            raise SystemExit(f'{path}: current assertion maps require helper_inventory_version: {VERSION} '
+                             f'and pinned reference {reference}')
+        strict_maps.append((path, data))
+    else:
+        if any(historical.get((data['reference'], r['id'])) != r for r in data['records']):
+            raise SystemExit(f'{path}: unregistered historical declaration-only assertion map')
+        print(f'{path}: historical declaration-only map; helper completeness is not claimed')
+inventory = from_pin(root, reference, [ledger[r['id']] for _, data in strict_maps for r in data['records']]) if strict_maps else None
+helper_errors = []
+expected_helpers = mapped_helpers = 0
+for path, data in strict_maps:
+    for record in data['records']:
+        original = ledger[record['id']]
+        required = inventory.required(original['rails'], original['rails_line'])
+        expected_helpers += len(required)
+        mapped_helpers += len(record.get('helper_assertions', []))
+        helper_errors.extend(f'{path}: {error}' for error in completeness_errors(record, required))
+if helper_errors:
+    raise SystemExit(f'Helper inventory v{VERSION}: {expected_helpers} required; {mapped_helpers} mapped\n' +
+                     '\n'.join(helper_errors))
 pass_log = args.pass_log.read_text() if args.pass_log else None
 total_records = total_assertions = total_helper_assertions = missing = 0
 original_browser = None
@@ -56,8 +93,7 @@ def cite(source):
     path, line = source['file'], source['line']
     return f'[{path}:{line}](../../{path}#L{line})'
 
-for path in args.maps:
-    data = json.loads(path.read_text())
+for path, data in maps:
     records = data['records']
     assert len({r['id'] for r in records}) == len(records), path
     markdown = ['# Rails assertion to Rust assertion map', '',
@@ -66,14 +102,21 @@ for path in args.maps:
                 'assertions and repeated loop cases are cited explicitly. These tables retain '
                 'compiler checks as compiler checks; they do not claim matching exception classes '
                 'between Ruby and the Rust type system.', '']
+    markdown += [f'Helper policy: independently derived pinned-source inventory v{VERSION}.'
+                 if data.get('helper_inventory_version') == VERSION else
+                 'Historical declaration-only policy; helper completeness is not claimed.', '']
     for record in records:
         rid = record['id']
         original = ledger[rid]
-        lines = (root / original['rails']).read_text().splitlines()
-        start = original['rails_line'] - 1
-        end = next(i for i in range(start + 1, len(lines)) if lines[i] == '  end')
-        required = {i + 1 for i in range(start, end)
-                    if re.search(r'\b(?:assert|refute)(?:_\w+)?\b|\.expects\(', lines[i]) and not lines[i].lstrip().startswith('#')}
+        strict = data.get('helper_inventory_version') == VERSION
+        if strict:
+            required = set(inventory.declarations[f"{original['rails']}:{original['rails_line']}"]['assertions'])
+        else:
+            lines = (root / original['rails']).read_text().splitlines()
+            start = original['rails_line'] - 1
+            end = next(i for i in range(start + 1, len(lines)) if lines[i] == '  end')
+            required = {i + 1 for i in range(start, end)
+                        if re.search(r'\b(?:assert|refute)(?:_\w+)?\b|\.expects\(', lines[i]) and not lines[i].lstrip().startswith('#')}
         actual = {a['rails']['line'] for a in record['assertions']}
         assert actual == required, (rid, 'omitted or extra assertion calls', required ^ actual)
         assert len(actual) == len(record['assertions']), rid
@@ -92,8 +135,12 @@ for path in args.maps:
             if entry not in helper_assertions:
                 assert ruby['file'] == original['rails'], rid
             assert ruby_lines[ruby['line'] - 1].strip() == ruby['text'], (rid, ruby)
+            if strict:
+                assert inventory.sources[ruby['file']][ruby['line'] - 1].strip() == ruby['text'], (rid, 'citation differs from pinned Ruby', ruby)
             if entry in helper_assertions:
-                assert re.match(r'(?:assert|refute)(?:_\w+)?\b', ruby['text']), (rid, 'helper citation must name an assertion call', ruby)
+                # Strict entries have already been checked against parsed
+                # assertion callsites, including assertions inside helpers.
+                assert strict or re.match(r'(?:assert|refute)(?:_\w+)?\b', ruby['text']), (rid, 'helper citation must name an assertion call', ruby)
                 assert entry['disposition'] == 'covered', (rid, ruby)
             native = entry['rust']
             assert entry['disposition'] in {'covered', 'unsupported_assertion'}, (rid, ruby)
@@ -109,6 +156,7 @@ for path in args.maps:
                 citations.append('**Open:** ' + entry['reason'])
             for rust in native:
                 source = (root / rust['file']).read_text().splitlines()
+                assert 1 <= rust['line'] <= rust['end_line'] <= len(source), (rid, 'invalid physical Rust citation range', rust)
                 quoted = '\n'.join(source[rust['line'] - 1:rust['end_line']])
                 assert rust['text'] in quoted, (rid, rust)
                 if rust.get('kind') in {'original_browser', 'original_browser_helper'}:

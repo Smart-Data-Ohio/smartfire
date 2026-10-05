@@ -1401,58 +1401,58 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 844,
-          "end_line": 844,
+          "line": 836,
+          "end_line": 836,
           "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
           "text": "assert!(input.contains(\"disabled\"))"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 853,
-          "end_line": 853,
+          "line": 845,
+          "end_line": 845,
           "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
           "text": "assert_eq!(status, 302)"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 854,
-          "end_line": 854,
+          "line": 846,
+          "end_line": 846,
           "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
           "text": "assert_eq!(headers[\"location\"], \"http://example.org/users/me/profile\")"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 859,
-          "end_line": 867,
+          "line": 851,
+          "end_line": 859,
           "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
           "text": "assert_eq!(\n                c.query_row(\n                    \"SELECT github_login FROM users WHERE id=?\",\n                    [id(\"david\")],\n                    |r| r.get::<_, Option<String>>(0)\n                )?\n                .as_deref(),\n                Some(\"octocat\")\n            )"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 868,
-          "end_line": 868,
+          "line": 860,
+          "end_line": 860,
           "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
           "text": "assert_eq!(u.name, \"Dave\")"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 884,
-          "end_line": 884,
+          "line": 876,
+          "end_line": 876,
           "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
           "text": "assert!(rejected.is_err())"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 888,
-          "end_line": 891,
+          "line": 880,
+          "end_line": 883,
           "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
           "text": "assert!(\n                e.on(\"github_login\")\n                    .contains(&\"is set by your linked GitHub account\")\n            )"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 884,
-        "end_line": 884,
+        "line": 876,
+        "end_line": 876,
         "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
         "text": "assert!(rejected.is_err())"
       },
@@ -1506,16 +1506,16 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 239,
-          "end_line": 243,
+          "line": 228,
+          "end_line": 232,
           "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
           "text": "assert_ne!(\n            before,\n            key(&f, parent).await,\n            \"frozen reply-count dependency delete={delete}\"\n        )"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 239,
-        "end_line": 243,
+        "line": 228,
+        "end_line": 232,
         "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
         "text": "assert_ne!(\n            before,\n            key(&f, parent).await,\n            \"frozen reply-count dependency delete={delete}\"\n        )"
       },
@@ -1569,16 +1569,16 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 314,
-          "end_line": 314,
+          "line": 303,
+          "end_line": 303,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_ne!(before, key(&f, first).await)"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 314,
-        "end_line": 314,
+        "line": 303,
+        "end_line": 303,
         "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "text": "assert_ne!(before, key(&f, first).await)"
       },
@@ -1632,16 +1632,16 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 351,
-          "end_line": 351,
+          "line": 340,
+          "end_line": 340,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_ne!(before, key(&f, step_message).await)"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 351,
-        "end_line": 351,
+        "line": 340,
+        "end_line": 340,
         "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "text": "assert_ne!(before, key(&f, step_message).await)"
       },
@@ -1693,8 +1693,8 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 387,
-          "end_line": 387,
+          "line": 376,
+          "end_line": 376,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_ne!(before, key(&f, quote).await)"
         }
@@ -1756,23 +1756,23 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 430,
-          "end_line": 430,
+          "line": 419,
+          "end_line": 419,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_ne!(before, voted)"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 438,
-          "end_line": 438,
+          "line": 427,
+          "end_line": 427,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_ne!(voted, key(&f, question).await)"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 430,
-        "end_line": 430,
+        "line": 419,
+        "end_line": 419,
         "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "text": "assert_ne!(before, voted)"
       },
@@ -1832,23 +1832,23 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 459,
-          "end_line": 459,
+          "line": 448,
+          "end_line": 448,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_eq!(key(&f, note).await.rsplit('/').nth(5), Some(\"true\"))"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 460,
-          "end_line": 460,
+          "line": 449,
+          "end_line": 449,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_eq!(key(&f, first).await.rsplit('/').nth(5), Some(\"false\"))"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 459,
-        "end_line": 459,
+        "line": 448,
+        "end_line": 448,
         "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "text": "assert_eq!(key(&f, note).await.rsplit('/').nth(5), Some(\"true\"))"
       },
@@ -1906,15 +1906,15 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 492,
-          "end_line": 492,
+          "line": 481,
+          "end_line": 481,
           "function": "cutover_d_cache_pins_and_newer_card_unpin",
           "text": "assert_ne!(before, pinned)"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 521,
-          "end_line": 525,
+          "line": 510,
+          "end_line": 514,
           "function": "cutover_d_cache_pins_and_newer_card_unpin",
           "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
         }
@@ -1970,16 +1970,16 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 564,
-          "end_line": 564,
+          "line": 553,
+          "end_line": 553,
           "function": "cutover_d_cache_x_and_link_fetch_dependencies",
           "text": "assert_ne!(before, key(&f, message).await)"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 564,
-        "end_line": 564,
+        "line": 553,
+        "end_line": 553,
         "function": "cutover_d_cache_x_and_link_fetch_dependencies",
         "text": "assert_ne!(before, key(&f, message).await)"
       },
@@ -2033,16 +2033,16 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 587,
-          "end_line": 587,
+          "line": 576,
+          "end_line": 576,
           "function": "cutover_d_cache_x_and_link_fetch_dependencies",
           "text": "assert_ne!(before, key(&f, message).await)"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 587,
-        "end_line": 587,
+        "line": 576,
+        "end_line": 576,
         "function": "cutover_d_cache_x_and_link_fetch_dependencies",
         "text": "assert_ne!(before, key(&f, message).await)"
       },
@@ -2097,16 +2097,16 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 387,
-          "end_line": 387,
+          "line": 376,
+          "end_line": 376,
           "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
           "text": "assert_ne!(before, key(&f, quote).await)"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 387,
-        "end_line": 387,
+        "line": 376,
+        "end_line": 376,
         "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
         "text": "assert_ne!(before, key(&f, quote).await)"
       },
@@ -2168,23 +2168,23 @@
       "current_cited_assertions": [
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 492,
-          "end_line": 492,
+          "line": 481,
+          "end_line": 481,
           "function": "cutover_d_cache_pins_and_newer_card_unpin",
           "text": "assert_ne!(before, pinned)"
         },
         {
           "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-          "line": 521,
-          "end_line": 525,
+          "line": 510,
+          "end_line": 514,
           "function": "cutover_d_cache_pins_and_newer_card_unpin",
           "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
         }
       ],
       "failed_current_citation": {
         "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
-        "line": 521,
-        "end_line": 525,
+        "line": 510,
+        "end_line": 514,
         "function": "cutover_d_cache_pins_and_newer_card_unpin",
         "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
       },

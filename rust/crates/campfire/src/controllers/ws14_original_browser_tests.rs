@@ -100,9 +100,9 @@ pub(super) async fn original(key: &str) {
     } else {
         TestApp::boot_with_network_clock_and_env(network, clock.clone(), &environment).await
     }
-        .expect("original browser requires reference-built seed")
-        .without_job_runner()
-        .await;
+    .expect("original browser requires reference-built seed")
+    .without_job_runner()
+    .await;
     app.db().write(|tx| {
         tx.conn().execute_batch("PRAGMA defer_foreign_keys=ON")?;
         let tables = tx.conn().prepare("SELECT name FROM pragma_table_list WHERE schema='main' AND type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('schema_migrations','ar_internal_metadata')")?
@@ -120,30 +120,7 @@ pub(super) async fn original(key: &str) {
     ));
     let jobs_app = app.booted.app.clone();
     let dispatch_app = jobs_app.clone();
-    let auth_app = jobs_app.clone();
-    let routes = axum::Router::new()
-        .route(
-            "/test_session",
-            axum::routing::get(move |axum::extract::Query(input): axum::extract::Query<std::collections::HashMap<String,String>>, headers: axum::http::HeaderMap| {
-                let app = auth_app.clone();
-                async move {
-                    use campfire_kit::Crypto;
-                    let email = input["email_address"].to_owned();
-                    let password = input["password"].to_owned();
-                    let candidate = app.db.read(move |conn| campfire_db::User::find_active_by_email_address(conn, &email)).await.unwrap();
-                    let user = tokio::task::spawn_blocking(move || campfire_db::User::authenticated(candidate, &password)).await.unwrap().expect("original fast sign-in verifies fixture credentials");
-                    let user_agent = headers[axum::http::header::USER_AGENT].to_str().unwrap().to_owned();
-                    let session = app.db.write(move |tx| campfire_db::Session::start_with(tx, user.id, campfire_db::NewSession {
-                        user_agent: Some(&user_agent), ip_address: Some("127.0.0.1"), device_id: None, two_factor_verified: true,
-                    })).await.unwrap();
-                    let value = campfire_kit::RailsCrypto::new(app.secrets.clone()).sign_cookie("session_token", &session.token, None);
-                    axum::http::Response::builder().status(axum::http::StatusCode::SEE_OTHER)
-                        .header(axum::http::header::LOCATION, "/")
-                        .header(axum::http::header::SET_COOKIE, format!("session_token={}; Path=/; HttpOnly; SameSite=Lax", campfire_kit::cookies::escape(&value)))
-                        .body(axum::body::Body::empty()).unwrap()
-                }
-            }),
-        )
+    let routes = super::presenters::test_support::test_session_router(&jobs_app)
         .route(
             "/__ws14_browser__/clock",
             axum::routing::post(move |axum::Json(input): axum::Json<serde_json::Value>| {
