@@ -27,8 +27,9 @@ audit_mode = sys.argv[1:] == ["--audit"]
 timezone_mode = sys.argv[1:] == ["--timezone"]
 assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode or timezone_mode or room_mode or tour_mode, "expected --picker, --status, --pwa, --audit, --timezone, --room, --tour or no arguments"
 scope_control = os.environ.get("WS8BR2_BROWSER_SCOPE_CONTROL", "")
-assert scope_control in ("", "status-field"), "unknown scope control"
-assert not scope_control or status_mode, "status field control requires --status"
+assert scope_control in ("", "status-field", "phone-first-row"), "unknown scope control"
+assert scope_control != "status-field" or status_mode, "status field control requires --status"
+assert scope_control != "phone-first-row" or picker_mode, "phone geometry control requires --picker"
 if audit_mode:
     setup_env = os.environ.copy()
     setup_env.pop("LD_LIBRARY_PATH", None)

@@ -415,3 +415,127 @@ historical job receipts remain historical.
 All targets created by this round and its six older-runner scratch directories
 are removed after pushing; small raw logs remain in rust/.scratch/review248-r2.
 No stash was used, and only C is pushed in this round.
+
+## Rereview 2: DOM-first phone geometry (ed3882c2)
+
+The pinned Rails queries at `people_group_dms_test.rb:302/304` select the first
+`.dm-picker__row:not([hidden])` and its first matching avatar document-wide, then
+measure `getBoundingClientRect()`. CSS-hidden nodes are still measured. Both
+`original_browser_assertions.mjs` and `browser_picker.mjs` previously added
+`:visible`, so they silently selected a later row. Both now call the shared exact
+queries in `browser_scopes.mjs:13-16`. The original thresholds remain height >= 44
+and avatar width within 1 of 32; no retry, timeout or production asset changed.
+
+The control hides the first **real rendered** matching row after filtering `j`,
+without changing its `[hidden]` attribute. Recorded input on both helpers:
+
+```text
+GEOMETRY_MUTATION phone-first-row {"matched":2,"height":0,"avatar":0,"nextHeight":44,"nextAvatar":32}
+```
+
+Both pre-fix helpers pass this actual DOM defect. Both repaired helpers reject it
+at the row-height predicate (original Rails assertion :303; legacy
+`browser_picker.mjs:69:12`). The later valid row cannot substitute for the required
+first match. Baselines pass separately on both pinned Rails and Rust. Exact
+controls, exit statuses and source evidence are retained in
+`ledger-ws8br-ws17-ws11ui-c-geometry-review.json`; the checked raw logs are in
+`rust/.scratch/review248-r3/`. The guard checks the shared queries against the
+current Rails source and excludes invalid producer/setup/transport failures.
+
+### Visibility sweep
+
+Searched every `.mjs` under `rust/reference-tools/` for `:visible`, `isVisible`,
+`boundingBox`, `getBoundingClientRect` and related dimension/visibility filters;
+inspected the assertion helpers and the corresponding pinned predicates.
+
+| Family | Disposition |
+| --- | --- |
+| Original phone picker geometry | **Fixed:** remove CSS visibility filtering; measure the first DOM match with the exact Rails queries. |
+| Legacy phone picker geometry | **Fixed:** same shared exact predicate; the 0px control fails here independently. |
+| `browser_scopes.mjs` picker rows/empty; original suggestion/selection bar; legacy picker empty/message buttons | Retained: Rails' default-visible selector/count predicates, not scripted first-node geometry. |
+| Original visible/visibleMinimum helpers and member-count wait | Retained: Rails requires rendered selectors and at least three visible rows. Geometry isn't selected through these helpers. |
+| Original group link/menu, tour show/hide, member identity/panel; legacy status/tour/stars/audit | Retained: explicit/default-visible interaction or presence predicates. Scripted member-row inline geometry still evaluates **all** selected DOM rows without filtering; Rails `starred_people_test.rb:169-175` does the same. |
+| Navigation fixture helpers; WS17 phone fields; board result field; agent-system dialog/badge/panel checks | Retained: presence/interaction visibility predicates, no first-node geometry substitution. |
+| Messaging Selenium visibility helpers | Retained: visibility is applied to Capybara selectors/actions. Independent geometry queries remain independent. |
+| Messaging member/avatar/directory motion geometry | Retained: arrays measure all queried nodes; no visible-row prefilter. The drawer visibility predicate explicitly rejects zero dimensions, as Rails `motion_test.rb:379-380` does. |
+| Messaging mobile profile overflow | Retained: its zero-size exclusion is explicitly present in Rails `mobile_layout_test.rb:17`, so it is not the picker shortcut. |
+| Messaging menu geometry / drawer navigation controls | Retained: `getClientRects` filtering is explicit in Rails `message_actions_mobile_test.rb:74`, `message_interactions_test.rb:368` and `mobile_layout_test.rb:141`. |
+| Messaging action/reply bounding boxes, sidebar organize pointer target | Retained: bounds locate interaction/scroll coordinates on an already-selected node; no visibility-filtered first-node measurement. Other document-wide composer/menu/header geometry stays direct. |
+
+No additional instance of the surviving first-row geometry shortcut was found.
+The fixes are the two phone helper sites above; legitimate selector visibility is
+preserved. The complete per-assertion browser table has refreshed coordinates and
+maps :303/:305 to the shared geometry expressions as well as their assertions.
+History is retained. Disk-upload findings remain with #249.
+
+### Targeted execution
+
+Only the affected picker wrapper/helper was executed. The workspace command below
+is a **compiled test listing**, not a workspace test run. All compilation joins
+the machine's existing four-slot rustc lock pool; tests use `nextest -j 4`.
+Commands ran in `campfire-ci-full-gate-correctness:latest` (Rust 1.98.1), using
+`PARITY_IMAGE=review236-reference:78b9b1546`, CI=true, CI's default seed, and the
+normal binary built before replay. Legacy hosts ran serially. Private Docker
+invocations use `rust/.scratch/review248-r3/exec-throttled.sh`, a copy of
+`rust/ci/exec.sh` joining the unchanged configured rustc lock pool.
+
+```sh
+cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire
+python3 rust/reference-tools/users/run_original_browser_assertions.py pickers --mutation phone-first-row
+WS8BR2_BROWSER_SCOPE_CONTROL=phone-first-row python3 rust/reference-tools/users/browser_people.py --picker
+# Each mutation command ran before and after the predicate fix (exits 0 -> 1).
+python3 rust/reference-tools/users/browser_people.py --picker
+cargo nextest list --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --run-ignored only --ignore-default-filter --message-format json
+WS11UI_BROWSER_BINARY="$PWD/rust/target/debug/campfire" cargo nextest run --manifest-path rust/Cargo.toml --locked -p campfire -j 4 --run-ignored only --success-output final -E 'test(=controllers::ws11ui_original_browser_tests::original_picker_assertions)'
+python3 rust/reference-tools/users/run_original_browser_assertions.py pickers --controls
+cargo clippy --manifest-path rust/Cargo.toml --locked --workspace --all-targets --exclude html5ever -- -D warnings
+python3 rust/reference-tools/users/check_geometry_mutation_receipts.py --evidence rust/.scratch/review248-r3
+python3 rust/reference-tools/check-original-browser-receipts.py --nextest-list rust/.scratch/review248-r3/nextest-list.json --browser-log rust/.scratch/review248-r3/picker-nextest.log --controls-dir rust/.scratch/review248-r3 --modes pickers
+python3 rust/reference-tools/check-controller-branch-sweep.py
+python3 rust/reference-tools/check-cutover-ledgers.py --nextest-list rust/.scratch/review248-r3/nextest-list.json
+python3 rust/ci/ignored_tests.py
+python3 rust/ci/ignored_tests.py --nextest-list rust/.scratch/review248-r3/nextest-list.json
+python3 -B -m unittest discover -s rust/ci -p test_ignored_tests.py -v
+python3 rust/ci/compiler_ignore_mutations.py
+```
+
+Raw summaries from those invocations:
+
+```text
+     Summary [  41.686s] 1 test run: 1 passed, 3053 skipped
+    Original browser pickers: 10 paired case executions passed; 0 failures
+WS8br2 browser picker: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
+WS8br2 browser picker: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 16s
+Geometry control original: survived before; rejected after at Rails row-height predicate; 0 invalid controls
+Geometry control legacy: survived before; rejected after at Rails row-height predicate; 0 invalid controls
+Geometry mutation receipts: 2 surviving before; 2 rejected after; 0 invalid controls
+Original browser per-assertion receipts: 27 declarations; 147 direct sites; 42 private-helper expansions; 4 setup assertions; 10 paired executions passed; 5 producer defects rejected; 0 unaccounted assertions
+Controller branch sweep: 120 current-pin declarations; 401 exact assertion mappings; all original HTTP request lines recorded; 0 source/setup drift
+Original helper scopes and Node harness: byte-identical to current Rails pin
+Controller branch controls: 21 prior survivors; 1 already rejected; 22/22 current assertion rejections; 0 invalid results credited
+Cutover ledger receipts: 25 historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; 233 broad WS8 closures; 1 approved queue supersession; 0 inconsistent records
+Cutover ledger remains partial: 104 broad receipts; 0 sidebar receipts; 6 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions
+Ignored-test guard: 21 CI correctness tests, 7 utilities; 0 unowned
+Compiler ignored-test guard: 21 CI correctness tests, 6 utilities; 0 unclassified
+Ran 6 tests in 1.266s
+OK
+Ran 1 test in 0.118s
+OK
+Compiler ignored-test guard: 8 CI correctness tests, 0 utilities; 0 unclassified
+Original browser pickers: 5 producer defects rejected; 0 invalid controls
+```
+
+This round: **1 registered wrapper passed / 0 failures**, **20 paired baseline
+executions passed / 0 failures** (10 original + 10 legacy), **2/2 new mutation
+controls rejected**, and **5/5 existing picker controls rejected / 0 invalid
+controls**. Registry self-tests: 6/6; compiler guard self-test: 1/1, exercising
+all eight attribute/expansion mutants. Strict workspace clippy passes.
+The other ledgers' mutation counts printed by their guards are retained historical
+evidence, not newly executed tests in this round.
+
+No new closure is claimed. The existing remainder is still 104 broad receipts,
+six overlapping criteria, one muted-room sequence, one Calendar sequence and
+three geometry-only exclusions; this review fix does not change that inventory.
+Build targets, the private Cargo cache and this round's large scratch fixtures
+are deleted after verification. CI results are reported for the pushed head.

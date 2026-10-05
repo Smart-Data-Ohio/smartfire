@@ -2,12 +2,14 @@ import assert from "node:assert/strict"
 import fs from "node:fs"
 import { chromium } from "playwright"
 import { diagnostics } from "./browser_diagnostics.mjs"
-import { pickerFrame, pickerFilter as filter, pickerRows as rows, pickerEmpty } from "./browser_scopes.mjs"
+import { hideFirstPickerRow } from "./browser_geometry_control.mjs"
+import { pickerFrame, pickerFilter as filter, pickerRows as rows, pickerEmpty, pickerGeometry } from "./browser_scopes.mjs"
 const base=process.env.WS8BR2_BROWSER_URL
 const labels=JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS,"utf8"))
 const browser=await chromium.launch({headless:true,args:["--no-sandbox"]})
 let passed=0
 async function scenario(name,run,phone=false) {
+  if(process.env.WS8BR2_BROWSER_SCOPE_CONTROL==='phone-first-row' && name!=='picker-phone-targets-and-width')return
   const context=await browser.newContext({viewport:phone?{width:390,height:844}:{width:1400,height:1400}})
   await context.route("**/*",route=>new URL(route.request().url()).origin===new URL(base).origin?route.continue():route.abort())
   await context.addCookies([{name:"session_token",value:labels["session_cookies.david"],url:base}])
@@ -60,9 +62,10 @@ try {
   })
   await scenario("picker-phone-targets-and-width",async p=>{
     await filter(p).fill("j")
+    if(process.env.WS8BR2_BROWSER_SCOPE_CONTROL==='phone-first-row')await hideFirstPickerRow(p)
     assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true)
     // Rails measures phone geometry document-wide, outside a within block.
-    const rect=await p.locator(".dm-picker__row:not([hidden]):visible").first().evaluate(el=>({height:el.getBoundingClientRect().height,avatar:el.querySelector(".avatar").getBoundingClientRect().width}))
+    const rect=await pickerGeometry(p)
     assert.ok(rect.height>=44,JSON.stringify(rect));assert.ok(Math.abs(rect.avatar-32)<=1,JSON.stringify(rect))
   },true)
   console.log(`WS8br2 browser picker: ${passed} passed; 0 failed; Chromium ${browser.version()}; real signed session and CSRF`)

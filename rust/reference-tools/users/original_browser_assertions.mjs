@@ -4,7 +4,8 @@ import fs from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { diagnostics } from './browser_diagnostics.mjs'
-import { pickerFrame, pickerFilter as filter, pickerRows as rows, pickerEmpty, pickerEmptyVisible, tourKey } from './browser_scopes.mjs'
+import { hideFirstPickerRow } from './browser_geometry_control.mjs'
+import { pickerFrame, pickerFilter as filter, pickerRows as rows, pickerEmpty, pickerEmptyVisible, tourKey, pickerGeometry } from './browser_scopes.mjs'
 import { network } from './original_browser_network.mjs'; import { visit, waitForController } from './browser_navigation.mjs'
 const base=process.env.WS11UI_BROWSER_URL
 const proxy=await network(base)
@@ -252,12 +253,12 @@ async function pickers() {
  })
  await scenario('picker-phone',async p=>{
   await picker(p,true);await filter(p).fill('j')
+  if(mutation==='phone-first-row')await hideFirstPickerRow(p)
   if(broken){console.log('ORIGINAL_MUTATION actual responsive row height rule');await p.addStyleTag({content:'.dm-picker__row { height: 1px !important; min-height: 1px !important; overflow: hidden !important; }'})}
   equal(P,299,await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true)
-  // Rails intentionally measures the first document-wide visible row here.
-  const phoneRow=p.locator('.dm-picker__row:not([hidden]):visible').first()
-  equal(P,303,(await phoneRow.boundingBox()).height>=44,true)
-  equal(P,305,Math.abs((await phoneRow.locator('.avatar').boundingBox()).width-32)<=1,true)
+  const rect=await pickerGeometry(p)
+  equal(P,303,rect.height>=44,true)
+  equal(P,305,Math.abs(rect.avatar-32)<=1,true)
  },{phone:true})
 }
 async function settled(p) {
