@@ -197,6 +197,16 @@ async fn card_case(name: &str) {
             .render()
             .unwrap()
     });
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&reply.text()).unwrap();
+    let status_links = dom.descendants(root).into_iter().filter(|node| {
+        dom.name(*node) == "a" && dom.text_content(*node).trim() == "Set a status"
+    }).collect::<Vec<_>>();
+    assert_eq!(status_links.len(), usize::from(id == DAVID), "only your own card offers Set a status");
+    if id == DAVID {
+        assert_eq!(dom.attr(status_links[0], "href"), Some(campfire_routes::edit_user_status().as_str()));
+        assert_eq!(dom.attr(status_links[0], "data-turbo-frame"), None, "status link uses normal navigation");
+    }
     assert_http_fragment(
         &reply.text(),
         case["html"].as_str().unwrap(),
@@ -368,12 +378,13 @@ async fn index_lists_active_members_with_presence_and_selection() {
     assert_eq!(bars, 1);
     assert!(html.contains(&format!("id=\"select_user_{JASON}\"")));
     assert!(!html.contains(&format!("id=\"select_user_{inactive}\"")));
-    assert!(html.contains("people-directory__presence\">Online"));
-    assert!(html.contains("profile-card__badge\">Agent"));
-    assert!(html.contains("data-multi-select-target=\"bar\""));
-    assert!(html.matches("class=\"people-directory__row").count() >= 2);
+    let has_class = |node, class: &str| dom.attr(node, "class").is_some_and(|value| value.split_ascii_whitespace().any(|value| value == class));
+    let nodes = dom.descendants(root);
+    assert!(nodes.iter().any(|node| has_class(*node, "people-directory__presence") && dom.text_content(*node).trim() == "Online"), "original Online presence selector");
+    assert!(nodes.iter().any(|node| has_class(*node, "profile-card__badge") && dom.text_content(*node).trim() == "Agent"), "original Agent badge selector");
+    assert!(nodes.iter().filter(|node| has_class(**node, "people-directory__row")).count() >= 2, "original minimum two directory row elements");
     assert!(!html.contains(&format!("id=\"select_user_{DAVID}\"")));
-    assert!(!html.contains("JZ"));
+    assert!(!nodes.iter().any(|node| has_class(*node, "people-directory__row") && dom.text_content(*node).contains("JZ")), "inactive JZ has no directory row");
 }
 
 #[tokio::test]
@@ -399,7 +410,8 @@ async fn profile_message_buttons_carry_the_accessible_name() {
                 dom.descendants(root)
                     .into_iter()
                     .any(|node| dom.name(node) == "button"
-                        && dom.text_content(node).contains("Ban Kevin"))
+                        && dom.text_content(node).trim() == "Ban Kevin"),
+                "original Ban Kevin button selector"
             );
         }
         assert_eq!(
@@ -410,9 +422,9 @@ async fn profile_message_buttons_carry_the_accessible_name() {
         if id == KEVIN {
             assert!(html.contains("Ban Kevin"));
         }
-        for image in html.split("<img").skip(1) {
-            assert!(!image.split('>').next().unwrap().contains("aria-label="));
-        }
+        assert_eq!(dom.descendants(root).into_iter().filter(|node| {
+            dom.name(*node) == "img" && dom.attr(*node, "aria-label").is_some()
+        }).count(), 0, "original img[aria-label] selector");
     }
 }
 

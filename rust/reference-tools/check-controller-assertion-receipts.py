@@ -8,12 +8,16 @@ import subprocess
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--manifest', type=Path, default=Path('rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json'))
 parser.add_argument('--nextest-list', type=Path, required=True)
 parser.add_argument('--native-log', type=Path, required=True)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
 rust = root / 'rust'
-manifest = json.loads((rust / 'plans/ledger-ws8br-ws17-ws11ui-b-receipts.json').read_text())
+manifest = json.loads((args.manifest if args.manifest.is_absolute() else root / args.manifest).read_text())
+assert manifest['reference'] == (rust / 'parity/reference.sha').read_text().strip(), 'receipts must audit the current Rails pin'
+if 'runtime_reference' in manifest:
+    assert manifest['reference'] == manifest['runtime_reference'] == (rust / 'parity/reference.sha').read_text().strip(), 'current receipts must audit the runtime Rails pin'
 listing = json.loads(args.nextest_list.read_text())
 active = {name for suite in listing['rust-suites'].values()
           for name, info in suite['testcases'].items() if not info['ignored']}
@@ -33,9 +37,11 @@ for record in records:
     if end == -1:
         end = len(source)
     start_line = source[:declaration.start()].count('\n') + 1
+    assert record['line'] == start_line, f"stale original declaration: {record['id']}"
     original = {start_line+i: s.strip() for i, s in enumerate(source[declaration.start():end].splitlines())
                 if s.strip().startswith(('assert', 'refute'))}
     receipts = {a['line']: a['ruby'] for a in record['assertions']}
+    assert len(receipts) == len(record['assertions']), f"duplicate original assertion: {record['id']}"
     assert receipts == original, f"missing/changed original assertion: {record['id']}"
     for assertion in record['assertions']:
         assert assertion['rust_test'] in record['rust_tests']
@@ -45,11 +51,18 @@ for record in records:
             continue
         assert assertion['assertion_scope'], f"missing executed assertion scope: {assertion}"
         assert not assertion['assertion_anchor'].startswith(('fn ', 'async fn ')), f"function declaration is not assertion evidence: {assertion}"
+        assert assertion['rust_source'] == assertion['assertion_source'], f"conflicting assertion sources: {assertion}"
+        if 'additional_test' in assertion:
+            assert assertion['additional_test'] in record['rust_tests'], f"uncited additional test: {assertion}"
         path, line = assertion['assertion_source'].rsplit(':', 1)
         assert (root / path).read_text().splitlines()[int(line)-1].strip() == assertion['assertion_anchor'], f"stale assertion source: {assertion}"
         for extra in assertion.get('additional_assertion_sources', []):
             path, line = extra['path'].rsplit(':', 1)
             assert (root / path).read_text().splitlines()[int(line)-1].strip() == extra['anchor'], f"stale additional assertion source: {extra}"
+    for helper in record.get('helper_expansion', []):
+        assert source.splitlines()[helper['line']-1].strip() == helper['ruby']
+        path, line = helper['rust_assertion']['path'].rsplit(':', 1)
+        assert (root/path).read_text().splitlines()[int(line)-1].strip() == helper['rust_assertion']['anchor']
     for name in record['rust_tests']:
         assert name in active, f'missing or ignored: {name}'
         assert name in passed, f'no actual pass receipt: {name}'

@@ -266,7 +266,7 @@ The private validation clone, tool download and temporary control-output directo
 are removed after recording these summaries. Small raw logs remain in the worktree's
 untracked `.scratch/ledger-cutover-b/`; no test consumes them.
 
-## PR #244 assertion audit (current)
+## PR #244 assertion audit (f05c3f2a; historical)
 
 Merged main at ea94edeaa, keeping the parent's e635996 fixes. The original 120
 Rails declarations and 399 assertion sites remain pinned to d7c7de92; runtime
@@ -324,3 +324,7 @@ Cutover ledger remains partial: 216 broad receipts; 8 sidebar receipts; 14 overl
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 57s
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 25s
 ```
+
+## PR #244 re-review fixes (current)
+
+The current audit uses the runtime Rails pin 78b9b1546 and maps all 401 direct assertion sites in 120 declarations. The populated clear-zone setup, routed DOM selectors and two status-link predicates are described in `ledger-ws8br-ws17-ws11ui-b-review-report.md`, with 14 producer controls and the completed full workspace/clippy receipts. The eight reopened records remain open. Historical summaries above retain their original pin and scope.

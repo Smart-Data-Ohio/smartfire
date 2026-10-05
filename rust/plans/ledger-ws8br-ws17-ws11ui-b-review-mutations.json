@@ -1,0 +1,119 @@
+{
+  "reference_head": "f05c3f2a5146a586a80149840f79f2ea52c6d87c",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "controls": [
+    {
+      "control": "zone-clear",
+      "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   1.040s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.845s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "about-comment",
+      "test": "controllers::public_pages::sign_in_google_tests::configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   3.124s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.745s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "unconfigured-about-comment",
+      "test": "controllers::public_pages::tests::unconfigured_sign_in_links_all_public_pages_in_new_tabs",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   0.751s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.766s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "nav-ancestry",
+      "test": "controllers::public_pages::sign_in_google_tests::configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   3.127s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.758s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "directory-presence-comment",
+      "test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   0.835s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.811s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "directory-badge-comment",
+      "test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   0.808s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.803s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "directory-row-comment-class",
+      "test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   0.794s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.800s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "image-aria-label",
+      "test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
+      "before": "rejected",
+      "after": "rejected",
+      "before_summary": "Summary [   0.794s] 1 test run: 0 passed, 1 failed, 2879 skipped",
+      "after_summary": "Summary [   0.788s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "calendar-connect-comment",
+      "test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   1.081s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.814s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "calendar-reconnect-comment",
+      "test": "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   0.839s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.852s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "ban-label-suffix",
+      "test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   0.805s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.806s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "light-meta-comment",
+      "test": "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state",
+      "before": "survived",
+      "after": "rejected",
+      "before_summary": "Summary [   0.975s] 1 test run: 1 passed, 2879 skipped",
+      "after_summary": "Summary [   0.891s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "own-status-frame",
+      "test": "controllers::users::people_tests::own_card_offers_editing_your_profile",
+      "before": "rejected",
+      "after": "rejected",
+      "before_summary": "Summary [   0.797s] 1 test run: 0 passed, 1 failed, 2879 skipped",
+      "after_summary": "Summary [   0.795s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    },
+    {
+      "control": "peer-status-extra",
+      "test": "controllers::users::people_tests::card_shows_identity_presence_role_and_actions_for_a_peer",
+      "before": "rejected",
+      "after": "rejected",
+      "before_summary": "Summary [   0.805s] 1 test run: 0 passed, 1 failed, 2879 skipped",
+      "after_summary": "Summary [   0.793s] 1 test run: 0 passed, 1 failed, 2879 skipped"
+    }
+  ],
+  "note": "Directory before receipts use the isolated original-test run, which passed each producer defect. A later old-check run hit its unrelated !html.contains(\"JZ\") assertion; that failure is excluded from rejected-defect credit. Final after receipts require the intended assertion in the named test; all producer source bytes were restored."
+}

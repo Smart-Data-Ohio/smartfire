@@ -185,8 +185,11 @@ async fn configured_calendar_profile_uses_real_account_metadata_and_forms() {
             connected && calendar
         );
         assert_eq!(
-            meetings.contains("href=\"#google-calendar-title\">Connect Google Calendar</a>"),
-            !(connected && calendar)
+            dom.descendants(root).into_iter().any(|id| dom.name(id) == "a"
+                && dom.attr(id, "href") == Some("#google-calendar-title")
+                && dom.text_content(id).trim() == "Connect Google Calendar"),
+            !(connected && calendar),
+            "original Connect Google Calendar link selector"
         );
     }
 }
@@ -279,11 +282,12 @@ async fn live_status_sections_show_cache_errors_disconnects_and_manual_return_da
     let body = reply.text();
     assert!(body.contains("Meeting status is on, but Google Calendar isn't connected."));
     assert!(body.contains("Calendar out-of-office is on, but Google Calendar isn't connected."));
-    assert_eq!(
-        body.matches("href=\"#google-calendar-title\">Reconnect below</a>")
-            .count(),
-        2
-    );
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&body).unwrap();
+    let reconnect_links = dom.descendants(root).into_iter().filter(|id| dom.name(*id) == "a"
+        && dom.attr(*id, "href") == Some("#google-calendar-title")
+        && dom.text_content(*id).trim() == "Reconnect below").count();
+    assert_eq!(reconnect_links, 2, "original reconnect link selector");
     assert!(!body.contains("&lt;Network &amp; refresh&gt;"));
     assert!(!body.contains("type=\"checkbox\" name=\"user[meeting_status_enabled]\""));
 }

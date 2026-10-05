@@ -26,7 +26,7 @@ pinned_application_tests = (
 
 
 def pinned_args(test_arguments):
-    scratch = root / '.scratch'
+    scratch = Path(os.environ.get('PINNED_MEDIA_SCRATCH', root / '.scratch'))
     temporary = scratch / 'pinned-media'
     temporary.mkdir(parents=True, exist_ok=True)
     image = os.environ.get('PARITY_IMAGE', PIN_IMAGE)
