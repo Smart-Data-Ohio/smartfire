@@ -85,8 +85,7 @@ pub fn prepare_disconnect(
             Some(account.id),
         ))));
     }
-    tx.conn()
-        .execute("DELETE FROM event_calendar_entries WHERE user_id=?", [id])?;
+    super::google_entry::delete_all_for_user(tx, id)?;
     let removed = tx
         .conn()
         .execute("DELETE FROM calendar_meeting_caches WHERE user_id=?", [id])?;

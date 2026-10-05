@@ -241,10 +241,15 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
         .is_some_and(|digest| !digest.trim().is_empty());
     let totp = c
         .app()
-        .db
-        .read(move |conn| user.two_factor_enabled(conn))
-        .await
-        .map_err(Error::internal)?;
+        .sudo
+        .extra_verifiers()
+        .iter()
+        .any(|name| name == "totp")
+        && c.app()
+            .db
+            .read(move |conn| user.two_factor_enabled(conn))
+            .await
+            .map_err(Error::internal)?;
     let google = c.app().sudo.google().is_some()
         && linked_subject(c, require_current_user(c)?.id)
             .await?

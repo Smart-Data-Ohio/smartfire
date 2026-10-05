@@ -129,6 +129,14 @@ impl CalendarEvent {
             Self::from_row,
         )
     }
+    pub fn for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {
+        query_all(conn, "SELECT * FROM events WHERE room_id=? ORDER BY starts_at,id", [room_id], Self::from_row)
+    }
+    /// Preserve the series association's ordering, including equal-time cancelled rows.
+    pub fn for_series_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn, "SELECT * FROM events WHERE series_id IN (SELECT value FROM json_each(?)) ORDER BY series_id,starts_at,cancelled_at ASC NULLS FIRST,id", [serde_json::json!(ids).to_string()], Self::from_row)
+    }
     /// Upcoming, unlinked choices for the work pane; retain Rails' starts_at/id order.
     pub fn work_link_candidates(
         conn: &Connection,

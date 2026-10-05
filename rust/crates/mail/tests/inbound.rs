@@ -1356,7 +1356,7 @@ fn source_truncation_counts_unicode_characters() {
 }
 
 #[tokio::test]
-#[ignore = "exports a database for the Rails rollback check; requires CAMPFIRE_MAIL_EXPORT_DIR"]
+#[ignore = "utility: exports a database for the Rails rollback check; requires CAMPFIRE_MAIL_EXPORT_DIR"]
 async fn export_for_rails() {
     let out = std::path::PathBuf::from(
         std::env::var("CAMPFIRE_MAIL_EXPORT_DIR").expect("set CAMPFIRE_MAIL_EXPORT_DIR"),

@@ -10,6 +10,10 @@ use rusqlite::params;
 
 mod calendar_api_test;
 mod membership_calendar_test;
+mod cutover_event_test;
+mod cutover_entry_test;
+mod cutover_timeline_test;
+mod cutover_recurrence_test;
 
 fn frozen() -> TestDb {
     TestDb::with_clock(
@@ -1327,3 +1331,7 @@ fn cancelling_a_singleton_twice_preserves_timestamp_and_activity_rows() {
         items
     );
 }
+
+mod cutover_reference_test;
+mod cutover_reminder_test;
+mod cutover_venue_test;

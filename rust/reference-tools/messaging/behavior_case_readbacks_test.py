@@ -7,6 +7,23 @@ SOURCE = Path(__file__).with_name('behavior-check.py')
 
 
 class NamedReadbacks(unittest.TestCase):
+    def test_native_case_gets_database_metadata_inside_a_shared_batch(self):
+        tree = ast.parse(SOURCE.read_text())
+        branch = next(node for node in ast.walk(tree) if isinstance(node, ast.If)
+                      and any(isinstance(child, ast.Constant)
+                              and child.value == 'WS8BM_WORK_DATABASES'
+                              for statement in node.body for child in ast.walk(statement)))
+        condition = compile(ast.Expression(branch.test), str(SOURCE), 'eval')
+        native = 'a release click landing on the just-opened menu does not activate it'
+        other = 'opens message actions from context menu and keyboard, and cancels a moving long press'
+        uploads = {'uploading a fresh video in the thread composer', 'late upload progress preserves a delivered attachment and reply preview'}
+        for batch in ([other, native], [native, other], [native], *([other, upload] for upload in uploads)):
+            with self.subTest(batch=batch):
+                self.assertTrue(eval(condition, {'file': 'message_interactions',
+                                                 'case': batch[0], 'batch': batch, 'new_upload_cases': uploads}))
+        self.assertFalse(eval(condition, {'file': 'message_interactions',
+                                          'case': other, 'batch': [other], 'new_upload_cases': uploads}))
+
     def test_original_named_cases_keep_their_persisted_row_checks(self):
         tree = ast.parse(SOURCE.read_text())
         cases = next(ast.literal_eval(node.value) for node in tree.body

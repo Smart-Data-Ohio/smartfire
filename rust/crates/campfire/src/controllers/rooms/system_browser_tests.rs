@@ -21,7 +21,8 @@ async fn livekit_stage_system_cases_in_real_browser() {
 }
 async fn run_browser(real_livekit:bool) {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
-    let cache = std::path::PathBuf::from("/home/riels/.cache/rust-port/ws13");
+    let cache = std::env::var_os("WS13_BROWSER_SCRATCH").map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::env::temp_dir().join("ws13-browser"));
     std::fs::create_dir_all(&cache).unwrap();
     let network = tempfile::Builder::new().prefix("browser-").tempdir_in(cache).unwrap();
     let listener = crate::test_support::bind_listener().await;
@@ -237,7 +238,7 @@ async fn run_browser(real_livekit:bool) {
         .arg(format!("WS13_ENABLE_INBOX_CASES={}",std::env::var("WS13_ENABLE_INBOX_CASES").unwrap_or_default()))
         .arg(image)
         .arg("node")
-        .args(["--test", "--test-concurrency=8"])
+        .args(["--test", "--test-concurrency=4"])
         // Isolation for timing investigations; unset runs every declaration.
         .args(std::env::var("WS13_SYSTEM_TEST_NAME").ok().map(|name|format!("--test-name-pattern={name}")))
         .arg(root.join(if real_livekit {"parity/system/ws13-livekit-stage.test.mjs"} else if std::env::var_os("WS13_BOARD_REVIEW_ONLY").is_some() {"parity/system/ws13-board-review.test.mjs"} else if std::env::var_os("WS13_INVITATIONS_ONLY").is_some() {"parity/system/ws13-invitations.cases.mjs"} else {"parity/system/ws13-stage.test.mjs"}))

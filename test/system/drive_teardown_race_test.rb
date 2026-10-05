@@ -15,6 +15,24 @@ class DriveTeardownRaceTest < ApplicationSystemTestCase
   FILE_ID = "1AbcDefGhIjKlMnOpQrSt"
   DOCS_URL = "https://docs.google.com/document/d/#{FILE_ID}/edit"
 
+  setup do
+    # Give this test a fresh shared server, started by a named session.
+    # The default session reuses its port but has a different middleware
+    # counter, making a current-session-only teardown deterministically wrong.
+    @original_app = Capybara.app
+    @original_session_name = Capybara.session_name
+    Capybara.app = ->(env) { @original_app.call(env) }
+    Capybara.session_name = :drive_teardown_server_owner
+    visit "about:blank"
+    @server_owner = page.server
+    Capybara.session_name = @original_session_name
+  end
+
+  teardown do
+    Capybara.app = @original_app
+    Capybara.session_name = @original_session_name
+  end
+
   test "an in-flight Drive metadata fetch completes against its own stubs at teardown" do
     started = Queue.new
     proceed = Queue.new
@@ -24,6 +42,8 @@ class DriveTeardownRaceTest < ApplicationSystemTestCase
       stub_google_drive_file(FILE_ID)
       sign_in "jz@37signals.com"
       join_room rooms(:designers)
+      assert_equal @server_owner.port, page.server.port
+      refute_same @server_owner, page.server
 
       send_message "Please review #{DOCS_URL} before Friday"
 

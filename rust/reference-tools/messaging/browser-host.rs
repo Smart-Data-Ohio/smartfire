@@ -1,7 +1,7 @@
 // Appended only to a generated test-source copy by browser_host.py. No
 // tracked crate or release binary is changed. Use the existing test boundary.
 #[tokio::test]
-#[ignore = "tools-only browser host"]
+#[ignore = "utility: tools-only browser host"]
 async fn ws8bm_browser_host_without_jobs() {
     assert_eq!(std::env::var("WS8BM_BROWSER_HOST").as_deref(), Ok("1"));
     let booted = boot_with_services(

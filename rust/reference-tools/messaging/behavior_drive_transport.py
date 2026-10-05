@@ -7,7 +7,7 @@ from urllib.parse import urlsplit, parse_qs
 
 
 @contextmanager
-def drive_transport(payloads, port):
+def drive_transport(payloads, port=0):
     class Calls(list):
         pass
     calls = Calls()

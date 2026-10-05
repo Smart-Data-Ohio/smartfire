@@ -1,0 +1,260 @@
+{
+  "production_restored": true,
+  "source_hashes": {
+    "rust/crates/db/src/models/calendar_event.rs": "f9dfd381d3d7ccb8438ce95355a8664555246384e2afceaeb2942df04cf710f3",
+    "rust/crates/db/src/models/calendar_event/changes.rs": "9f74d0ed46eeca675a89147ad57de1dad524a3c29d839f844c62f97516d14537",
+    "rust/crates/db/src/models/google_entry.rs": "2ce4f9d8df054e712c424d29b7b05fe7799a30d8d5bb3e109931b31a514e6c6a",
+    "rust/crates/campfire/src/controllers/rooms/events/input.rs": "b56b29af04daab0e30894a79876e7dc68fc38769794c4d67d91463816f7dd689",
+    "rust/crates/campfire/src/controllers/presenters/events/index.rs": "703b8607d7768f1dfe0b0d0fd9f7bde226bcd11ab6b80a2196e89c3b533a0726"
+  },
+  "results": [
+    {
+      "id": "organizer_bot",
+      "test": "cutover_event_rejects_bot_and_nonmember_organizers",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.926s] 1 test run: 0 passed, 1 failed, 5107 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:87:5:"
+      ],
+      "log": "organizer_bot.log"
+    },
+    {
+      "id": "deleted_venue",
+      "test": "cutover_event_rejects_soft_deleted_venue",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.142s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:114:5:"
+      ],
+      "log": "deleted_venue.log"
+    },
+    {
+      "id": "invisible_invites",
+      "test": "cutover_event_off_and_invisible_members_get_no_invitation",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.173s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:130:5:"
+      ],
+      "log": "invisible_invites.log"
+    },
+    {
+      "id": "bot_invites",
+      "test": "cutover_event_invitations_exclude_bots",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.126s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:180:5:"
+      ],
+      "log": "bot_invites.log"
+    },
+    {
+      "id": "mentions_notify",
+      "test": "cutover_event_mentions_member_receives_update_and_cancel",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.216s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:162:5:"
+      ],
+      "log": "mentions_notify.log"
+    },
+    {
+      "id": "update_kind",
+      "test": "cutover_event_time_change_notifies_going_and_maybe_once",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.172s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:193:9:"
+      ],
+      "log": "update_kind.log"
+    },
+    {
+      "id": "cancel_kind",
+      "test": "cutover_event_cancel_notifies_going_maybe_and_handles_declined",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.190s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_event_test.rs:244:9:"
+      ],
+      "log": "cancel_kind.log"
+    },
+    {
+      "id": "year_cap",
+      "test": "cutover_recurrence_head_plain_update_checks_one_year_cap",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.187s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs:52:5:"
+      ],
+      "log": "year_cap.log"
+    },
+    {
+      "id": "occurrence_cap",
+      "test": "cutover_recurrence_rule_over_cap_rejects_and_preserves_original_series",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.183s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs:160:5:"
+      ],
+      "log": "occurrence_cap.log"
+    },
+    {
+      "id": "series_order",
+      "test": "cutover_recurrence_equal_time_orders_active_before_cancelled",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.117s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs:135:5:"
+      ],
+      "log": "series_order.log"
+    },
+    {
+      "id": "guard_reset",
+      "test": "cutover_recurrence_head_only_series_retimes_through_following",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.214s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs:220:5:"
+      ],
+      "log": "guard_reset.log"
+    },
+    {
+      "id": "description",
+      "test": "cutover_recurrence_head_description_edit_stays_local",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.151s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_recurrence_test.rs:242:5:"
+      ],
+      "log": "description.log"
+    },
+    {
+      "id": "venue_change",
+      "test": "cutover_venue_following_propagates_change",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.115s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_venue_test.rs:177:5:"
+      ],
+      "log": "venue_change.log"
+    },
+    {
+      "id": "venue_clear",
+      "test": "cutover_venue_following_propagates_clear",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.151s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_venue_test.rs:185:5:"
+      ],
+      "log": "venue_clear.log"
+    },
+    {
+      "id": "association_reader",
+      "test": "cutover_reference_edit_adds_the_exact_event",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.348s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_reference_test.rs:79:5:"
+      ],
+      "log": "association_reader.log"
+    },
+    {
+      "id": "entry_destroy",
+      "test": "cutover_entry_destroy_enqueues_captured_remote_identity_after_commit",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.182s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_entry_test.rs:40:5:"
+      ],
+      "log": "entry_destroy.log"
+    },
+    {
+      "id": "delete_callback",
+      "test": "cutover_entry_delete_skips_remote_delete",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.102s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_entry_test.rs:51:5:"
+      ],
+      "log": "delete_callback.log"
+    },
+    {
+      "id": "existing_zone",
+      "test": "cutover_events_update_uses_existing_zone_and_notifies_attendees",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.127s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs:348:5:"
+      ],
+      "log": "existing_zone.log"
+    },
+    {
+      "id": "preload_n1",
+      "test": "cutover_events_index_query_count_is_independent_of_occurrence_count",
+      "exit_code": 1,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.374s] 1 test run: 0 passed, 1 failed, 5053 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs:329:5:"
+      ],
+      "log": "preload_n1.log"
+    }
+  ],
+  "execution_note": "19 distinct native tests. Eighteen original raw runs are retained; organizer_bot was rerun after the complete parent audit merge and redirect assertion strengthening. All nineteen fail at the mapped assertion; compilation/setup failures are excluded. Production SHA-256 hashes are unchanged."
+}

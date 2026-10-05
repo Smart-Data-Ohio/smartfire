@@ -13,6 +13,18 @@ use crate::{ActivityItem, Errors, Event, Result, Timestamp, Tx};
 
 /// Only persisted event attributes are accepted. Rails' temporary validation guards
 /// have no representation in this public input.
+///
+/// Rails rejects an injected `allow_recurrence_mutation` attribute. The typed
+/// model input rejects the same attempted injection at compile time:
+///
+/// ```compile_fail,E0560
+/// use campfire_db::models::calendar_event::changes::EventChanges;
+/// let changes = EventChanges {
+///     allow_recurrence_mutation: true,
+///     recurrence_rule: Some(Some("daily".into())),
+///     ..Default::default()
+/// };
+/// ```
 #[derive(Debug, Clone, Default)]
 pub struct EventChanges {
     pub title: Option<String>,
