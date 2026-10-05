@@ -271,6 +271,23 @@ parser_cases << ["multipart_initial_close_large_epilogue_suffix_checksum", multi
 ].each do |label, body|
   parser_cases << ["multipart_opening_preamble_#{label}_empty_checksum", multipart_type, body, false, empty_checksum]
 end
+# strscan's default fixed_anchor: false makes \A match at the cursor left after
+# each skipped close, so another boundary can immediately follow without CRLF.
+initial_close = closing.delete_suffix("\r\n")
+[
+  ["adjacent_valid", initial_close + multipart],
+  ["adjacent_repeated_closes_valid", initial_close * 2 + multipart],
+  ["lf_only_opening", initial_close + "\n" + multipart],
+  ["space_opening", initial_close + " " + multipart],
+  ["tab_opening", initial_close + "\t" + multipart],
+  ["crlf_space_opening", initial_close + "\r\n " + multipart],
+  ["unanchored_sequence", initial_close + " --upload-boundary" + multipart],
+  ["preamble_adjacent_valid", "preamble\r\n" + initial_close + multipart],
+  ["adjacent_truncated_part", initial_close + multipart.sub(/--upload-boundary--\r\n\z/, '')],
+  ["adjacent_file_limit", initial_close + file_part * 128 + closing]
+].each do |label, body|
+  parser_cases << ["multipart_initial_close_#{label}_empty_checksum", multipart_type, body, false, empty_checksum]
+end
 parser_cases.each do |name, content_type, body, chunked, signed_checksum|
   recipe = body if body.is_a?(Hash)
   body = recipe.fetch(:prefix, "") + recipe[:unit] * recipe[:repeat] + recipe[:suffix] if recipe

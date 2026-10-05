@@ -241,12 +241,14 @@ fn validate_multipart_buffers(
     }
 }
 
-// Rack's initial boundary regex requires the marker at byte zero or after CRLF.
-fn find_initial_boundary(bytes: &[u8], marker: &[u8], mut offset: usize) -> Option<(usize, bool)> {
+// Rack's strscan uses fixed_anchor: false: \A matches its current cursor, including
+// immediately after a skipped close. Rejected candidates do not advance that anchor.
+fn find_initial_boundary(bytes: &[u8], marker: &[u8], cursor: usize) -> Option<(usize, bool)> {
+    let mut offset = cursor;
     while let Some((end, closing)) = find_boundary(&bytes[offset..], marker) {
         let end = offset + end;
         let start = end - marker.len() - 2;
-        if start == 0 || (start >= 2 && bytes[start - 2..start] == *b"\r\n") {
+        if start == cursor || (start >= 2 && bytes[start - 2..start] == *b"\r\n") {
             return Some((end, closing));
         }
         offset = start + marker.len();
@@ -500,5 +502,80 @@ fn json_read_error(error: std::io::Error) -> BodyError {
         BodyError::Parse
     } else {
         BodyError::Storage(error)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::StatusCode;
+    use std::io::Write;
+
+    const PART: &str = "--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nx\r\n--B--\r\n";
+
+    async fn multipart(body: &str) -> Result<ParsedBody, BodyError> {
+        let mut input = tempfile::tempfile().unwrap();
+        input.write_all(body.as_bytes()).unwrap();
+        input.rewind().unwrap();
+        let mut file = tokio::fs::File::from_std(input);
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::CONTENT_TYPE,
+            "multipart/form-data; boundary=B".parse().unwrap(),
+        );
+        headers.insert(
+            header::CONTENT_LENGTH,
+            body.len().to_string().parse().unwrap(),
+        );
+        let parsed = parse_spooled(&headers, Some(&mut file)).await?;
+        assert_eq!(file.stream_position().await.unwrap(), body.len() as u64);
+        Ok(parsed)
+    }
+
+    #[tokio::test]
+    async fn multipart_adjacent_closing_markers_parse_the_part() {
+        // Rack's strscan \A is relative to the cursor after each skipped close.
+        for prefix in ["--B--", "--B----B--", "preamble\r\n--B--"] {
+            let parsed = multipart(&format!("{prefix}{PART}")).await.unwrap();
+            assert_eq!(parsed.params.unwrap().str("a"), Some("x"), "{prefix:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn multipart_initial_close_separators_match_rack() {
+        for separator in ["\n", " ", "\t", "\r\n "] {
+            let error = multipart(&format!("--B--{separator}{PART}"))
+                .await
+                .unwrap_err();
+            assert_eq!(error.status(), StatusCode::BAD_REQUEST, "{separator:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn multipart_rejected_candidates_do_not_move_the_anchor() {
+        let error = multipart(&format!("--B-- --B{PART}")).await.unwrap_err();
+        assert_eq!(error.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn multipart_adjacent_markers_still_validate_parts_and_limits() {
+        let truncated = PART.strip_suffix("--B--\r\n").unwrap();
+        assert_eq!(
+            multipart(&format!("--B--{truncated}"))
+                .await
+                .unwrap()
+                .params
+                .unwrap_err(),
+            params::ParamError::Parse,
+        );
+        let part =
+            "--B\r\nContent-Disposition: form-data; name=\"a[]\"; filename=\"x.bin\"\r\n\r\nx\r\n";
+        assert_eq!(
+            multipart(&format!("--B--{}--B--\r\n", part.repeat(128)))
+                .await
+                .unwrap_err()
+                .status(),
+            StatusCode::INTERNAL_SERVER_ERROR,
+        );
     }
 }
