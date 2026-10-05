@@ -11,12 +11,12 @@ end
 user=User.find(127326141)
 Current.reset;Current.user=user
 renderer=ProfileSectionsGoldenController.renderer.new(http_host:'campfire.test',https:false,'rack.session'=>{})
-cases=[['unconfigured',false,nil],['missing',true,nil],['calendar_only',true,nil,true],['calendar_drive',true,"#{Google::Client::CALENDAR_SCOPE} #{Google::Client::DRIVE_SCOPE}",true],['drive_only',true,Google::Client::DRIVE_SCOPE,true],['rejected_drive',true,Google::Client::DRIVE_SCOPE,true,'401'],['rejected_calendar',true,Google::Client::CALENDAR_SCOPE,true,'invalid_grant'],['retired_metadata',true,"#{Google::Client::CALENDAR_SCOPE} https://www.googleapis.com/auth/drive.metadata.readonly",true],['blank_reason',true,Google::Client::CALENDAR_SCOPE,true,' ']].map do |name,configured,scopes,exists,reason|
+cases=[['unconfigured',false,nil],['missing',true,nil],['calendar_only',true,nil,true],['calendar_drive',true,"#{Google::Client::CALENDAR_SCOPE} #{Google::Client::DRIVE_SCOPE}",true],['drive_only',true,Google::Client::DRIVE_SCOPE,true],['openid_email',true,'openid email',true],['rejected_drive',true,Google::Client::DRIVE_SCOPE,true,'401'],['rejected_calendar',true,Google::Client::CALENDAR_SCOPE,true,'invalid_grant'],['retired_metadata',true,"#{Google::Client::CALENDAR_SCOPE} https://www.googleapis.com/auth/drive.metadata.readonly",true],['blank_reason',true,Google::Client::CALENDAR_SCOPE,true,' ']].map do |name,configured,scopes,exists,reason|
   ENV['GOOGLE_CLIENT_ID']=configured ? 'parity-client' : nil
   ENV['GOOGLE_CLIENT_SECRET']=configured ? 'parity-secret' : nil
   GoogleAccount.where(user_id:user.id).delete_all
   if exists
-    GoogleAccount.create!(user:user,email:'fixture<&>@example.test',scopes:scopes,disconnected_reason:reason)
+    GoogleAccount.create!(user:user,email:name == 'openid_email' ? 'david@gmail.test' : 'fixture<&>@example.test',scopes:scopes,disconnected_reason:reason)
   end
   user.reload
   account=user.google_account

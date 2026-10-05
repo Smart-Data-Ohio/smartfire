@@ -385,6 +385,17 @@ async fn index_lists_active_members_with_presence_and_selection() {
     assert!(nodes.iter().filter(|node| has_class(**node, "people-directory__row")).count() >= 2, "original minimum two directory row elements");
     assert!(!html.contains(&format!("id=\"select_user_{DAVID}\"")));
     assert!(!nodes.iter().any(|node| has_class(*node, "people-directory__row") && dom.text_content(*node).contains("JZ")), "inactive JZ has no directory row");
+    // users_controller_test.rb:200 excludes every JZ input, independently of
+    // whether it participates in the multi-select controller.
+    let inactive_id = inactive.to_string();
+    let inactive_inputs = nodes
+        .iter()
+        .filter(|node| {
+            dom.name(**node) == "input"
+                && dom.attr(**node, "data-user-id") == Some(inactive_id.as_str())
+        })
+        .count();
+    assert_eq!(inactive_inputs, 0, "original inactive-user input selector");
 }
 
 #[tokio::test]

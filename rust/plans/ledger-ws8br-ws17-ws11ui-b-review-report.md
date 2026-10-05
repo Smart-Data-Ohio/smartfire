@@ -120,3 +120,67 @@ Cutover current branch: 100 credited test identities passed in the supplied curr
 Cutover ledger receipts: 25 historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; 121 broad WS8 closures; 1 approved queue supersession; 0 inconsistent records
 Cutover ledger remains partial: 216 broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions
 ```
+
+## Second re-review: P0130 and P0171
+
+This round starts at b169b8b49 and changes test evidence, with no production
+behavior changes. The reference remains 78b9b1546. P0130 now counts every input
+bearing inactive JZ's `data-user-id`, without requiring a multi-select attribute
+(`people_tests.rs:398`, matching Rails `users_controller_test.rb:200`).
+P0171 now uses a persisted `david@gmail.test` account with exactly `openid email`
+scopes. Its real profile GET checks the four original Rails assertions at
+`profile_sections_tests.rs:330`, `:331`, `:332`, and `:345`, including all form
+selector attributes on the same element. Unrelated connected parity-seed panels
+are cleared to match the original controller-test fixtures. The new test also
+compares the complete basic-identity fragment against the pinned Rails oracle.
+The nine existing fragments regenerate byte-identically; the tenth is new.
+
+Both surviving producer mutations were reproduced against the old assertions:
+
+- An actual directory template emits an inactive-user checkbox without the
+  multi-select attribute: the old test passes; the new input count fails 1 vs 0.
+- The actual profile presenter considers an account connected only with Calendar
+  or Drive: both old credited identities pass. With the new basic-identity state,
+  the HTTP matrix fails its Disconnect check and the dedicated original-setup
+  test fails the Calendar-permission warning check. The pure Drive fixture remains
+  green and is not credited as discrimination of the original basic-identity case.
+
+All three temporarily instrumented producer files were restored byte-for-byte
+before verification. No production mutation hook is committed. Both receipt
+maps retain the former insufficient evidence as history. Structural verification
+checks all 120 declarations, all 401 Rails assertions and all 390 current Rust
+assertion anchors; eleven previously reopened gaps remain unchanged. The focused
+receipt checker credits only these two closures' current executed identities.
+
+Only the two affected test modules were executed locally. The private Docker
+runner uses Rust 1.98.1, the existing shared compiler-slot pool, CI=true, the
+validated default seed (29 checks, zero failures), and nextest -j 4. Commands inside
+that runner:
+
+```sh
+cargo nextest run --manifest-path rust/Cargo.toml --locked -p campfire -j 4 --no-fail-fast -E 'test(controllers::users::people_tests::) or test(controllers::users::profile_sections_tests::)'
+cargo clippy --manifest-path rust/Cargo.toml --locked -p campfire --all-targets -- -D warnings
+python3 rust/reference-tools/check-controller-assertion-receipts.py --manifest rust/.scratch/rereview244/focused-receipts.json --nextest-list rust/.scratch/rereview244/list.json --native-log rust/.scratch/rereview244/modules.log
+```
+
+Raw summary lines (negative-control failures are intentional):
+
+```text
+Before, inactive-input mutation:
+     Summary [   0.743s] 1 test run: 1 passed, 2968 skipped
+Before, connection-needs-scope mutation:
+     Summary [   0.950s] 2 tests run: 2 passed, 2967 skipped
+After, inactive-input mutation:
+     Summary [   0.722s] 1 test run: 0 passed, 1 failed, 2969 skipped
+After, connection-needs-scope mutation:
+     Summary [   1.057s] 3 tests run: 1 passed, 2 failed, 2967 skipped
+Restored producers, both affected modules:
+     Summary [   4.811s] 26 tests run: 26 passed, 2944 skipped
+Controller per-assertion receipts: 2 audited declarations (2 closed, 0 reopened); 13 assertion sites; 2 enabled native test identities passed; 0 explicit reopened gaps; 0 unaccounted assertions
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 10s
+Rails profile sections oracle: 10 complete Google Calendar fragments; reference 78b9b1546bdab4c6c1c9b8ddb94512f661289112
+```
+
+Skipped counts above are unselected nextest cases, not skipped selected tests.
+The final reply supplies the pushed heads and the two ensuing CI runs; this is
+not a new local full-workspace receipt.

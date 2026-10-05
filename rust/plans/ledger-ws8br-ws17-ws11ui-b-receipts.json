@@ -1616,11 +1616,11 @@
           "ruby": "assert_response :ok",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:395",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:406",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:395",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:406",
           "assertion_anchor": "assert_eq!(reply.status, StatusCode::OK);",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         }
@@ -1643,11 +1643,11 @@
           "ruby": "assert_response :ok",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:395",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:406",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:395",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:406",
           "assertion_anchor": "assert_eq!(reply.status, StatusCode::OK);",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
@@ -1656,11 +1656,11 @@
           "ruby": "assert_select \"button[aria-label='Message Kevin']\", 1",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:407",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:418",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector button[aria-label='Message Kevin']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:407",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:418",
           "assertion_anchor": "assert_eq!(buttons, 1, \"exact Message button selector\");",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
@@ -1669,11 +1669,11 @@
           "ruby": "assert_select \"button\", text: \"Ban Kevin\"",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:413",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:424",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector button",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:413",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:424",
           "assertion_anchor": "&& dom.text_content(node).trim() == \"Ban Kevin\"),",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name",
           "additional_assertion_sources": []
@@ -1683,11 +1683,11 @@
           "ruby": "assert_select \"img[aria-label]\", 0",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:427",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:438",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector img[aria-label]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:427",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:438",
           "assertion_anchor": "}).count(), 0, \"original img[aria-label] selector\");",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name",
           "additional_assertion_sources": []
@@ -1697,11 +1697,11 @@
           "ruby": "assert_response :ok",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:395",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:406",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP status",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:395",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:406",
           "assertion_anchor": "assert_eq!(reply.status, StatusCode::OK);",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
@@ -1710,11 +1710,11 @@
           "ruby": "assert_select \"button[aria-label='Message Bender Bot']\", 1",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:407",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:418",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector button[aria-label='Message Bender Bot']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:407",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:418",
           "assertion_anchor": "assert_eq!(buttons, 1, \"exact Message button selector\");",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name"
         },
@@ -1723,11 +1723,11 @@
           "ruby": "assert_select \"img[aria-label]\", 0",
           "rust_test": "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name",
           "checks": "Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:427",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:438",
           "oracle": null,
           "oracle_cases": [],
           "observation": "HTTP DOM selector img[aria-label]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:427",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:438",
           "assertion_anchor": "}).count(), 0, \"original img[aria-label] selector\");",
           "assertion_scope": "profile_message_buttons_carry_the_accessible_name",
           "additional_assertion_sources": []
@@ -1925,7 +1925,7 @@
         },
         {
           "line": 69,
-          "ruby": "assert_match \"OpenAI \u00b7 Codex CLI 0.9\", response.body",
+          "ruby": "assert_match \"OpenAI · Codex CLI 0.9\", response.body",
           "rust_test": "controllers::users::agent_profile_tests::original_identity_and_two_room_visibility_match_rails",
           "checks": "Actual viewer GET; complete routed profile-section DOM equals the pinned full-byte fragment oracle. Every tag, text, link/action, status class, room count and management control is retained; only the randomized CSRF value is excluded from the additional DOM comparison. Separate detached comparison checks every original fragment byte.",
           "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
@@ -1933,7 +1933,7 @@
           "oracle_cases": [
             "original_identity"
           ],
-          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_match \"OpenAI \u00b7 Codex CLI 0.9\", response.body",
+          "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_match \"OpenAI · Codex CLI 0.9\", response.body",
           "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
           "assertion_anchor": "fragment(actual),",
           "assertion_scope": "shared complete-fragment comparator"
@@ -2737,15 +2737,15 @@
           "line": 200,
           "ruby": "assert_select \"input[data-user-id='#{users(:jz).id}']\", 0",
           "rust_test": "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection",
-          "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:371",
+          "checks": "Real directory GET after JZ deactivation: zero input elements bearing JZ's data-user-id, regardless of type, id, or multi-select attributes. Actual producer control inserts an otherwise-uncredited checkbox and fails this exact count.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:398",
           "oracle": "rust/vectors/users_people.json",
           "oracle_cases": [
             "directories"
           ],
           "observation": "HTTP DOM selector input[data-user-id='#{users(:jz).id}']",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:371",
-          "assertion_anchor": "assert_eq!(checkboxes, expected, \"original selection selector for {id}\");",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:398",
+          "assertion_anchor": "assert_eq!(inactive_inputs, 0, \"original inactive-user input selector\");",
           "assertion_scope": "index_lists_active_members_with_presence_and_selection"
         },
         {
@@ -2768,7 +2768,11 @@
       "rust_tests": [
         "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection"
       ],
-      "record_status": "closed"
+      "record_status": "closed",
+      "historical_insufficient_receipt": {
+        "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:371",
+        "reason": "The earlier selection count required data-multi-select-target=checkbox and accepted an inactive-user input lacking that attribute."
+      }
     },
     {
       "id": "P0131",
@@ -2810,7 +2814,7 @@
         },
         {
           "line": 218,
-          "ruby": "assert_equal \"\u2605\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
+          "ruby": "assert_equal \"★\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
           "rust_test": "controllers::users::people_tests::directories_match_complete_rails_body_and_starred_order",
           "checks": "Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked.",
           "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
@@ -2818,7 +2822,7 @@
           "oracle_cases": [
             "directories"
           ],
-          "observation": "Saved state / response value: assert_equal \"\u2605\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
+          "observation": "Saved state / response value: assert_equal \"★\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
           "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
           "assertion_anchor": "fragment(actual),",
           "assertion_scope": "shared complete-fragment comparator"
@@ -4330,69 +4334,78 @@
         {
           "line": 253,
           "ruby": "assert_includes response.body, \"Calendar permission needed, reconnect to publish events\"",
-          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:125",
+          "rust_test": "controllers::users::profile_sections_tests::profile_asks_to_reconnect_for_an_openid_email_only_grant",
+          "checks": "Real profile GET with configured OAuth and a persisted david@gmail.test account whose scopes are exactly openid email (no Calendar, no Drive). Whole-body warning/Connected-as absence/Disconnect and one form with action, method and data-turbo on the same element; complete Rails fragment bytes are also compared by calendar_case.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:330",
           "oracle": "rust/vectors/users_profile_sections.json",
           "oracle_cases": [
-            "drive_only"
+            "openid_email"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Calendar permission needed, reconnect to publish events\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:125",
-          "assertion_anchor": "assert!(fragment.contains(\"Calendar permission needed, reconnect to publish events\"));",
-          "assertion_scope": "configured_calendar_profile_uses_real_account_metadata_and_forms"
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:330",
+          "assertion_anchor": "assert!(body.contains(\"Calendar permission needed, reconnect to publish events\"));",
+          "assertion_scope": "profile_asks_to_reconnect_for_an_openid_email_only_grant"
         },
         {
           "line": 254,
           "ruby": "assert_not_includes response.body, \"Connected as\"",
-          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:96",
+          "rust_test": "controllers::users::profile_sections_tests::profile_asks_to_reconnect_for_an_openid_email_only_grant",
+          "checks": "Real profile GET with configured OAuth and a persisted david@gmail.test account whose scopes are exactly openid email (no Calendar, no Drive). Whole-body warning/Connected-as absence/Disconnect and one form with action, method and data-turbo on the same element; complete Rails fragment bytes are also compared by calendar_case.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:331",
           "oracle": "rust/vectors/users_profile_sections.json",
           "oracle_cases": [
-            "drive_only"
+            "openid_email"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_not_includes response.body, \"Connected as\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:96",
-          "assertion_anchor": "fragment.contains(\"Connected as fixture&lt;&amp;&gt;@example.test\"),",
-          "assertion_scope": "configured_calendar_profile_uses_real_account_metadata_and_forms"
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:331",
+          "assertion_anchor": "assert!(!body.contains(\"Connected as\"));",
+          "assertion_scope": "profile_asks_to_reconnect_for_an_openid_email_only_grant"
         },
         {
           "line": 255,
           "ruby": "assert_includes response.body, \"Disconnect\"",
-          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:102",
+          "rust_test": "controllers::users::profile_sections_tests::profile_asks_to_reconnect_for_an_openid_email_only_grant",
+          "checks": "Real profile GET with configured OAuth and a persisted david@gmail.test account whose scopes are exactly openid email (no Calendar, no Drive). Whole-body warning/Connected-as absence/Disconnect and one form with action, method and data-turbo on the same element; complete Rails fragment bytes are also compared by calendar_case.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:332",
           "oracle": "rust/vectors/users_profile_sections.json",
           "oracle_cases": [
-            "drive_only"
+            "openid_email"
           ],
           "observation": "HTTP body / complete Rails body or fragment byte oracle: assert_includes response.body, \"Disconnect\"",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:102",
-          "assertion_anchor": "fragment.contains(\"Disconnect</button>\"),",
-          "assertion_scope": "configured_calendar_profile_uses_real_account_metadata_and_forms"
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:332",
+          "assertion_anchor": "assert!(body.contains(\"Disconnect\"));",
+          "assertion_scope": "profile_asks_to_reconnect_for_an_openid_email_only_grant"
         },
         {
           "line": 256,
           "ruby": "assert_select \"form[action=?][method=post][data-turbo=false]\", google_connect_path, count: 1",
-          "rust_test": "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-          "checks": "Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity.",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:137",
+          "rust_test": "controllers::users::profile_sections_tests::profile_asks_to_reconnect_for_an_openid_email_only_grant",
+          "checks": "Real profile GET with configured OAuth and a persisted david@gmail.test account whose scopes are exactly openid email (no Calendar, no Drive). Whole-body warning/Connected-as absence/Disconnect and one form with action, method and data-turbo on the same element; complete Rails fragment bytes are also compared by calendar_case.",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:345",
           "oracle": "rust/vectors/users_profile_sections.json",
           "oracle_cases": [
-            "drive_only"
+            "openid_email"
           ],
           "observation": "HTTP DOM selector form[action=?][method=post][data-turbo=false]",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:137",
-          "assertion_anchor": "forms.len(),",
-          "assertion_scope": "configured_calendar_profile_uses_real_account_metadata_and_forms"
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:345",
+          "assertion_anchor": "assert_eq!(connect_forms, 1, \"original connect form selector\");",
+          "assertion_scope": "profile_asks_to_reconnect_for_an_openid_email_only_grant"
         }
       ],
       "rust_tests": [
-        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-        "controllers::users::profile_sections_tests::drive_only"
+        "controllers::users::profile_sections_tests::profile_asks_to_reconnect_for_an_openid_email_only_grant"
       ],
-      "record_status": "closed"
+      "record_status": "closed",
+      "historical_insufficient_receipt": {
+        "rust_tests": [
+          "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+          "controllers::users::profile_sections_tests::drive_only"
+        ],
+        "oracle_cases": [
+          "drive_only"
+        ],
+        "reason": "Drive-only state omitted the original openid email grant; the connection-needs-capability mutation survived both old identities."
+      }
     },
     {
       "id": "P0172",
@@ -6700,7 +6713,7 @@
         },
         {
           "line": 44,
-          "ruby": "assert_select \".user-status-badge__custom\", text: \"\ud83d\ude82 On a train\"",
+          "ruby": "assert_select \".user-status-badge__custom\", text: \"🚂 On a train\"",
           "rust_test": "controllers::users::people_tests::card_shows_presence_dot_and_custom_status_badge",
           "checks": "Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained.",
           "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
