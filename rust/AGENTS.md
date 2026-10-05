@@ -60,12 +60,15 @@ for anything that walks directories.
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on
 Rust and Rails comparison inputs. Every ordinary nextest group and runnable doctest is
-required; the app and workspace steps report all failures before explicit outcome gates.
-`ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold; local builds retain
-their normal linker. Shared pinned Rails seed build/restore/validation lives in
-`.github/actions/rust-setup`.
+required; tests run as twelve nextest partitions beside seed validation and clippy/doctest
+jobs, and the `Rust port` job fails unless all of them succeeded.
+`ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold, and the CI-only
+`ci/cargo-config.toml` (optimized dependencies, unoptimized workspace crates); local builds
+retain their normal linker and profile. Shared pinned Rails seed build/restore/validation
+lives in `.github/actions/rust-setup`.
 
-Separate required correctness jobs run Rails differential/rollback, Pebble ACME,
+Separate required correctness jobs (some sharded, behind the `Rust correctness` gate) run
+Rails differential/rollback, Pebble ACME,
 WS12/WS13 browsers and the gateway Node suite, project-local LiveKit, paired messaging,
 and WS11 agent UI. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
 `ci/ignored_tests.py` rejects any ignored test without a CI owner or a `utility:` reason,
@@ -92,7 +95,7 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
   reference). Missing seeds fail whenever `CI` is set; locally they skip with a message, so say
   which seeds were built when reporting results. CI archives `parity/reference.sha`, caches
   the reference image and seeds by their exact inputs, and validates even restored seeds with
-  Rails before testing. See `parity/seeds/README.md`. Storage vectors compare media bytes only when the
+  Rails in every run (the `Rust seeds` job, which both gates require). See `parity/seeds/README.md`. Storage vectors compare media bytes only when the
   local libvips/ffmpeg match the ones that produced `vectors/storage.json`.
 - `cargo clippy --workspace --exclude html5ever --all-targets` should stay clean. (`html5ever` is a
   vendored copy with one backported fix, kept identical to upstream otherwise.)

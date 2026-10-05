@@ -8,6 +8,9 @@ name: Rust
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
 # nothing is pushed or published. Deploys stay behind the manual Deploy to GCP workflow, which
 # requires a full main/nightly run for Rust candidates.
+#
+# Long suites run as parallel shards; a final job per gate ("Rust port", "Rust correctness")
+# fails unless every shard succeeded and their receipts add up to the whole suite.
 
 on:
   push:
@@ -56,19 +59,117 @@ concurrency:
   group: rust-${{ github.event_name == 'pull_request' && github.head_ref || inputs.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  CI: "true"
+  RUST_CI_IMAGE: campfire-toolchain
+  RUST_CI_CONTAINER_PREFIX: campfire-ci
+
 jobs:
-  rust:
-    # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.
-    name: Rust port
+  # Builds or restores the pinned Rails reference image and the default/first_run/agents_ui
+  # seeds, and validates them with Rails. Other jobs restore that exact seed cache entry
+  # (or, on a miss, build and validate their own); both gates require this job.
+  seeds:
+    name: Rust seeds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Prepare and validate pinned Rails inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: full
+          toolchain: 'false'
+          save-caches: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
+
+  # Every ordinary nextest test, split round-robin by nextest into twelve slices.
+  test:
+    name: Rust tests (${{ matrix.shard }})
     if: inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 90
-    env:
-      CI: "true"
-      RUST_CI_IMAGE: campfire-toolchain
-      RUST_CI_CONTAINER_PREFIX: campfire-ci
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/12", "2/12", "3/12", "4/12", "5/12", "6/12", "7/12", "8/12", "9/12", "10/12", "11/12", "12/12"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Prepare shared Rust CI inputs
+        id: setup
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: seeds
+          cargo-cache: tests
+
+      # Capture all failures and keep running; the explicit gate below then makes missing
+      # seeds and failed tests fail the job.
+      - name: Tests
+        id: tests
+        continue-on-error: true
+        shell: bash
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          status=0
+          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
+            --profile ci -j 4 --no-fail-fast --partition "slice:$SHARD" 2>&1 |
+            tee "$RUNNER_TEMP/nextest.log" || status=$?
+          mkdir -p "$RUNNER_TEMP/results"
+          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-${SHARD/\//of}.xml"
+          exit "$status"
+
+      # Lists ignored tests from the harnesses compiled above, with no partition or filter.
+      - name: Enumerate compiled ignored tests
+        if: ${{ !cancelled() && matrix.shard == '1/12' }}
+        run: bash rust/ci/verify-ignored.sh
+
+      - name: Retain test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-tests-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
+
+      - name: Gate tests
+        if: ${{ !cancelled() && steps.tests.outcome != 'success' }}
+        run: |
+          echo '::error::Rust tests failed; see the Tests step log.'
+          exit 1
+
+      - name: Keep only dependency artifacts for the cache
+        if: ${{ matrix.shard == '1/12' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        run: python3 rust/ci/prune-target.py rust/target
+
+      - name: Save cargo registry and target
+        if: ${{ matrix.shard == '1/12' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            rust/.cargo-home/registry
+            rust/target
+          key: ${{ steps.setup.outputs.cargo-cache-key }}
+
+  clippy:
+    name: Rust clippy, binaries and doctests
+    if: inputs.scope != 'messaging-and-browsers'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,7 +184,8 @@ jobs:
         id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          save-caches: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
+          parity: seeds
+          cargo-cache: build
 
       - name: Clippy
         run: bash rust/ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
@@ -93,77 +195,39 @@ jobs:
       - name: Build application binaries with production inputs
         run: bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
 
-      - name: Enumerate compiled ignored tests
-        run: bash rust/ci/verify-ignored.sh
-
-      # Build with the same workspace/features as clippy and the following nextest run, then run
-      # only the blocking database tests. The workspace filter below avoids executing them twice.
-      - name: Tests (campfire_db)
+      # nextest does not run doctests; database doctests remain part of the blocking gate.
+      - name: Doctests (campfire_db)
         shell: bash
         run: |
-          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci -j 4 --no-fail-fast -E 'package(campfire_db)'
-          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/db-junit.xml"
-          # nextest does not run doctests; database doctests remain part of the blocking gate.
+          mkdir -p "$RUNNER_TEMP/results"
           bash rust/ci/cargo.sh test --locked -p campfire_db --doc --no-fail-fast 2>&1 |
-            tee "$RUNNER_TEMP/db-doc.log"
-
-      # Capture all failures and keep running the rest of the suite; the explicit gate
-      # below then makes missing seeds and failed app tests fail the job.
-      - name: Tests (seed-dependent campfire)
-        id: app-tests
-        continue-on-error: true
-        shell: bash
-        run: |
-          status=0
-          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci -j 4 --no-fail-fast -E 'package(campfire)' 2>&1 |
-            tee "$RUNNER_TEMP/campfire-nextest.log" || status=$?
-          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/campfire-junit.xml"
-          exit "$status"
-
-      # Report the whole suite before promoting every failed outcome to job failure.
-      - name: Tests (other workspace)
-        id: tests
-        continue-on-error: true
-        shell: bash
-        run: |
-          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci -j 4 --no-fail-fast -E 'not package(campfire_db) and not package(campfire)' 2>&1 |
-            tee "$RUNNER_TEMP/nextest.log"
+            tee "$RUNNER_TEMP/results/db-doc.log"
 
       - name: Doctests (other workspace)
         id: doctests
-        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
         continue-on-error: true
         shell: bash
         run: |
           bash rust/ci/cargo.sh test --locked --workspace --exclude html5ever --exclude campfire_db \
-            --doc --no-fail-fast 2>&1 | tee "$RUNNER_TEMP/workspace-doc.log"
+            --doc --no-fail-fast 2>&1 | tee "$RUNNER_TEMP/results/workspace-doc.log"
 
-      - name: Summarize tests
-        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
-        env:
-          TMPDIR: ${{ runner.temp }}
-          TEST_OUTCOME: ${{ steps.tests.outcome == 'success' && steps.app-tests.outcome == 'success' && 'success' || 'failure' }}
-          DOC_OUTCOME: ${{ steps.doctests.outcome }}
-        run: |
-          python3 -m unittest discover -s rust/ci -p 'test_*.py'
-          python3 rust/ci/summarize-tests.py \
-            --junit "$RUNNER_TEMP/db-junit.xml" --junit "$RUNNER_TEMP/campfire-junit.xml" --junit rust/target/nextest/ci/junit.xml \
-            --doc-log "$RUNNER_TEMP/db-doc.log" --doc-log "$RUNNER_TEMP/workspace-doc.log"
+      - name: Retain doctest logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-doctests
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
 
-      - name: Gate seed-dependent tests
-        if: ${{ !cancelled() && steps.app-tests.outcome != 'success' }}
+      - name: Gate workspace doctests
+        if: ${{ !cancelled() && steps.doctests.outcome != 'success' }}
         run: |
-          echo '::error::Seed-dependent campfire tests failed; see the campfire nextest log.'
+          echo '::error::Workspace doctests failed; see the Doctests step log.'
           exit 1
 
-      - name: Gate workspace tests and doctests
-        if: ${{ !cancelled() && (steps.tests.outcome != 'success' || steps.doctests.outcome != 'success') }}
-        run: |
-          echo '::error::Workspace tests or doctests failed; see the test summary and logs.'
-          exit 1
+      - name: Keep only dependency artifacts for the cache
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        run: python3 rust/ci/prune-target.py rust/target
 
       - name: Save cargo registry and target
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
@@ -172,11 +236,61 @@ jobs:
           path: |
             rust/.cargo-home/registry
             rust/target
-          key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+          key: ${{ steps.setup.outputs.cargo-cache-key }}
+
+  rust:
+    # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.
+    name: Rust port
+    needs: [seeds, test, clippy]
+    if: ${{ always() && inputs.scope != 'messaging-and-browsers' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+          sparse-checkout: rust/ci
+
+      - name: Collect test results
+        if: ${{ needs.test.result != 'skipped' || needs.clippy.result != 'skipped' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: rust-{tests-*,doctests}
+          path: ${{ runner.temp }}/results
+          merge-multiple: true
+
+      - name: Summarize tests
+        env:
+          TEST_OUTCOME: ${{ needs.test.result }}
+          DOC_OUTCOME: ${{ needs.clippy.result }}
+        shell: bash
+        run: |
+          shopt -s nullglob
+          args=()
+          for path in "$RUNNER_TEMP"/results/junit-*.xml; do args+=(--junit "$path"); done
+          for path in "$RUNNER_TEMP"/results/*-doc.log; do args+=(--doc-log "$path"); done
+          python3 rust/ci/summarize-tests.py "${args[@]}"
+
+      # Every shard and prerequisite job must have succeeded: failed, cancelled and skipped
+      # all fail this check.
+      - name: Gate on every Rust port job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          results = {job: value["result"] for job, value in json.loads(os.environ["NEEDS"]).items()}
+          print("\n".join(f"{job}: {result}" for job, result in results.items()))
+          sys.exit(any(result != "success" for result in results.values()))
+          PY
 
   correctness:
     name: Rust correctness (${{ matrix.suite }})
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -184,12 +298,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [database, acme, browsers, livekit, messaging, agents-ui]
-        exclude: ${{ inputs.scope == 'messaging-and-browsers' && fromJSON('[{"suite":"database"},{"suite":"acme"},{"suite":"livekit"},{"suite":"agents-ui"}]') || fromJSON('[]') }}
-    env:
-      CI: "true"
-      RUST_CI_IMAGE: campfire-toolchain
-      RUST_CI_CONTAINER_PREFIX: campfire-ci
+        suite: [database, acme, livekit, agents-ui]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -201,17 +310,12 @@ jobs:
 
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: reference
+          cargo-cache: tests
 
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
-
-      - name: Permit native browser namespaces
-        if: ${{ matrix.suite == 'messaging' }}
-        run: |
-          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
-            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
-            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
-          fi
 
       - name: Run prerequisite-backed correctness suite
         env:
@@ -225,3 +329,253 @@ jobs:
           name: rust-correctness-${{ matrix.suite }}
           path: rust/target/ci-receipts/
           if-no-files-found: error
+
+  correctness-browsers:
+    name: Rust correctness (browsers ${{ matrix.shard }})
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [browsers]
+        shard: ["1/4", "2/4", "3/4", "4/4"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+          # The external harnesses read original case bodies and the approved layout commit.
+          fetch-depth: 0
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: reference
+          cargo-cache: tests
+      - name: Build pinned correctness prerequisites
+        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+      - name: Run prerequisite-backed correctness suite
+        env:
+          SUITE: ${{ matrix.suite }}
+          CORRECTNESS_SHARD: ${{ matrix.shard }}
+        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+      - name: Retain correctness receipts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-correctness-browsers-${{ strategy.job-index }}
+          path: rust/target/ci-receipts/
+          if-no-files-found: error
+
+  # The paired messaging run's two Rust hosts, built once from this checkout with the same
+  # commands behavior-check.py would run, then shared by every behaviour shard.
+  messaging-hosts:
+    name: Rust messaging host (${{ matrix.host }})
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [app, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: none
+          cargo-cache: ${{ matrix.host == 'app' && 'build' || 'tests' }}
+
+      - name: Build the application server
+        if: ${{ matrix.host == 'app' }}
+        env:
+          RUST_CORRECTNESS_IMAGE: campfire-toolchain
+        run: |
+          bash rust/ci/exec.sh env CAMPFIRE_REFERENCE="$GITHUB_WORKSPACE" \
+            cargo build --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire
+          tar -C rust/target -cf "$RUNNER_TEMP/messaging-host.tar" debug/campfire
+
+      # browser_host.py builds the generated paused-jobs test host in target/ws8bm-browser-host
+      # and audits its includes; the restored registry dependencies move there with it.
+      - name: Build the paused-jobs test host
+        if: ${{ matrix.host == 'test' }}
+        env:
+          RUST_CORRECTNESS_IMAGE: campfire-toolchain
+          WS8BM_HOST_BUILD_JOBS: 4
+        shell: bash
+        run: |
+          mkdir -p rust/target/ws8bm-browser-host
+          if [[ -d rust/target/debug ]]; then mv rust/target/debug rust/target/ws8bm-browser-host/debug; fi
+          executable=$(bash rust/ci/exec.sh python3 rust/reference-tools/messaging/browser_host.py | tail -n 1)
+          relative=${executable#"$GITHUB_WORKSPACE"/rust/target/}
+          [[ "$relative" != "$executable" && -x "$executable" ]] || { echo "::error::unexpected host path $executable"; exit 1; }
+          echo "$relative" > rust/target/ws8bm-browser-host/executable
+          tar -C rust/target -cf "$RUNNER_TEMP/messaging-host.tar" "$relative" \
+            ws8bm-browser-host/executable ws8bm-browser-host/include-audit.json
+
+      - name: Retain the host
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-messaging-host-${{ matrix.host }}
+          path: ${{ runner.temp }}/messaging-host.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  correctness-messaging:
+    name: Rust correctness (messaging behaviour ${{ matrix.shard }})
+    needs: messaging-hosts
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [messaging]
+        shard: ["1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"]
+    env:
+      CORRECTNESS_PART: behavior
+      WS8BM_PREBUILT_APP: "1"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+          # The external harnesses read original case bodies and the approved layout commit.
+          fetch-depth: 0
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: reference
+      - name: Collect the Rust hosts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: rust-messaging-host-*
+          path: ${{ runner.temp }}/hosts
+      - name: Install the Rust hosts
+        shell: bash
+        run: |
+          mkdir -p rust/target
+          for host in app test; do tar -C rust/target -xf "$RUNNER_TEMP/hosts/rust-messaging-host-$host/messaging-host.tar"; done
+          echo "WS8BM_PREBUILT_TEST_HOST=$GITHUB_WORKSPACE/rust/target/$(cat rust/target/ws8bm-browser-host/executable)" >> "$GITHUB_ENV"
+      - name: Build pinned correctness prerequisites
+        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+      - name: Permit native browser namespaces
+        run: |
+          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
+            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
+          fi
+      - name: Run prerequisite-backed correctness suite
+        env:
+          SUITE: ${{ matrix.suite }}
+          CORRECTNESS_SHARD: ${{ matrix.shard }}
+        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+      - name: Retain correctness receipts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-correctness-messaging-behavior-${{ strategy.job-index }}
+          path: rust/target/ci-receipts/
+          if-no-files-found: error
+
+  # The pinned original WS14/WS15 declarations (ignored-tests.json "messaging").
+  correctness-messaging-originals:
+    name: Rust correctness (messaging originals ${{ matrix.shard }})
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [messaging]
+        shard: ["1/2", "2/2"]
+    env:
+      CORRECTNESS_PART: originals
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+          # The external harnesses read original case bodies and the approved layout commit.
+          fetch-depth: 0
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: reference
+          cargo-cache: tests
+      - name: Build pinned correctness prerequisites
+        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+      - name: Permit native browser namespaces
+        run: |
+          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
+            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
+          fi
+      - name: Run prerequisite-backed correctness suite
+        env:
+          SUITE: ${{ matrix.suite }}
+          CORRECTNESS_SHARD: ${{ matrix.shard }}
+        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+      - name: Retain correctness receipts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-correctness-messaging-originals-${{ strategy.job-index }}
+          path: rust/target/ci-receipts/
+          if-no-files-found: error
+
+  correctness-gate:
+    name: Rust correctness
+    needs: [seeds, correctness, correctness-browsers, messaging-hosts, correctness-messaging, correctness-messaging-originals]
+    if: ${{ always() && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      # The correctness matrix is skipped, not failed, for a messaging-and-browsers check.
+      - name: Gate on every correctness job
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          PARTIAL: ${{ inputs.scope == 'messaging-and-browsers' }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          results = {job: value["result"] for job, value in json.loads(os.environ["NEEDS"]).items()}
+          print("\n".join(f"{job}: {result}" for job, result in results.items()))
+          allowed = lambda job, result: result == "success" or (os.environ["PARTIAL"] == "true" and job == "correctness" and result == "skipped")
+          sys.exit(not all(allowed(job, result) for job, result in results.items()))
+          PY
+
+      - name: Collect correctness receipts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: rust-correctness-*
+          path: ${{ runner.temp }}/receipts
+
+      - name: Check that the shards cover every suite
+        env:
+          SCOPE: ${{ inputs.scope || 'full' }}
+        run: python3 rust/ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$(git rev-parse HEAD)"
