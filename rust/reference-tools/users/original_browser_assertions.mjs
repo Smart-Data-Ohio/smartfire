@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { diagnostics } from './browser_diagnostics.mjs'
+import { pickerFrame, pickerFilter as filter, pickerRows as rows, pickerEmpty, pickerEmptyVisible, tourKey } from './browser_scopes.mjs'
 import { network } from './original_browser_network.mjs'; import { visit, waitForController } from './browser_navigation.mjs'
 const base=process.env.WS11UI_BROWSER_URL
 const proxy=await network(base)
@@ -191,8 +192,6 @@ async function people() {
   equal(P,177,(await directoryBar(p).innerText()).includes("1 agent stays in the DM but won't be rung."),true)
  },{path:'/users'})
 }
-const filter=p=>p.locator('#dm_picker_filter')
-const rows=p=>p.locator('.dm-picker__row:not([hidden]):visible')
 const pick=(p,u)=>p.locator('#pick_user_'+labels['users.'+u])
 const pickerBar=p=>p.locator("#direct_rooms_control [data-multi-select-target='bar']")
 async function picker(p,phone=false) {
@@ -202,11 +201,20 @@ async function picker(p,phone=false) {
 async function pickers() {
  await scenario('picker-filter',async p=>{
   await picker(p);if(broken)await mutate(p,'dm-picker','all-rows')
+
+  if(mutation==='picker-scope') {
+   await p.locator('#direct_rooms_control').evaluate(frame=>frame.after(frame.querySelector('.directs--new')))
+   await controller(p,'dm-picker');await controller(p,'multi-select')
+   const counts=await p.evaluate(()=>({scoped:document.querySelectorAll('#direct_rooms_control .dm-picker__row:not([hidden])').length,global:document.querySelectorAll('.dm-picker__row:not([hidden])').length}))
+   assert.equal(counts.scoped,0,'INVALID_CONTROL picker frame must have no rows')
+   assert.ok(counts.global>2,'INVALID_CONTROL real full outside picker remains')
+   console.log('ORIGINAL_MUTATION picker controls moved outside required frame '+JSON.stringify(counts))
+  }
   equal(P,189,await p.locator('#direct_rooms_control suggestion-option:visible').count(),0)
   equal(P,190,(await p.locator('#direct_rooms_control').innerText()).includes('Start Ping'),false)
   if(mutation==='picker-visibility') {
    await p.addStyleTag({content:`.dm-picker__row:not(:has(#pick_user_${labels['users.chad']})):not(:has(#pick_user_${labels['users.renee']})) { visibility: hidden !important; }`})
-   assert.equal(await p.locator('.dm-picker__row:visible').count(),2,'INVALID_CONTROL two visible initial picker rows')
+   assert.equal(await pickerFrame(p).locator('.dm-picker__row:visible').count(),2,'INVALID_CONTROL two visible initial picker rows')
    console.log('ORIGINAL_MUTATION only two initial picker rows visible; filter matches retained')
   }
   const total=await rows(p).count();equal(P,192,total>2,true)
@@ -214,9 +222,9 @@ async function pickers() {
    await filter(p).fill(q);equal(P,line,await rows(p).count(),1);equal(P,line,(await rows(p).innerText()).includes(text),true)
   }
   await filter(p).fill('zzz-no-one');equal(P,204,await rows(p).count(),0)
-  await visible(P,205,p.locator("[data-dm-picker-target='empty']"),'No one matches')
+  await visible(P,205,pickerEmpty(p),'No one matches')
   await filter(p).fill('');equal(P,208,await rows(p).count(),total)
-  equal(P,209,await p.locator("[data-dm-picker-target='empty']:not([hidden]):visible").count(),0)
+  equal(P,209,await pickerEmptyVisible(p).count(),0)
  })
  await scenario('picker-post',async p=>{
   await picker(p);if(broken)await mutate(p,'multi-select','counts')
@@ -246,8 +254,10 @@ async function pickers() {
   await picker(p,true);await filter(p).fill('j')
   if(broken){console.log('ORIGINAL_MUTATION actual responsive row height rule');await p.addStyleTag({content:'.dm-picker__row { height: 1px !important; min-height: 1px !important; overflow: hidden !important; }'})}
   equal(P,299,await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true)
-  equal(P,303,(await rows(p).first().boundingBox()).height>=44,true)
-  equal(P,305,Math.abs((await rows(p).first().locator('.avatar').boundingBox()).width-32)<=1,true)
+  // Rails intentionally measures the first document-wide visible row here.
+  const phoneRow=p.locator('.dm-picker__row:not([hidden]):visible').first()
+  equal(P,303,(await phoneRow.boundingBox()).height>=44,true)
+  equal(P,305,Math.abs((await phoneRow.locator('.avatar').boundingBox()).width-32)<=1,true)
  },{phone:true})
 }
 async function settled(p) {
@@ -330,7 +340,7 @@ async function stamped(p,action,hiddenLine,stampLine) {
  // The 204 follows the save. Read the actual HTTP server's database now, before
  // restart/navigation, matching assert_tour_completed's reloaded user predicate.
  const db=new DatabaseSync(process.env.WS11UI_BROWSER_DATABASE,{readOnly:true})
- try {equal(T,95,db.prepare('SELECT tour_completed_at FROM users WHERE id=?').get(labels['users.jz']).tour_completed_at!==null,true)} finally {db.close()}
+ try {equal(T,96,db.prepare('SELECT tour_completed_at FROM users WHERE id=?').get(labels['users.jz']).tour_completed_at!==null,true)} finally {db.close()}
  requests.push({kind:'tour',user:'jz',line:stampLine})
 }
 async function complete(p,action,hiddenLine,stampLine,attributeLine,finalLine) {
@@ -342,17 +352,28 @@ async function complete(p,action,hiddenLine,stampLine,attributeLine,finalLine) {
 async function tours() {
  await scenario('tour-finish',async p=>{
   await controller(p,'tour');if(broken)await mutate(p,'tour','finish')
+
+  if(mutation==='tour-key-scope') {
+   await p.locator('#tour .tour__card [data-tour-target="next"]').evaluate(button=>{
+    const root=button.closest('#tour');root.append(button)
+    button.setAttribute('data-action',button.getAttribute('data-action')+' keydown->tour#onKeydown')
+    Object.assign(button.style,{position:'fixed',right:'20px',bottom:'20px',zIndex:'9999',pointerEvents:'auto'})
+   })
+   assert.equal(await p.locator('#tour .tour__card [data-tour-target="next"]').count(),0,'INVALID_CONTROL no next control in tour card')
+   assert.equal(await p.locator('#tour [data-tour-target="next"]').count(),1,'INVALID_CONTROL real next control retained')
+   console.log('ORIGINAL_MUTATION real next control outside tour card')
+  }
   await visible(T,12,tour(p));await step(p,13,1);await visible(T,14,p.locator('.tour__title'),'Your rooms live here');await visible(T,15,p.locator('#sidebar.tour__target'))
   await next(p).click();await step(p,18,2);await visible(T,19,p.locator('#composer.tour__target'))
-  await next(p).press('ArrowRight');await step(p,22,3);await visible(T,23,p.locator('.tour__card--center'))
-  await next(p).press('ArrowRight');await step(p,26,4);await visible(T,27,p.locator('.tour__title'),'Jump anywhere with Ctrl+K')
-  await next(p).press('ArrowLeft');await step(p,30,3);await next(p).press('ArrowRight');await next(p).press('ArrowRight');await step(p,33,5)
+  await tourKey(p).press('ArrowRight');await step(p,22,3);await visible(T,23,p.locator('.tour__card--center'))
+  await tourKey(p).press('ArrowRight');await step(p,26,4);await visible(T,27,p.locator('.tour__title'),'Jump anywhere with Ctrl+K')
+  await tourKey(p).press('ArrowLeft');await step(p,30,3);await tourKey(p).press('ArrowRight');await tourKey(p).press('ArrowRight');await step(p,33,5)
   await visible(T,34,p.locator('.tour__title'),'Shortcuts live under ?');await visible(T,35,p.locator('#help-menu-button.tour__target'))
   await complete(p,()=>next(p).click(),38,39,42,43)
  },{user:'jz'})
  await scenario('tour-escape',async p=>{
   await controller(p,'tour');await visible(T,50,tour(p));if(broken)await mutate(p,'tour','skip')
-  await complete(p,()=>next(p).press('Escape'),53,54,57,58)
+  await complete(p,()=>tourKey(p).press('Escape'),53,54,57,58)
  },{user:'jz'})
  await scenario('tour-restart',async p=>{
   if(mutation==='tour-stamp') {

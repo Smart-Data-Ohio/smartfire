@@ -1499,4 +1499,3 @@ Status: **closed**. Native identities:
 | --- | --- | --- |
 | `test/controllers/pwa_controller_test.rb:58` — `assert $?.success?, output` | rust/crates/campfire/src/controllers/pwa.rs:100 | Normal enabled Rust test starts the actual application, GETs the worker, runs the byte-identical original Rails Node harness on that HTTP body, and asserts subprocess success and all-checks stdout. No byte-only stand-in. Cases: Pinned original Node fetch/push/notification harness. |
 | `test/controllers/pwa_controller_test.rb:59` — `assert_includes output, "all checks passed"` | rust/crates/campfire/src/controllers/pwa.rs:105 | Normal enabled Rust test starts the actual application, GETs the worker, runs the byte-identical original Rails Node harness on that HTTP body, and asserts subprocess success and all-checks stdout. No byte-only stand-in. Cases: Pinned original Node fetch/push/notification harness. |
-

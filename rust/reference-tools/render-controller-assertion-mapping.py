@@ -31,5 +31,5 @@ for row in manifest['records']:
         lines += [f"| `{helper['ruby_file']}:{helper['line']}` — `{helper['ruby']}` (private helper) | {helper['rust_assertion']['path']} | The calling original case executes this routed-response assertion. |"]
     lines += ['']
 output = args.output
-output.write_text('\n'.join(lines) + '\n')
+output.write_text('\n'.join(lines).rstrip() + '\n')
 print(f'Assertion mapping: {len(manifest["records"])} declarations; {sum(len(r["assertions"]) for r in manifest["records"])} explicit rows')

@@ -266,3 +266,152 @@ Cutover ledger remains partial: 104 broad receipts; 0 sidebar receipts; 6 overla
 The temporary B worktree, downloaded nextest executable and shared build target
 are removed after pushing. Small raw logs remain under `rust/.scratch/`. No stash
 was used and no source outside `rust/` was edited.
+
+
+## Rereview of f50d735d: retain browser scopes
+
+Reference remains `78b9b1546bdab4c6c1c9b8ddb94512f661289112`. Merge commit
+`b273b6880` incorporates B `7263ad8af7d7fbd2944966dd01abd91317798584`.
+The conflict resolution retains B's PUT/PATCH profile replay loop and C's
+selected, named profile cases. Both ledger histories remain, and the eight
+independently closed overlapping records are counted once. Live B/C source
+coordinates and the B branch-sweep coordinates were refreshed after resolution.
+No disk-upload code or expectations were changed; review findings 3/4 remain
+with PR #249.
+
+The scope sweep found these three shared helper defects:
+
+| Family | Rails scope | Fix and discriminating mutation |
+| --- | --- | --- |
+| Picker filters, visible rows/text/counts and empty states | `people_group_dms_test.rb:188`, `:221`, `:249`, `:296`: within `#direct_rooms_control` | `browser_scopes.mjs:2`–`:6`, used by both original and legacy picker scripts. Move the real `.directs--new` controller element outside the frame: 0 rows inside, 8 outside. The old original case passes; the fixed case rejects at the original `:192` predicate. |
+| Tour keyboard interaction | `first_run_tour_test.rb:101`: `.tour__card [data-tour-target='next']` | `browser_scopes.mjs:7`, used by original and legacy tour scripts. Move the real next button outside the card, retaining its real click/keydown actions. The old case still finishes and persists; the fixed helper rejects the missing card descendant. |
+| Status-popup field interactions | `status_popup_test.rb:19` and `:65`: within `#user_card` | `browser_scopes.mjs:8`, used by legacy status script for presence, emoji, text and expiry fields. Move the actual text field outside the card, retaining explicit form association. The old case still saves and reads back the value; the fixed helper cannot find that outside field. |
+
+The original three system files and all browser assertion helper families under
+`reference-tools/users/` were inspected. Card/name, directory/bar, member/row,
+starred-group/menu and message-author helpers already retain their ancestors.
+Document-wide predicates stay document-wide where Rails does: checked-field
+IDs, picker-row interactions, phone picker geometry, phone status-field presence,
+tour progress/title/anchor observations, controller readiness and animation
+settling. Audit table assertions retain `tbody td code`. Timezone metadata,
+service-worker events and navigation helpers have no lost enclosing `within`.
+The WS12 thread helpers accept already-qualified selectors and preserve their
+board/form/thread scope. No other lost ancestor was found.
+
+The persisted-tour receipt additionally now names the actual current-pin
+`assert_not_nil` at line 96, instead of the closing `end` at 95. The receipt guard
+requires helper/setup rows to cite an assertion. Its new explicit `--modes`
+option limits current execution validation to touched wrappers while checking
+all 27 declarations, 147 direct assertions, 42 helper expansions and four setup
+assertions against the pin and live source. Omitting `--modes` still requires
+all seven wrappers and all 54 paired executions. No test predicate, retry,
+wait/deadline or expected Rails response was weakened.
+
+Mutation details and exact call sites are in
+`ledger-ws8br-ws17-ws11ui-c-scope-review.json`. Before receipts use f50d735d's
+helpers (unchanged by the B merge); after receipts use the scoped helpers. All
+three are actual rendered-element/producer relocations, with real saves where
+applicable, and ordinary transport/setup failures are excluded. The first
+experimental tour relocation removed the keyboard event ancestry as well and
+failed even with the old helper; it was excluded and replaced with the functional
+producer control described above. A parallel invocation of the older developer
+runner also collided on its PID-derived seed name before any tour assertions;
+that invalid setup attempt is excluded. Those older scripts were then invoked
+serially. This does not affect the registered CI wrappers, whose kernel leases
+and private seeds remain unchanged.
+
+Only targeted tests were run. All builds use the configured machine-wide four
+rustc slots; Docker invocations join the same lock pool via a private copy of the
+existing wrapper. The global throttle/configuration is unchanged. Test inputs
+are CI's default, first_run and agents_ui seeds, independently validated by the
+pinned Rails image (29 + 4 + 40 checks, zero failures). The Rust normal binary
+was built before browser replays. No application JS/CSS assets changed.
+
+Executed commands (inside the Rust 1.98.1 / Node 26.10.0 correctness image,
+`PARITY_IMAGE=review236-reference:78b9b1546`, CI=true):
+
+```sh
+cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire
+cargo nextest list --manifest-path rust/Cargo.toml --locked -p campfire --message-format json
+cargo nextest run --manifest-path rust/Cargo.toml --locked -p campfire -j 4 --no-fail-fast -E "$(python3 rust/reference-tools/users/review248_targeted_filter.py LIST.json)"
+cargo nextest run --manifest-path rust/Cargo.toml --locked -p campfire -j 4 --no-fail-fast --run-ignored only --success-output final -E 'test(=controllers::ws11ui_original_browser_tests::original_picker_assertions) or test(=controllers::ws11ui_original_browser_tests::original_tour_assertions)'
+python3 rust/reference-tools/users/run_original_browser_assertions.py pickers --controls
+python3 rust/reference-tools/users/run_original_browser_assertions.py tours --controls
+python3 rust/reference-tools/users/run_original_browser_assertions.py pickers --mutation picker-scope
+python3 rust/reference-tools/users/run_original_browser_assertions.py tours --mutation tour-key-scope
+env WS8BR2_BROWSER_SCOPE_CONTROL=status-field python3 rust/reference-tools/users/browser_people.py --status
+python3 rust/reference-tools/users/browser_people.py --picker
+python3 rust/reference-tools/users/browser_people.py --tour
+python3 rust/reference-tools/users/browser_people.py --status
+cargo clippy --manifest-path rust/Cargo.toml --locked -p campfire --all-targets -- -D warnings
+cargo clippy --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --all-targets -- -D warnings
+cargo nextest list --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --run-ignored only --ignore-default-filter --message-format json
+python3 rust/ci/compiler_ignore_mutations.py
+```
+
+The native filter generated from the tracked helper exactly equals the executed
+177-identity filter (all merged/touched modules, B/C credited tests and the lease
+regression). A workspace **listing**, not a workspace test run, supplies the
+compiled ignored-test inventory.
+
+Executed guards, using the current compiled listings and captured logs:
+
+```sh
+python3 rust/reference-tools/users/check_scope_mutation_receipts.py --evidence rust/.scratch/review248-r2
+python3 rust/reference-tools/check-controller-branch-sweep.py
+python3 rust/reference-tools/check-controller-assertion-receipts.py --nextest-list rust/.scratch/review248-r2/nextest-list.json --native-log rust/.scratch/review248-r2/native.log
+python3 rust/reference-tools/check-controller-assertion-receipts.py --manifest rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json --nextest-list rust/.scratch/review248-r2/nextest-list.json --native-log rust/.scratch/review248-r2/native.log
+python3 rust/reference-tools/check-original-browser-receipts.py --nextest-list rust/.scratch/review248-r2/ignored-list.json --browser-log rust/.scratch/review248-r2/browser-final.log --controls-dir rust/.scratch/review248-r2 --modes pickers tours
+python3 rust/reference-tools/check-cutover-ledgers.py --nextest-list rust/.scratch/review248-r2/ignored-list.json
+python3 rust/ci/ignored_tests.py
+python3 rust/ci/ignored_tests.py --nextest-list rust/.scratch/review248-r2/ignored-list.json
+python3 -m unittest discover -s rust/ci -p test_ignored_tests.py -v
+```
+
+Raw summary lines:
+
+```text
+     Summary [  47.415s] 177 tests run: 177 passed, 2877 skipped
+     Summary [  48.559s] 2 tests run: 2 passed, 3052 skipped
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 09s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.51s
+Scope control picker: survived before; rejected after at required ancestor; 0 invalid controls
+Scope control tour: survived before; rejected after at required ancestor; 0 invalid controls
+Scope control status: survived before; rejected after at required ancestor; 0 invalid controls
+Scope mutation receipts: 3 surviving before; 3 rejected after; 0 invalid controls
+Controller per-assertion receipts: 120 audited declarations (120 closed, 0 reopened); 401 assertion sites; 74 enabled native test identities passed; 0 explicit reopened gaps; 0 unaccounted assertions
+Controller per-assertion receipts: 93 audited declarations (93 closed, 0 reopened); 279 assertion sites; 82 enabled native test identities passed; 0 explicit reopened gaps; 0 unaccounted assertions
+Original browser per-assertion receipts: 27 declarations; 147 direct sites; 42 private-helper expansions; 4 setup assertions; 18 paired executions passed; 9 producer defects rejected; 0 unaccounted assertions
+Ignored-test guard: 21 CI correctness tests, 7 utilities; 0 unowned
+Compiler ignored-test guard: 21 CI correctness tests, 6 utilities; 0 unclassified
+Ran 1 test in 0.110s
+OK
+Compiler ignored-test guard: 8 CI correctness tests, 0 utilities; 0 unclassified
+Ran 6 tests in 1.083s
+OK
+Compiler ignored-test guard: 1 CI correctness tests, 0 utilities; 0 unclassified
+Cutover ledger receipts: 25 historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; 233 broad WS8 closures; 1 approved queue supersession; 0 inconsistent records
+Cutover ledger remains partial: 104 broad receipts; 0 sidebar receipts; 6 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions
+Original browser pickers: 5 producer defects rejected; 0 invalid controls
+Original browser tours: 4 producer defects rejected; 0 invalid controls
+WS8br2 browser picker: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
+WS8br2 browser picker: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF
+WS8br2 browser tour: 4 passed; 0 failed; Chromium 153.0.8010.12; keyboard, persistence and help-menu behavior; real signed sessions and CSRF
+WS8br2 browser tour: 4 passed; 0 failed; Chromium 153.0.8010.12; keyboard, persistence and help-menu behavior; real signed sessions and CSRF
+WS8br2 browser status: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF; member-panel integration deferred
+WS8br2 browser status: 5 passed; 0 failed; Chromium 153.0.8010.12; real signed session and CSRF; member-panel integration deferred
+```
+
+The branch-sweep guard additionally verifies B's retained 22 mutation receipts;
+those are historical B evidence, not newly executed controls in this round.
+Local scope controls are 3/3 rejections and local standard controls are 9/9.
+Legacy external receipts total 28 paired cases (10 picker + 8 tour + 10 status);
+the two registered wrappers total 18 paired cases. No new ledger declaration is
+closed: the exact remainder stays 104 broad receipts, six overlapping criteria,
+one muted-room sequence and one Calendar sequence, with the existing three
+geometry-only exclusions. Current CI results belong to the newly pushed head;
+historical job receipts remain historical.
+
+All targets created by this round and its six older-runner scratch directories
+are removed after pushing; small raw logs remain in rust/.scratch/review248-r2.
+No stash was used, and only C is pushed in this round.

@@ -26,6 +26,9 @@ pwa_mode = sys.argv[1:] == ["--pwa"]
 audit_mode = sys.argv[1:] == ["--audit"]
 timezone_mode = sys.argv[1:] == ["--timezone"]
 assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode or timezone_mode or room_mode or tour_mode, "expected --picker, --status, --pwa, --audit, --timezone, --room, --tour or no arguments"
+scope_control = os.environ.get("WS8BR2_BROWSER_SCOPE_CONTROL", "")
+assert scope_control in ("", "status-field"), "unknown scope control"
+assert not scope_control or status_mode, "status field control requires --status"
 if audit_mode:
     setup_env = os.environ.copy()
     setup_env.pop("LD_LIBRARY_PATH", None)
@@ -98,10 +101,12 @@ try:
         else:
             raise RuntimeError("Rust server did not start")
         for name, port in (("Rails", 52610), ("Rust", 52611)):
+            if scope_control and name == "Rails":
+                continue
             print(f"{name} directory browser scenarios:", flush=True)
             subprocess.run(["docker", "run", "--rm", "--network", "host", "--label", "parity.owner=ws8br2",
                             "-v", f"{root.parent}:/work:ro", "-e", f"WS8BR2_BROWSER_URL=http://127.0.0.1:{port}",
-                            "-e", f"WS8BR2_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json", image,
+                            "-e", f"WS8BR2_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json", "-e", "WS8BR2_BROWSER_SCOPE_CONTROL=" + scope_control, image,
                             "node", "/work/rust/reference-tools/users/" + ("browser_room.mjs" if room_mode else "browser_tour.mjs" if tour_mode else "browser_timezone.mjs" if timezone_mode else "browser_audit.mjs" if audit_mode else "browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
 finally:
     if server is not None:
