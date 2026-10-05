@@ -4,3 +4,10 @@ export function visit(page, url) {
   // Those readiness assertions below the visit keep their original deadlines.
   return page.goto(url, {waitUntil:'domcontentloaded'})
 }
+
+export function waitForController(page, name) {
+  return page.waitForFunction(name => {
+    const element = document.querySelector(`[data-controller~='${name}']`)
+    return element && window.Stimulus?.getControllerForElementAndIdentifier(element, name)
+  }, name)
+}

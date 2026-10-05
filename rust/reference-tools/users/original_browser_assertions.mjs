@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { diagnostics } from './browser_diagnostics.mjs'
-import { network } from './original_browser_network.mjs'; import { visit } from './browser_navigation.mjs'
+import { network } from './original_browser_network.mjs'; import { visit, waitForController } from './browser_navigation.mjs'
 const base=process.env.WS11UI_BROWSER_URL
 const proxy=await network(base)
 const labels=JSON.parse(fs.readFileSync(process.env.WS11UI_BROWSER_LABELS,'utf8'))
@@ -54,7 +54,7 @@ async function focused(file,line,p,selector) {
   equal(file,line,await p.locator(selector).evaluate(el=>el===document.activeElement),true)
 }
 async function controller(p,name) {
-  await p.waitForFunction(name=>{const el=document.querySelector(`[data-controller~='${name}']`);return el&&window.Stimulus?.getControllerForElementAndIdentifier(el,name)},name)
+  await waitForController(p,name)
 }
 async function mutate(p,name,method) {
   const scope=mode==='pickers'&&name==='multi-select'?'#direct_rooms_control ':''
@@ -282,7 +282,7 @@ async function members() {
 }
 async function group() {
  await scenario('group-lifecycle',async p=>{
-  await p.locator("[data-multi-select-target='checkbox']").first().waitFor()
+  await controller(p,'multi-select');await p.locator("[data-multi-select-target='checkbox']").first().waitFor()
   for(const u of ['jason','kevin'])await checkbox(p,u).check()
   await directoryBar(p).getByRole('button',{name:'Message (2)',exact:true}).click();await p.waitForURL(/\/rooms\/\d+$/)
   const room=Number(new URL(p.url()).pathname.split('/').at(-1))
