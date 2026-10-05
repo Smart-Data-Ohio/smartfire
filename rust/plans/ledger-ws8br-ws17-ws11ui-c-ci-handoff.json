@@ -59,6 +59,7 @@
     "rust/reference-tools/users/browser_navigation.test.mjs: pending image does not gate initial document/controller assertions",
     "rust/reference-tools/users/test_browser_port_leases.py: system hosts hold disjoint non-ephemeral leases",
     "rust/reference-tools/users/browser_navigation.test.mjs: visible checkboxes wait for their multi-select controller to connect; concurrent group scenario failed without this wait",
-    "rust/reference-tools/users/test_browser_port_leases.py: paired system replays own and remove their private network; completed, failed-startup and foreign-owner cleanup boundaries are checked"
+    "rust/reference-tools/users/test_browser_port_leases.py: paired system replays own and remove their private network; completed, failed-startup and foreign-owner cleanup boundaries are checked",
+    "rust/reference-tools/users/thread_form.mjs: pinned SystemTestHelper#fill_in_thread_name focus prerequisite and exact field value; browser_navigation.test.mjs rejects a replay that types before the callback focus"
   ]
 }
