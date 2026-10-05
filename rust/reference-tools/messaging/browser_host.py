@@ -17,6 +17,8 @@ def include_calls(content):
     """Return actual invocations, including macro bodies, but not Rust literals."""
     items = _rust.tokens(content.decode())
     for index, item in enumerate(items):
+        # The terminal macro identifier is shared by bare and qualified paths.
+        item = item.removeprefix("r#")
         if item not in {"include", "include_str", "include_bytes"} or items[index + 1:index + 2] != ["!"]:
             continue
         if items[index + 2:index + 3] not in [["("], ["["], ["{"]]:

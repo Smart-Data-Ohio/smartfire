@@ -130,6 +130,80 @@ class HostSourceTests(unittest.TestCase):
                             with self.assertRaisesRegex(RuntimeError, f'main.rs: .*{error}'):
                                 include_inputs(root, {Path('main.rs'): content}, set())
 
+    def test_raw_include_identifiers_accept_all_delimiters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = Path('input.rs')
+            (root / target).write_text('const INCLUDED: u8 = 1;')
+            for macro in ('include', 'include_str', 'include_bytes'):
+                for opening, closing in (('(', ')'), ('[', ']'), ('{', '}')):
+                    with self.subTest(macro=macro, delimiter=opening):
+                        source = f'r#{macro}!{opening}"input.rs"{closing};'.encode()
+                        self.assertEqual(include_inputs(root, {Path('build.rs'): source}, {target}), {target})
+
+    def test_raw_include_identifiers_reject_unknown_and_missing_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for macro in ('include', 'include_str', 'include_bytes'):
+                for opening, closing in (('(', ')'), ('[', ']'), ('{', '}')):
+                    for argument, error in [('env!("UNKNOWN")', 'unsupported'), ('$path', 'unsupported'), ('"missing"', 'missing')]:
+                        with self.subTest(macro=macro, delimiter=opening, argument=argument):
+                            source = f'r#{macro}!{opening}{argument}{closing};'.encode()
+                            with self.assertRaisesRegex(RuntimeError, f'build.rs: .*{error}'):
+                                include_inputs(root, {Path('build.rs'): source}, set())
+
+    def test_qualified_include_identifiers_and_comments_accept_all_delimiters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = Path('input.rs')
+            (root / target).write_text('const INCLUDED: u8 = 1;')
+            for prefix in ('::core::', 'std::', '$crate::', '::r#core::r#', 'r#std::r#'):
+                for macro in ('include', 'include_str', 'include_bytes'):
+                    for opening, closing in (('(', ')'), ('[', ']'), ('{', '}')):
+                        with self.subTest(prefix=prefix, macro=macro, delimiter=opening):
+                            source = f'{prefix}{macro} /* before bang */ ! // before delimiter\n{opening}"input.rs"{closing};'.encode()
+                            self.assertEqual(include_inputs(root, {Path('main.rs'): source}, {target}), {target})
+
+    def test_qualified_include_identifiers_reject_unknown_and_missing_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for prefix in ('::core::', 'std::', '$crate::', '::r#core::r#', 'r#std::r#'):
+                for macro in ('include', 'include_str', 'include_bytes'):
+                    for opening, closing in (('(', ')'), ('[', ']'), ('{', '}')):
+                        for argument, error in [('env!("UNKNOWN")', 'unsupported'), ('$path', 'unsupported'), ('"missing"', 'missing')]:
+                            with self.subTest(prefix=prefix, macro=macro, delimiter=opening, argument=argument):
+                                source = f'{prefix}{macro}!{opening}{argument}{closing};'.encode()
+                                with self.assertRaisesRegex(RuntimeError, f'main.rs: .*{error}'):
+                                    include_inputs(root, {Path('main.rs'): source}, set())
+
+    def test_raw_and_qualified_include_syntax_errors_fail_loudly(self):
+        for name in ('r#include', '::core::include_str', 'std::r#include_bytes'):
+            for body, error in [('"input"', 'invalid .* delimiter'), ('["input"}', 'unbalanced'), ('("input"', 'unterminated')]:
+                with self.subTest(name=name, body=body), tempfile.TemporaryDirectory() as directory:
+                    with self.assertRaisesRegex(RuntimeError, f'main.rs: .*{error}'):
+                        include_inputs(Path(directory), {Path('main.rs'): f'{name}!{body}'.encode()}, set())
+
+    def test_raw_include_recursively_copies_non_rs_sources_and_rejects_unknown_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = {
+                'rust/Cargo.toml': '',
+                'rust/crates/app/build.rs': 'r#include!["../../reference-tools/source.inc"];',
+                'rust/reference-tools/source.inc': '::core::r#include_str!{"leaf.txt"};',
+                'rust/reference-tools/leaf.txt': 'included',
+            }
+            for relative, content in inputs.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content)
+            with patch('browser_host.subprocess.check_output', return_value='\0'.join(inputs)):
+                generated = prepare_source(root)
+                for relative in ('rust/reference-tools/source.inc', 'rust/reference-tools/leaf.txt'):
+                    self.assertEqual((generated.parent / relative).read_text(), inputs[relative])
+                (root / 'rust/reference-tools/source.inc').write_text('r#include_bytes![env!("UNKNOWN")];')
+                with self.assertRaisesRegex(RuntimeError, 'source.inc: unsupported'):
+                    prepare_source(root)
+
     def test_concat_and_manifest_env_accept_all_delimiters_and_rust_escapes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -217,6 +291,20 @@ class HostSourceTests(unittest.TestCase):
             self.assertEqual(len(report['generated_include_edges']), 3)
             self.assertEqual(len(report['compiler_dependencies']), 4)
             self.assertEqual(report['pending'], [])
+
+    def test_raw_generated_non_rs_include_cannot_bypass_the_final_audit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            generated, target, entries, tracked, depfile, output = self.generated_fixture(root)
+            (generated / 'crates/app/lib.rs').write_text('r#include!{concat![env!{"OUT_DIR"}, "/generated.inc"]};')
+            (output / 'generated.rs').rename(output / 'generated.inc')
+            depfile.write_text(depfile.read_text().replace('generated.rs', 'generated.inc'))
+            with patch('browser_host.subprocess.check_output', return_value=tracked):
+                report = audit_build(root, generated, entries, target)
+                self.assertEqual(len(report['generated_include_edges']), 3)
+                (output / 'generated.inc').write_text('::core::r#include_str!(env!("REVIEW_UNKNOWN"));')
+                with self.assertRaisesRegex(RuntimeError, 'generated.inc: unsupported'):
+                    audit_build(root, generated, entries, target)
 
     def test_compiler_dependencies_support_escaped_spaces(self):
         with tempfile.TemporaryDirectory() as directory:
