@@ -23832,6 +23832,20 @@
           "failed": 0,
           "skipped": 4500,
           "elapsed": "125.341s"
+        },
+        "ci_input_fix": {
+          "failed_run": "https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37317046566",
+          "failed_head": "655a6f82502a5d6409799c721c3b29c30832812e",
+          "reason": "Messaging generated host omitted tracked PWA service-worker harness required by a merged cfg(test) include; failure occurred during compilation, before browser assertions.",
+          "fix": "Copy the tracked service_worker_original_harness.mjs at its original relative path on every source refresh.",
+          "regression_command": "python3 -m unittest discover -s rust/reference-tools/messaging -p browser_host_test.py -v",
+          "regressions_passed": 4,
+          "regressions_failed": 0,
+          "raw_log": "rust/target/ledger-d-tools/review252-host-tests.log",
+          "raw_log_sha256": "f548043f767bd77162b3d6f752df4054872c51ed2b59acffc393a2227f7c813a",
+          "real_generated_host_literal_inputs_verified": 648,
+          "rust_sources_unchanged": true,
+          "push_exception": "User explicitly pre-approved a second push to fix CI."
         }
       },
       "pre_review252_clippy": {

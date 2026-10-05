@@ -74,4 +74,16 @@ CI=true CARGO_BUILD_JOBS=2 PATH="$PWD/target/ledger-d-tools:$PATH" mise exec rus
 
 Independent Astra review approved all 35 new entries, DOM scopes, source-derived inventory, callback regressions, 9 mutation receipts, exact assertion coordinates, and producer restoration. Its 35 individual helper-removal checks and 10 historical-pin downgrade attempts all rejected.
 
-After the single follow-up push, dispatch the correctness matrix from `main` for the pushed head with `gh workflow run rust.yml --ref main -f ref=<sha>` and require every job green. The dispatched run URL/head are reported with the final PR handoff; they are not a substitute for the local receipts above.
+Dispatch the correctness matrix from `main` for the pushed head with `gh workflow run rust.yml --ref main -f ref=<sha>` and require every job green. The final dispatched run URL/head are reported with the PR handoff.
+
+## Pre-approved CI input repair
+
+The first follow-up head was `655a6f82502a5d6409799c721c3b29c30832812e`, pushed once. Its dispatched matrix run [37317046566](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37317046566) exposed a generated-host compilation failure in messaging: `browser_host.py` omitted the tracked PWA service-worker harness used by a `cfg(test)` module merged from main. Browser assertions had not started.
+
+The source copy now includes `reference-tools/users/service_worker_original_harness.mjs` at its original relative path. The regression reads all three literal includes from the real `pwa.rs` and checks byte identity on a cold copy and refresh of stale/source inputs. It reproduced the exact missing-file failure before the fix.
+
+```bash
+python3 -m unittest discover -s rust/reference-tools/messaging -p browser_host_test.py -v
+```
+
+**4 passed, 0 failed.** A separate cold copy of the actual tracked source verified **648 literal campfire compile-time inputs** byte-for-byte; its 260 MB generated scratch tree was deleted. This Python-only repair changes no Rust source or assertion coordinates; the restored 104-test/clippy receipts above remain applicable. Ledger, per-assertion and ignore-registry checks were rerun before the user's pre-approved CI-fix push and dispatch of a new full matrix.

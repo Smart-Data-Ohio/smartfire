@@ -14,7 +14,8 @@ def prepare_source(root):
     wanted = [Path(path).relative_to("rust") for path in paths
               if path.startswith(("rust/crates/", "rust/vectors/", "rust/test-support/", "rust/reference-tools/views/agents_ui/")) or
               path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference", "rust/parity/reference.sha",
-                       "rust/reference-tools/messaging/older_provider_callbacks.rb")]
+                       "rust/reference-tools/messaging/older_provider_callbacks.rb",
+                       "rust/reference-tools/users/service_worker_original_harness.mjs")]
     expected = set(wanted)
     if generated.exists():
         for path in generated.rglob("*"):
@@ -37,8 +38,8 @@ def prepare_source(root):
     # Main's cfg(test) modules also read tracked agents_ui cast/replay inputs
     # above. Preserve those paths in a cold copy, without copying any target.
     # Main's cfg(test) modules include this root-level Rails error fixture and
-    # the provider callback above. Keep their original relative paths; neither
-    # fixture may come from a pre-existing generated tree.
+    # the provider callback and PWA harness above. Keep their original relative
+    # paths; no fixture may come from a pre-existing generated tree.
     if "public/500.html" not in paths:
         raise RuntimeError("tracked public/500.html test input missing")
     error_page = generated.parent / "public/500.html"
