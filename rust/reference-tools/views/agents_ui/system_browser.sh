@@ -23,7 +23,7 @@ ws11ui_cleanup() {
 trap ws11ui_cleanup EXIT INT TERM
 export PARITY_NAMESPACE=${PARITY_NAMESPACE:-ws11ui-system}
 image=$(docker_image)
-net_root=/home/riels/.cache/rust-port/ws11ui/browser
+net_root=${WS11UI_BROWSER_SCRATCH:-${TMPDIR:-/tmp}/ws11ui-browser}
 mkdir -p "$net_root"
 net_dir=$(mktemp -d "$net_root/net.XXXXXX")
 NET_DIRS+=("$net_dir")

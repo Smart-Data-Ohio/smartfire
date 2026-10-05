@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import socket
 import sqlite3
 import subprocess
@@ -35,13 +36,14 @@ CASES = {
     "motion": ["motion is off by default in the test environment",'mobile drawer animates in, lands in place, and returns focus with motion on', 'member selection mode moves no rows and resizes nothing', 'people directory bar shifts no rows when toggling', 'people directory bar stays stuck while scrolling', 'room menu measures at full scale when clamping to the viewport edge', 'mobile drawer keeps the room list scroll position across close and reopen', 'mobile drawer reveals a current room far down the list on first open', 'mobile drawer reopens on the current room when it is already in view'],
     "mobile_layout": ['the profile page fits phone widths without scrolling sideways', 'headers outside the workspace shell stay opaque over scrolled content', 'headers outside the workspace shell never cover the page or its scrollbar', 'pages outside the workspace shell show no drawer toggle that opens nothing', 'every drawer destination has one toggle that opens the drawer on itself'],
     "channel_threads_controller": ['converts a thread to work, assigns an eligible owner, and keeps an audit trail', 'work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable', 'assigned owner can change work status but cannot reassign it', 'only a thread manager can remove work tracking', 'a manager can assign an eligible agent and the agent is notified', 'the owner picker lists eligible agents with profiles and excludes ineligible ones', 'a member who cannot manage the thread cannot assign an agent', 'ordinary thread fields remain separate from work tracking'],
-    "sending_messages": ["sending messages between two users", "editing messages", "deleting messages"],
+    "sending_messages": ["uploading a fresh video in the thread composer", "sending messages between two users", "editing messages", "deleting messages"],
     "workspace_markdown": [
         "workspace follows the system theme and mobile navigation remains reachable",
         "Markdown messages reach other users and editing preserves the original source",
         "desktop keyboard composition keeps line breaks and sends once after composition ends",
         "untrusted markup stays inert in the delivered message",
         "Markdown replies and file attachments remain usable",
+        "late upload progress preserves a delivered attachment and reply preview",
         "mention suggestions select a room member without sending the unfinished message",
         "a rejected message can be recovered corrected and sent",
         "sending preserves the submitted source and a newer draft",
@@ -222,21 +224,24 @@ subprocess.run(["bash", "rust/parity/bin/seed", "build", "default", "first_run"]
 # Build every host this invocation uses, including on a cold target. A
 # paused-only case uses TestApp's real binary and needs no second app build.
 # Preserve continuation's upload boundary as well as URL/PR jobs.
-paused_job_cases={"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable", "workspace follows the system theme and mobile navigation remains reachable"}
+new_upload_cases={"uploading a fresh video in the thread composer", "late upload progress preserves a delivered attachment and reply preview"}
+paused_job_cases=new_upload_cases|{"editing to add a URL renders its card live and the edited marker on load", "discusses a pull request from its card", "Markdown replies and file attachments remain usable", "workspace follows the system theme and mobile navigation remains reachable"}
 drive_cases=set(CASES["drive_attachments"]+["From Google Drive starts the legacy picker flow"])
 paused_job_cases |= drive_cases
 motion_default="motion is off by default in the test environment"
-test_environment_cases=drive_cases|{motion_default,"Markdown replies and file attachments remain usable"}
+test_environment_cases=new_upload_cases|drive_cases|{motion_default,"Markdown replies and file attachments remain usable"}
 paused_job_cases.add(motion_default)
 selected_names=[name for file in files for name in CASES[file] if (not args.case or name==args.case) and name not in args.exclude_case]
 needs_paused_jobs=not args.slice and any(name in paused_job_cases for name in selected_names)
 needs_test_environment=motion_default in selected_names
 needs_drive=any(name in drive_cases for name in selected_names)
 if args.slice or any(name not in paused_job_cases for name in selected_names):
-    subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 test_host=build_host(ROOT,env) if needs_paused_jobs or needs_drive or needs_test_environment else None
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
-subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
+# CI supplies Chromium and the matching ChromeDriver from pinned inputs.
+if os.environ.get("WS8BM_PINNED_BROWSER") != "1":
+    subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
 visibility_atom = subprocess.check_output([
     "docker", "run", "--rm", "--entrypoint", "bundle", browser_image,
     "exec", "ruby", "-rselenium-webdriver", "-e",
@@ -250,6 +255,10 @@ for line in (RUST / "parity/.env.reference").read_text().splitlines():
         env[key] = value
 env.update(CAMPFIRE_FROZEN_TIME="2026-03-02T16:00:00Z", CAMPFIRE_LOG="error", TARGET_BIND="127.0.0.1")
 target = Path(env.get("CARGO_TARGET_DIR", RUST / "target"))
+media = target / "ws8bm-browser-media"
+if any(name in new_upload_cases for name in selected_names):
+    subprocess.run(["bash", str(RUST / "reference-tools/users/media_runtime.sh")], cwd=ROOT,
+                   env=dict(env, WS8BR2_MEDIA_DIR=str(media)), check=True)
 reference = str(RUST / "parity/bin/reference")
 # Keep the historical default, while allowing a worker to choose slots outside
 # its OS ephemeral-client range. No application wait or retry is changed.
@@ -343,7 +352,7 @@ for file in files:
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "work-controller", case], cwd=ROOT, env=env, check=True)
             elif file == "mobile_layout":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "mobile-layout"], cwd=ROOT, env=env, check=True)
-            elif file == "workspace_markdown" and case == "Markdown replies and file attachments remain usable":
+            elif case in new_upload_cases or file == "workspace_markdown" and case == "Markdown replies and file attachments remain usable":
                 subprocess.run([reference, "runner", "--storage", str(fixture), "--time", "2026-03-02T16:00:00Z", "--freeze", str(RUST / "reference-tools/messaging/behavior-fixtures.rb"), "workspace-upload"], cwd=ROOT, env=env, check=True)
             elif file == "message_list_a11y":
                 fixture_kind = "board-touch" if case.startswith("text fields") else "history" if case.startswith("paginated history") else "message_list"
@@ -401,7 +410,7 @@ for file in files:
             shutil.copytree(fixture / "storage", work / "files")
             database_name="test.sqlite3" if case in test_environment_cases else "production.sqlite3"
             run_env = dict(env, CAMPFIRE_STORAGE_PATH=str(work), HTTP_PORT=str(ports[1]), TARGET_PORT=str(ports[2]), PARITY_SEED_DIR=str(work))
-            if file in {"channel_threads_controller","drive_attachments"} or case in {"workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"}:
+            if file in {"channel_threads_controller","drive_attachments"} or any(name in new_upload_cases | {"a release click landing on the just-opened menu does not activate it", "workspace follows the system theme and mobile navigation remains reachable", "Markdown replies and file attachments remain usable"} for name in batch):
                 run_env['WS8BM_WORK_DATABASES']=json.dumps({
                     f'http://127.0.0.1:{ports[0]}':str(work / f'.instances/{ports[0]}/db' / database_name),
                     f'http://127.0.0.1:{ports[1]}':str(work / 'db' / database_name),
@@ -418,13 +427,16 @@ for file in files:
             if case in test_environment_cases:
                 run_env.update(RAILS_ENV="test",CAMPFIRE_DATABASE_PATH=str(work / "db/test.sqlite3"))
             if case in drive_cases:
-                run_env.update(WS8BM_DRIVE_PORT=str(port_base+4),WS8BM_DRIVE_STUBS="1",WS8BM_DRIVE_TWO="1" if case.startswith("edit a room message") else "0")
+                run_env.update(WS8BM_DRIVE_STUBS="1",WS8BM_DRIVE_TWO="1" if case.startswith("edit a room message") else "0")
             process = None
             with (SCRATCH / "ws8bm-behavior-servers.log").open("a") as log, ExitStack() as transports:
                 try:
                     metadata_path=fixture / "db/browser-fixture.json"
                     metadata=json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-                    drive_calls=transports.enter_context(drive_transport(metadata["drive_payloads"],port_base+4)) if case in drive_cases else None
+                    # Hold the OS-assigned mock listener through the whole case.
+                    drive_calls=transports.enter_context(drive_transport(metadata["drive_payloads"])) if case in drive_cases else None
+                    if drive_calls is not None:
+                        run_env["WS8BM_DRIVE_PORT"]=str(drive_calls.port)
                     reference_up=[reference, "up", "--seed", "fixture", "--port", str(ports[0]), "--time", "2026-03-02T16:00:00Z", "--freeze"]
                     if case.startswith("From Google Drive starts the enhanced"):
                         for key in ["GOOGLE_CLIENT_ID","GOOGLE_CLIENT_SECRET","GOOGLE_PICKER_API_KEY","GOOGLE_CLOUD_PROJECT_NUMBER"]:
@@ -438,13 +450,21 @@ for file in files:
                         # to eager-load the same models/routes as pinned tests.
                         if "CI" in run_env:
                             reference_up += ["-e","CI="+run_env["CI"]]
-                    if case=="Markdown replies and file attachments remain usable":
+                    if case in new_upload_cases or case=="Markdown replies and file attachments remain usable":
                         reference_up += ["-e","WS8BM_TEST_FORGERY_PROTECTION=1"]
+                    if case in new_upload_cases:
+                        reference_up += ["-e","WS8BM_NATIVE_MEDIA=1"]
                     if paused_jobs:
                         reference_up += ["-e", "WS8BM_TEST_JOB_ADAPTER=1"]
                     subprocess.run(reference_up, cwd=ROOT, env=run_env, stdout=log, stderr=log, check=True)
                     host_command=[test_host,"controllers::presenters::test_support::ws8bm_browser_host_without_jobs","--exact","--ignored","--nocapture","--test-threads=1"] if paused_jobs else [str(target / "debug/campfire"), "server"]
-                    process = subprocess.Popen(host_command, cwd=ROOT, env=run_env, stdout=log, stderr=log)
+                    # Debian's media dependencies belong to the candidate,
+                    # not the host's curl/git used to start the reference.
+                    host_env = dict(run_env)
+                    if case in new_upload_cases:
+                        host_env.update(LD_LIBRARY_PATH=str(media / "native-libs"),
+                                        PATH=str(media / "usr/bin") + os.pathsep + run_env["PATH"])
+                    process = subprocess.Popen(host_command, cwd=ROOT, env=host_env, stdout=log, stderr=log)
                     if paused_jobs:
                         print("WS8bm job boundary: Rails ActiveJob::TestAdapter; Rust TestApp::without_job_runner; no selector deadline changes",flush=True)
                     deadline = time.monotonic() + 120
@@ -527,6 +547,11 @@ for file in files:
                                 assert mobile==[(773523953,201306877,"Mobile draft\n")]
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     assert conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]==seed.execute("SELECT COUNT(*) FROM messages").fetchone()[0]+2
+                            elif case in new_upload_cases:
+                                storage = work / (f".instances/{ports[0]}/storage" if database == databases[0] else "files")
+                                from behavior_upload_rows import assert_upload_rows
+                                with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
+                                    assert_upload_rows(conn,seed,case,storage,ROOT,PIN)
                             elif file == "drive_attachments":
                                 with sqlite3.connect(fixture / "db/production.sqlite3") as seed:
                                     old_ids={row[0] for row in seed.execute("SELECT id FROM messages")}

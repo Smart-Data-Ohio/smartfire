@@ -144,7 +144,12 @@ impl Api {
             .await
             .map_err(|error| {
                 Error::Unavailable(format!(
-                    "Google Calendar request failed ({})",
+                    "{} ({})",
+                    if path == "/revoke" {
+                        "Google token revoke failed"
+                    } else {
+                        "Google Calendar request failed"
+                    },
                     error.class()
                 ))
             })

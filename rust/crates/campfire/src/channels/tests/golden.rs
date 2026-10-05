@@ -717,7 +717,7 @@ fn sorted(steps: &[Exchange]) -> Vec<Exchange> {
 }
 
 #[tokio::test]
-#[ignore = "needs a running reference app; see the module docs"]
+#[ignore = "utility: needs a running reference app; see the module docs"]
 async fn record_reference() {
     let port = std::env::var("CHANNELS_REFERENCE_PORT").expect("CHANNELS_REFERENCE_PORT");
     let path = std::env::var("CHANNELS_REFERENCE_FIXTURES").expect("CHANNELS_REFERENCE_FIXTURES");

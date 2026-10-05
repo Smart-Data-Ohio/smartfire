@@ -330,6 +330,8 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/github/webhooks.{format}", github_webhook())
         .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
         .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
+        // Disk-service PUTs are file streams, not buffered/parsed parameter bodies.
+        .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::unparsed_action(dispatch_with_fragment_cache)).fallback(campfire_kit::action(dispatch_with_fragment_cache)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -589,6 +591,8 @@ mod challenge_tests;
 
 #[cfg(test)]
 mod enforcement_tests;
+#[cfg(test)]
+mod direct_upload_tests;
 
 #[cfg(test)]
 mod session_management_tests;
@@ -655,3 +659,6 @@ mod google_reporting_tests;
 
 #[cfg(test)]
 mod google_message_tests;
+
+#[cfg(test)]
+pub(crate) mod cutover_c_tests;

@@ -1,5 +1,16 @@
 # WS15g Rails test coverage — partial
 
+## Cutover reconciliation (2026-10-04)
+
+This annotation reviews **64 originally open records** against main `78b9b154`. Current dispositions: **8 passed with baseline execution receipts, 4 implemented or strengthened in this slice, 0 test-only outside gate, 52 unsupported acceptance assertions**.
+
+The original status, counts and owner handoffs below are **historical receipts**, not current cutover dispositions. Each reviewed declaration now has an explicit record ID and current evidence in its own row. A missing discriminating assertion remains in the gate even when the production path exists; owner attribution does not close it. Browser cases remain in the gate. New test registrations are covered by the unchanged CI package selectors; their actual local pass receipts are separate from the baseline run.
+
+The baseline [CI run 37200618245](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37200618245) executed **4,948 tests, 0 failures** at exactly this main SHA. Closures below require the audited assertion mappings and their named execution receipts. Compact assertion locations use `file:line,line`; each Rails assertion has its own full Rust `file:line` list in the JSON. A baseline PASS certifies the historical test execution; added assertions are verified by the current branch run. See [the machine-readable receipts](ledger-ws14-ws15.json), [the remaining exact declarations](ledger-ws14-ws15-remaining.md) and [validation/failing-first evidence](ledger-ws14-ws15-report.md).
+
+## Historical inventory (receipts preserved)
+
+
 Reference: `d7c7de92`. 426 Rails cases in 31 files: 362 mapped to Rust assertions; 64 explicitly deferred.
 
 These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; the GitHub profile/bot sections are wired, with exact seed fragment bytes and real HTTP callers; manual profile login-edit policy remains deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Room-card integration is 14/16 covered through actual room requests and pinned full card-container bytes; constant-query preload and the open-room join page remain deferred. Execution-audit cases are 6/6 mapped to regenerated Rails execution/sweep vectors, including audit outages and retry dedupe. Other room-page/controller/system parity and helper cache cases remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
@@ -40,10 +51,10 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | an administrator can link the agent's account | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
-| the owner without admin rights can neither link, relink, nor unlink | Deferred; WS15g continuation | — |
+| the owner without admin rights can neither link, relink, nor unlink | Deferred; WS15g continuation | — | **[WS15g-001] Closed with audited assertions** — `campfire::bin/campfire controllers::presenters::accounts::tests::github_connections::the_owner_without_admin_rights_can_neither_link_relink_nor_unlink` at `rust/crates/campfire/src/controllers/presenters/accounts/tests/github_connections.rs:169`. Assertions: `rust/crates/campfire/src/controllers/presenters/accounts/tests/github_connections.rs:193,201,203,204,205,206`. Named test PASS in baseline CI 37200618245, raw log line 4221; assertion mapping audited on this branch. |
 | another member gets 403 linking and unlinking | Mapped to grouped Rust assertions; WS15g | `github_connections_security_enforces_sudo_admin_active_bot_and_single_use_state` |
 | an administrator can unlink the agent's account | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | a rejected token stores nothing and shows the GitHub message | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
@@ -55,8 +66,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/controllers/agents/github/pull_request_actions_controller_test.rb` (21 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | a bad credential is 401 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
 | a suspended agent is 401 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
 | a room the agent is not a member of is 404 | Mapped to grouped Rust assertions; WS15g | `github_agent_http_authorization_actions_replay_budgets_and_throttle_match_rails` |
@@ -81,22 +92,22 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/controllers/agents/github_action_delivery_test.rb` (9 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
-| an approved action records a completed ledger row with the GitHub url | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| a failed action records the reason without a url | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| completion appears in event polling with the github_action payload | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| failed completions poll with the message and no url | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| ack works on completion rows | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| completion posts the webhook with agent and github_action keys | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| completion rows are readable by their own agent only | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| the ledger page lists the completion with its status | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
-| the ledger page lists failures with their reason | Deferred; WS15g continuation; WS11 owns authentication middleware | — |
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
+| an approved action records a completed ledger row with the GitHub url | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-002] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:25`. Missing: test/controllers/agents/github_action_delivery_test.rb:38: Select the completed ledger row message_id after executing the actual approval-produced action job and assert it is null.; test/controllers/agents/github_action_delivery_test.rb:30: Assert the complete success ledger contract after approval.decide -> persisted Github::PerformAgentActionJob -> registered execution, rather than combining direct-consumer complete snapshots with a runner EXISTS(status) check.; test/controllers/agents/github_action_delivery_test.rb:39: From that same approval-produced job, assert the complete approval_id/action/status/returned URL metadata and the correct room/outcome together. |
+| a failed action records the reason without a url | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-003] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:50`. Missing: test/controllers/agents/github_action_delivery_test.rb:58: Decide the actual approval approved, run its registered durable action job against HTTP403 with the refusal reason, then compare exactly approval_id/action/status=failed/message=GitHub refused: <response reason> and absence of URL in that same ledger row. |
+| completion appears in event polling with the github_action payload | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-004] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:69`. Discriminating domain/HTTP assertion still required for: completion appears in event polling with the github_action payload. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| failed completions poll with the message and no url | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-005] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:95`. Discriminating domain/HTTP assertion still required for: failed completions poll with the message and no url. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| ack works on completion rows | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-006] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:114`. Discriminating domain/HTTP assertion still required for: ack works on completion rows. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| completion posts the webhook with agent and github_action keys | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-007] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:129`. Discriminating domain/HTTP assertion still required for: completion posts the webhook with agent and github_action keys. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| completion rows are readable by their own agent only | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-008] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:151`. Discriminating domain/HTTP assertion still required for: completion rows are readable by their own agent only. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| the ledger page lists the completion with its status | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-009] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:173`. Discriminating domain/HTTP assertion still required for: the ledger page lists the completion with its status. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| the ledger page lists failures with their reason | Deferred; WS15g continuation; WS11 owns authentication middleware | — | **[WS15g-010] Unsupported acceptance assertion** — `test/controllers/agents/github_action_delivery_test.rb:188`. Discriminating domain/HTTP assertion still required for: the ledger page lists failures with their reason. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 
 ## `test/controllers/github/app_connections_controller_test.rb` (13 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | connect redirects to the GitHub App authorize URL | Mapped to grouped Rust assertions; WS15g | `github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange` |
 | connect answers 404 while the App is unconfigured | Mapped to grouped Rust assertions; WS15g | `github_connections_oauth_state_round_trips_and_is_consumed_before_error_or_exchange` |
 | callback exchanges the code and stores an app token | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
@@ -113,26 +124,26 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/controllers/github/connections_controller_test.rb` (13 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | linking validates the token with GET /user and stores the login | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | linking sets the profile username when blank | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | linking replaces a differing profile username with the verified one | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | linking releases the login from a member who claimed it without verification | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | linking never takes a login another member's linked token verifies | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
-| the profile cannot edit the login while a verified account is linked | Deferred; WS15g continuation | — |
-| the profile edits the login again once the link is disconnected | Deferred; WS15g continuation | — |
+| the profile cannot edit the login while a verified account is linked | Deferred; WS15g continuation | — | **[WS15g-011] Unsupported acceptance assertion** — `test/controllers/github/connections_controller_test.rb:71`. Discriminating domain/HTTP assertion still required for: the profile cannot edit the login while a verified account is linked. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| the profile edits the login again once the link is disconnected | Deferred; WS15g continuation | — | **[WS15g-012] Unsupported acceptance assertion** — `test/controllers/github/connections_controller_test.rb:86`. Discriminating domain/HTTP assertion still required for: the profile edits the login again once the link is disconnected. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | a rejected token stores nothing | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | linking again after a disconnect replaces the token and clears the reason | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | unlinking destroys the account | Mapped to grouped Rust assertions; WS15g | `github_connections_http_identity_flash_revocation_and_audits_match_rails` |
 | profile shows link and unlink state without rendering the token | Mapped to grouped Rust assertions; WS15g | `round2_profile_fragment_is_reachable_from_the_seed_page` |
-| linking never logs the pasted token | Deferred; WS15g continuation | — |
-| the token parameter is filtered from request logs | Deferred; WS15g continuation | — |
+| linking never logs the pasted token | Deferred; WS15g continuation | — | **[WS15g-013] Unsupported acceptance assertion** — `test/controllers/github/connections_controller_test.rb:144`. Discriminating domain/HTTP assertion still required for: linking never logs the pasted token. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| the token parameter is filtered from request logs | Deferred; WS15g continuation | — | **[WS15g-014] Unsupported acceptance assertion** — `test/controllers/github/connections_controller_test.rb:156`. Discriminating domain/HTTP assertion still required for: the token parameter is filtered from request logs. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 
 ## `test/controllers/github/pull_request_comments_controller_test.rb` (11 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | posts the comment with the member's token, never the workspace token | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | success over Turbo Stream replaces the frame with the confirmation | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
@@ -143,12 +154,12 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | a GitHub 401 disconnects the account and shows the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | a blank body is rejected without calling GitHub | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | a PR the room does not discuss gets not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
-| posting never logs the member's token | Deferred; WS15g continuation | — |
+| posting never logs the member's token | Deferred; WS15g continuation | — | **[WS15g-015] Unsupported acceptance assertion** — `test/controllers/github/pull_request_comments_controller_test.rb:156`. Discriminating domain/HTTP assertion still required for: posting never logs the member's token. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 
 ## `test/controllers/github/pull_request_review_requests_controller_test.rb` (15 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | requests the review with the member's token, never the workspace token | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | reviewers are split on commas or whitespace, stripped of @, downcased, and deduped | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | success over Turbo Stream replaces the frame with the confirmation | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
@@ -163,12 +174,12 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | more than 15 reviewers are rejected without calling GitHub | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | a PR the room does not discuss gets not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
 | a bot key is forbidden, exactly as the comments endpoint | Mapped to grouped Rust assertions; WS15g | `github_write_bot_credentials_are_forbidden_and_never_reach_github` |
-| requesting never logs the member's token | Deferred; WS15g continuation | — |
+| requesting never logs the member's token | Deferred; WS15g continuation | — | **[WS15g-016] Unsupported acceptance assertion** — `test/controllers/github/pull_request_review_requests_controller_test.rb:210`. Discriminating domain/HTTP assertion still required for: requesting never logs the member's token. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 
 ## `test/controllers/github/pull_request_reviews_controller_test.rb` (9 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | approve posts with the member's token, never the workspace token | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | request-changes posts the review body | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | request-changes without a body is rejected locally with 422 | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
@@ -181,31 +192,31 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/controllers/github/pull_request_threads_controller_test.rb` (7 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | discuss creates a thread with the card message as parent and records the mapping | Mapped to grouped Rust assertions; WS15g | `github_discuss_http_redirect_persistence_membership_and_fetch_match_rails` |
 | discuss reuses the room's existing thread for the PR | Mapped to grouped Rust assertions; WS15g | `github_discuss_http_redirect_persistence_membership_and_fetch_match_rails` |
-| discuss reuses the winner and drops the loser when the race is lost at the unique index | Deferred; WS15g continuation | — |
-| discuss reuses the winner and drops the loser when the race is lost at the validation | Deferred; WS15g continuation | — |
+| discuss reuses the winner and drops the loser when the race is lost at the unique index | Deferred; WS15g continuation | — | **[WS15g-017] Unsupported acceptance assertion** — `test/controllers/github/pull_request_threads_controller_test.rb:54`. Discriminating domain/HTTP assertion still required for: discuss reuses the winner and drops the loser when the race is lost at the unique index. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| discuss reuses the winner and drops the loser when the race is lost at the validation | Deferred; WS15g continuation | — | **[WS15g-018] Unsupported acceptance assertion** — `test/controllers/github/pull_request_threads_controller_test.rb:66`. Discriminating domain/HTTP assertion still required for: discuss reuses the winner and drops the loser when the race is lost at the validation. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_discuss_security_requires_membership_root_parent_and_exact_reference` |
 | a message that does not reference the PR gets not found | Mapped to grouped Rust assertions; WS15g | `github_discuss_security_requires_membership_root_parent_and_exact_reference` |
 | a thread reply cannot parent a discussion | Mapped to grouped Rust assertions; WS15g | `github_discuss_security_requires_membership_root_parent_and_exact_reference` |
 
 ## `test/controllers/github/pull_request_write_actions_controller_test.rb` (5 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | a linked member gets the composer and review buttons | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | a member without a linked token gets the connect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | a member with a disconnected token gets the reconnect prompt | Mapped to grouped Rust assertions; WS15g | `github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails` |
 | non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_write_security_checks_room_and_mapping_before_own_token_access` |
-| the thread header carries the write-actions frame | Deferred; WS15g continuation | — |
+| the thread header carries the write-actions frame | Deferred; WS15g continuation | — | **[WS15g-019] Closed with audited assertions** — `campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies` at `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:7`. Assertions: `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:44,58,61`. Named test PASS in baseline CI 37200618245, raw log line 3615; assertion mapping audited on this branch. |
 
 ## `test/controllers/github/webhooks_controller_test.rb` (21 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
-| valid pull_request signature updates the record and broadcasts once | Deferred; WS15g continuation | — |
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
+| valid pull_request signature updates the record and broadcasts once | Deferred; WS15g continuation | — | **[WS15g-020] Unsupported acceptance assertion** — `test/controllers/github/webhooks_controller_test.rb:26`. Discriminating domain/HTTP assertion still required for: valid pull_request signature updates the record and broadcasts once. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | response carries no card content | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 | pull_request webhook stores repository privacy when the payload carries it | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 | pull_request webhook stores a public repository when the payload says so | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
@@ -222,23 +233,23 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | unhandled event types are acknowledged and ignored | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 | pull_request_review, check_run, check_suite, and status events enqueue a refresh | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 | mixed-case repository names in payloads still find the stored PR | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
-| subscribed repositories enqueue subscription delivery and post once | Deferred; WS15g continuation | — |
-| redelivered subscription events post nothing | Deferred; WS15g continuation | — |
+| subscribed repositories enqueue subscription delivery and post once | Deferred; WS15g continuation | — | **[WS15g-021] Unsupported acceptance assertion** — `test/controllers/github/webhooks_controller_test.rb:220`. Discriminating domain/HTTP assertion still required for: subscribed repositories enqueue subscription delivery and post once. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| redelivered subscription events post nothing | Deferred; WS15g continuation | — | **[WS15g-022] Unsupported acceptance assertion** — `test/controllers/github/webhooks_controller_test.rb:239`. Discriminating domain/HTTP assertion still required for: redelivered subscription events post nothing. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | unsubscribed repositories enqueue no delivery and create no bot user | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 | check events without PR links and status events for other branches are ignored | Mapped to grouped Rust assertions; WS15g | `webhook_http_status_body_selection_and_privacy_match_rails` |
 
 ## `test/controllers/rooms/github/pull_request_cards_controller_test.rb` (15 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | a member whose token can read the repository sees the card | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
 | a member without a linked account gets the empty frame and no GitHub request | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
 | a member with a disconnected account gets the empty frame and no GitHub request | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
 | GitHub 404 gives the empty frame | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
 | GitHub 401 marks the account disconnected and gives the empty frame | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
 | the decision is cached per viewer and repository | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
-| a cached denial no longer applies after the member relinks | Deferred; WS15g continuation (relink through Connection HTTP; transport failure followed by recovery through the same frame) | — |
-| a transport error renders the empty frame and caches nothing | Deferred; WS15g continuation (relink through Connection HTTP; transport failure followed by recovery through the same frame) | — |
+| a cached denial no longer applies after the member relinks | Deferred; WS15g continuation (relink through Connection HTTP; transport failure followed by recovery through the same frame) | — | **[WS15g-023] Unsupported acceptance assertion** — `test/controllers/rooms/github/pull_request_cards_controller_test.rb:105`. Discriminating domain/HTTP assertion still required for: a cached denial no longer applies after the member relinks. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| a transport error renders the empty frame and caches nothing | Deferred; WS15g continuation (relink through Connection HTTP; transport failure followed by recovery through the same frame) | — | **[WS15g-024] Unsupported acceptance assertion** — `test/controllers/rooms/github/pull_request_cards_controller_test.rb:139`. Discriminating domain/HTTP assertion still required for: a transport error renders the empty frame and caches nothing. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | a public PR renders the card with no GitHub request | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
 | a thread frame renders the card and files summary when the viewer may see it | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
 | a thread frame is empty when the viewer may not see it | Mapped to grouped Rust assertions; WS15g | `github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails` |
@@ -249,8 +260,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/controllers/rooms/github_subscriptions_controller_test.rb` (17 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | administrator can subscribe a room with default events | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
 | administrator can subscribe with an explicit event selection | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
 | subscribing an open room returns to its edit page | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
@@ -271,33 +282,33 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/helpers/github_pull_requests_helper_test.rb` (20 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | cache key changes when a referenced pull request is updated | Mapped to grouped Rust assertions; WS15g | `github_pr_and_thread_stamps_invalidate_message_fragments_without_touching_message` |
-| cache key for a message without pull requests is just the message | Deferred; WS15g continuation | — |
-| cache key changes when a thread reply is posted | Deferred; WS15g continuation | — |
-| cache key changes when an older thread reply is deleted | Deferred; WS15g continuation | — |
-| cache key reads the reply count without a query | Deferred; WS15g continuation | — |
-| cache key carries the streaming flag | Deferred; WS15g continuation | — |
-| cache key changes when a step is added to the message | Deferred; WS15g continuation | — |
-| cache key changes when a quoted source is edited | Deferred; WS15g continuation | — |
-| cache key changes when a quoted source's author is renamed | Deferred; WS15g continuation | — |
-| cache key changes when a quoted source's room is renamed | Deferred; WS15g continuation | — |
-| cache key changes when a quoted source is deleted | Deferred; WS15g continuation | — |
-| cache key changes when a poll is voted and retracted | Deferred; WS15g continuation | — |
-| cache key carries the system note flag | Deferred; WS15g continuation | — |
-| cache key changes when the message is pinned and unpinned | Deferred; WS15g continuation | — |
-| cache key changes on unpin even when a referenced card is newer | Deferred; WS15g continuation | — |
-| cache key changes when a referenced X post is fetched | Deferred; WS15g continuation | — |
-| cache key changes when a referenced link embed is fetched | Deferred; WS15g continuation | — |
-| cache key changes when a referenced event is updated | Deferred; WS15g continuation | — |
+| cache key for a message without pull requests is just the message | Deferred; WS15g continuation | — | **[WS15g-025] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:35`. Discriminating domain/HTTP assertion still required for: cache key for a message without pull requests is just the message. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes when a thread reply is posted | Deferred; WS15g continuation | — | **[WS15g-026] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:41`. Missing: test/helpers/github_pull_requests_helper_test.rb:50: Freeze the clock across posting the additional thread reply so all relevant timestamps stay equal, then compare the actual before/after message helper keys and assert they differ through the reply-count dependency. |
+| cache key changes when an older thread reply is deleted | Deferred; WS15g continuation | — | **[WS15g-027] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:53`. Discriminating domain/HTTP assertion still required for: cache key changes when an older thread reply is deleted. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key reads the reply count without a query | Deferred; WS15g continuation | — | **[WS15g-028] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:66`. Discriminating domain/HTTP assertion still required for: cache key reads the reply count without a query. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key carries the streaming flag | Deferred; WS15g continuation | — | **[WS15g-029] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:78`. Discriminating domain/HTTP assertion still required for: cache key carries the streaming flag. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes when a step is added to the message | Deferred; WS15g continuation | — | **[WS15g-030] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:89`. Discriminating domain/HTTP assertion still required for: cache key changes when a step is added to the message. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes when a quoted source is edited | Deferred; WS15g continuation | — | **[WS15g-031] Closed with audited assertions** — `campfire::bin/campfire controllers::message_features::root_cache_tests::composite_keys_and_private_provider_frames_match_actual_rails_transitions` at `rust/crates/campfire/src/controllers/message_features/root_cache_tests.rs:21`. Assertions: `rust/crates/campfire/src/controllers/message_features/root_cache_tests.rs:68,80`. Named test PASS in baseline CI 37200618245, raw log line 3858; assertion mapping audited on this branch. |
+| cache key changes when a quoted source's author is renamed | Deferred; WS15g continuation | — | **[WS15g-032] Closed with audited assertions** — `campfire::bin/campfire controllers::message_features::root_cache_tests::composite_keys_and_private_provider_frames_match_actual_rails_transitions` at `rust/crates/campfire/src/controllers/message_features/root_cache_tests.rs:21`. Assertions: `rust/crates/campfire/src/controllers/message_features/root_cache_tests.rs:68,80`. Named test PASS in baseline CI 37200618245, raw log line 3858; assertion mapping audited on this branch. |
+| cache key changes when a quoted source's room is renamed | Deferred; WS15g continuation | — | **[WS15g-033] Closed with audited assertions** — `campfire::bin/campfire controllers::message_features::root_cache_tests::composite_keys_and_private_provider_frames_match_actual_rails_transitions` at `rust/crates/campfire/src/controllers/message_features/root_cache_tests.rs:21`. Assertions: `rust/crates/campfire/src/controllers/message_features/root_cache_tests.rs:68,80`. Named test PASS in baseline CI 37200618245, raw log line 3858; assertion mapping audited on this branch. |
+| cache key changes when a quoted source is deleted | Deferred; WS15g continuation | — | **[WS15g-034] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:151`. Discriminating domain/HTTP assertion still required for: cache key changes when a quoted source is deleted. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes when a poll is voted and retracted | Deferred; WS15g continuation | — | **[WS15g-035] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:167`. Discriminating domain/HTTP assertion still required for: cache key changes when a poll is voted and retracted. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key carries the system note flag | Deferred; WS15g continuation | — | **[WS15g-036] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:186`. Discriminating domain/HTTP assertion still required for: cache key carries the system note flag. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes when the message is pinned and unpinned | Deferred; WS15g continuation | — | **[WS15g-037] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:194`. Discriminating domain/HTTP assertion still required for: cache key changes when the message is pinned and unpinned. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes on unpin even when a referenced card is newer | Deferred; WS15g continuation | — | **[WS15g-038] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:211`. Missing: test/helpers/github_pull_requests_helper_test.rb:224: Pin a message referencing a PR, capture its helper key, update that referenced PR after the pin timestamp, unpin through the actual MessagePin API, reload and assert the helper key differs for the same newer-PR scenario. |
+| cache key changes when a referenced X post is fetched | Deferred; WS15g continuation | — | **[WS15g-039] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:227`. Discriminating domain/HTTP assertion still required for: cache key changes when a referenced X post is fetched. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes when a referenced link embed is fetched | Deferred; WS15g continuation | — | **[WS15g-040] Unsupported acceptance assertion** — `test/helpers/github_pull_requests_helper_test.rb:241`. Discriminating domain/HTTP assertion still required for: cache key changes when a referenced link embed is fetched. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| cache key changes when a referenced event is updated | Deferred; WS15g continuation | — | **[WS15g-041] Closed with audited assertions** — `campfire::bin/campfire controllers::rooms::events::tests::event_cards_refresh_after_an_event_edit_through_the_message_cache` at `rust/crates/campfire/src/controllers/rooms/events/tests.rs:346`. Assertions: `rust/crates/campfire/src/controllers/rooms/events/tests.rs:354,372`. Named test PASS in baseline CI 37200618245, raw log line 4486; assertion mapping audited on this branch. |
 | pr cards still render when the queue is down | Mapped to grouped Rust assertions; WS15g | `review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure` |
 | a failed pr enqueue releases its fetch claim | Mapped to grouped Rust assertions; WS15g | `review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure` |
 
 ## `test/integration/github_pr_cards_test.rb` (16 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | a message with a PR link renders the card | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
 | the card keeps the fetched repository name case | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
 | a message without a PR link renders no card | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
@@ -307,32 +318,32 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | a PR with unknown privacy is treated as private | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
 | rendering a stale card enqueues a refresh | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
 | a loaded card with no check data shows No checks | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
-| rendering a room page costs no extra queries per message with a PR link | Deferred; WS15g continuation | — |
+| rendering a room page costs no extra queries per message with a PR link | Deferred; WS15g continuation | — | **[WS15g-042] Unsupported acceptance assertion** — `test/integration/github_pr_cards_test.rb:156`. Discriminating domain/HTTP assertion still required for: rendering a room page costs no extra queries per message with a PR link. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | one render enqueues a single refresh for one stale PR linked by many messages | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
 | repeat views by different users enqueue at most one refresh per PR per window | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
 | a fresh card does not enqueue a refresh on render | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
 | a non-member cannot see the card through the room | Mapped to grouped Rust assertions; WS15g | `github_room_cards_security_redirects_nonmembers_without_card_data` |
-| the open-room join page leaks no card content to non-members | Deferred; WS15g continuation | — |
+| the open-room join page leaks no card content to non-members | Deferred; WS15g continuation | — | **[WS15g-043] Unsupported acceptance assertion** — `test/integration/github_pr_cards_test.rb:254`. Discriminating domain/HTTP assertion still required for: the open-room join page leaks no card content to non-members. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | added routes never render card content to unauthorized callers | Mapped to grouped Rust assertions; WS15g | `webhook_security_rejects_bad_or_missing_signatures_before_parsing` |
 
 ## `test/integration/github_pr_threads_test.rb` (9 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
-| a card without a thread shows a Discuss button | Deferred; WS15g continuation | — |
-| a card with a thread links to it | Deferred; WS15g continuation | — |
-| a PR thread shows the card and files summary above its messages | Deferred; WS15g continuation | — |
-| the files summary omits the more line when everything is shown | Deferred; WS15g continuation | — |
-| a PR thread without fetched files shows a loading summary | Deferred; WS15g continuation | — |
-| an ordinary thread shows no PR header | Deferred; WS15g continuation | — |
-| file paths from the API render as text | Deferred; WS15g continuation | — |
-| a PR thread for a private PR shows only the lazy frame in its header | Deferred; WS15g continuation | — |
-| a non-member cannot open the PR thread | Deferred; WS15g continuation | — |
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
+| a card without a thread shows a Discuss button | Deferred; WS15g continuation | — | **[WS15g-044] Closed with new assertions** — `campfire::bin/campfire controllers::github::room_card_tests::github_room_cards_real_pages_match_pinned_rails_card_containers` at `rust/crates/campfire/src/controllers/github/room_card_tests.rs:35`. Assertions: `rust/crates/campfire/src/controllers/github/room_card_tests.rs:44,45,52,57,62`. Verified in the current branch run; baseline test receipts, where present, remain in the JSON. |
+| a card with a thread links to it | Deferred; WS15g continuation | — | **[WS15g-045] Closed with new assertions** — `campfire::bin/campfire controllers::github::room_card_tests::github_room_cards_real_pages_match_pinned_rails_card_containers` at `rust/crates/campfire/src/controllers/github/room_card_tests.rs:35`. Assertions: `rust/crates/campfire/src/controllers/github/room_card_tests.rs:44,45,79,83`. Verified in the current branch run; baseline test receipts, where present, remain in the JSON. |
+| a PR thread shows the card and files summary above its messages | Deferred; WS15g continuation | — | **[WS15g-046] Closed with new assertions** — `campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_http_renders_populated_files_and_hides_private_filenames` at `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:77`. Assertions: `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:109,119,120,121,122,123,133`. Verified in the current branch run; baseline test receipts, where present, remain in the JSON. |
+| the files summary omits the more line when everything is shown | Deferred; WS15g continuation | — | **[WS15g-047] Unsupported acceptance assertion** — `test/integration/github_pr_threads_test.rb:62`. Discriminating domain/HTTP assertion still required for: the files summary omits the more line when everything is shown. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| a PR thread without fetched files shows a loading summary | Deferred; WS15g continuation | — | **[WS15g-048] Unsupported acceptance assertion** — `test/integration/github_pr_threads_test.rb:78`. Discriminating domain/HTTP assertion still required for: a PR thread without fetched files shows a loading summary. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| an ordinary thread shows no PR header | Deferred; WS15g continuation | — | **[WS15g-049] Unsupported acceptance assertion** — `test/integration/github_pr_threads_test.rb:92`. Discriminating domain/HTTP assertion still required for: an ordinary thread shows no PR header. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| file paths from the API render as text | Deferred; WS15g continuation | — | **[WS15g-050] Unsupported acceptance assertion** — `test/integration/github_pr_threads_test.rb:105`. Discriminating domain/HTTP assertion still required for: file paths from the API render as text. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| a PR thread for a private PR shows only the lazy frame in its header | Deferred; WS15g continuation | — | **[WS15g-051] Closed with new assertions** — `campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_http_renders_populated_files_and_hides_private_filenames` at `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:77`. Assertions: `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:58,149,154,158,165`. Verified in the current branch run; baseline test receipts, where present, remain in the JSON. |
+| a non-member cannot open the PR thread | Deferred; WS15g continuation | — | **[WS15g-052] Closed with audited assertions** — `campfire::bin/campfire controllers::channel_threads::github_tests::github_thread_show_matches_complete_rails_public_private_and_unknown_bodies` at `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:7`. Assertions: `rust/crates/campfire/src/controllers/channel_threads/github_tests.rs:62`. Named test PASS in baseline CI 37200618245, raw log line 3615; assertion mapping audited on this branch. |
 
 ## `test/jobs/audit_log_github_execution_test.rb` (6 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | a completed GitHub action is recorded with the decider as actor | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
 | a refused execution is recorded as failed without a GitHub request | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
 | a retried job records no second row | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
@@ -342,17 +353,17 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/jobs/github/deliver_subscription_event_job_test.rb` (37 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | opened posts one bot message with the pr url and reference | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | the posted url is built from the subscribed repository, not the payload | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | webhook text cannot smuggle a mention token into the post | Mapped to grouped Rust assertions; WS15g | `github_notifier_security_redacts_per_subscription_and_neutralizes_mentions` |
 | reopened, ready for review, and synchronize post nothing after opened | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | reopened posts when the pr opened before the subscription | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | closed with merged true posts merged, merged false posts closed | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
-| review_requested posts and records an inbox item for the linked member | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — |
+| review_requested posts and records an inbox item for the linked member | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — | **[WS15g-053] Unsupported acceptance assertion** — `test/jobs/github/deliver_subscription_event_job_test.rb:77`. Missing: test/jobs/github/deliver_subscription_event_job_test.rb:89: After actual review_requested delivery creates the linked reviewer item, invoke ActivityItem::accessible_to for that reviewer and assert the exact created item is included.; test/jobs/github/deliver_subscription_event_job_test.rb:92: Delete the reviewer room membership after delivery, invoke that same inbox reader again and assert the retained persisted item is no longer accessible. |
 | review_requested records nothing for non-members or unlinked logins | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
-| review_requested skips the item when the reviewer switched them off | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — |
+| review_requested skips the item when the reviewer switched them off | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — | **[WS15g-054] Unsupported acceptance assertion** — `test/jobs/github/deliver_subscription_event_job_test.rb:111`. Missing: test/jobs/github/deliver_subscription_event_job_test.rb:125: While that reviewer github_review_requests=false, post an ordinary real message containing a mention attachment for the reviewer and assert the produced item event_type is mention. |
 | review_requested still notifies a member with notifications off but not an invisible one | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | team review requests post nothing | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | review_submitted posts each review once | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
@@ -367,7 +378,7 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | claimed notifications record their message | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | an event posts a thread reply where the PR has a thread and a room message elsewhere | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | thread updates dedupe like room messages | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
-| review_requested in a PR thread points the inbox item at the thread message | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — |
+| review_requested in a PR thread points the inbox item at the thread message | Deferred; WS15g continuation (Notifier source/item/preference assertions covered; WS12 owns inbox accessible_to and the general mention recorder) | — | **[WS15g-055] Unsupported acceptance assertion** — `test/jobs/github/deliver_subscription_event_job_test.rb:289`. Missing: test/jobs/github/deliver_subscription_event_job_test.rb:300: After actual review_requested routing creates the PR-thread reply and reviewer item, invoke ActivityItem::accessible_to for the linked reviewer and assert that exact thread-sourced item is included. |
 | an update for a locked PR thread falls back to a root room message | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | an update for a closed PR thread still lands in the thread | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
 | subscription events find the PR thread regardless of payload case | Mapped to grouped Rust assertions; WS15g | `github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails` |
@@ -384,8 +395,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/jobs/github/fetch_pull_request_job_test.rb` (22 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | success stores card fields, clears errors, and stamps fetched_at | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
 | fetch stores the repository privacy from base.repo.private | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
 | fetch stores a public repository as not private | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
@@ -406,18 +417,18 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | mapped PRs store the files summary without diff bodies | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
 | the files summary caps at 100 files with the PR total | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
 | a failed files fetch keeps the previous summary and sets fetch_error | Mapped to grouped Rust assertions; WS15g | `github_fetch_persisted_fields_errors_reviews_checks_and_files_match_rails` |
-| card updates broadcast the thread header to mapped thread streams | Deferred; WS15g continuation | — |
-| card updates broadcast nothing without referencing messages or mappings | Deferred; WS15g continuation | — |
+| card updates broadcast the thread header to mapped thread streams | Deferred; WS15g continuation | — | **[WS15g-056] Open; unsupported acceptance assertion** — `test/jobs/github/fetch_pull_request_job_test.rb:305`. Reopened after shared-receipt audit: execute the registered Github::FetchPullRequestJob through recorded API responses for a mapped PR and assert its thread stream receives the card/header replacement with the fetched title and file path. Direct PullRequest updates prove the downstream callback but omit the fetch-job producer. |
+| card updates broadcast nothing without referencing messages or mappings | Deferred; WS15g continuation | — | **[WS15g-057] Open; unsupported acceptance assertion** — `test/jobs/github/fetch_pull_request_job_test.rb:328`. Reopened after PR #239 review: execute the registered Github::FetchPullRequestJob for a PR with neither referencing messages nor thread mappings and observe zero card/header publications, while proving the fetch committed. The cited callback test always creates both routes and expects positive frames. |
 
 ## `test/jobs/github/perform_agent_action_job_test.rb` (36 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
-| approving a github action enqueues the job, denying does not | Deferred; WS15g continuation | — |
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
+| approving a github action enqueues the job, denying does not | Deferred; WS15g continuation | — | **[WS15g-058] Unsupported acceptance assertion** — `test/jobs/github/perform_agent_action_job_test.rb:34`. Discriminating domain/HTTP assertion still required for: approving a github action enqueues the job, denying does not. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | a relinked GitHub account after approval makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
 | a replaced GitHub connection with the same login makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
 | an approval that recorded no GitHub identity makes no request | Mapped to grouped Rust assertions; WS15g | `github_agent_rechecks_payload_and_linked_identity_before_any_write` |
-| approving a non-github action enqueues nothing | Deferred; WS15g continuation | — |
+| approving a non-github action enqueues nothing | Deferred; WS15g continuation | — | **[WS15g-059] Unsupported acceptance assertion** — `test/jobs/github/perform_agent_action_job_test.rb:78`. Discriminating domain/HTTP assertion still required for: approving a non-github action enqueues nothing. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | an approved comment posts with the agent token and records completion | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
 | an approved approve posts the review with the agent token | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
 | approved request_changes posts the review body | Mapped to grouped Rust assertions; WS15g | `github_agent_persisted_outcomes_audits_jobs_and_requests_match_rails` |
@@ -452,8 +463,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/agent_pull_request_action_test.rb` (11 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | comment requires a body | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
 | request_changes requires a body | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
 | approve accepts a missing body | Mapped to grouped Rust assertions; WS15g | `github_agent_action_validation_summary_payload_and_normalization_match_rails` |
@@ -468,8 +479,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/app_test.rb` (11 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | unconfigured without both credentials | Mapped to grouped Rust assertions; WS15g | `app_requires_both_credentials_and_authorizes_with_empty_scope` |
 | authorize_url points at github.com with the client id | Mapped to grouped Rust assertions; WS15g | `app_requires_both_credentials_and_authorizes_with_empty_scope` |
 | exchange_code returns the token response | Mapped to grouped Rust assertions; WS15g | `oauth_response_matrix_matches_rails` |
@@ -484,16 +495,16 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/notification_test.rb` (3 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | claim! wins once per subscription and dedupe key | Mapped to grouped Rust assertions; WS15g | `github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription` |
 | claim! is scoped to the subscription | Mapped to grouped Rust assertions; WS15g | `github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription` |
 | claim! survives a duplicate insert race | Mapped to grouped Rust assertions; WS15g | `github_notification_claims_validate_and_share_one_concurrent_winner_per_subscription` |
 
 ## `test/models/github/pull_request_test.rb` (17 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | for_reference upserts by owner, repo, and number | Mapped to grouped Rust assertions; WS15g | `github_pr_identity_display_files_and_save_callbacks_match_rails` |
 | repository names are stored downcased so links in any case share one row | Mapped to grouped Rust assertions; WS15g | `github_pr_identity_display_files_and_save_callbacks_match_rails` |
 | display_full_name keeps the fetched repository name case | Mapped to grouped Rust assertions; WS15g | `github_pr_identity_display_files_and_save_callbacks_match_rails` |
@@ -502,7 +513,7 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | stale? is true until fetched and after ten minutes | Mapped to grouped Rust assertions; WS15g | `github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet` |
 | claim_fetch_request! grants one fetch per PR per ten minutes | Mapped to grouped Rust assertions; WS15g | `github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet` |
 | claiming a fetch request does not broadcast a card update | Mapped to grouped Rust assertions; WS15g | `github_pr_staleness_claim_boundaries_and_concurrent_upserts_are_quiet` |
-| with_rendering_details preloads referenced PRs | Deferred; WS15g continuation | — |
+| with_rendering_details preloads referenced PRs | Deferred; WS15g continuation | — | **[WS15g-060] Closed with audited assertions** — `campfire::bin/campfire controllers::message_features::provider_tests::preloaded_provider_cards_render_with_zero_queries_for_one_or_many_messages` at `rust/crates/campfire/src/controllers/message_features/provider_tests.rs:111`. Assertions: `rust/crates/campfire/src/controllers/message_features/provider_tests.rs:75,148`. Named test PASS in baseline CI 37200618245, raw log line 3828; assertion mapping audited on this branch. |
 | creating a message with a PR URL references the PR and enqueues a fetch | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
 | duplicate URLs in one message create a single reference | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
 | a message without a PR URL references nothing and enqueues nothing | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
@@ -514,8 +525,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/pull_request_thread_test.rb` (11 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | one thread per PR per room, and a thread discusses at most one PR | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
 | the same PR can be discussed in different rooms | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
 | create_or_reuse! creates the mapping once | Mapped to grouped Rust assertions; WS15g | `github_pr_thread_uniqueness_reuse_cleanup_and_unrelated_errors_match_rails` |
@@ -530,8 +541,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/pull_request_url_test.rb` (10 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | extracts a canonical pull request URL | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
 | extracts /pulls/ variants and trailing paths, queries, and fragments | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
 | extracts multiple URLs and deduplicates repeats | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
@@ -545,8 +556,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/repository_subscription_test.rb` (10 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | new subscriptions default to the standard event selection | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
 | event keys are validated against the known set | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
 | owner and repo are stripped and downcased | Mapped to grouped Rust assertions; WS15g | `github_subscriptions_validation_and_bot_membership_callbacks_match_rails` |
@@ -560,8 +571,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/review_logins_test.rb` (5 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | splits on commas and whitespace, strips @, downcases, and dedupes | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
 | accepts an array of tokens | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
 | blank input normalizes to an empty array | Mapped to grouped Rust assertions; WS15g | `github_review_logins_normalization_matches_rails_odd_shapes_and_boundaries` |
@@ -570,8 +581,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github/write_client_test.rb` (13 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | authenticated_login returns the token owner's login | Mapped to grouped Rust assertions; WS15g | `write_paths_payloads_identity_and_headers_match_rails` |
 | authenticated_login raises Unauthorized on 401 | Mapped to grouped Rust assertions; WS15g | `repository_access_denies_refusals_but_propagates_unauthorized_and_errors` |
 | create_issue_comment posts to the issues comments endpoint | Mapped to grouped Rust assertions; WS15g | `write_paths_payloads_identity_and_headers_match_rails` |
@@ -580,7 +591,7 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | request_reviewers maps a GitHub 422 to Refused with GitHub's message | Mapped to grouped Rust assertions; WS15g | `write_status_matrix_matches_rails_and_cannot_inject_mentions` |
 | 401 raises Unauthorized | Mapped to grouped Rust assertions; WS15g | `write_status_matrix_matches_rails_and_cannot_inject_mentions` |
 | 403 and 404 raise Refused with GitHub's message | Mapped to grouped Rust assertions; WS15g | `write_status_matrix_matches_rails_and_cannot_inject_mentions` |
-| network errors raise Error without logging the token | Deferred; WS15g continuation (warning-log assertion; error/privacy assertions already covered) | — |
+| network errors raise Error without logging the token | Deferred; WS15g continuation (warning-log assertion; error/privacy assertions already covered) | — | **[WS15g-061] Unsupported acceptance assertion** — `test/models/github/write_client_test.rb:102`. Discriminating domain/HTTP assertion still required for: network errors raise Error without logging the token. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
 | repository_readable? is true when GitHub answers 200 | Mapped to grouped Rust assertions; WS15g | `repository_access_denies_refusals_but_propagates_unauthorized_and_errors` |
 | repository_readable? is false on 403 and 404 | Mapped to grouped Rust assertions; WS15g | `repository_access_denies_refusals_but_propagates_unauthorized_and_errors` |
 | repository_readable? raises Unauthorized on 401 | Mapped to grouped Rust assertions; WS15g | `repository_access_denies_refusals_but_propagates_unauthorized_and_errors` |
@@ -588,8 +599,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/models/github_connected_account_test.rb` (20 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
 | one account per user | Mapped to grouped Rust assertions; WS15g | `accounts_enforce_rails_validations` |
 | token is encrypted at rest | Mapped to grouped Rust assertions; WS15g | `accounts_encrypt_both_columns_and_read_rails_rows` |
 | an undecryptable token is unusable, not fatal | Mapped to grouped Rust assertions; WS15g | `unreadable_or_tampered_tokens_disconnect_without_panicking` |
@@ -613,8 +624,8 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 ## `test/system/github_pr_write_actions_test.rb` (3 tests)
 
-| Rails test | Status and owner | Rust coverage |
-|---|---|---|
-| a linked member comments from a PR thread and sees the inline confirmation | Deferred; WS15g continuation | — |
-| a linked member requests a review from a PR thread and sees the inline confirmation | Deferred; WS15g continuation | — |
-| a member without a linked token sees the connect prompt in the thread | Deferred; WS15g continuation | — |
+| Rails test | Status and owner | Rust coverage | Cutover disposition (2026-10-04) |
+|---|---|---|---|
+| a linked member comments from a PR thread and sees the inline confirmation | Deferred; WS15g continuation | — | **[WS15g-062] Unsupported acceptance assertion** — `test/system/github_pr_write_actions_test.rb:6`. Browser interaction still required for: a linked member comments from a PR thread and sees the inline confirmation. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| a linked member requests a review from a PR thread and sees the inline confirmation | Deferred; WS15g continuation | — | **[WS15g-063] Unsupported acceptance assertion** — `test/system/github_pr_write_actions_test.rb:52`. Browser interaction still required for: a linked member requests a review from a PR thread and sees the inline confirmation. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |
+| a member without a linked token sees the connect prompt in the thread | Deferred; WS15g continuation | — | **[WS15g-064] Unsupported acceptance assertion** — `test/system/github_pr_write_actions_test.rb:98`. Browser interaction still required for: a member without a linked token sees the connect prompt in the thread. Existing grouped tests do not establish the complete named declaration; not closed by another-owner attribution or by the overall CI count. |

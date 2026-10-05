@@ -1,6 +1,6 @@
 // Instrumentation from pinned Rails HuddlesTest; native WebRTC and local LiveKit.
 import assert from 'node:assert/strict';
-import {fixture, text, absent} from './ws13-support.mjs';
+import {fixture, text, absent, connected} from './ws13-support.mjs';
 import {pollBrowser} from './ws13-browser-poll.mjs';
 export const target = name => '[data-huddle-target="'+name+'"]';
 export const controller = "window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle')";
@@ -30,7 +30,7 @@ export async function join(p,label='Join huddle') {
     await p.locator(target('checkJoin')+':not([disabled])').waitFor({timeout:20000});
     await p.locator(target('checkJoin')).click();
   }
-  await p.locator('#channel-huddle[data-state="connected"]').waitFor({timeout:20000});
+  await connected(p);
   await p.getByRole('button',{name:'Mute microphone',exact:true}).waitFor();
 }
 export async function leave(p) {

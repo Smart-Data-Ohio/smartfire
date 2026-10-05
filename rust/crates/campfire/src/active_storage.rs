@@ -530,17 +530,21 @@ pub async fn disk_update(c: &mut Ctx) -> Result {
     require_active_storage_authentication(c).await?;
     let storage = c.app().storage.clone();
     let encoded_token = c.param_str("encoded_token").unwrap_or("").to_string();
-    let Some(token) = disk::decode_verified_token(&*storage.verifier, &encoded_token, c.now()) else {
+    let Some(token) = disk::decode_verified_token(&*storage.verifier, &encoded_token, c.now())
+    else {
         return Ok(c.head(StatusCode::NOT_FOUND));
     };
-    if !acceptable_content(c, &token) {
+    // Rails' DiskController passes request.body to DiskService#upload. The adapter has
+    // already validated/spooled the whole PUT, including any configured front-server limit.
+    let body = c.take_body_file().await.map_err(Error::internal)?;
+    if !acceptable_content(c, &token, body.metadata().map_err(Error::internal)?.len()) {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    let body = c.request.raw_post().clone();
     let (key, checksum) = (token.key.clone(), token.checksum.clone());
-    let uploaded = tokio::task::spawn_blocking(move || storage.service.upload(&key, body.as_ref(), Some(&checksum)))
-        .await
-        .map_err(Error::internal)?;
+    let uploaded =
+        tokio::task::spawn_blocking(move || storage.service.upload(&key, body, Some(&checksum)))
+            .await
+            .map_err(Error::internal)?;
     match uploaded {
         Ok(()) => Ok(c.head(StatusCode::NO_CONTENT)),
         Err(campfire_storage::Error::Integrity) => Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)),
@@ -549,10 +553,19 @@ pub async fn disk_update(c: &mut Ctx) -> Result {
 }
 
 /// `token[:content_type] == request.content_mime_type && token[:content_length] == request.content_length`
-fn acceptable_content(c: &Ctx, token: &disk::DiskToken) -> bool {
+fn acceptable_content(c: &Ctx, token: &disk::DiskToken, body_length: u64) -> bool {
     let media_type = c.request.media_type();
-    let content_length = c.request.header("content-length").and_then(|l| l.trim().parse::<i64>().ok());
-    token.content_type.as_deref().map(str::to_ascii_lowercase) == media_type.map(|m| m.to_ascii_lowercase())
+    // ActionDispatch::Request#content_length measures raw_post when Transfer-Encoding
+    // is present. Otherwise an absent Content-Length becomes zero via Ruby's to_i.
+    let content_length = if c.request.header("transfer-encoding").is_some() {
+        i64::try_from(body_length).ok()
+    } else {
+        c.request
+            .header("content-length")
+            .map_or(Some(0), |length| length.trim().parse::<i64>().ok())
+    };
+    token.content_type.as_deref().map(str::to_ascii_lowercase)
+        == media_type.map(|m| m.to_ascii_lowercase())
         && Some(token.content_length) == content_length
 }
 
@@ -577,12 +590,6 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
     let Some(byte_size) = text("byte_size").and_then(|s| crate::concerns::cast_integer(&s)) else {
         return Err(Error::Status(StatusCode::UNPROCESSABLE_ENTITY));
     };
-    // The upload's PUT body is read into memory, so it's capped like other bodies: don't hand out
-    // a URL for more than it will accept. (Campfire's editor only attaches mentions and embeds;
-    // files go up with the message form.)
-    if !(0..=campfire_kit::body::MAX_BUFFERED_BODY as i64).contains(&byte_size) {
-        return Err(Error::Status(StatusCode::PAYLOAD_TOO_LARGE));
-    }
     let content_type = text("content_type");
     let metadata = match blob_params.get("metadata").and_then(|m| m.as_hash()) {
         Some(metadata) => Json::parse(&metadata.to_json().to_string()).map_err(Error::internal)?,

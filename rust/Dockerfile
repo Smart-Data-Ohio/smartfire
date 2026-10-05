@@ -42,7 +42,7 @@ ARG FFMPEG_DSC_SHA256=9ed2ed34cbe7f056eeebbe9045c5e2d15e41b5b053fe7c8ba6979a0b6f
 # Toolchain and Debian -dev packages for libvips, ffmpeg and the Rust build, with deb-src enabled so
 # `apt-get source` can fetch the exact Debian sources (the .dsc checksums pin them; dpkg-source
 # verifies the tarballs against the .dsc).
-FROM docker.io/library/rust:${RUST_VERSION}-${DEBIAN_RELEASE} AS media-base
+FROM docker.io/library/rust:${RUST_VERSION}-${DEBIAN_RELEASE}@sha256:a8a5f0a1e5fe7dfe1d352591e4a1c7dd2c08fd70475cae872cf3458ba0df0546 AS media-base
 RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources && \
     apt-get update -qq && \
     apt-get install --no-install-recommends -y \
@@ -166,7 +166,7 @@ COPY --from=ffmpeg /opt/ffmpeg/lib/libavcodec.so.61 /opt/ffmpeg/lib/libavfilter.
 COPY --from=ffmpeg /opt/ffmpeg/bin/ffmpeg /opt/ffmpeg/bin/ffprobe /usr/local/bin/
 
 
-FROM docker.io/library/debian:${DEBIAN_RELEASE}-slim
+FROM docker.io/library/debian:${DEBIAN_RELEASE}-slim@sha256:a99cfc517144bc59b1978475ec53b46ecabec7e43635402ee5b77cc54cd1b20a
 
 # ca-certificates: the system CA store, for webhooks, unfurling, Web Push and the ACME directory.
 # The rest are the Debian libraries libvips and ffmpeg were built against: glib and expat, the image

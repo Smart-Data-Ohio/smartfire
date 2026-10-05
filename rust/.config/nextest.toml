@@ -9,11 +9,18 @@ report-skipped = "ignored"
 
 [test-groups]
 acme = { max-threads = 1 }
+browser = { max-threads = 1 }
 
 [[profile.default.overrides]]
 # These tests use Pebble's fixed validation ports 5001/5002 when PEBBLE_MINICA is set.
 filter = 'package(campfire_kit) & binary(front) & test(acme_)'
 test-group = "acme"
+
+[[profile.ci.overrides]]
+# Browser/Node suites own their workers and the gateway asserts 60 ms deadlines.
+# Keep them sequential while the job's nextest/build caps stay at four.
+filter = 'package(campfire) & (test(ws12_browser_) | test(huddle_system_cases_in_real_browser) | test(livekit_stage_system_cases_in_real_browser) | test(huddle_gateway_own_node_suite_against_rust_endpoints))'
+test-group = "browser"
 
 [[profile.ci.overrides]]
 # These hardening tests assert elapsed CPU time. Unlike libtest's sequential test binaries,

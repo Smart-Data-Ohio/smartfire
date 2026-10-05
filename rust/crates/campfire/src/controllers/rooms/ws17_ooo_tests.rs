@@ -19,6 +19,7 @@ async fn replay(names: &[&str]) {
         .write(|tx| Room::create_for(tx, RoomType::Direct, None, KEVIN, &[DAVID, JASON, KEVIN]))
         .await
         .unwrap();
+    let notice_class = regex::Regex::new(r#"\bclass="[^"]*\booo-notice(?:\s|")"#).unwrap();
     for name in names {
         let row = data["rows"]
             .as_array()
@@ -75,8 +76,10 @@ async fn replay(names: &[&str]) {
         assert_eq!(reply.status, StatusCode::OK, "{name}: {}", reply.text());
         let html = reply.text();
         let expected = row["html"].as_str().unwrap();
+        let notices = notice_class.find_iter(&html).count();
         if expected.is_empty() {
             assert!(!html.contains("id=\"ooo-notices\""));
+            assert_eq!(notices, 0);
         } else {
             assert!(
                 html.contains(expected),
@@ -85,6 +88,15 @@ async fn replay(names: &[&str]) {
             assert!(
                 html.find("id=\"ooo-notices\"").unwrap() < html.find("id=\"composer\"").unwrap(),
                 "above composer"
+            );
+            assert_eq!(
+                notices,
+                row["members"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter(|member| member["visible"] == true)
+                    .count()
             );
         }
         assert!(!html.contains("<b>gone</b>"));

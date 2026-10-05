@@ -1,0 +1,94 @@
+{
+  "database": [
+    {
+      "path": "crates/db/src/tests/fixtures_test.rs",
+      "package": "campfire_db",
+      "binary": "campfire_db",
+      "test": "tests::fixtures_test::fixtures_match_ruby_row_for_row"
+    },
+    {
+      "path": "crates/db/src/tests/differential_test.rs",
+      "package": "campfire_db",
+      "binary": "campfire_db",
+      "test": "tests::differential_test::scenario_matches_ruby"
+    },
+    {
+      "path": "crates/db/src/tests/two_factor_rollback_test.rs",
+      "package": "campfire_db",
+      "binary": "campfire_db",
+      "test": "tests::two_factor_rollback_test::read_rails_rollback_changes"
+    }
+  ],
+  "acme": [
+    {
+      "path": "crates/kit/tests/front.rs",
+      "package": "campfire_kit",
+      "binary": "front",
+      "test": "acme_tls_alpn_certificate_cached_and_reused"
+    }
+  ],
+  "browsers": [
+    {
+      "path": "crates/campfire/src/controllers/internal_huddle_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::internal_huddle_tests::huddle_gateway_own_node_suite_against_rust_endpoints"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c224_original_named_system_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c225_original_named_system_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c226_original_named_system_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c227_original_named_system_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/rooms/system_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::rooms::system_browser_tests::huddle_system_cases_in_real_browser"
+    }
+  ],
+  "livekit": [
+    {
+      "path": "crates/campfire/src/controllers/rooms/system_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::rooms::system_browser_tests::livekit_stage_system_cases_in_real_browser"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ use axum::body::{Body, Bytes, HttpBody};
 use axum::http::{HeaderMap, Method, StatusCode, header};
 use futures_util::StreamExt;
 use http_body_util::BodyExt;
-use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 
 use crate::format;
 use crate::params::{self, ParamError, ParamMap, RawPair, UploadedFile};
@@ -165,11 +165,11 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>) -> 
 }
 
 /// Read an unparsed body's entire stream before entering the action, as Puma does. Spool it
-/// to an anonymous temporary file so raw uploads need only one chunk in memory, then replay it
-/// for `Ctx::read_body`. A handler that never reads its body must not bypass its size limit.
-pub(crate) async fn validate_unparsed(body: Body, limit: Option<usize>) -> Result<Body, BodyError> {
+/// to an anonymous temporary file so raw uploads need only one chunk in memory. A handler that
+/// never reads its body must not bypass its size limit.
+pub(crate) async fn validate_unparsed(body: Body, limit: Option<usize>) -> Result<Option<tokio::fs::File>, BodyError> {
     if body.is_end_stream() {
-        return Ok(body);
+        return Ok(None);
     }
     let mut body = match limit {
         Some(limit) => Body::new(http_body_util::Limited::new(body, limit)),
@@ -186,17 +186,7 @@ pub(crate) async fn validate_unparsed(body: Body, limit: Option<usize>) -> Resul
         }
     }
     file.seek(std::io::SeekFrom::Start(0)).await?;
-    let stream = futures_util::stream::try_unfold(file, |mut file| async move {
-        let mut chunk = vec![0; 64 * 1024];
-        let size = file.read(&mut chunk).await?;
-        if size == 0 {
-            Ok::<_, std::io::Error>(None)
-        } else {
-            chunk.truncate(size);
-            Ok(Some((Bytes::from(chunk), file)))
-        }
-    });
-    Ok(Body::from_stream(stream))
+    Ok(Some(file))
 }
 
 fn read_error(mut error: &(dyn std::error::Error + 'static)) -> BodyError {

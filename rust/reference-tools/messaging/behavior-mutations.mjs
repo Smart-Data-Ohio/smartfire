@@ -6,11 +6,14 @@ import {mutationTarget} from './behavior-discrimination.mjs';
 import {WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motionCases} from './behavior-motion.mjs';
 import {actionMutations} from './behavior-action-mutations.mjs';
+import {RELEASE_SCOPE_MUTATION} from './behavior-native-release.mjs';
 const list='controllers/message_list_controller-';
 const actions='controllers/message_actions_controller-';
 const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
+  ['uploading a fresh video in the thread composer',['native-upload']],
+  ['late upload progress preserves a delivered attachment and reply preview',['native-upload']],
   ...actionMutations,
   ['From Google Drive starts the legacy picker flow',['messages-','.message__quick-reaction {','.drive-picker__item { opacity: 0 !important; }\n.message__quick-reaction {']],
   ...['attach Drive files from the picker, send textless, and remove through edit','edit a room message in the composer and remove one of two attachments'].map(name=>[name,['messages-','.message__quick-reaction {','.drive-attachments .drive-chip__name { opacity: 0 !important; }\n.message__quick-reaction {']]),
@@ -119,6 +122,7 @@ const mutations=new Map([
 // defects. Keep source text intact while removing only its keyword styling.
 const missingKeyword=keyword=>['models/code_highlighter-','span.className = "code-token"',`span.className = token.content.trim() === "${keyword}" ? "missing-keyword-token" : "code-token"`];
 const reviewMutations=new Map([
+  ['a release click landing on the just-opened menu does not activate it',new Map([['unrelated-hidden-context',RELEASE_SCOPE_MUTATION]])],
   ...['assigned owner can change work status but cannot reassign it','a member who cannot manage the thread cannot assign an agent'].map(name=>[name,new Map([['wrong-permission-status',['work-controller-permission-response']]])]),
   ['work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable',new Map([['wrong-validation-status',['work-controller-permission-response']]])],
   ['search results highlight code on initial load and after returning to the channel',new Map([['missing-const',missingKeyword('const')]])],

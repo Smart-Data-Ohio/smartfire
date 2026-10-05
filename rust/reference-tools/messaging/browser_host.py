@@ -1,5 +1,6 @@
 """Build the existing TestApp boundary from reproducible, tools-only test inputs."""
 import json
+import shlex
 from pathlib import Path
 import subprocess
 
@@ -12,7 +13,7 @@ def prepare_source(root):
     paths = subprocess.check_output(["git", "ls-files", "rust", "public/500.html"], cwd=root, text=True).splitlines()
     wanted = [Path(path).relative_to("rust") for path in paths
               if path.startswith(("rust/crates/", "rust/vectors/", "rust/test-support/", "rust/reference-tools/views/agents_ui/")) or
-              path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference",
+              path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference", "rust/parity/reference.sha",
                        "rust/reference-tools/messaging/older_provider_callbacks.rb")]
     expected = set(wanted)
     if generated.exists():
@@ -28,7 +29,9 @@ def prepare_source(root):
             if b"async fn ws8bm_browser_host_without_jobs()" not in content:
                 content += (source / "reference-tools/messaging/browser-host.rs").read_bytes()
             content = content.replace(b"    let front = campfire_kit::front::FrontConfig::from_env();", b"    ws8bm_install_drive_client(&app);\n    let front = campfire_kit::front::FrontConfig::from_env();")
+            content = content.replace(b"        app.booted.router.clone(),", b"        app.booted.router.clone().merge(ws8bm_attachment_job_router(&app)),")
             content += (source / "reference-tools/messaging/browser-drive-client.rs").read_bytes()
+            content += (source / "reference-tools/messaging/browser-attachment-jobs.rs").read_bytes()
         if not path.exists() or path.read_bytes() != content:
             path.write_bytes(content)
     # Main's cfg(test) modules also read tracked agents_ui cast/replay inputs
@@ -49,9 +52,12 @@ def prepare_source(root):
 def build_host(root, env):
     source = root / "rust"
     generated = prepare_source(root)
-    host_env = dict(env, CAMPFIRE_REFERENCE=str(root),
-                    CARGO_TARGET_DIR=str(Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve()))
-    command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2",
+    # A generated package has the same Cargo identity as the workspace app.
+    # Sharing its test executable with nextest replaces a running suite's
+    # binary, despite different source roots. Keep this cache under target/.
+    host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
+    host_env = dict(env, CAMPFIRE_REFERENCE=str(root), CARGO_TARGET_DIR=str(host_target))
+    command = shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["test", "--locked", "-j2",
                "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
                "--no-run", "--message-format=json"]
     result = subprocess.run(command, cwd=root, env=host_env, stdout=subprocess.PIPE, text=True)

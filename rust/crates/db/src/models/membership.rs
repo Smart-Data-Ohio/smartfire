@@ -489,6 +489,24 @@ impl Membership {
             super::stage::host_departed(tx,self.room_id,self.user_id,&super::room_delete::HuddleConfig::from_env())?;
         }
         let (user_id, room_id) = (self.user_id, self.room_id);
+        // Membership#sync_removed_room_calendar_entries reads the final committed
+        // entries. Prepare durable intents from that same final state so an
+        // enqueue rejection rolls back the removal (the WS17 queue contract).
+        tx.before_commit_record_latest("membership_calendar_removal", self.id, move |tx| {
+            let event_ids = query_all(
+                tx.conn(),
+                "SELECT c.event_id FROM event_calendar_entries c JOIN events e ON e.id=c.event_id WHERE c.user_id=? AND e.room_id=? ORDER BY c.id",
+                [user_id, room_id],
+                |row| row.get::<_, i64>(0),
+            )?;
+            for event_id in event_ids {
+                tx.emit_after_commit(Event::job(&crate::models::calendar_event::SyncEntryJob {
+                    event_id,
+                    user_id,
+                }));
+            }
+            Ok(())
+        })?;
         tx.after_commit(move |tx| {
             // `dom_id(room, :list)` raises for a room that's gone, which the callback rescues.
             if let Some(room) = Room::find_by_id(tx.conn(), room_id)? {
