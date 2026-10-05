@@ -41,6 +41,13 @@ enum Surface {
     Both,
 }
 impl State {
+    #[cfg(test)]
+    pub(crate) fn fixture_snapshot(&self) -> Self {
+        Self {
+            reader: RwLock::new(self.reader.read().unwrap_or_else(|p| p.into_inner()).clone()),
+        }
+    }
+
     /// Share the booted owner service, including its configured network.
     pub fn live(accounts: super::github::accounts::Accounts) -> Self {
         let state = Self::default();

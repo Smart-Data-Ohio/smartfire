@@ -32,7 +32,7 @@ impl Fresh {
         })
         .unwrap();
         let booted = app::boot(config).await.unwrap();
-        let app::Booted { app, router, jobs } = booted;
+        let app::Booted { app, router, jobs, .. } = booted;
         jobs.shutdown(std::time::Duration::from_secs(1)).await;
         Self {
             app,

@@ -670,3 +670,98 @@ async fn ws11_bot_client_id_coercion_matches_rails_lookup_and_storage() {
         }
     }
 }
+
+/// Registers a workspace (custom, non-built-in) icon so `Icons.find` resolves it.
+async fn custom_icon_message(app: &TestApp, body: &str) -> i64 {
+    let body = body.to_string();
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "INSERT INTO workspace_icons (name,title,creator_id,created_at,updated_at) VALUES ('acme_brand','Acme',?,?,?)",
+                (DAVID, tx.now(), tx.now()),
+            )?;
+            let message = Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some(body),
+                    client_message_id: Some("custom-icon-emoji".into()),
+                    ..Default::default()
+                },
+            )?;
+            Ok(message.id)
+        })
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn message_of_only_a_custom_icon_shortcode_is_emoji_only_like_rails() {
+    // lib/rails_ext/string.rb: `all_emoji?` accepts `:name:` when `Icons.find(name)` resolves,
+    // and Icons.find covers workspace icons as well as the built-in catalog.
+    let app = TestApp::boot().await.unwrap();
+    let id = custom_icon_message(&app, ":acme_brand:").await;
+    let other = app
+        .db()
+        .write(|tx| {
+            Ok(Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some(":acme_unknown:".into()),
+                    client_message_id: Some("custom-icon-plain".into()),
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    let runtime = app.booted.app.clone();
+    let (custom, unknown) = app
+        .db()
+        .read(move |conn| {
+            let p = crate::controllers::presenters::Presenter::new(conn, &runtime, None);
+            Ok((p.message(&Message::find(conn, id)?)?.all_emoji, p.message(&Message::find(conn, other)?)?.all_emoji))
+        })
+        .await
+        .unwrap();
+    assert!(custom, "a message of only a registered workspace icon is emoji-only");
+    assert!(!unknown, "an unregistered shortcode is plain text");
+    let page = app.david().get(&format!("/rooms/{ALL_TALK}")).await.text();
+    // The DOM id is the client message id (MessagesHelper#message_tag).
+    let opening = |client: &str| {
+        let start = page.find(&format!(r#"id="message_{client}""#)).expect("message rendered on the room page");
+        page[page[..start].rfind('<').unwrap()..start + page[start..].find('>').unwrap()].to_string()
+    };
+    let (emoji, plain) = (opening("custom-icon-emoji"), opening("custom-icon-plain"));
+    assert!(emoji.contains(r#"class="message message--emoji""#), "{emoji}");
+    assert!(plain.contains(r#"class="message""#), "{plain}");
+}
+
+#[tokio::test]
+async fn boost_of_only_a_custom_icon_shortcode_is_emoji_only_like_rails() {
+    let app = TestApp::boot().await.unwrap();
+    let id = custom_icon_message(&app, "Boost target").await;
+    app.db()
+        .write(move |tx| {
+            Boost::create(tx, id, DAVID, ":acme_brand:")?;
+            Boost::create(tx, id, JASON, ":acme_unknown:")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let runtime = app.booted.app.clone();
+    let boosts = app
+        .db()
+        .read(move |conn| {
+            let p = crate::controllers::presenters::Presenter::new(conn, &runtime, None);
+            Ok(p.boosts(&Message::find(conn, id)?)?.into_iter().map(|b| (b.content, b.all_emoji)).collect::<Vec<_>>())
+        })
+        .await
+        .unwrap();
+    assert!(boosts.contains(&(":acme_brand:".to_string(), true)), "{boosts:?}");
+    assert!(boosts.contains(&(":acme_unknown:".to_string(), false)), "{boosts:?}");
+}

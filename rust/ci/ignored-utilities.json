@@ -34,5 +34,11 @@
     "package": "campfire",
     "binary": "campfire",
     "test": "controllers::presenters::test_support::ws8bm_browser_host_without_jobs"
+  },
+  {
+    "path": "crates/campfire/src/controllers/ledger_browser_tests/lifecycle_host.rs",
+    "package": "campfire",
+    "binary": "campfire",
+    "test": "controllers::ledger_browser_tests::lifecycle_host::original_ledger_injected_clock_host"
   }
 ]

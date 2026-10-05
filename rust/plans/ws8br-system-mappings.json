@@ -27,21 +27,21 @@
       ],
       "status": "passed from fresh clone at ad4ffef1",
       "setup": "Replace original fixture favorites/category writes with actual UI setup; restore favorites and remove categories through real controllers between declarations. Synthetic HTML5 drag events are the original Rails interaction.",
-      "remaining": [
-        "muted rooms dim and stay quiet until mentioned"
-      ]
+      "remaining": [],
+      "additional_assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-lifecycle-receipts.json#muted-room-sequence"
     }
   ],
-  "partial": "Original phone/header/member/pins aggregate browser declarations and the muted-room delivery sequence still need individual assertion receipts. The eight sidebar controller originals now have complete assertion mappings and actual nextest passes in C; these do not substitute for their interacting browser counterparts.",
+  "partial": false,
   "cutover_reconciliation": {
-    "date": "2026-10-04",
+    "date": "2026-10-05",
     "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
-    "partial": true,
-    "reason": "Configured Huddle source/header/sidebar APIs are on main; the historical unmerged-owner blocker is superseded. Exact original browser receipts remain incomplete. Muted-room delivery is still an unexecuted full browser sequence here, not proved absent.",
+    "partial": false,
+    "reason": "Exact named browser receipts close phone/header/member/pins aggregate gaps and the muted delivery sequence; exclusions retain their original dispositions.",
     "remaining_manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-remaining.json",
     "current_controller_report": "rust/plans/ledger-ws8br-ws17-ws11ui-c-report.md",
-    "controller_receipts_do_not_close_aggregate_browser_mappings": true
+    "controller_receipts_do_not_close_aggregate_browser_mappings": true,
+    "current_browser_report": "rust/plans/ledger-ws8br-ws17-ws11ui-d-report.md"
   },
   "history": [
     {
@@ -52,7 +52,20 @@
       "date": "2026-10-04",
       "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
       "previous_partial": "Original phone/header/member/pins declaration receipts remain partial, even though real configured Huddle source APIs now exist. Eight exact controller/sidebar receipts and the muted-room sequence remain acceptance gaps; see the cutover remaining manifest. No absent-owner implementation blocker is claimed."
+    },
+    {
+      "date": "2026-10-05",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+      "previous_partial": "Original phone/header/member/pins aggregate browser declarations and the muted-room delivery sequence still need individual assertion receipts. The eight sidebar controller originals now have complete assertion mappings and actual nextest passes in C; these do not substitute for their interacting browser counterparts."
     }
   ],
-  "sidebar_original_assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json (S0001-S0008)"
+  "sidebar_original_assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json (S0001-S0008)",
+  "aggregate_assertion_receipts": [
+    "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json",
+    "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json",
+    "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json",
+    "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json",
+    "rust/plans/ledger-ws8br-ws17-ws11ui-d-lifecycle-receipts.json"
+  ],
+  "aggregate_disposition": "All active named declarations covered through exact per-assertion maps; three excluded geometry declarations remain outside the phase."
 }

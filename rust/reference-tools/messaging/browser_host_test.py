@@ -9,6 +9,29 @@ from browser_host import prepare_source, build_host, include_inputs, audit_build
 
 
 class HostSourceTests(unittest.TestCase):
+    def test_follows_tracked_literal_include_inputs_outside_the_copy_prefixes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = {
+                "public/500.html": b"original error page",
+                "rust/crates/campfire/src/receipt.rs":
+                    b'include_str!(\n "../../../plans/receipt.json"\n);\n'
+                    b'include_bytes!("../../../reference-tools/original.rb");',
+                "rust/plans/receipt.json": b'{"original_assertions":3}',
+                "rust/reference-tools/original.rb": b"assert rendered_body",
+            }
+            for relative, content in inputs.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            with patch("browser_host.subprocess.check_output", return_value="\0".join(inputs)):
+                generated = prepare_source(root)
+                self.assertEqual((generated / "plans/receipt.json").read_bytes(), inputs["rust/plans/receipt.json"])
+                self.assertEqual((generated / "reference-tools/original.rb").read_bytes(), inputs["rust/reference-tools/original.rb"])
+            with patch("browser_host.subprocess.check_output", return_value="\0".join(k for k in inputs if k != "rust/plans/receipt.json")):
+                with self.assertRaisesRegex(RuntimeError, "receipt.rs: tracked compile-time include missing: rust/plans/receipt.json"):
+                    prepare_source(root)
+
     def test_generated_pwa_module_keeps_its_real_relative_compile_inputs(self):
         project = Path(__file__).resolve().parents[3]
         module = Path("rust/crates/campfire/src/controllers/pwa.rs")

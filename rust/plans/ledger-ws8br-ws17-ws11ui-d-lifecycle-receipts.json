@@ -1,0 +1,247 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "records": [
+    {
+      "id": "muted-room-sequence",
+      "file": "test/system/sidebar_organize_test.rb",
+      "line": 60,
+      "test": "muted rooms dim and stay quiet until mentioned",
+      "source_sha256": "db6a1bba4f7576a3ace15dd368e3b44e195bc2b45c82d32bc9aa7a4b7fc76286",
+      "record_status": "closed",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
+      ],
+      "browser_case": "muted-delivery",
+      "browser_mode": "lifecycle",
+      "assertions": [
+        {
+          "line": 70,
+          "ruby": "assert_selector \"#sidebar a.muted[data-room-id='#{designers.id}']\", wait: 10",
+          "assertion_source": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:61",
+          "assertion_anchor": "await selector(file,70,'#sidebar a.muted[data-room-id=\"'+labels['rooms.designers']+'\"]',null,{wait:10000})",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:21",
+              "anchor": "function equal(file,line,actual,expected) {assert.deepEqual(actual,expected,`${file}:${line}: original assertion`);console.log(`ORIGINAL_ASSERTION ${file}:${line}`)}"
+            }
+          ]
+        },
+        {
+          "line": 77,
+          "ruby": "assert_room_read designers",
+          "assertion_source": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:67",
+          "assertion_anchor": "console.log(`ORIGINAL_ASSERTION ${file}:77`)",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:21",
+              "anchor": "function equal(file,line,actual,expected) {assert.deepEqual(actual,expected,`${file}:${line}: original assertion`);console.log(`ORIGINAL_ASSERTION ${file}:${line}`)}"
+            }
+          ]
+        }
+      ],
+      "helper_expansion": [
+        {
+          "line": 148,
+          "ruby": "assert_selector \"#room-menu:not([hidden])\", wait: 5",
+          "rust_assertion": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:59",
+            "anchor": "await selector(file,148,'#room-menu:not([hidden])',null,{wait:5000})"
+          }
+        },
+        {
+          "ruby_file": "test/test_helpers/system_test_helper.rb",
+          "line": 127,
+          "ruby": "assert_selector \".rooms a\", class: \"!unread\", text: \"#{room.name}\", wait: 5",
+          "rust_assertion": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:66",
+            "anchor": "await selector('test/test_helpers/system_test_helper.rb',127,'.rooms a:not(.unread)','Designers',{wait:5000})"
+          }
+        },
+        {
+          "ruby_file": "test/test_helpers/system_test_helper.rb",
+          "line": 131,
+          "ruby": "assert_selector \".rooms a\", class: \"unread\", text: \"#{room.name}\", wait: 5",
+          "rust_assertion": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:36",
+            "anchor": "await selector('test/test_helpers/system_test_helper.rb',131,'.rooms a.unread',room,{wait:1000})"
+          }
+        }
+      ],
+      "setup_expansion": [
+        {
+          "ruby_file": "test/test_helpers/system_test_helper.rb",
+          "line": 65,
+          "ruby": "assert_selector \"a.btn\", text: \"Designers\", wait: 10",
+          "rust_assertion": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:44",
+            "anchor": "await selector('test/test_helpers/system_test_helper.rb',65,'a.btn','Designers',{wait:10000})"
+          }
+        },
+        {
+          "ruby_file": "test/test_helpers/system_test_helper.rb",
+          "line": 65,
+          "ruby": "assert_selector \"a.btn\", text: \"Designers\", wait: 10",
+          "rust_assertion": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:49",
+            "anchor": "await selector('test/test_helpers/system_test_helper.rb',65,'a.btn','Designers',{wait:10000})"
+          }
+        }
+      ]
+    },
+    {
+      "id": "calendar-browser-sequence",
+      "file": "test/system/meeting_status_test.rb",
+      "line": 7,
+      "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
+      "source_sha256": "b671812bd06b37e5b515832c8cfea0ddb98ea43c01777e2499ebc57d6b1ab52a",
+      "record_status": "closed",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
+      ],
+      "browser_case": "calendar-lifecycle",
+      "browser_mode": "lifecycle",
+      "assertions": [
+        {
+          "line": 24,
+          "ruby": "assert_selector \".user-status-badge\", text: \"In a meeting\"",
+          "assertion_source": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:85",
+          "assertion_anchor": "await selector(file,24,'.user-status-badge','In a meeting')",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:21",
+              "anchor": "function equal(file,line,actual,expected) {assert.deepEqual(actual,expected,`${file}:${line}: original assertion`);console.log(`ORIGINAL_ASSERTION ${file}:${line}`)}"
+            }
+          ]
+        },
+        {
+          "line": 30,
+          "ruby": "assert_no_selector \".user-status-badge__custom\", text: \"In a meeting\"",
+          "assertion_source": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:89",
+          "assertion_anchor": "await selector(file,30,'.user-status-badge__custom','In a meeting',{absent:true})",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:21",
+              "anchor": "function equal(file,line,actual,expected) {assert.deepEqual(actual,expected,`${file}:${line}: original assertion`);console.log(`ORIGINAL_ASSERTION ${file}:${line}`)}"
+            }
+          ]
+        }
+      ],
+      "helper_expansion": [
+        {
+          "line": 49,
+          "ruby": "assert true",
+          "rust_assertion": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:82",
+            "anchor": "equal(file,49,true,true);state.push({kind:'calendar-enabled'})"
+          }
+        }
+      ],
+      "setup_expansion": [
+        {
+          "ruby_file": "test/test_helpers/system_test_helper.rb",
+          "line": 65,
+          "ruby": "assert_selector \"a.btn\", text: \"Designers\", wait: 10",
+          "rust_assertion": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:44",
+            "anchor": "await selector('test/test_helpers/system_test_helper.rb',65,'a.btn','Designers',{wait:10000})"
+          }
+        }
+      ],
+      "interaction_helper_sources": [
+        {
+          "ruby_file": "test/system/meeting_status_test.rb",
+          "line": 46,
+          "ruby": "flunk message if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline",
+          "rust_helper": {
+            "path": "rust/reference-tools/users/ledger_browser_lifecycle.mjs:81",
+            "anchor": "while(database.prepare('SELECT meeting_status_enabled FROM users WHERE id=?').get(labels['users.david']).meeting_status_enabled!==1) {assert.ok(performance.now()<deadline,`${file}:46: original assertion meeting status was not enabled`);await new Promise(r=>setTimeout(r,50))}"
+          }
+        }
+      ]
+    }
+  ],
+  "fixture_bridge": "Real Message::create + Broadcasts::message_create; Calendar::MeetingRefresh fetch/parse/cache + minute dispatcher; both render visits share the injected mutable clock. Rails remains unchanged outside tools-only injected clock/fixture configuration.",
+  "implementation_sha256": {
+    "rust/crates/campfire/src/app.rs": "71362d0462aebb65fb0433e89241bdd2c62f399392ba04b0b398f8805813af26",
+    "rust/crates/campfire/src/concerns/sudo.rs": "ec7adfc5c757e4390dee78d17ffcc76229b0560a32e5f47ebb4d9962fc418fd2",
+    "rust/crates/campfire/src/concerns/two_factor.rs": "1e377d16e1f0cb442d8f8cd163a225c940e6e9b4ae02f3df940c307426e9bf5c",
+    "rust/crates/campfire/src/concerns.rs": "17e5ccb3a48b2adddeccf557b33f49ef679b0c709e61ca1f4acf1300b721735f",
+    "rust/crates/campfire/src/controllers/ledger_browser_tests/lifecycle_host.rs": "f5450996c2e6b5e49e6e7808c27367de05eb178f3b390872e93b1fa5ed997169",
+    "rust/crates/campfire/src/controllers/ledger_browser_tests.rs": "cfbea6400323a763395f2223f503a92314dc272830a5cbc255243612d3fe0add",
+    "rust/crates/campfire/src/controllers/presenters/agent_payload.rs": "3913e8411d74037cfde6bd66f5f04f7987a97f30e341f3e3bfbc5bd8e318290a",
+    "rust/crates/campfire/src/controllers/presenters/view_context.rs": "7105fec07951d3d9888f830a3ee74fac52e5953f8f5bcd2ae9861e0aac4fdd8c",
+    "rust/crates/campfire/src/controllers/presenters.rs": "4642f9548a683a5309a5e521eb61e01e1de7fb4c14754ab8a0f49813d5a290ee",
+    "rust/crates/campfire/src/integrations/agent_repositories.rs": "a67cb76aae3607d3f21bb0dacca67c58ea84f65e1acd06559bff0d4f6e95eb90",
+    "rust/crates/campfire/src/jobs.rs": "24b28310e823fbbbc4d363b874005c7bae0ba09744ef781812e7fc62288d6858",
+    "rust/crates/campfire/src/mail.rs": "b5c1ad80a301cba4f499c602184e7ad2416f38666d975cd56caa72953831a609",
+    "rust/crates/kit/src/app.rs": "2b276190d8a6a9db5001e7cb1833e320bc54b97fa43a2acfe8f7ba3f1c228620",
+    "rust/crates/views/src/helpers/request_forgery.rs": "321bdc55af674167cddfaa5f083c3879069d7229fca1a882bcc4f3cb797bea29",
+    "rust/parity/seeds/ledger_originals.rb": "65a6a622774359d5715c79dbc24474280edfb266f979cc1ef8a7045f10b58bd0",
+    "rust/reference-tools/users/browser_diagnostics.mjs": "749ac61791a6e93a33d62bd32ab2b8fe7f170bdd4f1037481b239b5479872c92",
+    "rust/reference-tools/users/browser_navigation.mjs": "a7524911f16a7a861bdd0921b913e161fc4fe868922585deeb801e3f35935ea1",
+    "rust/reference-tools/users/browser_port_leases.py": "ad427449ab5791ce970c06bb8277e15d101080663e4670a8a11297087a4a4c7f",
+    "rust/reference-tools/users/ledger_browser_lifecycle.mjs": "d6322e0c1807653664d89960beed7a4c8e9430474db7e5a0d22e0d7668dd133a",
+    "rust/reference-tools/users/ledger_browser_lifecycle.py": "659cc633eacf603da130392057e9da673d74c79de8fd443fc107c069c54b9583",
+    "rust/reference-tools/users/ledger_browser_lifecycle.rb": "e24f39f18cf55774a90f1c98e8f41be6e8bbe5ba4a50ead3b463688a84306984",
+    "rust/reference-tools/users/ledger_browser_lifecycle_initializer.rb": "7007620706a445ea38cca3612e7b9a49bc4a3f0b6d3838874a6186132443ba6f",
+    "rust/reference-tools/users/ledger_browser_members.mjs": "f765047fdf21cde01e7b4a16f8ae7c1d0b3ae26de565f4612c0202daa2e298f7",
+    "rust/reference-tools/users/ledger_browser_members.py": "3dc7eebc3416dc46ab7bf094ba2e009a9aae261286981de7cbb5240cd3fe23f0",
+    "rust/reference-tools/users/ledger_browser_navigation.mjs": "6887af4402acfb55ae1fb73d9fc74289b8eb019865264974ab8f70cce9150a7b",
+    "rust/reference-tools/users/ledger_browser_navigation.py": "12984c69a6672e874324f6779c02f793160e0fa46927ee0f9389b09274fcaf3a",
+    "rust/reference-tools/users/ledger_browser_surfaces.mjs": "09daff9ef0868f21bb3ed59c5318a9f3bd2e5180ff9b89b5530e4439636b5902",
+    "rust/reference-tools/users/ledger_browser_surfaces.py": "cdd82ada8811169bde6ce60166a0740347bf4e4f5a553d03092d37bdabbd623a",
+    "rust/reference-tools/users/ledger_browser_surfaces_initializer.rb": "67fc07ec70d62f68bc8ab8d98c7f3ad2cc1281167b8e3b2712fa131004414ae7",
+    "rust/reference-tools/users/ledger_browser_viewports.mjs": "1b2054c4fe8569b9d1b5b61af9cf1ae9d6bf963259d52d8ad230c768b52b0b89",
+    "rust/reference-tools/users/ledger_browser_viewports.py": "fd7fe19e18aca44666c0ab7ed720eb02f23d61bad938bf7385946344d33f3182",
+    "rust/reference-tools/users/ledger_fixture_actions.rb": "8434412e302b11682e47d8eb4ae981f8ab752ed838c02f75ac265c473205f837",
+    "rust/reference-tools/users/ledger_fixture_bridge.mjs": "1581a05e896bf6ae69d416916d75964ceac529e8bd2cf3a9fafe9db4b881fa28",
+    "rust/reference-tools/users/ledger_fixture_cache_initializer.rb": "2d36916a396dfface53dad62cf3b0a00ce60d17f3cd8c810e6828f13985b08e2",
+    "rust/reference-tools/users/ledger_fixture_rpc_initializer.rb": "14d308689a78d7d42abc5bc75daeb4441479ed3b65489d7e6ba91d0b0ca40ffa",
+    "rust/reference-tools/users/ledger_fixture_state.py": "2ebe1f14966c37b82eec0c1c8b2b387a082f6eee51dd679411aab4dda73c17be",
+    "rust/reference-tools/users/ledger_fixture_state_test.py": "07f57d9811f22b0e635da13fdbdf18ba54d7abf37bcfa9e9b395259471320440",
+    "rust/reference-tools/users/original-test-session-controller.provenance.json": "6f3eb8a58ed4f517fa92a243934edc870361b31ba2e594502e5fc13572caa656",
+    "rust/reference-tools/users/original-test-session-controller.rb": "412f0769c15b8c61421b475a0f74c2ea6b4a0e04e6acf2941d401f61243df4ab",
+    "rust/reference-tools/users/original_browser_network.mjs": "6a4bd13b6aa839d90f8a636ce25e4fe71ecc6ec24f37c14d5ab3930ef54aa547",
+    "rust/reference-tools/users/reference_runtime.py": "8cd50e8e6fa676b8654e6e7e1c787217076ca518516911a3b35bdf023ee29b96",
+    "rust/reference-tools/users/run_ledger_browser_assertions.py": "9f96a4395fda06f01cac80d1db304084efc3e5a504de9a72a86f4259700c2551",
+    "rust/reference-tools/users/selenium-atoms.LICENSE": "568a3599346856120dede4ccbc2864436f3d0a998b2155fe6eac80a51c4b0181",
+    "rust/reference-tools/users/selenium-atoms.LICENSE.sizzle": "7a1cdaeb0f54a963261d6856842249ef7fd52d49162c2996f9cef20eb7f40cfa",
+    "rust/reference-tools/users/selenium-atoms.LICENSE.wgxpath": "580b8af1dced4e95e1d8ffbc8182d4cb4e67724f9450df2503a692b79773d00b",
+    "rust/reference-tools/users/selenium-get-text.js": "22d0b5a41a63dc87a170054639613811e524ac3459839c632d7d1debfa4a2b82",
+    "rust/reference-tools/users/selenium-get-text.native-proof.json": "047b627a257793df092e15ff492925098e2249eac59a3290b813458d2c1f4b5f",
+    "rust/reference-tools/users/selenium-get-text.provenance.json": "d4827f59cc5a6334424c7fcac45bb4e20c65cdd97c75671db89737739aec807c",
+    "rust/reference-tools/users/selenium-is-displayed.js": "ae26018c01cd27448b250f8e55a094cbfcd2e2cbbe171c78aaa906e1b5c3ed7c",
+    "rust/reference-tools/users/selenium-is-displayed.provenance.json": "de03db872d3582bae2af010c7e99e0e88bc3689ae0339cbd94c0ea0cbd0ea02c",
+    "rust/reference-tools/users/selenium_displayed.mjs": "3d1df36a165925d23490a61473c173f63745e31384cf5f752130f737a0877124"
+  },
+  "fixture_foundation": "rust/parity/seeds/ledger_originals.rb",
+  "fixture_foundation_sha256": "65a6a622774359d5715c79dbc24474280edfb266f979cc1ef8a7045f10b58bd0",
+  "paired_execution_gate": {
+    "rounds": [
+      {
+        "run_id": "c95a5c36-6637-419e-b130-fb88f47c175d",
+        "profile": "default",
+        "threads": 4,
+        "wrappers_passed": 4,
+        "wrappers_failed": 0,
+        "browser_case_pairs": 107,
+        "browser_executions": 214,
+        "local_log": "rust/target/ledger-d/wrappers-final-1.log",
+        "log_sha256": "39129945b4d5ff08d69a353b5900704fac2a24c2882482250ecc0ea7d4e049ab"
+      },
+      {
+        "run_id": "684ed862-efc4-4770-8a48-93e6ac108291",
+        "profile": "ci",
+        "threads": 4,
+        "wrappers_passed": 4,
+        "wrappers_failed": 0,
+        "browser_case_pairs": 107,
+        "browser_executions": 214,
+        "local_log": "rust/target/ledger-d/wrappers-final-2.log",
+        "log_sha256": "f414d2a990734de96e3340c2068aa8a3e03b4ffee684129783234b0aa30af58b"
+      }
+    ],
+    "receipt_checker": "Both complete current logs passed check-ledger-d-receipts.py; implementation digests unchanged between executions.",
+    "registered_wrapper": "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
+  }
+}

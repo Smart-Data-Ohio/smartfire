@@ -1,0 +1,6 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "source": "test/support/test_session_controller.rb",
+  "sha256": "412f0769c15b8c61421b475a0f74c2ea6b4a0e04e6acf2941d401f61243df4ab",
+  "use": "Unchanged pinned Rails test-environment route dependency excluded by the production Dockerfile. Carried into the tools-only reference image."
+}

@@ -166,7 +166,7 @@ for record in receipt_audit["records"]:
         covered.get(record["file"].removeprefix("test/"), set()).discard(record["test"])
 
 # Current per-assertion receipts supersede historical broad and reopened claims.
-for manifest_name in ["ledger-ws8br-ws17-ws11ui-c-receipts.json", "ledger-ws8br-ws17-ws11ui-c-browser-receipts.json"]:
+for manifest_name in ["ledger-ws8br-ws17-ws11ui-c-receipts.json", "ledger-ws8br-ws17-ws11ui-c-browser-receipts.json", "ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json"]:
     manifest_path = root / "plans" / manifest_name
     if manifest_path.exists():
         for record in json.loads(manifest_path.read_text())["records"]:

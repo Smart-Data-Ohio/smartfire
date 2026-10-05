@@ -1,0 +1,962 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "counting": "15 named producer mutations across 11 distinct original declarations; 4 scope/geometry variants add discrimination without duplicate closure credit.",
+  "browser_driver_sha256": "f765047fdf21cde01e7b4a16f8ae7c1d0b3ae26de565f4612c0202daa2e298f7",
+  "binary": "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-main-ci/rust/target/debug/deps/campfire-205f5301470b6db4",
+  "reference_image": "review236-reference:78b9b1546",
+  "fixture_foundation": "rust/parity/seeds/ledger_originals.rb",
+  "fixture_foundation_sha256": "65a6a622774359d5715c79dbc24474280edfb266f979cc1ef8a7045f10b58bd0",
+  "mutations": [
+    {
+      "mutation": "member-count",
+      "closure_id": "P0323",
+      "browser_case": "member-plain",
+      "assertion": "test/system/member_select_mode_test.rb:46",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "multi-select.update",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:46: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "1da5b1c3eebe9453fd4aae91ba4259bbc79d0f572dfa8289f1b103fe0c424636",
+      "failure_output_sha256": "1da5b1c3eebe9453fd4aae91ba4259bbc79d0f572dfa8289f1b103fe0c424636",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-plain: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-plain: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-plain: False"
+    },
+    {
+      "mutation": "member-hidden-checkbox",
+      "closure_id": "P0324",
+      "browser_case": "member-modifiers",
+      "assertion": "test/system/member_select_mode_test.rb:60",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "display": "none"
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:60: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "616d15ffdefdbed37522fe4c0d088b1e021bcdcffc92bc3d7f5e63c905873370",
+      "failure_output_sha256": "616d15ffdefdbed37522fe4c0d088b1e021bcdcffc92bc3d7f5e63c905873370",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-modifiers: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-modifiers: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-modifiers: False"
+    },
+    {
+      "mutation": "member-inline-zero",
+      "closure_id": "P0322",
+      "browser_case": "member-inline",
+      "assertion": "test/system/member_select_mode_test.rb:442",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "matched": 4,
+        "width": 0,
+        "laterWidth": 138.234375
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:442: original assertion\n+ actual - expected\n\n+ [\n+   '127326141'\n+ ]\n- []\n",
+      "evidence_sha256": "156495e753beaec8182fbdae5547723d0f24296233c741099b0bf7260b8ad422",
+      "failure_output_sha256": "156495e753beaec8182fbdae5547723d0f24296233c741099b0bf7260b8ad422",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-inline: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-inline: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-inline: False"
+    },
+    {
+      "mutation": "member-focus",
+      "closure_id": "P0329",
+      "browser_case": "member-exit-focus",
+      "assertion": "test/system/member_select_mode_test.rb:159",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "multi-select.clear",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:159: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "b087e839c0075f485b6297e6c4c8e931d982e58e46a73e95609e1615d429da01",
+      "failure_output_sha256": "b087e839c0075f485b6297e6c4c8e931d982e58e46a73e95609e1615d429da01",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-exit-focus: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-exit-focus: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-exit-focus: False"
+    },
+    {
+      "mutation": "member-rerender",
+      "closure_id": "P0337",
+      "browser_case": "member-rerender",
+      "assertion": "test/system/member_select_mode_test.rb:275",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "multi-select.checkboxTargetConnected",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:275: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "606d2c95b8be105b8144fd72cc4ad62d53e17ef30ca36ccb36c0d82a1bb1d0f2",
+      "failure_output_sha256": "606d2c95b8be105b8144fd72cc4ad62d53e17ef30ca36ccb36c0d82a1bb1d0f2",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-rerender: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-rerender: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-rerender: False"
+    },
+    {
+      "mutation": "channel-presence",
+      "closure_id": "P0289",
+      "browser_case": "channel-online",
+      "assertion": "test/system/channel_members_test.rb:33",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "served members online predicate",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/channel_members_test.rb:33: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "522d66c1a487caedb8cafc1b35b0674fc73fdeea74ece97a38015ab5942d2ab8",
+      "failure_output_sha256": "522d66c1a487caedb8cafc1b35b0674fc73fdeea74ece97a38015ab5942d2ab8",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED channel-online: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust channel-online: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust channel-online: True"
+    },
+    {
+      "mutation": "channel-composer",
+      "closure_id": "P0292",
+      "browser_case": "channel-phone",
+      "assertion": "test/system/channel_members_test.rb:158",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": ".composer__send transform",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/channel_members_test.rb:158: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "9795efdb48af7ed6062c4f73acb37b8a28d3f1f2f9a03a87891d8325e5932f35",
+      "failure_output_sha256": "9795efdb48af7ed6062c4f73acb37b8a28d3f1f2f9a03a87891d8325e5932f35",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED channel-phone: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust channel-phone: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust channel-phone: True"
+    },
+    {
+      "mutation": "motion-member-shift",
+      "closure_id": "P0347",
+      "browser_case": "motion-members",
+      "assertion": "test/system/motion_test.rb:86",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "member avatar layout",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/motion_test.rb:86: original assertion\n+ actual - expected\n\n  [\n+   1216.578125,\n    1208.578125,\n    1208.578125,\n    1208.578125,\n-   1208.578125\n  ]\n",
+      "evidence_sha256": "79fa1d261a735ee0df956b3ce75ae2125873e3e1bbc8e23e5f637fad06cc94c8",
+      "failure_output_sha256": "79fa1d261a735ee0df956b3ce75ae2125873e3e1bbc8e23e5f637fad06cc94c8",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED motion-members: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust motion-members: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust motion-members: False"
+    },
+    {
+      "mutation": "motion-sticky-out-of-frame",
+      "closure_id": "P0349",
+      "browser_case": "motion-sticky",
+      "assertion": "test/system/motion_test.rb:145",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "directory bar layout",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/motion_test.rb:145: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "143cc72c17bf83621773bf164365d7e987e84be3ed0c593a8dc887e00f3bbbbd",
+      "failure_output_sha256": "143cc72c17bf83621773bf164365d7e987e84be3ed0c593a8dc887e00f3bbbbd",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED motion-sticky: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust motion-sticky: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust motion-sticky: False"
+    },
+    {
+      "mutation": "motion-menu-clamp",
+      "closure_id": "P0350",
+      "browser_case": "motion-menu",
+      "assertion": "test/system/motion_test.rb:170",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "room menu position",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/motion_test.rb:170: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "2b14adb9c8e5d3fcf68025a86aa32f5860ea244a2552fbe51297b7ee427fa9b1",
+      "failure_output_sha256": "2b14adb9c8e5d3fcf68025a86aa32f5860ea244a2552fbe51297b7ee427fa9b1",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED motion-menu: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust motion-menu: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust motion-menu: False"
+    },
+    {
+      "mutation": "motion-scroll-retention",
+      "closure_id": "P0351",
+      "browser_case": "motion-scroll",
+      "assertion": "test/system/motion_test.rb:224",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "closed scroller offset",
+        "scrollTop": 0
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/motion_test.rb:224: original assertion\n\n0 !== 400\n",
+      "evidence_sha256": "504be7bbcdcf2d91c960da9b62af7307ed0bbc19c34aed563c18eb023981ae38",
+      "failure_output_sha256": "504be7bbcdcf2d91c960da9b62af7307ed0bbc19c34aed563c18eb023981ae38",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED motion-scroll: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --controls",
+      "run_summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust motion-scroll: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust motion-scroll: False"
+    },
+    {
+      "mutation": "member-bar-scope",
+      "closure_id": "P0323",
+      "browser_case": "member-plain",
+      "assertion": "test/system/member_select_mode_test.rb:46",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "multi-select.update",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:46: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "1da5b1c3eebe9453fd4aae91ba4259bbc79d0f572dfa8289f1b103fe0c424636",
+      "failure_output_sha256": "1da5b1c3eebe9453fd4aae91ba4259bbc79d0f572dfa8289f1b103fe0c424636",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-plain: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --case member-plain --mutation member-bar-scope",
+      "run_summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-plain: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-plain: False"
+    },
+    {
+      "mutation": "member-inline-hidden",
+      "closure_id": "P0322",
+      "browser_case": "member-inline",
+      "assertion": "test/system/member_select_mode_test.rb:442",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "matched": 4,
+        "width": 0,
+        "laterWidth": 138.234375
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:442: original assertion\n+ actual - expected\n\n+ [\n+   '127326141'\n+ ]\n- []\n",
+      "evidence_sha256": "156495e753beaec8182fbdae5547723d0f24296233c741099b0bf7260b8ad422",
+      "failure_output_sha256": "156495e753beaec8182fbdae5547723d0f24296233c741099b0bf7260b8ad422",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-inline: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --case member-inline --mutation member-inline-hidden",
+      "run_summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-inline: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-inline: False"
+    },
+    {
+      "mutation": "member-inline-out-of-frame",
+      "closure_id": "P0322",
+      "browser_case": "member-inline",
+      "assertion": "test/system/member_select_mode_test.rb:442",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "matched": 4,
+        "width": 138.234375,
+        "laterWidth": 138.234375
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/member_select_mode_test.rb:442: original assertion\n+ actual - expected\n\n+ [\n+   '127326141'\n+ ]\n- []\n",
+      "evidence_sha256": "156495e753beaec8182fbdae5547723d0f24296233c741099b0bf7260b8ad422",
+      "failure_output_sha256": "156495e753beaec8182fbdae5547723d0f24296233c741099b0bf7260b8ad422",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED member-inline: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --case member-inline --mutation member-inline-out-of-frame",
+      "run_summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust member-inline: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust member-inline: False"
+    },
+    {
+      "mutation": "motion-reopen-focus",
+      "closure_id": "P0351",
+      "browser_case": "motion-scroll",
+      "assertion": "test/system/motion_test.rb:238",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "producer_observation": {
+        "producer": "reopen drawer focus",
+        "valid": true
+      },
+      "failure_output": "AssertionError [ERR_ASSERTION]: test/system/motion_test.rb:238: original assertion\n\nfalse !== true\n",
+      "evidence_sha256": "db88640d461921f8b03bcf8fffb67f229ea2885f4e71843d88e95e5666f7f13b",
+      "failure_output_sha256": "db88640d461921f8b03bcf8fffb67f229ea2885f4e71843d88e95e5666f7f13b",
+      "restoration_output": "ORIGINAL_PRODUCER_RESTORED motion-scroll: browser context disposed",
+      "restoration_method": "Each live mutation modifies the isolated page/controller or its served response. All primary and secondary browser contexts are closed; disposable seed is removed by runner finally.",
+      "command": "python3 rust/reference-tools/users/run_ledger_browser_assertions.py members --case motion-scroll --mutation motion-reopen-focus",
+      "run_summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "fixture_reset": "ORIGINAL_FIXTURE_RESET Rust motion-scroll: all original tables/FTS/sequences and renderer cache",
+      "forgery_policy": "ORIGINAL_FORGERY Rust motion-scroll: False"
+    }
+  ],
+  "invalid_controls": [],
+  "run_observations": [
+    {
+      "run": "grouped11",
+      "measured_original_windows": {
+        "1024x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 1024,
+          "width": 1024
+        },
+        "1280x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1280,
+          "width": 1280
+        },
+        "1400x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x1400": {
+          "devicePixelRatio": 1,
+          "height": 1257,
+          "outerHeight": 1400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x400": {
+          "devicePixelRatio": 1,
+          "height": 257,
+          "outerHeight": 400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1440x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1440,
+          "width": 1440
+        },
+        "320x740": {
+          "devicePixelRatio": 1,
+          "height": 597,
+          "outerHeight": 740,
+          "outerWidth": 500,
+          "width": 320
+        },
+        "360x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 360
+        },
+        "375x812": {
+          "devicePixelRatio": 1,
+          "height": 669,
+          "outerHeight": 812,
+          "outerWidth": 500,
+          "width": 375
+        },
+        "390x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "390x844": {
+          "devicePixelRatio": 1,
+          "height": 701,
+          "outerHeight": 844,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "500x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 500
+        },
+        "640x360": {
+          "devicePixelRatio": 1,
+          "height": 217,
+          "outerHeight": 360,
+          "outerWidth": 640,
+          "width": 640
+        },
+        "700x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 700,
+          "width": 700
+        },
+        "768x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 768,
+          "width": 768
+        }
+      },
+      "summary": "Original browser members: 11 producer defects rejected; 0 invalid controls",
+      "source_log_sha256": "2b34cb4af1af64e3e6ea45319c5132cd8e6f5bebb0c1821dede5f7c6ea3d67f8",
+      "fixture_policy": "Exact original credential GET/new verified session; RAILS_ENV=test; actual null fragment cache; percase original forgery policy; renderer IPC and TestAdapter."
+    },
+    {
+      "run": "member-bar-scope",
+      "measured_original_windows": {
+        "1024x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 1024,
+          "width": 1024
+        },
+        "1280x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1280,
+          "width": 1280
+        },
+        "1400x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x1400": {
+          "devicePixelRatio": 1,
+          "height": 1257,
+          "outerHeight": 1400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x400": {
+          "devicePixelRatio": 1,
+          "height": 257,
+          "outerHeight": 400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1440x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1440,
+          "width": 1440
+        },
+        "320x740": {
+          "devicePixelRatio": 1,
+          "height": 597,
+          "outerHeight": 740,
+          "outerWidth": 500,
+          "width": 320
+        },
+        "360x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 360
+        },
+        "375x812": {
+          "devicePixelRatio": 1,
+          "height": 669,
+          "outerHeight": 812,
+          "outerWidth": 500,
+          "width": 375
+        },
+        "390x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "390x844": {
+          "devicePixelRatio": 1,
+          "height": 701,
+          "outerHeight": 844,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "500x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 500
+        },
+        "640x360": {
+          "devicePixelRatio": 1,
+          "height": 217,
+          "outerHeight": 360,
+          "outerWidth": 640,
+          "width": 640
+        },
+        "700x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 700,
+          "width": 700
+        },
+        "768x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 768,
+          "width": 768
+        }
+      },
+      "summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "source_log_sha256": "da3d1f1e9e405045e8ca9104aa69393f5db86fd6fe05117ff291d588605443c4",
+      "fixture_policy": "Exact original credential GET/new verified session; RAILS_ENV=test; actual null fragment cache; percase original forgery policy; renderer IPC and TestAdapter."
+    },
+    {
+      "run": "member-inline-hidden",
+      "measured_original_windows": {
+        "1024x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 1024,
+          "width": 1024
+        },
+        "1280x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1280,
+          "width": 1280
+        },
+        "1400x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x1400": {
+          "devicePixelRatio": 1,
+          "height": 1257,
+          "outerHeight": 1400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x400": {
+          "devicePixelRatio": 1,
+          "height": 257,
+          "outerHeight": 400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1440x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1440,
+          "width": 1440
+        },
+        "320x740": {
+          "devicePixelRatio": 1,
+          "height": 597,
+          "outerHeight": 740,
+          "outerWidth": 500,
+          "width": 320
+        },
+        "360x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 360
+        },
+        "375x812": {
+          "devicePixelRatio": 1,
+          "height": 669,
+          "outerHeight": 812,
+          "outerWidth": 500,
+          "width": 375
+        },
+        "390x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "390x844": {
+          "devicePixelRatio": 1,
+          "height": 701,
+          "outerHeight": 844,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "500x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 500
+        },
+        "640x360": {
+          "devicePixelRatio": 1,
+          "height": 217,
+          "outerHeight": 360,
+          "outerWidth": 640,
+          "width": 640
+        },
+        "700x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 700,
+          "width": 700
+        },
+        "768x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 768,
+          "width": 768
+        }
+      },
+      "summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "source_log_sha256": "d6707c9433358ae234cf65b465bf3c61326850f716bf36f3700a4a449251b1c5",
+      "fixture_policy": "Exact original credential GET/new verified session; RAILS_ENV=test; actual null fragment cache; percase original forgery policy; renderer IPC and TestAdapter."
+    },
+    {
+      "run": "member-inline-out-of-frame",
+      "measured_original_windows": {
+        "1024x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 1024,
+          "width": 1024
+        },
+        "1280x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1280,
+          "width": 1280
+        },
+        "1400x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x1400": {
+          "devicePixelRatio": 1,
+          "height": 1257,
+          "outerHeight": 1400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x400": {
+          "devicePixelRatio": 1,
+          "height": 257,
+          "outerHeight": 400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1440x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1440,
+          "width": 1440
+        },
+        "320x740": {
+          "devicePixelRatio": 1,
+          "height": 597,
+          "outerHeight": 740,
+          "outerWidth": 500,
+          "width": 320
+        },
+        "360x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 360
+        },
+        "375x812": {
+          "devicePixelRatio": 1,
+          "height": 669,
+          "outerHeight": 812,
+          "outerWidth": 500,
+          "width": 375
+        },
+        "390x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "390x844": {
+          "devicePixelRatio": 1,
+          "height": 701,
+          "outerHeight": 844,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "500x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 500
+        },
+        "640x360": {
+          "devicePixelRatio": 1,
+          "height": 217,
+          "outerHeight": 360,
+          "outerWidth": 640,
+          "width": 640
+        },
+        "700x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 700,
+          "width": 700
+        },
+        "768x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 768,
+          "width": 768
+        }
+      },
+      "summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "source_log_sha256": "652b54bacd0e027520fdd299d869232e399faac9a22524b0dedd13ca5cbb9cab",
+      "fixture_policy": "Exact original credential GET/new verified session; RAILS_ENV=test; actual null fragment cache; percase original forgery policy; renderer IPC and TestAdapter."
+    },
+    {
+      "run": "motion-reopen-focus",
+      "measured_original_windows": {
+        "1024x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 1024,
+          "width": 1024
+        },
+        "1280x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1280,
+          "width": 1280
+        },
+        "1400x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x1400": {
+          "devicePixelRatio": 1,
+          "height": 1257,
+          "outerHeight": 1400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x400": {
+          "devicePixelRatio": 1,
+          "height": 257,
+          "outerHeight": 400,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1400x900": {
+          "devicePixelRatio": 1,
+          "height": 757,
+          "outerHeight": 900,
+          "outerWidth": 1400,
+          "width": 1400
+        },
+        "1440x1000": {
+          "devicePixelRatio": 1,
+          "height": 857,
+          "outerHeight": 1000,
+          "outerWidth": 1440,
+          "width": 1440
+        },
+        "320x740": {
+          "devicePixelRatio": 1,
+          "height": 597,
+          "outerHeight": 740,
+          "outerWidth": 500,
+          "width": 320
+        },
+        "360x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 360
+        },
+        "375x812": {
+          "devicePixelRatio": 1,
+          "height": 669,
+          "outerHeight": 812,
+          "outerWidth": 500,
+          "width": 375
+        },
+        "390x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "390x844": {
+          "devicePixelRatio": 1,
+          "height": 701,
+          "outerHeight": 844,
+          "outerWidth": 500,
+          "width": 390
+        },
+        "500x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 500,
+          "width": 500
+        },
+        "640x360": {
+          "devicePixelRatio": 1,
+          "height": 217,
+          "outerHeight": 360,
+          "outerWidth": 640,
+          "width": 640
+        },
+        "700x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 700,
+          "width": 700
+        },
+        "768x800": {
+          "devicePixelRatio": 1,
+          "height": 657,
+          "outerHeight": 800,
+          "outerWidth": 768,
+          "width": 768
+        }
+      },
+      "summary": "Original browser members: 1 producer defects rejected; 0 invalid controls",
+      "source_log_sha256": "534d2cc196ad17bcdaf16e66f7dff2007924a0a40747801040feeb3346c34e27",
+      "fixture_policy": "Exact original credential GET/new verified session; RAILS_ENV=test; actual null fragment cache; percase original forgery policy; renderer IPC and TestAdapter."
+    }
+  ],
+  "summary": "15 final real-session/test-cache producer defects rejected; 11 distinct closures; 0 invalid controls credited; all producers restored",
+  "excluded_setup_attempts": [
+    {
+      "attempt": "Initial pure-foundation controls startup before test-host environment was supplied",
+      "failure_output": "KeyError: 'WS11UI_LEDGER_TEST_HOST'",
+      "mutations_executed": 0,
+      "closure_credit": 0,
+      "reason": "Runner requires the compiled private fixture host. Restart supplied the known compiled test binary; every final control passed with the intended original assertion failure."
+    }
+  ],
+  "runtime_test_host": "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-main-ci/rust/target/debug/deps/campfire-205f5301470b6db4",
+  "runtime_test_host_sha256": "a9b9d3b743bd251fb860b237d23d90c599767918525a25eb70a32a005f67f64b",
+  "fixture_context": "Final pure original fixtures and credential GET /test_session with real new verified session row/cookie; both actual servers RAILS_ENV=test; original null fragment cache, renderer IPC, Base ActiveJob TestAdapter, same current Kit counter reset and per-declaration forgery policy.",
+  "superseded_evidence": "All member control runs before exact original credential GET and null test fragment cache are superseded by these five successful final runs.",
+  "current_gate": "Final exact original credential-path15 controls passed; lead required final paired member wrapper two-run gate remains pending.",
+  "normal_binary": "/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-main-ci/rust/target/debug/campfire"
+}

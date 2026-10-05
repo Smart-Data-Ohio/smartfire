@@ -15,6 +15,11 @@ use super::tag::{attrs, legacy_tag};
 
 /// `form_authenticity_token` for this request's session.
 pub trait AuthenticityTokens {
+    /// Rails omits these tags when `allow_forgery_protection` is disabled.
+    fn enabled(&self) -> bool {
+        true
+    }
+
     /// The masked global token (`csrf_meta_tags`).
     fn global(&self) -> String;
     /// The masked per-form token for a form posting to `action` (as written in the page) with
@@ -61,6 +66,9 @@ pub const PARAM: &str = "authenticity_token";
 /// tokens from the five cached message-tree forms; slots remain as defence in depth for any
 /// other form rendered inside a cached fragment.
 pub fn token_tag(action: &str, method: &str) -> Html {
+    if current().is_some_and(|secrets| !secrets.tokens.enabled()) {
+        return Safe(String::new());
+    }
     if crate::fragment_cache::rendering_fragment() {
         return Safe(format!("{}{method} {action}{SLOT_END}", slot_start()));
     }
@@ -113,12 +121,12 @@ pub fn fill_token_slots(html: &str) -> std::borrow::Cow<'_, str> {
 /// `csrf_meta_tags`
 pub fn csrf_meta_tags() -> Html {
     match current() {
-        Some(secrets) => Safe(format!(
+        Some(secrets) if secrets.tokens.enabled() => Safe(format!(
             "{}\n{}",
             legacy_tag("meta", attrs().name("csrf-param").attr("content", PARAM)).0,
             legacy_tag("meta", attrs().name("csrf-token").attr("content", secrets.tokens.global())).0
         )),
-        None => Safe(String::new()),
+        _ => Safe(String::new()),
     }
 }
 
@@ -174,6 +182,22 @@ mod tests {
 
     fn secrets(nonce: Option<&str>) -> RequestSecrets {
         RequestSecrets { tokens: Box::new(Fixed), csp_nonce: nonce.map(str::to_string) }
+    }
+
+    #[test]
+    fn disabled_forgery_omits_tokens_and_preserves_the_real_csp_nonce() {
+        struct Disabled;
+        impl AuthenticityTokens for Disabled {
+            fn enabled(&self) -> bool { false }
+            fn global(&self) -> String { panic!("disabled token must not be requested") }
+            fn for_form(&self, _: &str, _: &str) -> String { panic!("disabled form token must not be requested") }
+        }
+        let (meta, field, nonce) = rendering_with(RequestSecrets {
+            tokens: Box::new(Disabled), csp_nonce: Some("real-nonce".into()),
+        }, || (csrf_meta_tags().0, token_tag("/session", "post").0, csp_meta_tag().0));
+        assert_eq!(meta, "");
+        assert_eq!(field, "");
+        assert_eq!(nonce, "<meta name=\"csp-nonce\" content=\"real-nonce\" />");
     }
 
     #[test]

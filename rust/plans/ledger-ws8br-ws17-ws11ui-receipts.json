@@ -308,6 +308,15 @@
         "log_line": 2812,
         "result": "PASS"
       }
+    },
+    {
+      "file": "test/system/meeting_status_test.rb",
+      "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-lifecycle-receipts.json#calendar-browser-sequence",
+      "rust_test": "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
     }
   ],
   "ws11ui_browser_records": [
@@ -2949,6 +2958,1358 @@
       "assertion_count": 2,
       "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
       "additional_assertion_receipts": []
+    },
+    {
+      "id": "P0308",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "? opens the shortcut sheet everywhere except while typing",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0308",
+      "assertion_count": 7,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0309",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "? while typing stays in the composer",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0309",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0310",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "ctrl+k fires while typing and inserts no link markup",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0310",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0311",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "alt+up and alt+down move between rooms",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0311",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0312",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "alt+shift+arrows jump between unread rooms",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0312",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0313",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "escape marks the current room read",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0313",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 6,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0314",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "escape while typing leaves the room unread",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0314",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 6,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0315",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "escape with a menu open closes the menu instead of marking read",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0315",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 8,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0316",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "escape with the huddle theater open yields to the theater instead of marking read",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0316",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 7,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0317",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "escape in full screen leaves the room unread",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0317",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 5,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0318",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "alt+arrows while typing stay in the room",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0318",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0319",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "ctrl+k ignores IME composition",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0319",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0320",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "ctrl+k does not open over an open modal dialog",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0320",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0321",
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "test": "ctrl+k still toggles the switcher closed",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0321",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0384",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "an admin deletes a channel from the room menu",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0384",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0385",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "the creator sees Delete on their own room but not on others",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0385",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0386",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "a plain member does not see Delete",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0386",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0387",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "Cancel and Escape keep the room",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0387",
+      "assertion_count": 6,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0388",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "deleting the room you are in navigates you home",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0388",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0389",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "Delete is offered on every room kind for admins",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0389",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0390",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "a group dm shows Delete only for admins",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0390",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0391",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "one-to-one dms follow the server delete rule",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0391",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0392",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "Delete is reachable by arrow keys",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0392",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0393",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "deleting from the long-press menu on phones",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0393",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0394",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "a member leaves an open channel and rejoins through the join page",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0394",
+      "assertion_count": 7,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0395",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "leaving a private channel warns about being re-added",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0395",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0396",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "leaving the room you are in sends you home",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0396",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0397",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "the last member out leaves the room behind for no one to lose",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0397",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0398",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "Leave is offered on every room kind and never deletes",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0398",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0399",
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "test": "a member leaves a group dm from the menu",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0399",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0293",
+      "file": "test/system/channel_navigation_test.rb",
+      "test": "switching channels hides the progress bar and lands without a reload",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0293",
+      "assertion_count": 8,
+      "private_helper_assertion_count": 5,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0294",
+      "file": "test/system/channel_navigation_test.rb",
+      "test": "browser back returns to the previous channel without a reload",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0294",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0295",
+      "file": "test/system/channel_navigation_test.rb",
+      "test": "slow back and forward restores never flash the channel loader",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0295",
+      "assertion_count": 7,
+      "private_helper_assertion_count": 4,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0296",
+      "file": "test/system/channel_navigation_test.rb",
+      "test": "canceling a channel visit does not suppress the next page loader",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0296",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0297",
+      "file": "test/system/channel_navigation_test.rb",
+      "test": "shared message links also navigate without a channel loader",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0297",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 4,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0298",
+      "file": "test/system/channel_navigation_test.rb",
+      "test": "channel switch from the mobile drawer closes the drawer without a reload",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0298",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0299",
+      "file": "test/system/channel_navigation_test.rb",
+      "test": "non-room visits still show the progress bar",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0299",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0373",
+      "file": "test/system/room_header_test.rb",
+      "test": "phone header keeps members, call, search and More with the rest in the menu",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0373",
+      "assertion_count": 28,
+      "private_helper_assertion_count": 14,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0374",
+      "file": "test/system/room_header_test.rb",
+      "test": "tablet header keeps notifications and settings visible with the rest in the menu",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0374",
+      "assertion_count": 20,
+      "private_helper_assertion_count": 9,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0375",
+      "file": "test/system/room_header_test.rb",
+      "test": "desktop header is unchanged with no More button",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0375",
+      "assertion_count": 12,
+      "private_helper_assertion_count": 8,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0376",
+      "file": "test/system/room_header_test.rb",
+      "test": "every phone overflow menu item works",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0376",
+      "assertion_count": 19,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0377",
+      "file": "test/system/room_header_test.rb",
+      "test": "the overflow menu scrolls within a landscape phone viewport",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0377",
+      "assertion_count": 6,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0378",
+      "file": "test/system/room_header_test.rb",
+      "test": "opening threads from the menu returns focus to More on close",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0378",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0379",
+      "file": "test/system/room_header_test.rb",
+      "test": "the overflow menu is keyboard accessible and closes on outside tap",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0379",
+      "assertion_count": 9,
+      "private_helper_assertion_count": 3,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0380",
+      "file": "test/system/room_header_test.rb",
+      "test": "the overflow dot lights for unread threads, not pins, and the pins badge hides at zero",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0380",
+      "assertion_count": 8,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0381",
+      "file": "test/system/room_header_test.rb",
+      "test": "the tour restarts from the overflow menu on phones",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0381",
+      "assertion_count": 9,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0411",
+      "file": "test/system/unread_rooms_test.rb",
+      "test": "sending messages between two users",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0411",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 3,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0412",
+      "file": "test/system/unread_rooms_test.rb",
+      "test": "channel and DM rows keep exactly one unread badge next to the huddle stack",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0412",
+      "assertion_count": 10,
+      "private_helper_assertion_count": 12,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0322",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "member rows render without checkboxes and stay inline on desktop and phone",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0322",
+      "assertion_count": 11,
+      "private_helper_assertion_count": 4,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0323",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "a plain click opens the profile card outside selection mode and toggles inside it",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0323",
+      "assertion_count": 8,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0324",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "ctrl-click and cmd-click toggle members, and dropping to zero exits the mode",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0324",
+      "assertion_count": 10,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0325",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "ctrl-shift-click selects a range across groups and skips your own row",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0325",
+      "assertion_count": 13,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0326",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "ctrl-shift-click on a checked checkbox adds the range instead of clearing it",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0326",
+      "assertion_count": 6,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0327",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "a plain click opens the profile card again after the selected member leaves",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0327",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0328",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "esc and the exit button leave selection mode with the panel open",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0328",
+      "assertion_count": 8,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0329",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "the exit button returns focus to the last-touched row",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0329",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0330",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "the exit button falls back to the first row when the last-touched row is gone",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0330",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0331",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "unchecking the last box returns focus to that row",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0331",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0332",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "esc closes the mobile drawer when only a departed member's hidden selection remains",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0332",
+      "assertion_count": 6,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0333",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "esc on desktop leaves a departed member's hidden selection alone",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0333",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0334",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "esc with the row menu open closes only the menu",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0334",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0335",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "the selection count is announced through a dedicated status element",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0335",
+      "assertion_count": 7,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0336",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "space toggles the focused row without opening the profile card",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0336",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0337",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "selection, mode, and anchor survive a presence re-render",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0337",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0338",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "the star row menu works in and out of selection mode",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0338",
+      "assertion_count": 10,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0339",
+      "file": "test/system/member_select_mode_test.rb",
+      "test": "a phone long-press enters selection mode, then taps toggle and Message submits the set",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0339",
+      "assertion_count": 12,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0289",
+      "file": "test/system/channel_members_test.rb",
+      "test": "members are online across channels and go offline after signing out",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0289",
+      "assertion_count": 9,
+      "private_helper_assertion_count": 7,
+      "setup_assertion_count": 3,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0290",
+      "file": "test/system/channel_members_test.rb",
+      "test": "a bot with a checked-in agent shows online in the member panel",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0290",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0291",
+      "file": "test/system/channel_members_test.rb",
+      "test": "closing one tab keeps a member online until their last tab closes",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0291",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 5,
+      "setup_assertion_count": 3,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0292",
+      "file": "test/system/channel_members_test.rb",
+      "test": "the member panel follows channel access and remains usable on a phone",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0292",
+      "assertion_count": 21,
+      "private_helper_assertion_count": 18,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0345",
+      "file": "test/system/motion_test.rb",
+      "test": "motion is off by default in the test environment",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0345",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0346",
+      "file": "test/system/motion_test.rb",
+      "test": "mobile drawer animates in, lands in place, and returns focus with motion on",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0346",
+      "assertion_count": 6,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0347",
+      "file": "test/system/motion_test.rb",
+      "test": "member selection mode moves no rows and resizes nothing",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0347",
+      "assertion_count": 12,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0348",
+      "file": "test/system/motion_test.rb",
+      "test": "people directory bar shifts no rows when toggling",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0348",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0349",
+      "file": "test/system/motion_test.rb",
+      "test": "people directory bar stays stuck while scrolling",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0349",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0350",
+      "file": "test/system/motion_test.rb",
+      "test": "room menu measures at full scale when clamping to the viewport edge",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0350",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0351",
+      "file": "test/system/motion_test.rb",
+      "test": "mobile drawer keeps the room list scroll position across close and reopen",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0351",
+      "assertion_count": 10,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0352",
+      "file": "test/system/motion_test.rb",
+      "test": "mobile drawer reveals a current room far down the list on first open",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0352",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0353",
+      "file": "test/system/motion_test.rb",
+      "test": "mobile drawer reopens on the current room when it is already in view",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0353",
+      "assertion_count": 6,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0287",
+      "file": "test/system/audit_log_test.rb",
+      "test": "admin browses filters and exports the audit log",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0287",
+      "assertion_count": 8,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0288",
+      "file": "test/system/audit_log_test.rb",
+      "test": "audit log stays usable at phone width",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0288",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0304",
+      "file": "test/system/icons_test.rb",
+      "test": "colon autocomplete inserts a brand shortcode that renders in both themes",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0304",
+      "assertion_count": 14,
+      "private_helper_assertion_count": 3,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0305",
+      "file": "test/system/icons_test.rb",
+      "test": "room icon picker sets an icon that shows in the sidebar and header",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0305",
+      "assertion_count": 8,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0306",
+      "file": "test/system/icons_test.rb",
+      "test": "icon rooms suppress the search arrow marker",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0306",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0307",
+      "file": "test/system/icons_test.rb",
+      "test": "lobehub brand icons render visibly in both themes",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0307",
+      "assertion_count": 10,
+      "private_helper_assertion_count": 8,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0343",
+      "file": "test/system/mobile_layout_test.rb",
+      "test": "pages outside the workspace shell show no drawer toggle that opens nothing",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0343",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0344",
+      "file": "test/system/mobile_layout_test.rb",
+      "test": "every drawer destination has one toggle that opens the drawer on itself",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0344",
+      "assertion_count": 9,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0370",
+      "file": "test/system/people_group_dms_test.rb",
+      "test": "starting a group huddle rings every other member",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0370",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 2,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0382",
+      "file": "test/system/service_worker_test.rb",
+      "test": "the worker caches static assets and never authenticated responses",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0382",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0383",
+      "file": "test/system/service_worker_test.rb",
+      "test": "the offline shell renders with working retry behavior",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0383",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 0,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0404",
+      "file": "test/system/timezone_detection_test.rb",
+      "test": "the browser does not report its zone without a CSRF token",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0404",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0405",
+      "file": "test/system/timezone_detection_test.rb",
+      "test": "the browser reports its detected zone once",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0405",
+      "assertion_count": 1,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0406",
+      "file": "test/system/unread_divider_test.rb",
+      "test": "few unread render the divider above the first new message and keep the bottom scroll",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0406",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0407",
+      "file": "test/system/unread_divider_test.rb",
+      "test": "many unread scroll the room to the divider",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0407",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0408",
+      "file": "test/system/unread_divider_test.rb",
+      "test": "the jump pill shows while the divider is off-screen and returns to it",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0408",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0409",
+      "file": "test/system/unread_divider_test.rb",
+      "test": "unread older than the last page keeps the last page and the pill links to the first unread",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0409",
+      "assertion_count": 4,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0410",
+      "file": "test/system/unread_divider_test.rb",
+      "test": "mark unread from the message menu points the divider at that message",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0410",
+      "assertion_count": 3,
+      "private_helper_assertion_count": 4,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0413",
+      "file": "test/system/workspace_icons_test.rb",
+      "test": "upload post in both themes then delete falls back to the shortcode",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0413",
+      "assertion_count": 8,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0414",
+      "file": "test/system/browser_launch_profile_test.rb",
+      "test": "the browser launches with a managed profile under the worker TMPDIR",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0414",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 2,
+      "setup_assertion_count": 0,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0415",
+      "file": "test/system/content_security_policy_test.rb",
+      "test": "signing in through the real login form lands on the signed-in page",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0415",
+      "assertion_count": 5,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 0,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0416",
+      "file": "test/system/content_security_policy_test.rb",
+      "test": "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0416",
+      "assertion_count": 12,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0417",
+      "file": "test/system/content_security_policy_test.rb",
+      "test": "a Turbo visit to the event form fills the time zone with no violations",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0417",
+      "assertion_count": 6,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0418",
+      "file": "test/system/content_security_policy_test.rb",
+      "test": "a forced inline script without the nonce is blocked and reported",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0418",
+      "assertion_count": 2,
+      "private_helper_assertion_count": 0,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
+    },
+    {
+      "id": "P0419",
+      "file": "test/system/content_security_policy_test.rb",
+      "test": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0419",
+      "assertion_count": 10,
+      "private_helper_assertion_count": 1,
+      "setup_assertion_count": 1,
+      "execution": "D: current registered correctness wrapper passed twice at nextest -j 4; exact original assertions executed against pinned Rails and Rust in real Chromium."
     }
   ],
   "review240_assertion_tests": [
@@ -3379,6 +4740,88 @@
       "ledger": "rust/reference-tools/users/deferred_inventory.py",
       "reason": "Original interacting browser criterion still requires a verified named receipt. Merged domain/HTTP coverage is not a substitute for focus, menu, exact recipient or two-theme browser assertions.",
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0403"
+    },
+    {
+      "file": "test/system/people_group_dms_test.rb",
+      "criterion": "starting a group huddle rings every other member",
+      "historical_owner": "WS8br2 people/cards; WS8br DM actions",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0370"
+    },
+    {
+      "file": "test/system/icons_test.rb",
+      "criterion": "colon autocomplete inserts a brand shortcode that renders in both themes",
+      "historical_owner": "WS8br2 workspace icons/profile names; WS8b-m message icons",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0304"
+    },
+    {
+      "file": "test/system/icons_test.rb",
+      "criterion": "room icon picker sets an icon that shows in the sidebar and header",
+      "historical_owner": "WS8br2 workspace icons/profile names; WS8b-m message icons",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0305"
+    },
+    {
+      "file": "test/system/icons_test.rb",
+      "criterion": "icon rooms suppress the search arrow marker",
+      "historical_owner": "WS8br2 workspace icons/profile names; WS8b-m message icons",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0306"
+    },
+    {
+      "file": "test/system/icons_test.rb",
+      "criterion": "lobehub brand icons render visibly in both themes",
+      "historical_owner": "WS8br2 workspace icons/profile names; WS8b-m message icons",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0307"
+    },
+    {
+      "file": "test/system/workspace_icons_test.rb",
+      "criterion": "upload post in both themes then delete falls back to the shortcode",
+      "historical_owner": "WS8br2",
+      "ledger": "rust/reference-tools/users/deferred_inventory.py",
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0413"
     }
-  ]
+  ],
+  "ws8br_muted_browser_closed_records": [
+    {
+      "file": "test/system/sidebar_organize_test.rb",
+      "test": "muted rooms dim and stay quiet until mentioned",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-lifecycle-receipts.json#muted-room-sequence"
+    }
+  ],
+  "ws17_calendar_browser_closed_records": [
+    {
+      "file": "test/system/meeting_status_test.rb",
+      "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
+      "rust_tests": [
+        "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-lifecycle-receipts.json#calendar-browser-sequence"
+    }
+  ],
+  "d_validation": {
+    "report": "rust/plans/ledger-ws8br-ws17-ws11ui-d-report.md",
+    "assertion_receipts": [
+      "ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json",
+      "ledger-ws8br-ws17-ws11ui-d-members-receipts.json",
+      "ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json",
+      "ledger-ws8br-ws17-ws11ui-d-lifecycle-receipts.json"
+    ],
+    "registered_browser_tests": [
+      "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions",
+      "controllers::ledger_browser_tests::original_ledger_member_assertions",
+      "controllers::ledger_browser_tests::original_ledger_navigation_assertions",
+      "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+    ],
+    "new_broad_closures": 104,
+    "overlapping_criteria": 6,
+    "lifecycle_sequences": 2,
+    "current_pin_additions": 1,
+    "mutation_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-mutations.json"
+  }
 }

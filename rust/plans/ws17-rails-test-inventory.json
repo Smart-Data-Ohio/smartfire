@@ -2220,10 +2220,10 @@
     {
       "file": "test/system/meeting_status_test.rb",
       "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
-      "status": "acceptance-replay-pending",
+      "status": "ported-equivalent",
       "owner": "WS17 cutover browser receipt",
-      "evidence": "The current Google refresh implementation and interval/broadcast tests pass in CI. The full original toggle -> stubbed busy interval -> injected clock advance -> cleared browser badge sequence has no exact browser receipt here. This is an acceptance gap, not an absent refresh handler.",
-      "seam": "Current code: rust/crates/campfire/src/integrations/google/meeting_refresh.rs; app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails. Next slice must drive the real refresh job and browser with an injected clock; existing native tests alone do not close the declaration.",
+      "evidence": "Paired current real-browser opt-in, UI-enqueued refresh, actual busy intervals, shared injected clock advance and cleared rendered badge; twice through the registered wrapper.",
+      "seam": "Tools-only injected clock/fixture bridge invokes the real refresh/cache and minute dispatcher; no production route or fabricated cache success.",
       "history": [
         {
           "date": "2026-10-04",
@@ -2237,6 +2237,27 @@
             "evidence": null,
             "seam": "Calendar::MeetingRefreshJob { user_id: i64 }, class Calendar::MeetingRefreshJob, default queue/version 1: WS14 Google events fetch/interval filtering and cache completion must run before dispatch_meetings(&Database, Timestamp) and the browser clock advance. Handler is deliberately absent, not a fabricated refresh success."
           }
+        },
+        {
+          "date": "2026-10-05",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+          "previous": {
+            "file": "test/system/meeting_status_test.rb",
+            "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
+            "status": "acceptance-replay-pending",
+            "owner": "WS17 cutover browser receipt",
+            "evidence": "The current Google refresh implementation and interval/broadcast tests pass in CI. The full original toggle -> stubbed busy interval -> injected clock advance -> cleared browser badge sequence has no exact browser receipt here. This is an acceptance gap, not an absent refresh handler.",
+            "seam": "Current code: rust/crates/campfire/src/integrations/google/meeting_refresh.rs; app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails. Next slice must drive the real refresh job and browser with an injected clock; existing native tests alone do not close the declaration.",
+            "supporting_ci": {
+              "run": 37200618245,
+              "head": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+              "crate": "campfire::bin/campfire",
+              "test": "app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails",
+              "log_line": 3008,
+              "result": "PASS"
+            }
+          }
         }
       ],
       "supporting_ci": {
@@ -2246,7 +2267,9 @@
         "test": "app::google_meeting_refresh_tests::google_meeting_refresh_complete_states_and_requests_match_pinned_rails",
         "log_line": 3008,
         "result": "PASS"
-      }
+      },
+      "rust_test": "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions",
+      "browser_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-lifecycle-receipts.json#calendar-browser-sequence"
     },
     {
       "file": "test/system/meeting_status_test.rb",
@@ -2796,17 +2819,18 @@
     }
   ],
   "cutover_reconciliation": {
-    "date": "2026-10-04",
+    "date": "2026-10-05",
     "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
-    "closed_from_fifteen": 14,
-    "remaining": 1,
+    "closed_from_fifteen": 15,
+    "remaining": 0,
     "historical_named_total": 347,
-    "current_named_passed": 346,
+    "current_named_passed": 347,
     "new_tests_not_in_historical_ci": [
       "tests::huddle_cutover_test::huddle_push_honors_dnd_with_a_starred_caller_exception",
       "tests::huddle_cutover_test::group_huddle_push_skips_dnd_and_quiet_hours_but_records_all_missed_calls"
     ],
-    "partial": true
+    "partial": false,
+    "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-d-report.md"
   }
 }

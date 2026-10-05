@@ -32,6 +32,13 @@ pub struct State {
     adapter: RwLock<Option<Arc<dyn MessagePayload>>>,
 }
 impl State {
+    #[cfg(test)]
+    pub(crate) fn fixture_snapshot(&self) -> Self {
+        Self {
+            adapter: RwLock::new(self.adapter.read().unwrap_or_else(|p| p.into_inner()).clone()),
+        }
+    }
+
     pub fn live() -> Self {
         let state = Self::default();
         state.install(Arc::new(SharedPayload));
