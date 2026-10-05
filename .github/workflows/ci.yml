@@ -23,7 +23,9 @@ jobs:
       rails: ${{ steps.scope.outputs.rails }}
     steps:
       - name: Checkout PR history
+        id: history
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -31,6 +33,8 @@ jobs:
 
       - name: Decide whether Rails tests are needed
         id: scope
+        env:
+          HISTORY_OUTCOME: ${{ steps.history.outcome }}
         run: |
           python3 - <<'PY'
           import json
@@ -38,20 +42,27 @@ jobs:
           import subprocess
 
           rails = True
-          if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
-              with open(os.environ["GITHUB_EVENT_PATH"]) as event_file:
-                  pr = json.load(event_file)["pull_request"]
-              # Use the PR merge base and include both sides of renames. Unknown
-              # files and empty diffs keep full coverage; Git errors fail the gate.
-              diff = subprocess.check_output([
-                  "git", "diff", "--no-renames", "--name-only", "-z",
-                  f'{pr["base"]["sha"]}...{pr["head"]["sha"]}', "--",
-              ])
-              paths = [path for path in diff.split(b"\0") if path]
-              rails = not paths or any(
-                  not (path.startswith((b"rust/", b".claude/")) or path.endswith(b".md"))
-                  for path in paths
-              )
+          try:
+              if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
+                  if os.environ["HISTORY_OUTCOME"] != "success":
+                      print("::warning::PR history checkout unavailable; running full Rails suite.")
+                  else:
+                      with open(os.environ["GITHUB_EVENT_PATH"]) as event_file:
+                          pr = json.load(event_file)["pull_request"]
+                      # Include both sides of renames. Unknown files, empty
+                      # diffs, and unavailable history keep full coverage.
+                      diff = subprocess.check_output([
+                          "git", "diff", "--no-renames", "--name-only", "-z",
+                          f'{pr["base"]["sha"]}...{pr["head"]["sha"]}', "--",
+                      ])
+                      paths = [path for path in diff.split(b"\0") if path]
+                      rails = not paths or any(
+                          not (path.startswith((b"rust/", b".claude/")) or path.endswith(b".md"))
+                          for path in paths
+                      )
+          except (OSError, KeyError, ValueError, TypeError, subprocess.CalledProcessError) as error:
+              rails = True
+              print(f"::warning::PR diff unavailable ({type(error).__name__}); running full Rails suite.")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"rails={str(rails).lower()}\n")
           print("Run Rails tests" if rails else "Rust/docs-only PR: skip Rails tests")
