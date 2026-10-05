@@ -1,0 +1,30 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "cases": [
+    {
+      "name": "missing_account",
+      "account_exists": false,
+      "fetch_error": null,
+      "response": {
+        "status": 200,
+        "reconnect_links": [
+          [
+            "#google-calendar-title",
+            "Reconnect below"
+          ]
+        ],
+        "escaped_fetch_error": null
+      }
+    },
+    {
+      "name": "fetch_error",
+      "account_exists": true,
+      "fetch_error": "Google Calendar couldn't be reached; calendar status will retry.",
+      "response": {
+        "status": 200,
+        "reconnect_links": [],
+        "escaped_fetch_error": "Google Calendar couldn&#39;t be reached; calendar status will retry."
+      }
+    }
+  ]
+}

@@ -1607,7 +1607,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+            "controllers::public_pages::tests::public_pages_accept_anonymous_head_without_a_body"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0100",
           "assertion_count": 2,
@@ -1646,7 +1646,7 @@
           "name": "configured installation names the operator and contact",
           "line": 166,
           "cutover_id": "P0102",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -2134,7 +2134,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name"
+            "controllers::users::people_tests::own_public_profile_matches_the_original_show_request"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0113",
           "assertion_count": 1,
@@ -3371,7 +3371,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::calendar_only"
+            "controllers::users::profile_sections_tests::original_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0153",
           "assertion_count": 3,
@@ -3381,7 +3381,7 @@
           "name": "profile shows the meeting fetch notice when a refresh failed",
           "line": 74,
           "cutover_id": "P0154",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -3416,7 +3416,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+            "controllers::users::profile_sections_tests::profile_failed_calendar_refresh_keeps_the_original_notice"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
           "assertion_count": 2,
@@ -3446,7 +3446,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+            "controllers::users::profile_sections_tests::profile_missing_google_account_keeps_the_meeting_reconnect_link"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0155",
           "assertion_count": 2,
@@ -3717,7 +3717,7 @@
           "name": "profile shows the connected account with a disconnect button",
           "line": 190,
           "cutover_id": "P0165",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -3754,7 +3754,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::calendar_only"
+            "controllers::users::profile_sections_tests::original_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
           "assertion_count": 2,
@@ -3785,7 +3785,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::rejected_calendar"
+            "controllers::users::profile_sections_tests::original_rejected_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0166",
           "assertion_count": 3,
@@ -3815,7 +3815,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::calendar_only"
+            "controllers::users::profile_sections_tests::original_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0167",
           "assertion_count": 4,
@@ -3845,7 +3845,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::calendar_drive"
+            "controllers::users::profile_sections_tests::original_calendar_drive"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0168",
           "assertion_count": 2,
@@ -3875,7 +3875,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::retired_metadata"
+            "controllers::users::profile_sections_tests::original_retired_metadata"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0169",
           "assertion_count": 2,
@@ -3963,7 +3963,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::drive_only"
+            "controllers::users::profile_sections_tests::original_drive_only"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0172",
           "assertion_count": 3,
@@ -3993,7 +3993,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::rejected_drive"
+            "controllers::users::profile_sections_tests::original_rejected_calendar_drive"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0173",
           "assertion_count": 3,
@@ -4023,7 +4023,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::rejected_calendar"
+            "controllers::users::profile_sections_tests::original_rejected_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0174",
           "assertion_count": 2,
@@ -4062,7 +4062,7 @@
           "name": "linking a github login strips and downcases it",
           "line": 304,
           "cutover_id": "P0176",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -4369,7 +4369,7 @@
           "name": "clearing a github login unlinks it",
           "line": 399,
           "cutover_id": "P0186",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -4502,7 +4502,7 @@
           "name": "changing email with the current password records a self-change",
           "line": 433,
           "cutover_id": "P0190",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -4548,7 +4548,7 @@
           "name": "other profile edits and case-only email edits need no password and record nothing",
           "line": 443,
           "cutover_id": "P0191",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -6251,7 +6251,7 @@
           "name": "service worker fetch and notification logic",
           "line": 51,
           "cutover_id": "P0276",
-          "cutover_disposition": "acceptance-receipt-pending",
+          "cutover_disposition": "ported-current-assertion-receipt",
           "history": [
             {
               "date": "2026-10-04",
@@ -6286,7 +6286,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
+            "controllers::pwa::tests::original_service_worker_logic_checks_the_real_http_script"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
           "assertion_count": 2,
@@ -8122,7 +8122,7 @@
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
     "approved_queue_supersessions": 1,
     "sidebar_original_receipts_pending": 8,
-    "broad_original_receipts_pending": 216,
+    "broad_original_receipts_pending": 208,
     "geometry_only_excluded": 3,
     "partial": true,
     "broad_original_receipts_superseded": 9,
@@ -8158,9 +8158,15 @@
           "broad_original_assertion_receipts": 57,
           "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md"
         }
+      },
+      {
+        "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+        "reason": "Original-setup sweep closes eight previously reopened B declarations.",
+        "broad_original_receipts_pending": 216,
+        "broad_original_assertion_receipts": 112
       }
     ],
-    "broad_original_assertion_receipts": 112,
+    "broad_original_assertion_receipts": 120,
     "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md"
   },
   "source_pin_refresh": {

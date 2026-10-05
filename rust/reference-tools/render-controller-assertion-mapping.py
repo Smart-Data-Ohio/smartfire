@@ -5,7 +5,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 manifest = json.loads((root / 'plans/ledger-ws8br-ws17-ws11ui-b-receipts.json').read_text())
 lines = ['# PR #244 per-assertion audit', '',
-         'Original declarations use Rails d7c7de92. Runtime fixtures follow the current reference pin.', '',
+         f"Original declarations and runtime fixtures use Rails {manifest['reference']}.", '',
          'Every row names the original assertion and the actual Rust check. Whole-byte/DOM checks retain tags, attributes, text and cardinality; their fixture cases are named below. Reopened gaps are explicit and retain the previous insufficient claim in JSON history.', '']
 for row in manifest['records']:
     lines += [f"## {row['id']}: {row['test']}", '', f"Status: **{row['record_status']}**. Native identities:", '']

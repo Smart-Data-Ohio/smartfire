@@ -231,4 +231,14 @@ mod tests {
             );
         }
     }
+    #[tokio::test]
+    async fn public_pages_accept_anonymous_head_without_a_body() {
+        let app = TestApp::boot_frozen().await.expect("seed required");
+        for path in ["/about", "/privacy", "/terms"] {
+            let reply = app.anonymous().send(Req::new(Method::HEAD, path)).await;
+            assert_eq!(reply.status, StatusCode::OK, "{path}: anonymous HEAD");
+            assert!(reply.body.is_empty(), "{path}: original empty HEAD body");
+        }
+    }
+
 }

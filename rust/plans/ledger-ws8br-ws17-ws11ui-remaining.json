@@ -1461,78 +1461,6 @@
       "line": 153,
       "test": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
       "ledger": "rust/plans/ws8br-rails-cases.json"
-    },
-    {
-      "id": "P0102",
-      "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 166,
-      "test": "configured installation names the operator and contact",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
-    },
-    {
-      "id": "P0154",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 74,
-      "test": "profile shows the meeting fetch notice when a refresh failed",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
-    },
-    {
-      "id": "P0165",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 190,
-      "test": "profile shows the connected account with a disconnect button",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
-    },
-    {
-      "id": "P0176",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 304,
-      "test": "linking a github login strips and downcases it",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
-    },
-    {
-      "id": "P0186",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 399,
-      "test": "clearing a github login unlinks it",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
-    },
-    {
-      "id": "P0190",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 433,
-      "test": "changing email with the current password records a self-change",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
-    },
-    {
-      "id": "P0191",
-      "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 443,
-      "test": "other profile edits and case-only email edits need no password and record nothing",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The security corpus checks Submitted name rather than the original Dave name.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
-    },
-    {
-      "id": "P0276",
-      "file": "test/controllers/pwa_controller_test.rb",
-      "line": 51,
-      "test": "service worker fetch and notification logic",
-      "ledger": "rust/plans/ws8br-rails-cases.json",
-      "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output.",
-      "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
     }
   ],
   "ws8br_sidebar_original_receipts": [
@@ -1882,6 +1810,21 @@
         "P0191",
         "P0276"
       ]
+    },
+    {
+      "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+      "reason": "Eight formerly reopened B declarations now have original-setup enabled assertion receipts; keep prior reopened history in B manifest.",
+      "closed_ids": [
+        "P0102",
+        "P0154",
+        "P0165",
+        "P0176",
+        "P0186",
+        "P0190",
+        "P0191",
+        "P0276"
+      ],
+      "broad_pending_before": 216
     }
   ]
 }

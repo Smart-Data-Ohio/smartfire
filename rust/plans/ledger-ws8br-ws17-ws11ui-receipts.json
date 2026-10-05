@@ -1708,6 +1708,143 @@
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0275",
       "assertion_count": 5,
       "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0165",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows the connected account with a disconnect button",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::original_calendar"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0176",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "linking a github login strips and downcases it",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0190",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "changing email with the current password records a self-change",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0154",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows the meeting fetch notice when a refresh failed",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::profile_failed_calendar_refresh_keeps_the_original_notice"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0186",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "clearing a github login unlinks it",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0102",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "configured installation names the operator and contact",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0191",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "other profile edits and case-only email edits need no password and record nothing",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The security corpus checks Submitted name rather than the original Dave name."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0276",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "test": "service worker fetch and notification logic",
+      "rust_tests": [
+        "controllers::pwa::tests::original_service_worker_logic_checks_the_real_http_script"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
     }
   ],
   "review240_assertion_tests": [
@@ -1840,6 +1977,10 @@
         "P0191",
         "P0276"
       ]
+    },
+    {
+      "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+      "reason": "Full branch sweep with eight original-value receipts closed; historical full-suite claims remain historical."
     }
   ]
 }
