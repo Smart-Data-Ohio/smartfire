@@ -245,12 +245,6 @@ async fn compare_cutover(scenario: &str) {
     }
     let namespace = std::env::var("PARITY_NAMESPACE")
         .unwrap_or_else(|_| format!("ws11ui-ci-{}", std::process::id()));
-    let offset = match scenario {
-        "inbox" => 0,
-        "inbox-filter" => 3,
-        "work" => 6,
-        _ => unreachable!(),
-    };
     let mut command = tokio::process::Command::new("python3");
     command
         .arg(root.join("rust/reference-tools/views/agents_ui/check_cutover_browser.py"))
@@ -262,18 +256,8 @@ async fn compare_cutover(scenario: &str) {
         .arg(scenario)
         .env("PARITY_NAMESPACE", format!("{namespace}-{scenario}"))
         .current_dir(root);
-    // The ignored-test CI job runs four nextest workers. Give the three paired
-    // hosts disjoint ports and container namespaces rather than serializing CI.
-    for (key, default) in [
-        ("WS11UI_SYSTEM_REFERENCE_PORT", 52798_u16),
-        ("WS11UI_SYSTEM_CANDIDATE_PORT", 52799_u16),
-        ("WS11UI_SYSTEM_TARGET_PORT", 52797_u16),
-    ] {
-        let base = std::env::var(key)
-            .map(|value| value.parse::<u16>().unwrap())
-            .unwrap_or(default);
-        command.env(key, (base + offset).to_string());
-    }
+    // The runner holds host-wide kernel leases outside the outbound ephemeral
+    // range. Distinct container namespaces alone cannot reserve listener ports.
     let output = command.kill_on_drop(true).output().await.unwrap();
     println!("{}", String::from_utf8_lossy(&output.stdout));
     assert!(

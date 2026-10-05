@@ -32,7 +32,7 @@
       ]
     }
   ],
-  "partial": "Original phone/header/member/pins declaration receipts remain partial, even though real configured Huddle source APIs now exist. Eight exact controller/sidebar receipts and the muted-room sequence remain acceptance gaps; see the cutover remaining manifest. No absent-owner implementation blocker is claimed.",
+  "partial": "Original phone/header/member/pins aggregate browser declarations and the muted-room delivery sequence still need individual assertion receipts. The eight sidebar controller originals now have complete assertion mappings and actual nextest passes in C; these do not substitute for their interacting browser counterparts.",
   "cutover_reconciliation": {
     "date": "2026-10-04",
     "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
@@ -40,13 +40,19 @@
     "partial": true,
     "reason": "Configured Huddle source/header/sidebar APIs are on main; the historical unmerged-owner blocker is superseded. Exact original browser receipts remain incomplete. Muted-room delivery is still an unexecuted full browser sequence here, not proved absent.",
     "remaining_manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-remaining.json",
-    "current_controller_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md",
+    "current_controller_report": "rust/plans/ledger-ws8br-ws17-ws11ui-c-report.md",
     "controller_receipts_do_not_close_aggregate_browser_mappings": true
   },
   "history": [
     {
       "date": "2026-10-04",
       "previous_partial": "Existing phone/header/member/pins probes remain partial original-file mappings because the original header setup requires WS13 configured huddles. The eight WS13 controller/sidebar cases remain deferred. Other per-declaration ownership is in ws8br-rails-cases.json."
+    },
+    {
+      "date": "2026-10-04",
+      "branch": "rust/ledger-ws8br-ws17-ws11ui-c",
+      "previous_partial": "Original phone/header/member/pins declaration receipts remain partial, even though real configured Huddle source APIs now exist. Eight exact controller/sidebar receipts and the muted-room sequence remain acceptance gaps; see the cutover remaining manifest. No absent-owner implementation blocker is claimed."
     }
-  ]
+  ],
+  "sidebar_original_assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json (S0001-S0008)"
 }

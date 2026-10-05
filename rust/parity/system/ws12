@@ -25,3 +25,8 @@ WS11UI_BROWSER_BINARY=$(cargo metadata --locked --manifest-path rust/Cargo.toml 
 # --show-output preserves both libtest pass receipts and the real-browser traces.
 cargo test --locked --manifest-path rust/Cargo.toml -p campfire \
   controllers::ws12_browser_remaining_tests -- --ignored --show-output --test-threads=1
+
+# Ledger follow-up: the original individual people/tour/star/worker assertions.
+# Shares the normal binary above and the full-gate pinned browser image.
+cargo test --locked --manifest-path rust/Cargo.toml -p campfire \
+  controllers::ws11ui_original_browser_tests -- --ignored --show-output --test-threads=1

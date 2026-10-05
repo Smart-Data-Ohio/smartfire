@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import fs from "node:fs"
 import { chromium } from "playwright"
 import { diagnostics } from "./browser_diagnostics.mjs"
+import { tourKey } from "./browser_scopes.mjs"
 const base = process.env.WS8BR2_BROWSER_URL
 const labels = JSON.parse(fs.readFileSync(process.env.WS8BR2_BROWSER_LABELS,"utf8"))
 const browser = await chromium.launch({headless:true,args:["--no-sandbox"]})
@@ -36,16 +37,16 @@ try {
     await step(p,1); assert.equal(await p.locator(".tour__title").innerText(),"Your rooms live here")
     assert.equal(await p.locator("#sidebar.tour__target").count(),1)
     await next(p).click(); await step(p,2); assert.equal(await p.locator("#composer.tour__target").count(),1)
-    await next(p).press("ArrowRight"); await step(p,3); assert.equal(await p.locator(".tour__card--center").count(),1)
-    await next(p).press("ArrowRight"); await step(p,4); assert.equal(await p.locator(".tour__title").innerText(),"Jump anywhere with Ctrl+K")
-    await next(p).press("ArrowLeft"); await step(p,3)
-    await next(p).press("ArrowRight"); await next(p).press("ArrowRight"); await step(p,5)
+    await tourKey(p).press("ArrowRight"); await step(p,3); assert.equal(await p.locator(".tour__card--center").count(),1)
+    await tourKey(p).press("ArrowRight"); await step(p,4); assert.equal(await p.locator(".tour__title").innerText(),"Jump anywhere with Ctrl+K")
+    await tourKey(p).press("ArrowLeft"); await step(p,3)
+    await tourKey(p).press("ArrowRight"); await tourKey(p).press("ArrowRight"); await step(p,5)
     assert.equal(await p.locator(".tour__title").innerText(),"Shortcuts live under ?")
     assert.equal(await p.locator("#help-menu-button.tour__target").count(),1)
     await stamped(p,() => next(p).click())
   })
   await scenario("tour-escape-skip-persists","jason",async p => {
-    await step(p,1); await stamped(p,() => next(p).press("Escape"))
+    await step(p,1); await stamped(p,() => tourKey(p).press("Escape"))
   })
   await scenario("tour-restarts-from-help","kevin",async p => {
     await step(p,1); await stamped(p,() => p.getByRole("button",{name:"Skip tour",exact:true}).click())

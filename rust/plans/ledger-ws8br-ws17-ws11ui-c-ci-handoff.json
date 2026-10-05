@@ -1,0 +1,65 @@
+{
+  "owner": "Rust correctness (browsers), rust/ci/correctness.sh",
+  "status": "registered",
+  "current_main_toolchain_ci": "Ordinary tests skip the seven wrappers; Rust correctness (browsers) selects all seven exactly and requires their successful JUnit records. Current execution results are retained by that job and PR #248 checks.",
+  "required_prerequisites": [
+    "CI default seed and pinned Rails reference image",
+    "Pinned Playwright image built as for the existing browsers suite",
+    "Build the normal binary before ignored tests: cargo build --locked -p campfire --bin campfire; set WS11UI_BROWSER_BINARY to the target directory/debug/campfire"
+  ],
+  "registry": "These seven records are registered in rust/ci/ignored-tests.json browsers, alongside the existing nine records.",
+  "scheduling": "Seven explicit ignored functions; kernel-coordinated three-port leases in 24000-24191, outside the outbound ephemeral range. Four nextest -j 4 runs: 28/28 wrappers passed, 0 startup failures. No retries or longer deadlines.",
+  "records": [
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_people_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
+    }
+  ],
+  "ordinary_ci_regression": "controllers::ws11ui_original_browser_tests::original_browser_port_leases_are_host_coordinated_and_ephemeral_safe (enabled; five real-kernel lease checks plus three owned-network cleanup checks; no browser/image/seed required)",
+  "ci_scheduling": "The job keeps nextest -j 4. Each multi-process WS11-UI wrapper requires all four CI scheduler slots; the default profile retains concurrent four-worker execution. Original assertions, test deadlines and retries remain unchanged.",
+  "harness_regressions": [
+    "rust/reference-tools/users/browser_navigation.test.mjs: pending image does not gate initial document/controller assertions",
+    "rust/reference-tools/users/test_browser_port_leases.py: system hosts hold disjoint non-ephemeral leases",
+    "rust/reference-tools/users/browser_navigation.test.mjs: visible checkboxes wait for their multi-select controller to connect; concurrent group scenario failed without this wait",
+    "rust/reference-tools/users/test_browser_port_leases.py: paired system replays own and remove their private network; completed, failed-startup and foreign-owner cleanup boundaries are checked",
+    "rust/reference-tools/users/thread_form.mjs: pinned SystemTestHelper#fill_in_thread_name focus prerequisite and exact field value; browser_navigation.test.mjs rejects a replay that types before the callback focus"
+  ]
+}

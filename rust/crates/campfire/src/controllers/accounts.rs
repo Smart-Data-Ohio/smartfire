@@ -105,3 +105,6 @@ pub async fn current_account(c: &Ctx) -> Result<Account> {
 
 #[cfg(test)]
 mod attachment_tests;
+
+#[cfg(test)]
+mod original_control_tests;

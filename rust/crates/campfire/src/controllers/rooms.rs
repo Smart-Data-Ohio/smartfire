@@ -857,3 +857,6 @@ mod board_destroy_tests;
 
 #[cfg(test)]
 mod board_automation_tests;
+
+#[cfg(test)]
+mod original_audit_tests;

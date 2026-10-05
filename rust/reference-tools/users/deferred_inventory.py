@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Enumerate historical criteria without claiming whole-file browser receipts.
 
-Cutover: owner APIs mentioned below have landed. The fourteen uncredited original
+Cutover: owner APIs mentioned below have landed. The uncredited original
 interactions are acceptance-receipt gaps, not declarations that those APIs are
 absent. See plans/ledger-ws8br-ws17-ws11ui-remaining.json for the exact current list.
 """
@@ -164,6 +164,16 @@ receipt_audit = json.loads((root / "plans/ledger-ws8br-ws17-ws11ui-b-receipts.js
 for record in receipt_audit["records"]:
     if record.get("record_status") == "reopened":
         covered.get(record["file"].removeprefix("test/"), set()).discard(record["test"])
+
+# Current per-assertion receipts supersede historical broad and reopened claims.
+for manifest_name in ["ledger-ws8br-ws17-ws11ui-c-receipts.json", "ledger-ws8br-ws17-ws11ui-c-browser-receipts.json"]:
+    manifest_path = root / "plans" / manifest_name
+    if manifest_path.exists():
+        for record in json.loads(manifest_path.read_text())["records"]:
+            if record["record_status"] == "closed":
+                file = record["file"].removeprefix("test/")
+                if file in files and (not file.startswith("controllers/public_pages") or record["test"].startswith("sign-in page")):
+                    covered.setdefault(file, set()).add(record["test"])
 
 for file, owner in files.items():
     source = subprocess.check_output(["git", "show", f"{PIN_FULL}:test/{file}"], cwd=root, text=True)

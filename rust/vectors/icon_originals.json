@@ -1,0 +1,35 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "create": {
+    "status": 302,
+    "location": "http://campfire.test/account/icons",
+    "delta": 1,
+    "title": "Acme Corp",
+    "creator": 127326141,
+    "attached": true,
+    "audit": [
+      [
+        "WorkspaceIcon",
+        ":acme:"
+      ]
+    ]
+  },
+  "index": {
+    "status": 200,
+    "images": 1,
+    "codes": 1,
+    "title": true,
+    "uploader": true
+  },
+  "remove": {
+    "status": 302,
+    "location": "http://campfire.test/account/icons",
+    "delta": 0,
+    "audit": [
+      [
+        "WorkspaceIcon",
+        ":acme:"
+      ]
+    ]
+  }
+}

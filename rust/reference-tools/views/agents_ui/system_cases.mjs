@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import { connectUpstream } from '../../../parity/capture/forward.ts';
 import path from 'node:path';
-import { createRequire } from 'node:module';
+import { createRequire } from 'node:module'; import { fillThreadName } from '../../users/thread_form.mjs';
 // Reject the broken host path before looking for any browser dependencies.
 if (process.env.WS11UI_HOST_NETWORK === fs.readlinkSync('/proc/self/ns/net')) throw new Error('browser must have an isolated network namespace');
 const require = createRequire(path.resolve('rust/parity/package.json'));
@@ -136,13 +136,7 @@ try {
       await page.locator("#thread-panel[aria-hidden='false']").waitFor({state:'visible',timeout:10000});
       await page.getByRole('button',{name:'New thread',exact:true}).click();
       await page.locator("#thread-panel [data-thread-panel-target='create']").waitFor({state:'visible',timeout:10000});
-      // SystemTestHelper#fill_in_thread_name waits for beginCreate's deferred
-      // First message focus before typing the name. Form visibility precedes
-      // that animation frame; otherwise it can steal Playwright.fill's input
-      // and the server receives a blank name, which defaults to "New thread".
-      await page.waitForFunction(() => document.activeElement?.matches("#thread-panel [data-thread-panel-target='createMessage']"), null, {timeout:10000});
-      await page.locator("#thread-panel [data-thread-panel-target='createName']").fill('Agent owned thread');
-      await page.waitForFunction(name => document.querySelector("#thread-panel [data-thread-panel-target='createName']")?.value === name, 'Agent owned thread', {timeout:2000});
+      await fillThreadName(page, 'Agent owned thread');
       await page.locator("#thread-panel [data-thread-panel-target='createMessage']").fill('Work the agent will pick up.');
       await page.locator("#thread-panel [data-thread-panel-target='createSubmit']").click();
       await page.locator("#thread-panel [data-thread-panel-target='conversation']").waitFor({state:'visible',timeout:10000});
