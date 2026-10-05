@@ -355,8 +355,19 @@ jobs:
         with:
           parity: reference
           cargo-cache: tests
-      - name: Build pinned correctness prerequisites
-        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+      # The prerequisite image only adds browsers and tools to the toolchain image, so the
+      # server binary and campfire's test harnesses (what correctness.sh builds first)
+      # compile under the toolchain image meanwhile. Both images share the Cargo home and
+      # target directory, so correctness.sh's own builds then find them fresh.
+      - name: Build pinned correctness prerequisites while compiling
+        env:
+          RUST_CORRECTNESS_IMAGE: campfire-toolchain
+        run: |
+          bash rust/ci/exec.sh bash -c 'cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire &&
+            cargo test --manifest-path rust/Cargo.toml --locked -p campfire --no-run -j 4' &
+          compile=$!
+          docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+          wait "$compile"
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}

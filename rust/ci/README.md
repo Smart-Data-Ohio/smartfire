@@ -35,7 +35,7 @@ behavior-check.py's own commands.
 | --- | --- |
 | database | `reference-tools/db/differential.sh --prepare-only`, `reference-tools/auth/rollback.sh --prepare-only`, then exactly 3 ignored Ruby DB/rollback comparisons |
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
-| browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`), then exactly 7 WS11-UI, 7 WS12, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
+| browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 7 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
 | messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16` (paired Rails/Rust cases) |
 | messaging originals (2 shards) | `behavior-check.py --prepare-only`, then the 53 registered original WS14/WS15 browser declarations against Rust via the pinned native Selenium image |
