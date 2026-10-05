@@ -55,8 +55,21 @@ async function run(file, name, user, check) {
   page.on('console', msg => {if (msg.type()==='error') console.log('BROWSER ERROR '+msg.text());});
   page.on('pageerror', error => console.log('PAGE ERROR '+error.message));
   page.on('requestfailed', request => console.log('REQUEST FAILED '+request.method()+' '+new URL(request.url()).pathname+' '+request.failure()?.errorText));
+  page.on('response', response => {if (response.status() >= 400) console.log('HTTP ERROR '+response.status()+' '+new URL(response.url()).pathname);});
   try { await check(page); passed++; counts[0]++; console.log(`PASS ${file}: ${name}`); }
-  catch (error) { failed++; counts[1]++; console.log(`FAIL ${file}: ${name}: ${`${new URL(page.url()).pathname}: ${String(error.message).split('\n').slice(0,6).join(' | ')}`}`); }
+  catch (error) {
+    failed++; counts[1]++; console.log(`FAIL ${file}: ${name}: ${`${new URL(page.url()).pathname}: ${String(error.message).split('\n').slice(0,6).join(' | ')}`}`);
+    if (scenario === 'work') console.log('WORK PANEL '+JSON.stringify(await page.evaluate(() => ({
+      url: location.pathname + location.search,
+      bodyClass: document.body.className,
+      panels: [...document.querySelectorAll('#thread-panel')].map(node => ({
+        hidden: node.getAttribute('aria-hidden'),
+        title: node.querySelector('[data-thread-panel-target="conversationTitle"]')?.textContent,
+        status: node.querySelector('[data-thread-panel-target="threadStatus"]')?.textContent,
+        loaded: node.querySelector('[data-thread-panel-target="content"]')?.dataset.threadContentAtLatest,
+      })),
+    }))));
+  }
   finally {
     if (failed) console.log('STREAM DIAGNOSTICS '+JSON.stringify(await page.evaluate(()=>[...document.querySelectorAll('turbo-cable-stream-source')].map(node=>({channel:node.getAttribute('channel'),signed:!!node.getAttribute('signed-stream-name'),connected:node.hasAttribute('connected')})))));
     await context.close();
@@ -126,6 +139,7 @@ try {
       await fillThreadName(page, 'Agent owned thread');
       await page.locator("#thread-panel [data-thread-panel-target='createMessage']").fill('Work the agent will pick up.');
       await page.locator("#thread-panel [data-thread-panel-target='createSubmit']").click();
+      await page.locator("#thread-panel [data-thread-panel-target='conversation']").waitFor({state:'visible',timeout:10000});
       await contains(page.locator("#thread-panel [data-thread-panel-target='conversationTitle']"),'Agent owned thread',10000);
       await page.locator("#thread-panel [data-thread-panel-target='manage'] summary").click();
       await page.getByRole('menuitem',{name:'Track as work',exact:true}).click();
