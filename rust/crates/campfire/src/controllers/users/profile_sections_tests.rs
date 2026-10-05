@@ -43,7 +43,13 @@ cases!(
     rejected_drive,
     rejected_calendar,
     retired_metadata,
-    blank_reason
+    blank_reason,
+    original_calendar,
+    original_calendar_drive,
+    original_drive_only,
+    original_rejected_calendar,
+    original_rejected_calendar_drive,
+    original_retired_metadata
 );
 #[tokio::test]
 async fn configured_calendar_profile_uses_real_account_metadata_and_forms() {
@@ -85,15 +91,29 @@ async fn configured_calendar_profile_uses_real_account_metadata_and_forms() {
             .split_once("</section>")
             .unwrap()
             .0;
+        super::people_tests::assert_http_fragment(
+            &body,
+            case["html"].as_str().unwrap(),
+            "section",
+            "aria-labelledby",
+            "google-calendar-title",
+        );
         let input = &case["input"];
         let connected = input["connected"] == true;
         let calendar = input["calendar"] == true;
         if !(connected && calendar) {
-            assert!(fragment.contains("Connect Google Calendar"), "{}: original connect label", case["name"]);
+            assert!(
+                fragment.contains("Connect Google Calendar"),
+                "{}: original connect label",
+                case["name"]
+            );
         }
         assert!(!fragment.contains("not configured"));
         assert_eq!(
-            fragment.contains("Connected as fixture&lt;&amp;&gt;@example.test"),
+            fragment.contains(&format!(
+                "Connected as {}",
+                campfire_views::helpers::escape(input["email"].as_str().unwrap())
+            )),
             connected && calendar,
             "{}",
             case["name"]
@@ -185,9 +205,11 @@ async fn configured_calendar_profile_uses_real_account_metadata_and_forms() {
             connected && calendar
         );
         assert_eq!(
-            dom.descendants(root).into_iter().any(|id| dom.name(id) == "a"
-                && dom.attr(id, "href") == Some("#google-calendar-title")
-                && dom.text_content(id).trim() == "Connect Google Calendar"),
+            dom.descendants(root)
+                .into_iter()
+                .any(|id| dom.name(id) == "a"
+                    && dom.attr(id, "href") == Some("#google-calendar-title")
+                    && dom.text_content(id).trim() == "Connect Google Calendar"),
             !(connected && calendar),
             "original Connect Google Calendar link selector"
         );
@@ -343,4 +365,80 @@ async fn profile_asks_to_reconnect_for_an_openid_email_only_grant() {
         })
         .count();
     assert_eq!(connect_forms, 1, "original connect form selector");
+}
+
+/// Replay the missing-record/error branches with the original controller-test inputs.
+async fn original_reconnect_case(name: &str) {
+    let app = TestApp::boot_with_clock_and_env(
+        seed_clock(),
+        &[
+            ("GOOGLE_CLIENT_ID", "parity-client"),
+            ("GOOGLE_CLIENT_SECRET", "parity-secret"),
+        ],
+    )
+    .await
+    .expect("seed required");
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/users_profile_reconnect_receipts.json"
+    ))
+    .unwrap();
+    let case = vectors["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|v| v["name"] == name)
+        .unwrap()
+        .clone();
+    let setup = case.clone();
+    app.db().write(move |tx| {
+        tx.conn().execute("DELETE FROM google_accounts WHERE user_id=?", [DAVID])?;
+        tx.conn().execute("DELETE FROM calendar_meeting_caches WHERE user_id=?", [DAVID])?;
+        tx.conn().execute("UPDATE users SET meeting_status_enabled=1,ooo_calendar_enabled=0 WHERE id=?", [DAVID])?;
+        if setup["account_exists"] == true {
+            tx.conn().execute("INSERT INTO google_accounts(user_id,email,created_at,updated_at) VALUES(?,?,?,?)",
+                rusqlite::params![DAVID,"david@gmail.test",tx.now(),tx.now()])?;
+        }
+        if let Some(error) = setup["fetch_error"].as_str() {
+            tx.conn().execute("INSERT INTO calendar_meeting_caches(user_id,fetched_at,fetch_error,created_at,updated_at) VALUES(?,?,?,?,?)",
+                rusqlite::params![DAVID,tx.now(),error,tx.now(),tx.now()])?;
+        }
+        Ok(())
+    }).await.unwrap();
+    let reply = app.david().get("/users/me/profile").await;
+    assert_eq!(
+        reply.status.as_u16(),
+        case["response"]["status"].as_u64().unwrap() as u16,
+        "{name}: original status"
+    );
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&reply.text()).unwrap();
+    let links = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|node| {
+            dom.name(*node) == "a"
+                && dom.attr(*node, "href") == Some("#google-calendar-title")
+                && dom.text_content(*node).trim() == "Reconnect below"
+        })
+        .map(|node| serde_json::json!([dom.attr(node, "href"), dom.text_content(node).trim()]))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        serde_json::json!(links),
+        case["response"]["reconnect_links"],
+        "{name}: original reconnect selector"
+    );
+    if let Some(expected) = case["response"]["escaped_fetch_error"].as_str() {
+        assert!(
+            reply.text().contains(expected),
+            "{name}: original escaped refresh failure"
+        );
+    }
+}
+#[tokio::test]
+async fn profile_missing_google_account_keeps_the_meeting_reconnect_link() {
+    original_reconnect_case("missing_account").await;
+}
+#[tokio::test]
+async fn profile_failed_calendar_refresh_keeps_the_original_notice() {
+    original_reconnect_case("fetch_error").await;
 }

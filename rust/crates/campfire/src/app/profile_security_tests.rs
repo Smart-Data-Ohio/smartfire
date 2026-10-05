@@ -176,153 +176,163 @@ async fn audits(a: &TestApp) -> Value {
 }
 #[tokio::test]
 async fn profile_guard_fields_errors_and_security_writes_match_pinned_rails() {
-    for (name, case) in vectors()["profile"].as_object().unwrap() {
-        let a = app().await;
-        a.db()
-            .write(|tx| {
-                tx.conn().execute("DELETE FROM audit_logs", [])?;
-                TwoFactorRememberedDevice::revoke_all(tx, DAVID)?;
-                TwoFactorRememberedDevice::create_for(tx, DAVID, Some(CHROME), Some("127.0.0.1"))?;
-                Ok(())
-            })
-            .await
-            .unwrap();
-        if name == "passwordless" || name == "unicode_case_only" {
-            let passwordless = name == "passwordless";
+    for method in [Method::PUT, Method::PATCH] {
+        for (name, case) in vectors()["profile"].as_object().unwrap() {
+            let a = app().await;
             a.db()
-                .write(move |tx| {
-                    if passwordless {
-                        tx.conn()
-                            .execute("UPDATE users SET password_digest=NULL WHERE id=?", [DAVID])?;
-                    } else {
-                        tx.conn().execute(
-                            "UPDATE users SET email_address='STRASSE@example.test' WHERE id=?",
-                            [DAVID],
-                        )?;
-                    }
+                .write(|tx| {
+                    tx.conn().execute("DELETE FROM audit_logs", [])?;
+                    TwoFactorRememberedDevice::revoke_all(tx, DAVID)?;
+                    TwoFactorRememberedDevice::create_for(
+                        tx,
+                        DAVID,
+                        Some(CHROME),
+                        Some("127.0.0.1"),
+                    )?;
                     Ok(())
                 })
                 .await
                 .unwrap();
-        }
-        let before = a.db().read(|c| User::find(c, DAVID)).await.unwrap();
-        let mut b = a.sign_in(DAVID).await;
-        let page = b
-            .send(
-                Req::new(Method::GET, "/users/me/profile")
-                    .header("user-agent", CHROME)
-                    .header("x-forwarded-for", "127.0.0.1"),
-            )
-            .await;
-        let mut dom = campfire_richtext::dom::Dom::new();
-        let root = dom.parse_fragment(&page.text()).unwrap();
-        let password_fields = dom
-            .descendants(root)
-            .into_iter()
-            .filter(|id| {
-                dom.name(*id) == "input" && dom.attr(*id, "name") == Some("user[current_password]")
-            })
-            .count();
-        assert_eq!(
-            password_fields,
-            usize::from(name != "passwordless"),
-            "{name}: exact password field selector"
-        );
-        let mut request = Req::new(Method::PATCH, "/users/me/profile")
-            .header("user-agent", CHROME)
-            .header("x-forwarded-for", "127.0.0.1");
-        if case["params"]
-            .as_object()
-            .unwrap()
-            .values()
-            .any(|v| !v.is_string())
-        {
-            request = request
-                .header("content-type", "application/json")
-                .body(json!({"user": case["params"]}).to_string());
-        } else {
-            let fields: Vec<(String, String)> = case["params"]
+            if name == "passwordless" || name == "unicode_case_only" {
+                let passwordless = name == "passwordless";
+                a.db()
+                    .write(move |tx| {
+                        if passwordless {
+                            tx.conn().execute(
+                                "UPDATE users SET password_digest=NULL WHERE id=?",
+                                [DAVID],
+                            )?;
+                        } else {
+                            tx.conn().execute(
+                                "UPDATE users SET email_address='STRASSE@example.test' WHERE id=?",
+                                [DAVID],
+                            )?;
+                        }
+                        Ok(())
+                    })
+                    .await
+                    .unwrap();
+            }
+            let before = a.db().read(|c| User::find(c, DAVID)).await.unwrap();
+            let mut b = a.sign_in(DAVID).await;
+            let page = b
+                .send(
+                    Req::new(Method::GET, "/users/me/profile")
+                        .header("user-agent", CHROME)
+                        .header("x-forwarded-for", "127.0.0.1"),
+                )
+                .await;
+            let mut dom = campfire_richtext::dom::Dom::new();
+            let root = dom.parse_fragment(&page.text()).unwrap();
+            let password_fields = dom
+                .descendants(root)
+                .into_iter()
+                .filter(|id| {
+                    dom.name(*id) == "input"
+                        && dom.attr(*id, "name") == Some("user[current_password]")
+                })
+                .count();
+            assert_eq!(
+                password_fields,
+                usize::from(name != "passwordless"),
+                "{name}: exact password field selector"
+            );
+            let mut request = Req::new(method.clone(), "/users/me/profile")
+                .header("user-agent", CHROME)
+                .header("x-forwarded-for", "127.0.0.1");
+            if case["params"]
                 .as_object()
                 .unwrap()
-                .iter()
-                .map(|(k, v)| (format!("user[{k}]"), v.as_str().unwrap().into()))
-                .collect();
-            let pairs: Vec<_> = fields
-                .iter()
-                .map(|(k, v)| (k.as_str(), v.as_str()))
-                .collect();
-            request = request.form(&pairs);
-        }
-        let response = b.write(request).await;
-        assert_eq!(
-            response.status.as_u16(),
-            case["status"].as_u64().unwrap() as u16,
-            "{name}: {}",
-            response.text()
-        );
-        if response.status == StatusCode::FOUND {
+                .values()
+                .any(|v| !v.is_string())
+            {
+                request = request
+                    .header("content-type", "application/json")
+                    .body(json!({"user": case["params"]}).to_string());
+            } else {
+                let fields: Vec<(String, String)> = case["params"]
+                    .as_object()
+                    .unwrap()
+                    .iter()
+                    .map(|(k, v)| (format!("user[{k}]"), v.as_str().unwrap().into()))
+                    .collect();
+                let pairs: Vec<_> = fields
+                    .iter()
+                    .map(|(k, v)| (k.as_str(), v.as_str()))
+                    .collect();
+                request = request.form(&pairs);
+            }
+            let response = b.write(request).await;
             assert_eq!(
-                response.location(),
-                Some("http://campfire.test/users/me/profile"),
+                response.status.as_u16(),
+                case["status"].as_u64().unwrap() as u16,
+                "{name}: {}",
+                response.text()
+            );
+            if response.status == StatusCode::FOUND {
+                assert_eq!(
+                    response.location(),
+                    Some("http://campfire.test/users/me/profile"),
+                    "{name}"
+                );
+            }
+            let saved = a.db().read(|c| User::find(c, DAVID)).await.unwrap();
+            if name == "new_is_not_current" || name == "original_new_is_not_current" {
+                assert!(
+                    saved.authenticate("secret123456"),
+                    "existing password remains authenticatable after refused profile write"
+                );
+            }
+            assert_eq!(json!(saved.email_address), case["email"], "{name}");
+            assert_eq!(json!(saved.name), case["name"], "{name}");
+            assert_eq!(json!(saved.bio), case["bio"], "{name}");
+            assert_eq!(
+                json!(saved.password_digest != before.password_digest),
+                case["password_changed"],
                 "{name}"
             );
-        }
-        let saved = a.db().read(|c| User::find(c, DAVID)).await.unwrap();
-        if name == "new_is_not_current" {
-            assert!(
-                saved.authenticate("secret123456"),
-                "existing password remains authenticatable after refused profile write"
+            let (marker, allowed): (Option<campfire_db::Timestamp>, bool) = a
+                .db()
+                .read(|c| {
+                    Ok(c.query_row(
+                        "SELECT email_self_changed_at,google_email_link_allowed FROM users WHERE id=?",
+                        [DAVID],
+                        |r| Ok((r.get(0)?, r.get(1)?)),
+                    )?)
+                })
+                .await
+                .unwrap();
+            assert_eq!(
+                marker.map(|t| t.jiff()),
+                case["marker"]
+                    .as_str()
+                    .map(|v| v.parse::<jiff::Timestamp>().unwrap()),
+                "{name}"
             );
-        }
-        assert_eq!(json!(saved.email_address), case["email"], "{name}");
-        assert_eq!(json!(saved.name), case["name"], "{name}");
-        assert_eq!(json!(saved.bio), case["bio"], "{name}");
-        assert_eq!(
-            json!(saved.password_digest != before.password_digest),
-            case["password_changed"],
-            "{name}"
-        );
-        let (marker, allowed): (Option<campfire_db::Timestamp>, bool) = a
-            .db()
-            .read(|c| {
-                Ok(c.query_row(
-                    "SELECT email_self_changed_at,google_email_link_allowed FROM users WHERE id=?",
-                    [DAVID],
-                    |r| Ok((r.get(0)?, r.get(1)?)),
-                )?)
-            })
-            .await
-            .unwrap();
-        assert_eq!(
-            marker.map(|t| t.jiff()),
-            case["marker"]
-                .as_str()
-                .map(|v| v.parse::<jiff::Timestamp>().unwrap()),
-            "{name}"
-        );
-        assert_eq!(json!(allowed), case["allowed"], "{name}");
-        assert_eq!(audits(&a).await, case["audits"], "{name}");
-        let device_count = a
-            .db()
-            .read(|c| Ok(TwoFactorRememberedDevice::for_user(c, DAVID)?.len()))
-            .await
-            .unwrap();
-        assert_eq!(
-            device_count,
-            if case["password_changed"] == true {
-                0
-            } else {
-                1
-            },
-            "{name}"
-        );
-        for key in ["current_password_input", "error_html"] {
-            if let Some(html) = case[key].as_str() {
-                assert!(
-                    response.text().contains(html),
-                    "{name}: missing {key}: {html}\n{}",
-                    response.text()
-                );
+            assert_eq!(json!(allowed), case["allowed"], "{name}");
+            assert_eq!(audits(&a).await, case["audits"], "{name}");
+            let device_count = a
+                .db()
+                .read(|c| Ok(TwoFactorRememberedDevice::for_user(c, DAVID)?.len()))
+                .await
+                .unwrap();
+            assert_eq!(
+                device_count,
+                if case["password_changed"] == true {
+                    0
+                } else {
+                    1
+                },
+                "{name}"
+            );
+            for key in ["current_password_input", "error_html"] {
+                if let Some(html) = case[key].as_str() {
+                    assert!(
+                        response.text().contains(html),
+                        "{name}: missing {key}: {html}\n{}",
+                        response.text()
+                    );
+                }
             }
         }
     }

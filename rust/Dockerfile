@@ -98,7 +98,12 @@ RUN apt-get source -qq ffmpeg=${FFMPEG_VERSION} && \
 
 # The toolchain CI runs the tests and clippy in, with the source bind-mounted: the same libvips and
 # ffmpeg as the image, so the storage vectors' byte comparisons run rather than skip.
+# The enabled service-worker receipt runs the pinned original Node harness on real HTTP bytes.
+# Keep this prerequisite in the test toolchain stage; production builds start from media-base.
+FROM docker.io/library/node:26.10.0-trixie-slim@sha256:ec7758ee051e457b468b32bde57b0879010b325bb9862718e9615225ce4aaae1 AS test-node
+
 FROM media-base AS toolchain
+COPY --from=test-node /usr/local/bin/node /usr/local/bin/node
 COPY --from=vips /opt/vips /opt/vips
 COPY --from=ffmpeg /opt/ffmpeg /opt/ffmpeg
 ENV LIBRARY_PATH=/opt/vips/lib \

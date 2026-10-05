@@ -1930,7 +1930,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+            "controllers::public_pages::tests::public_pages_accept_anonymous_head_without_a_body"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0100",
           "assertion_count": 2,
@@ -2022,11 +2022,14 @@
           "rust_tests": [
             "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0102",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
           "assertion_count": 5,
           "cutover_reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus.",
           "private_helper_assertion_count": 0,
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0102"
+          ]
         },
         {
           "name": "operator name is escaped and malicious contact email is dropped",
@@ -2474,7 +2477,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name"
+            "controllers::users::people_tests::own_public_profile_matches_the_original_show_request"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0113",
           "assertion_count": 1,
@@ -3847,7 +3850,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::calendar_only"
+            "controllers::users::profile_sections_tests::original_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0153",
           "assertion_count": 3,
@@ -3908,13 +3911,16 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_gap_original_tests::original_meeting_unreachable_notice"
+            "controllers::users::profile_sections_tests::profile_failed_calendar_refresh_keeps_the_original_notice"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0154",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
           "assertion_count": 2,
           "cutover_reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE.",
           "private_helper_assertion_count": 0,
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0154"
+          ]
         },
         {
           "name": "profile asks to reconnect for meeting status left on after disconnect",
@@ -3939,7 +3945,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+            "controllers::users::profile_sections_tests::profile_missing_google_account_keeps_the_meeting_reconnect_link"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0155",
           "assertion_count": 2,
@@ -4263,13 +4269,17 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_gap_original_tests::original_connected_david_gmail_email"
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_calendar"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0165",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
           "assertion_count": 2,
           "cutover_reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test.",
           "private_helper_assertion_count": 0,
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0165"
+          ]
         },
         {
           "name": "profile offers a reconnect when Google rejected the connection",
@@ -4295,7 +4305,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::rejected_calendar"
+            "controllers::users::profile_sections_tests::original_rejected_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0166",
           "assertion_count": 3,
@@ -4325,7 +4335,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::calendar_only"
+            "controllers::users::profile_sections_tests::original_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0167",
           "assertion_count": 4,
@@ -4355,7 +4365,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::calendar_drive"
+            "controllers::users::profile_sections_tests::original_calendar_drive"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0168",
           "assertion_count": 2,
@@ -4385,7 +4395,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::retired_metadata"
+            "controllers::users::profile_sections_tests::original_retired_metadata"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0169",
           "assertion_count": 2,
@@ -4473,7 +4483,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::drive_only"
+            "controllers::users::profile_sections_tests::original_drive_only"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0172",
           "assertion_count": 3,
@@ -4503,7 +4513,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::rejected_drive"
+            "controllers::users::profile_sections_tests::original_rejected_calendar_drive"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0173",
           "assertion_count": 3,
@@ -4533,7 +4543,7 @@
           ],
           "rust_tests": [
             "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::rejected_calendar"
+            "controllers::users::profile_sections_tests::original_rejected_calendar"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0174",
           "assertion_count": 2,
@@ -4623,13 +4633,16 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_settings_tests::original_github_login_normalizes_david_gh"
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0176",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
           "assertion_count": 2,
           "cutover_reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value.",
           "private_helper_assertion_count": 0,
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0176"
+          ]
         },
         {
           "name": "a github login cannot be claimed by a second user",
@@ -4947,13 +4960,16 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_settings_tests::original_linked_github_login_is_cleared"
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0186",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
           "assertion_count": 2,
           "cutover_reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login.",
           "private_helper_assertion_count": 0,
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0186"
+          ]
         },
         {
           "name": "changing email requires the current password",
@@ -5097,13 +5113,16 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_gap_original_tests::original_email_change_with_current_password_marks_now"
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0190",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
           "assertion_count": 3,
           "cutover_reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value.",
           "private_helper_assertion_count": 0,
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0190"
+          ]
         },
         {
           "name": "other profile edits and case-only email edits need no password and record nothing",
@@ -5160,13 +5179,16 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_gap_original_tests::original_case_only_email_and_dave_name_leave_marker_null"
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0191",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
           "assertion_count": 3,
           "cutover_reason": "The security corpus checks Submitted name rather than the original Dave name.",
           "private_helper_assertion_count": 0,
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0191"
+          ]
         },
         {
           "name": "profile asks for the current password only when the account has one",
@@ -7818,14 +7840,17 @@
             }
           ],
           "rust_tests": [
-            "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
+            "controllers::pwa::tests::original_service_worker_logic_checks_the_real_http_script"
           ],
-          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0276",
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
           "assertion_count": 2,
           "cutover_reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output.",
           "private_helper_assertion_count": 0,
           "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
-          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "additional_assertion_receipts": [
+            "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0276"
+          ]
         }
       ],
       "declared_count": 5,
@@ -10409,6 +10434,12 @@
           "broad_original_assertion_receipts": 195,
           "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-c-report.md"
         }
+      },
+      {
+        "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+        "reason": "Original-setup sweep closes eight previously reopened B declarations.",
+        "broad_original_receipts_pending": 216,
+        "broad_original_assertion_receipts": 112
       }
     ],
     "broad_original_assertion_receipts": 233,

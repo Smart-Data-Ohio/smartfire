@@ -1320,6 +1320,21 @@
         "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json"
       ],
       "executed_browser_gate": "Seven ignored registrations explicitly executed locally by rust/parity/system/ws12; future CI handoff: PR #237 must add the seven exact names to its ignored-test registry. Current main toolchain CI skips them."
+    },
+    {
+      "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+      "reason": "Eight formerly reopened B declarations now have original-setup enabled assertion receipts; keep prior reopened history in B manifest.",
+      "closed_ids": [
+        "P0102",
+        "P0154",
+        "P0165",
+        "P0176",
+        "P0186",
+        "P0190",
+        "P0191",
+        "P0276"
+      ],
+      "broad_pending_before": 216
     }
   ],
   "ci_browser_handoff": {

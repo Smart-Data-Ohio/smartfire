@@ -443,3 +443,10 @@ async fn profile_message_buttons_carry_the_accessible_name() {
 async fn review_card_markup_matches_rails() {
     card_case("review_markup").await;
 }
+
+#[tokio::test]
+async fn own_public_profile_matches_the_original_show_request() {
+    let app = TestApp::boot_frozen().await.expect("seed required");
+    let reply = app.david().get(&campfire_routes::user(DAVID)).await;
+    assert_eq!(reply.status, StatusCode::OK, "original own-user GET");
+}

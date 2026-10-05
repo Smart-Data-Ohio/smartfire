@@ -328,3 +328,8 @@ Cutover ledger remains partial: 216 broad receipts; 8 sidebar receipts; 14 overl
 ## PR #244 re-review fixes (current)
 
 The current audit uses the runtime Rails pin 78b9b1546 and maps all 401 direct assertion sites in 120 declarations. The populated clear-zone setup, routed DOM selectors and two status-link predicates are described in `ledger-ws8br-ws17-ws11ui-b-review-report.md`, with 14 producer controls and the completed full workspace/clippy receipts. The eight reopened records remain open. Historical summaries above retain their original pin and scope.
+
+
+## Current-pin HTTP branch sweep after REREVIEW2-244
+
+The latest round closes the three sampled branch gaps and all eight reopened original-value receipts. All 120 declarations and 401 Rails assertion sites now have enabled Rust assertions. See `ledger-ws8br-ws17-ws11ui-b-review-report.md` and the complete per-declaration `ledger-ws8br-ws17-ws11ui-b-branch-sweep.{json,md}`. Historical summaries above retain their original pin and execution scope. This round ran targeted tests only; it does not claim a new local full-workspace run. The independent remainder remains 208 broad declarations, eight sidebar declarations, fourteen overlapping criteria, the muted and Calendar sequences and aggregate mappings. No #248/C source or branch was modified.

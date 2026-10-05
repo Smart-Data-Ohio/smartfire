@@ -20,7 +20,14 @@ end
 def audits
   AuditLog.order(:id).map { |row| row.attributes.slice("action", "actor_id", "actor_label", "target_type", "target_id", "target_label", "details", "ip_address", "user_agent") }
 end
+verb = ENV.fetch("PROFILE_RECEIPT_VERB", "patch")
+raise "unsupported receipt verb" unless %w[patch put].include?(verb)
 cases = [
+  ["original_missing", { email_address: "newhire@smartdata.net" }],
+  ["original_wrong", { email_address: "newhire@smartdata.net", current_password: "wrong-password" }],
+  ["original_new_is_not_current", { email_address: "newhire@smartdata.net", password: "brand-new-secret", current_password: "brand-new-secret" }],
+  ["original_correct", { email_address: "david@smartdata.net", current_password: "secret123456" }],
+  ["original_case_only", { email_address: "David@37signals.com", name: "Dave" }],
   ["missing", { email_address: "ws9-reviewed@example.test", password: "proposed-password", name: "Submitted name", bio: "Submitted bio" }],
   ["blank", { email_address: "ws9-reviewed@example.test", current_password: "  " }],
   ["wrong", { email_address: "ws9-reviewed@example.test", current_password: "wrong" }],
@@ -47,9 +54,9 @@ profile = cases.to_h do |name, params|
     before = user.attributes.slice("email_address", "name", "bio", "password_digest", "email_self_changed_at", "google_email_link_allowed")
     client, headers = browser(user)
     if params.values.any? { |value| !value.is_a?(String) }
-      client.patch "/users/me/profile", params: { user: params }, as: :json, headers: headers.merge("Accept" => "text/html")
+      client.public_send verb, "/users/me/profile", params: { user: params }, as: :json, headers: headers.merge("Accept" => "text/html")
     else
-      client.patch "/users/me/profile", params: { user: params }, headers: headers
+      client.public_send verb, "/users/me/profile", params: { user: params }, headers: headers
     end
     body = client.response.body
     user.reload

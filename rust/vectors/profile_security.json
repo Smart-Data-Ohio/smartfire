@@ -1,5 +1,102 @@
 {
   "profile": {
+    "original_missing": {
+      "params": {
+        "email_address": "newhire@smartdata.net"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is required to change your email address.\n        </p>\n"
+    },
+    "original_wrong": {
+      "params": {
+        "email_address": "newhire@smartdata.net",
+        "current_password": "wrong-password"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is incorrect.\n        </p>\n"
+    },
+    "original_new_is_not_current": {
+      "params": {
+        "email_address": "newhire@smartdata.net",
+        "password": "brand-new-secret",
+        "current_password": "brand-new-secret"
+      },
+      "status": 422,
+      "email": "david@37signals.com",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": "<input type=\"password\" name=\"user[current_password]\" id=\"user_current_password\" class=\"input txt-large\" autocomplete=\"current-password\" placeholder=\"Current password (to change email)\" maxlength=\"72\" aria-label=\"Current password, required to change your email address\" />",
+      "error_html": "        <p class=\"txt-small margin-none\" style=\"color: var(--color-negative)\">\n          Current password is incorrect.\n        </p>\n"
+    },
+    "original_correct": {
+      "params": {
+        "email_address": "david@smartdata.net",
+        "current_password": "secret123456"
+      },
+      "status": 302,
+      "email": "david@smartdata.net",
+      "name": "David",
+      "bio": null,
+      "password_changed": false,
+      "marker": "2026-03-02T16:00:00.000000Z",
+      "allowed": true,
+      "audits": [
+        {
+          "action": "user.email.change",
+          "actor_id": 127326141,
+          "actor_label": "David <david@smartdata.net>",
+          "target_type": "User",
+          "target_id": 127326141,
+          "target_label": "David <david@smartdata.net>",
+          "details": {
+            "email_address": {
+              "before": "david@37signals.com",
+              "after": "david@smartdata.net"
+            }
+          },
+          "ip_address": "127.0.0.1",
+          "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      ],
+      "current_password_input": null,
+      "error_html": null
+    },
+    "original_case_only": {
+      "params": {
+        "email_address": "David@37signals.com",
+        "name": "Dave"
+      },
+      "status": 302,
+      "email": "David@37signals.com",
+      "name": "Dave",
+      "bio": null,
+      "password_changed": false,
+      "marker": null,
+      "allowed": true,
+      "audits": [],
+      "current_password_input": null,
+      "error_html": null
+    },
     "missing": {
       "params": {
         "email_address": "ws9-reviewed@example.test",

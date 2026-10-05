@@ -4803,8 +4803,8 @@
             "original_github_normalize"
           ],
           "observation": "assert_redirected_to user_profile_url",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:269",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:269",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []
@@ -4819,8 +4819,8 @@
             "original_github_normalize"
           ],
           "observation": "assert_equal \"david-gh\", users(:david).reload.github_login",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []
@@ -4850,8 +4850,8 @@
             "original_github_unlink"
           ],
           "observation": "assert_redirected_to user_profile_url",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:269",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:269",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []
@@ -4866,8 +4866,8 @@
             "original_github_unlink"
           ],
           "observation": "assert_nil users(:david).reload.github_login",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []

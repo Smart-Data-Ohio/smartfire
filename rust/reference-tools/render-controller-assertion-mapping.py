@@ -10,7 +10,7 @@ parser.add_argument('--output',type=Path,default=root/'plans/ledger-ws8br-ws17-w
 args=parser.parse_args()
 manifest = json.loads(args.manifest.read_text())
 lines = ['# Individual original assertion audit', '',
-         'Original declarations use Rails d7c7de92. Runtime fixtures follow the current reference pin.', '',
+         f"Original declarations and runtime fixtures use Rails {manifest['reference']}.", '',
          'Every row names the original assertion and the actual Rust check. Whole-byte/DOM checks retain tags, attributes, text and cardinality; their fixture cases are named below. Reopened gaps are explicit and retain the previous insufficient claim in JSON history.', '']
 for row in manifest['records']:
     lines += [f"## {row['id']}: {row['test']}", '', f"Status: **{row['record_status']}**. Native identities:", '']

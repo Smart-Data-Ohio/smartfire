@@ -2555,7 +2555,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0102",
       "assertion_count": 5,
-      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged.",
+      "additional_assertion_receipts": []
     },
     {
       "id": "P0176",
@@ -2566,7 +2567,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0176",
       "assertion_count": 2,
-      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged.",
+      "additional_assertion_receipts": []
     },
     {
       "id": "P0186",
@@ -2577,7 +2579,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0186",
       "assertion_count": 2,
-      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged.",
+      "additional_assertion_receipts": []
     },
     {
       "id": "P0154",
@@ -2588,7 +2591,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0154",
       "assertion_count": 2,
-      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged.",
+      "additional_assertion_receipts": []
     },
     {
       "id": "P0165",
@@ -2599,7 +2603,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0165",
       "assertion_count": 2,
-      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged.",
+      "additional_assertion_receipts": []
     },
     {
       "id": "P0190",
@@ -2610,7 +2615,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0190",
       "assertion_count": 3,
-      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged.",
+      "additional_assertion_receipts": []
     },
     {
       "id": "P0191",
@@ -2621,7 +2627,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json#P0191",
       "assertion_count": 3,
-      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged."
+      "execution": "Current branch enabled native nextest; see C report. Historical main CI counts are unchanged.",
+      "additional_assertion_receipts": []
     },
     {
       "id": "P0251",
@@ -2940,7 +2947,8 @@
       ],
       "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json#P0276",
       "assertion_count": 2,
-      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests."
+      "execution": "rust/ci-full-gate -> rust/parity/system/ws12 -> seven explicitly enabled ignored browser wrappers; missing browser dependencies fail this gate. Ordinary toolchain CI does not claim these ignored tests.",
+      "additional_assertion_receipts": []
     }
   ],
   "review240_assertion_tests": [
@@ -3219,6 +3227,10 @@
         "Escape still dismisses the row menu after the profile card takes focus",
         "the Starred group works on a phone"
       ]
+    },
+    {
+      "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+      "reason": "Full branch sweep with eight original-value receipts closed; historical full-suite claims remain historical."
     }
   ],
   "ws8br_sidebar_closed_records": [

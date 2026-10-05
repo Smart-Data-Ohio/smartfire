@@ -172,14 +172,14 @@ macro_rules! cases {
 cases!(
     layout_theme_zone_and_manual_sound_state => ["default", "manual_dnd", "expired_dnd", "boundary_dnd", "running_dnd"],
     layout_dnd_presence_mutes_sounds => ["dnd_presence"],
-    layout_quiet_hours_window_and_zone => ["quiet_hours", "quiet_hours_off", "quiet_hours_incomplete", "quiet_hours_equal", "quiet_hours_zone_default"],
+    layout_quiet_hours_window_and_zone => ["quiet_hours", "quiet_hours_off", "quiet_hours_incomplete", "quiet_hours_equal", "quiet_hours_zone_default", "original_quiet_hours_disabled"],
     layout_meeting_windows_include_all_cached_pairs => ["meeting_current", "cache_order_and_offsets", "cache_malformed_pairs"],
     layout_future_meeting_windows_before_start => ["meeting_future"],
     layout_empty_or_missing_meeting_cache => ["meeting_empty", "meeting_missing"],
     layout_meeting_status_off_sends_no_windows => ["meeting_status_off"],
     layout_manual_ooo_windows => ["manual_ooo", "expired_ooo", "boundary_ooo", "ooo_manual_and_calendar"],
     layout_future_calendar_ooo_windows => ["calendar_ooo_future", "calendar_ooo_off"],
-    layout_ooo_notifications_kept_sends_no_windows => ["ooo_notifications_kept"],
+    layout_ooo_notifications_kept_sends_no_windows => ["ooo_notifications_kept", "original_manual_ooo_notifications_kept"],
     layout_meeting_quiet_off_sends_no_windows => ["meeting_quiet_off"],
-    layout_drive_previews_uses_exact_scope => ["drive_missing", "drive_calendar_only", "drive_current_scope", "drive_retired_scope", "drive_disconnected", "drive_ascii_separators", "drive_wrong_case", "drive_unicode_separator"],
+    layout_drive_previews_uses_exact_scope => ["drive_missing", "drive_calendar_only", "drive_current_scope", "drive_retired_scope", "drive_disconnected", "drive_ascii_separators", "drive_wrong_case", "drive_unicode_separator", "original_drive_legacy_calendar", "original_drive_full_scope"],
 );

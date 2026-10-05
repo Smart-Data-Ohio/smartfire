@@ -1,0 +1,7 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "source": "test/test_helpers/google_calendar_test_helper.rb",
+  "source_sha256": "1f1d1ce815565b9fec68c0cacf405e6dd46e6d723b7f29ef01ff553e8fd5c714",
+  "drive_scopes": "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file",
+  "legacy_drive_scopes": "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly"
+}
