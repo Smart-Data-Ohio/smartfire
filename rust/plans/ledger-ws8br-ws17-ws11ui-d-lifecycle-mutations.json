@@ -1,0 +1,37 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "mutations": [
+    {
+      "closure_id": "muted-room-sequence",
+      "browser_case": "muted-delivery",
+      "mutation": "muted-writer",
+      "producer": "SQLite AFTER UPDATE trigger breaks the real UI writer; finally removes the trigger",
+      "assertion": "test/system/sidebar_organize_test.rb:70",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "failure_output": "ORIGINAL_FORGERY Rust muted-delivery: False\nORIGINAL_FIXTURE_RESET Rust muted-delivery: all original tables/FTS/sequences and renderer cache\nOriginal Rust muted-delivery:\nOriginal browser network: isolated namespace, unchanged HTTP/WebSocket bytes\nORIGINAL_ASSERTION test/test_helpers/system_test_helper.rb:65\nORIGINAL_ASSERTION test/test_helpers/system_test_helper.rb:65\nORIGINAL_MUTATION membership involvement writer\nORIGINAL_ASSERTION test/system/sidebar_organize_test.rb:148\nORIGINAL_PRODUCER_RESTORED muted-delivery: fixture triggers removed\nfile:///work/rust/reference-tools/users/ledger_browser_lifecycle.mjs:27\n  if(performance.now()>=deadline)throw Error(`${file}:${line}: original assertion`)\n                                       ^\n\nError: test/system/sidebar_organize_test.rb:70: original assertion\n    at selector (file:///work/rust/reference-tools/users/ledger_browser_lifecycle.mjs:27:40)\n    at async file:///work/rust/reference-tools/users/ledger_browser_lifecycle.mjs:61:3\n\nNode.js v24.20.0\n\n",
+      "evidence_sha256": "d117a7ccba2cc8e04a2868caa85a91a46d64bddde20f238b225c54a1d61db765",
+      "configuration": "Original Rails test environment; null fragment cache; real test_session credential GET; per-case forgery-off; original fixture foundation and actual renderer/cache/Kit-counter reset",
+      "command": "PARITY_IMAGE=review236-reference:78b9b1546 WS11UI_LEDGER_TEST_HOST=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-main-ci/rust/target/debug/deps/campfire-205f5301470b6db4 WS11UI_BROWSER_BINARY=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-main-ci/rust/target/debug/campfire python3 rust/reference-tools/users/run_ledger_browser_assertions.py lifecycle --controls"
+    },
+    {
+      "closure_id": "calendar-browser-sequence",
+      "browser_case": "calendar-lifecycle",
+      "mutation": "calendar-opt-in-writer",
+      "producer": "SQLite AFTER UPDATE trigger breaks the real UI writer; finally removes the trigger",
+      "assertion": "test/system/meeting_status_test.rb:46",
+      "intended_assertion_failed": true,
+      "producer_restored": true,
+      "invalid_control": false,
+      "failure_output": "ORIGINAL_FORGERY Rust calendar-lifecycle: False\nORIGINAL_FIXTURE_RESET Rust calendar-lifecycle: all original tables/FTS/sequences and renderer cache\nOriginal Rust calendar-lifecycle:\nOriginal browser network: isolated namespace, unchanged HTTP/WebSocket bytes\nORIGINAL_ASSERTION test/test_helpers/system_test_helper.rb:65\nORIGINAL_MUTATION Calendar opt-in writer\nORIGINAL_PRODUCER_RESTORED calendar-lifecycle: fixture triggers removed\nnode:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: test/system/meeting_status_test.rb:46: original assertion meeting status was not enabled\n    at file:///work/rust/reference-tools/users/ledger_browser_lifecycle.mjs:81:144 {\n  generatedMessage: false,\n  code: 'ERR_ASSERTION',\n  actual: false,\n  expected: true,\n  operator: '==',\n  diff: 'simple'\n}\n\nNode.js v24.20.0\n\n",
+      "evidence_sha256": "1f3444e27d0109885f5ade2b5f4d7d45843070f8c557b51cd200bebc9a53dc08",
+      "configuration": "Original Rails test environment; null fragment cache; real test_session credential GET; per-case forgery-off; original fixture foundation and actual renderer/cache/Kit-counter reset",
+      "command": "PARITY_IMAGE=review236-reference:78b9b1546 WS11UI_LEDGER_TEST_HOST=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-main-ci/rust/target/debug/deps/campfire-205f5301470b6db4 WS11UI_BROWSER_BINARY=/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-main-ci/rust/target/debug/campfire python3 rust/reference-tools/users/run_ledger_browser_assertions.py lifecycle --controls"
+    }
+  ],
+  "fixture_foundation": "rust/parity/seeds/ledger_originals.rb",
+  "fixture_foundation_sha256": "65a6a622774359d5715c79dbc24474280edfb266f979cc1ef8a7045f10b58bd0",
+  "browser_driver_sha256": "d6322e0c1807653664d89960beed7a4c8e9430474db7e5a0d22e0d7668dd133a",
+  "verification_status": "Final exact credential/test-cache context: 2 intended failures, actual producer restorations; 0 invalid controls"
+}

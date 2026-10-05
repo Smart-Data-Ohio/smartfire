@@ -123,6 +123,30 @@
       "package": "campfire",
       "binary": "campfire",
       "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ledger_browser_tests::original_ledger_member_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
     }
   ],
   "livekit": [

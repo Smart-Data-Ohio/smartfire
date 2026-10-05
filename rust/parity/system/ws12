@@ -30,3 +30,7 @@ cargo test --locked --manifest-path rust/Cargo.toml -p campfire \
 # Shares the normal binary above and the full-gate pinned browser image.
 cargo test --locked --manifest-path rust/Cargo.toml -p campfire \
   controllers::ws11ui_original_browser_tests -- --ignored --show-output --test-threads=1
+
+# Remaining WS8br/WS17 originals use the same pinned transport and leased hosts.
+cargo test --locked --manifest-path rust/Cargo.toml -p campfire \
+  controllers::ledger_browser_tests -- --ignored --show-output --test-threads=1 --skip original_ledger_injected_clock_host

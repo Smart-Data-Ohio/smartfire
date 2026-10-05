@@ -30,6 +30,14 @@ impl Default for State {
 }
 
 impl State {
+    #[cfg(test)]
+    pub(crate) fn fixture_snapshot(&self) -> Self {
+        Self {
+            google: RwLock::new(self.google.read().unwrap_or_else(|p| p.into_inner()).clone()),
+            extra_verifiers: RwLock::new(self.extra_verifiers()),
+        }
+    }
+
     /// SudoMode.register_verifier preserves order and ignores duplicate names.
     /// Registration alone does not supply a verifier implementation.
     pub fn register_verifier(&self, name: &str) {

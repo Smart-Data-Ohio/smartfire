@@ -8,6 +8,29 @@ from browser_host import prepare_source, build_host
 
 
 class HostSourceTests(unittest.TestCase):
+    def test_follows_tracked_literal_include_inputs_outside_the_copy_prefixes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inputs = {
+                "public/500.html": b"original error page",
+                "rust/crates/campfire/src/receipt.rs":
+                    b'include_str!(\n "../../../plans/receipt.json"\n);\n'
+                    b'include_bytes!("../../../reference-tools/original.rb");',
+                "rust/plans/receipt.json": b'{"original_assertions":3}',
+                "rust/reference-tools/original.rb": b"assert rendered_body",
+            }
+            for relative, content in inputs.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(content)
+            with patch("browser_host.subprocess.check_output", return_value="\n".join(inputs)):
+                generated = prepare_source(root)
+                self.assertEqual((generated / "plans/receipt.json").read_bytes(), inputs["rust/plans/receipt.json"])
+                self.assertEqual((generated / "reference-tools/original.rb").read_bytes(), inputs["rust/reference-tools/original.rb"])
+            with patch("browser_host.subprocess.check_output", return_value="\n".join(k for k in inputs if k != "rust/plans/receipt.json")):
+                with self.assertRaisesRegex(RuntimeError, "untracked crate include input"):
+                    prepare_source(root)
+
     def test_generated_executable_cannot_replace_the_workspace_suite_binary(self):
         import json
         from types import SimpleNamespace

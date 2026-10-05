@@ -256,6 +256,11 @@ impl Layout {
 struct KitTokens(campfire_kit::csrf::AuthenticityTokens);
 
 impl request_forgery::AuthenticityTokens for KitTokens {
+    #[cfg(test)]
+    fn enabled(&self) -> bool {
+        !crate::controllers::ledger_browser_tests::forgery_disabled()
+    }
+
     fn global(&self) -> String {
         self.0.global()
     }

@@ -59,6 +59,45 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// The original system helpers change LiveKit ENV inside a test body.
+    /// Rebind only that real configuration, keeping the booted model/service
+    /// dependencies and all installed adapter contents in the private host.
+    #[cfg(test)]
+    pub(crate) fn fixture_huddle_config(&self, lookup: impl Fn(&str) -> Option<String>) -> App {
+        let mut config = self.config.clone();
+        config.livekit_url = lookup("LIVEKIT_URL");
+        config.huddle = crate::huddle::Config::from_lookup(&lookup);
+        config.huddles_configured = crate::huddle_readiness::huddles_configured(&lookup);
+        Arc::new(Self {
+            config,
+            secrets: self.secrets.clone(),
+            ar_encryption: self.ar_encryption.clone(),
+            clock: self.clock.clone(),
+            db: self.db.clone(),
+            storage: self.storage.clone(),
+            cable: self.cable.clone(),
+            broadcasts: self.broadcasts.clone(),
+            jobs: self.jobs.clone(),
+            mail: self.mail.fixture_snapshot(),
+            fizzy: crate::integrations::fizzy::State {
+                network: self.fizzy.network.clone(), base: self.fizzy.base.clone(),
+            },
+            agent_message_payload: self.agent_message_payload.fixture_snapshot(),
+            agent_repositories: self.agent_repositories.fixture_snapshot(),
+            sudo: self.sudo.fixture_snapshot(),
+            two_factor: self.two_factor.fixture_snapshot(),
+            google: self.google.clone(),
+            errors: self.errors.clone(),
+            web_push: self.web_push.clone(),
+            github_accounts: self.github_accounts.clone(),
+            github_app: self.github_app.clone(),
+            github_read: self.github_read.clone(),
+            subscription_network: self.subscription_network.clone(),
+            slack_network: self.slack_network.clone(),
+            fragment_cache: self.fragment_cache.clone(),
+        })
+    }
+
     /// The key pages offer browsers to subscribe with: none while Web Push is off, so that browsers
     /// don't subscribe to notifications that would never be sent.
     pub fn vapid_public_key(&self) -> Option<String> {
@@ -86,6 +125,8 @@ pub struct Booted {
     pub app: App,
     pub router: Router,
     pub jobs: jobs::Runner,
+    #[cfg(test)]
+    pub(crate) fixture_kit: Kit,
 }
 
 /// Boots the app from `config`: prepares the database, restores the reference's boot-time
@@ -248,11 +289,13 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
     let kit = Kit::new(kit_config, crypto, clock, app.clone());
-    let router = router(&app, kit);
+    let router = router(&app, kit.clone());
     Ok(Booted {
         app,
         router,
         jobs: runner,
+        #[cfg(test)]
+        fixture_kit: kit,
     })
 }
 
@@ -335,9 +378,32 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
+    #[cfg(test)]
+    let routes = if app.config.environment == "test" && std::env::var("WS11UI_LEDGER_HOST").as_deref() == Ok("1") {
+        routes.route("/test_session", axum::routing::get(campfire_kit::action(
+            controllers::ledger_browser_tests::original_test_session,
+        )))
+    } else {
+        routes
+    };
     // config.ru: `use Rack::Deflater` around the whole app.
     campfire_kit::app(routes, kit)
         .layer(axum::middleware::from_fn(campfire_kit::deflater::deflater))
+}
+
+/// Rebuild the unchanged real HTTP stack for the original helper's late
+/// configuration input, without booting another DB, Cable server or job runner.
+#[cfg(test)]
+pub(crate) fn fixture_router(app: &App, original: &Kit) -> (Kit, Router) {
+    let mut kit_config = KitConfig::production(app.config.disable_ssl);
+    kit_config.error_pages = error_pages();
+    kit_config.default_headers = crate::security::default_headers();
+    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(
+        app.config.livekit_url.clone(),
+    )));
+    let kit = original.fixture_rebind(kit_config, app.clone());
+    let router = router(app, kit.clone());
+    (kit, router)
 }
 
 /// The Rails route table, with the app's fragment cache current while the action runs.
@@ -505,7 +571,7 @@ const SHUTDOWN_GRACE: Duration = Duration::from_secs(10);
 /// TLS_DOMAIN, HTTPS_PORT, and the app itself on TARGET_PORT.
 async fn serve(config: Config) -> anyhow::Result<()> {
     let front = campfire_kit::front::FrontConfig::from_env();
-    let Booted { app, router, jobs } = boot(config).await?;
+    let Booted { app, router, jobs, .. } = boot(config).await?;
 
     let (stopping_tx, stopping) = tokio::sync::watch::channel(false);
     let cable = app.cable.clone();

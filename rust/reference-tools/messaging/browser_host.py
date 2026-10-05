@@ -1,5 +1,6 @@
 """Build the existing TestApp boundary from reproducible, tools-only test inputs."""
 import json
+import re
 import shlex
 from pathlib import Path
 import subprocess
@@ -15,6 +16,21 @@ def prepare_source(root):
               if path.startswith(("rust/crates/", "rust/vectors/", "rust/test-support/", "rust/reference-tools/views/agents_ui/")) or
               path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference", "rust/parity/reference.sha",
                        "rust/reference-tools/messaging/older_provider_callbacks.rb")]
+    # A crate's literal include inputs are compilation dependencies too. Follow
+    # them rather than letting a new plan/fixture silently disappear from this
+    # tools-only build tree (the normal checkout has those files).
+    tracked = {Path(path) for path in paths}
+    for relative in list(wanted):
+        if relative.suffix != ".rs":
+            continue
+        for name in re.findall(r'include_(?:str|bytes)!\s*\(\s*"([^"]+)"\s*\)', (source / relative).read_text()):
+            included = (source / relative).parent.joinpath(name).resolve()
+            if included.is_relative_to(source):
+                dependency = included.relative_to(source)
+                if Path("rust") / dependency not in tracked:
+                    raise RuntimeError(f"untracked crate include input: {included}")
+                if dependency not in wanted:
+                    wanted.append(dependency)
     expected = set(wanted)
     if generated.exists():
         for path in generated.rglob("*"):

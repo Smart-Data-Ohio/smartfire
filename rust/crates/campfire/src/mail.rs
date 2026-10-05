@@ -28,6 +28,16 @@ pub struct State {
     fanout: RwLock<Option<Fanout>>,
 }
 impl State {
+    #[cfg(test)]
+    pub(crate) fn fixture_snapshot(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            throttle: self.throttle.clone(),
+            renderer: RwLock::new(self.renderer.read().unwrap_or_else(|p| p.into_inner()).clone()),
+            fanout: RwLock::new(self.fanout.read().unwrap_or_else(|p| p.into_inner()).clone()),
+        }
+    }
+
     pub fn new(config: Config) -> Self {
         Self {
             config,

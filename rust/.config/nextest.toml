@@ -25,8 +25,8 @@ test-group = "browser"
 [[profile.ci.overrides]]
 # A paired wrapper owns Rails/Redis, Rust, Chromium and byte-forwarder workers.
 # Account for those child workers in the four-slot CI budget; the default
-# profile still exercises the seven wrappers concurrently at -j 4.
-filter = 'package(campfire) & test(ws11ui_original_browser_tests) & not test(original_browser_port_leases)'
+# profile still exercises the eleven wrappers concurrently at -j 4.
+filter = 'package(campfire) & (test(ws11ui_original_browser_tests) | test(ledger_browser_tests)) & not test(original_browser_port_leases)'
 threads-required = 4
 
 [[profile.ci.overrides]]

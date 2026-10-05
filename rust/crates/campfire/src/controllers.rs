@@ -1302,4 +1302,7 @@ mod ws12_browser_remaining_tests;
 mod ws11ui_original_browser_tests;
 
 #[cfg(test)]
+pub(crate) mod ledger_browser_tests;
+
+#[cfg(test)]
 mod template_coverage_tests;
