@@ -3,8 +3,10 @@
 Build the binary and agents_ui seed first; the pinned Playwright Docker image
 supplies its committed browser dependencies. No images are captured or compared.
 """
-import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, tempfile, threading, time, urllib.request
+import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, sys, tempfile, threading, time, urllib.request
 root = pathlib.Path(__file__).resolve().parents[4]
+sys.path.insert(0, str(root/'rust/reference-tools/users'))
+from browser_port_leases import reserve_system_ports
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
 p.add_argument('--scenario', choices=['all','pages','budget','work','inbox','inbox-filter'], default='all')
@@ -31,9 +33,9 @@ env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11u
 reference = root / 'rust/parity/bin/reference'
 child = None
 # Keep simultaneous worktrees' servers and teardown isolated.
-reference_port = int(os.environ.get('WS11UI_SYSTEM_REFERENCE_PORT','52798'))
-candidate_port = int(os.environ.get('WS11UI_SYSTEM_CANDIDATE_PORT','52799'))
-target_port = int(os.environ.get('WS11UI_SYSTEM_TARGET_PORT','52797'))
+lease = reserve_system_ports(args.scenario)
+reference_port, candidate_port, target_port = lease.ports
+print(f'AGENT_SYSTEM_PORT_LEASE {args.scenario}: {lease.ports}', flush=True)
 
 def wait_up(port):
     for _ in range(240):
@@ -102,10 +104,15 @@ try:
             result_codes.append(result.returncode)
         raise SystemExit(1 if any(result_codes) else 0)
 finally:
+    failure = sys.exc_info()[1]
+    if failure is not None and not (isinstance(failure, SystemExit) and failure.code in (None, 0)):
+        log = work/'candidate.log'
+        if log.exists(): print('CANDIDATE_SERVER_DIAGNOSTICS\n'+log.read_text()[-12000:], flush=True)
     if child is not None:
         if child.poll() is None:
             os.killpg(child.pid,signal.SIGTERM)
             try: child.wait(timeout=5)
             except subprocess.TimeoutExpired: os.killpg(child.pid,signal.SIGKILL);child.wait()
     subprocess.run([str(reference),'down','--port',str(reference_port)],cwd=root,env=env,stdout=subprocess.DEVNULL,check=False)
+    lease.close()
     shutil.rmtree(work)

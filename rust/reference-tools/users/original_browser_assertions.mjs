@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { diagnostics } from './browser_diagnostics.mjs'
-import { network } from './original_browser_network.mjs'
+import { network } from './original_browser_network.mjs'; import { visit } from './browser_navigation.mjs'
 const base=process.env.WS11UI_BROWSER_URL
 const proxy=await network(base)
 const labels=JSON.parse(fs.readFileSync(process.env.WS11UI_BROWSER_LABELS,'utf8'))
@@ -85,7 +85,7 @@ async function scenario(name,fn,{user='david',phone=false,path='/rooms/'+labels[
   p.on('requestfailed',r=>{if(new URL(r.url()).pathname.startsWith('/assets/')&&r.failure()?.errorText!=='net::ERR_ABORTED')bad.push(r.failure().errorText)})
   p.on('response',r=>{if(r.status()>=500)bad.push(`${r.status()} ${r.url()}`)})
   try {
-    assert.equal((await p.goto(base+path)).status(),200,'real initial request')
+    assert.equal((await visit(p,base+path)).status(),200,'real initial request')
     await controller(p,'profile-card')
     await fn(p)
     equal('transport',0,bad,[])

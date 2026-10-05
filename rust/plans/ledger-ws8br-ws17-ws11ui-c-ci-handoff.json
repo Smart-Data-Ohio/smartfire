@@ -53,5 +53,10 @@
       "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
     }
   ],
-  "ordinary_ci_regression": "controllers::ws11ui_original_browser_tests::original_browser_port_leases_are_host_coordinated_and_ephemeral_safe (enabled; four real-kernel Python checks; no browser/image/seed required)"
+  "ordinary_ci_regression": "controllers::ws11ui_original_browser_tests::original_browser_port_leases_are_host_coordinated_and_ephemeral_safe (enabled; four real-kernel Python checks; no browser/image/seed required)",
+  "ci_scheduling": "The job keeps nextest -j 4. Each multi-process WS11-UI wrapper requires all four CI scheduler slots; the default profile retains concurrent four-worker execution. Original assertions, test deadlines and retries remain unchanged.",
+  "harness_regressions": [
+    "rust/reference-tools/users/browser_navigation.test.mjs: pending image does not gate initial document/controller assertions",
+    "rust/reference-tools/users/test_browser_port_leases.py: system hosts hold disjoint non-ephemeral leases"
+  ]
 }

@@ -2,7 +2,7 @@
   "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "runtime_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "stack_base": "f05c3f2a5146a586a80149840f79f2ea52c6d87c",
-  "gate": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+  "gate": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
   "records": [
     {
       "id": "P0354",
@@ -17,7 +17,7 @@
       ],
       "browser_case": "author",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 16,
@@ -121,7 +121,7 @@
       ],
       "browser_case": "author-keyboard",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 34,
@@ -225,7 +225,7 @@
       ],
       "browser_case": "closed-escape",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 47,
@@ -278,7 +278,7 @@
       ],
       "browser_case": "sidebar-keyboard",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 68,
@@ -331,7 +331,7 @@
       ],
       "browser_case": "directory-three",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 81,
@@ -396,7 +396,7 @@
       ],
       "browser_case": "member-huddle",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 97,
@@ -487,7 +487,7 @@
       ],
       "browser_case": "shift-range",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 121,
@@ -540,7 +540,7 @@
       ],
       "browser_case": "long-press",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 147,
@@ -610,7 +610,7 @@
       ],
       "browser_case": "agent",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 161,
@@ -680,7 +680,7 @@
       ],
       "browser_case": "mixed",
       "browser_mode": "people",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 175,
@@ -750,7 +750,7 @@
       ],
       "browser_case": "picker-filter",
       "browser_mode": "pickers",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 189,
@@ -810,7 +810,7 @@
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_selector \".dm-picker__row:not([hidden])\", count: 1, text: \"Chad Puterbaugh\"",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:213",
-          "assertion_anchor": "for(const [q,line,text] of [['chad',195,'Chad Puterbaugh'],['CHA',198,'Chad Puterbaugh'],['renee',201,'Ren\u00e9e Dupont']]) {",
+          "assertion_anchor": "for(const [q,line,text] of [['chad',195,'Chad Puterbaugh'],['CHA',198,'Chad Puterbaugh'],['renee',201,'Renée Dupont']]) {",
           "assertion_scope": "picker-filter",
           "additional_assertion_sources": [
             {
@@ -827,7 +827,7 @@
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_selector \".dm-picker__row:not([hidden])\", count: 1, text: \"Chad Puterbaugh\"",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:213",
-          "assertion_anchor": "for(const [q,line,text] of [['chad',195,'Chad Puterbaugh'],['CHA',198,'Chad Puterbaugh'],['renee',201,'Ren\u00e9e Dupont']]) {",
+          "assertion_anchor": "for(const [q,line,text] of [['chad',195,'Chad Puterbaugh'],['CHA',198,'Chad Puterbaugh'],['renee',201,'Renée Dupont']]) {",
           "assertion_scope": "picker-filter",
           "additional_assertion_sources": [
             {
@@ -839,12 +839,12 @@
         },
         {
           "line": 201,
-          "ruby": "assert_selector \".dm-picker__row:not([hidden])\", count: 1, text: \"Ren\u00e9e Dupont\"",
+          "ruby": "assert_selector \".dm-picker__row:not([hidden])\", count: 1, text: \"Renée Dupont\"",
           "rust_test": "controllers::ws11ui_original_browser_tests::original_picker_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
-          "observation": "assert_selector \".dm-picker__row:not([hidden])\", count: 1, text: \"Ren\u00e9e Dupont\"",
+          "observation": "assert_selector \".dm-picker__row:not([hidden])\", count: 1, text: \"Renée Dupont\"",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:213",
-          "assertion_anchor": "for(const [q,line,text] of [['chad',195,'Chad Puterbaugh'],['CHA',198,'Chad Puterbaugh'],['renee',201,'Ren\u00e9e Dupont']]) {",
+          "assertion_anchor": "for(const [q,line,text] of [['chad',195,'Chad Puterbaugh'],['CHA',198,'Chad Puterbaugh'],['renee',201,'Renée Dupont']]) {",
           "assertion_scope": "picker-filter",
           "additional_assertion_sources": [
             {
@@ -939,7 +939,7 @@
       ],
       "browser_case": "picker-post",
       "browser_mode": "pickers",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 223,
@@ -1038,7 +1038,7 @@
       ],
       "browser_case": "picker-enter",
       "browser_mode": "pickers",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 252,
@@ -1159,7 +1159,7 @@
       ],
       "browser_case": "picker-row",
       "browser_mode": "pickers",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 281,
@@ -1229,7 +1229,7 @@
       ],
       "browser_case": "picker-phone",
       "browser_mode": "pickers",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 292,
@@ -1316,7 +1316,7 @@
       ],
       "browser_case": "group-lifecycle",
       "browser_mode": "group",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 321,
@@ -1517,7 +1517,7 @@
       ],
       "browser_case": "mobile-escape",
       "browser_mode": "members",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 372,
@@ -1642,7 +1642,7 @@
       ],
       "browser_case": "mobile-tab",
       "browser_mode": "members",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 396,
@@ -1767,7 +1767,7 @@
       ],
       "browser_case": "tour-finish",
       "browser_mode": "tours",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 12,
@@ -2139,7 +2139,7 @@
       ],
       "browser_case": "tour-escape",
       "browser_mode": "tours",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 50,
@@ -2266,7 +2266,7 @@
       ],
       "browser_case": "tour-restart",
       "browser_mode": "tours",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 66,
@@ -2372,7 +2372,7 @@
       ],
       "browser_case": "tour-completed",
       "browser_mode": "tours",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 82,
@@ -2442,7 +2442,7 @@
       ],
       "browser_case": "star-card",
       "browser_mode": "stars",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 21,
@@ -2463,12 +2463,12 @@
         },
         {
           "line": 26,
-          "ruby": "assert_selector \"button\", text: \"\u2605 Unstar\", wait: 10",
+          "ruby": "assert_selector \"button\", text: \"★ Unstar\", wait: 10",
           "rust_test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
-          "observation": "assert_selector \"button\", text: \"\u2605 Unstar\", wait: 10",
+          "observation": "assert_selector \"button\", text: \"★ Unstar\", wait: 10",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:417",
-          "assertion_anchor": "await open(p);await p.locator('#user_card').getByRole('button',{name:'\u2606 Star',exact:true}).click();await visible(S,26,p.locator('#user_card').getByRole('button',{name:'\u2605 Unstar',exact:true}))",
+          "assertion_anchor": "await open(p);await p.locator('#user_card').getByRole('button',{name:'☆ Star',exact:true}).click();await visible(S,26,p.locator('#user_card').getByRole('button',{name:'★ Unstar',exact:true}))",
           "assertion_scope": "star-card",
           "additional_assertion_sources": [
             {
@@ -2530,12 +2530,12 @@
         },
         {
           "line": 36,
-          "ruby": "assert_selector \"button\", text: \"\u2606 Star\", wait: 10",
+          "ruby": "assert_selector \"button\", text: \"☆ Star\", wait: 10",
           "rust_test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
-          "observation": "assert_selector \"button\", text: \"\u2606 Star\", wait: 10",
+          "observation": "assert_selector \"button\", text: \"☆ Star\", wait: 10",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:419",
-          "assertion_anchor": "await p.locator('#user_card').getByRole('button',{name:'\u2605 Unstar',exact:true}).click();await visible(S,36,p.locator('#user_card').getByRole('button',{name:'\u2606 Star',exact:true}));await close(p);await marked(p,false);await inline(p)",
+          "assertion_anchor": "await p.locator('#user_card').getByRole('button',{name:'★ Unstar',exact:true}).click();await visible(S,36,p.locator('#user_card').getByRole('button',{name:'☆ Star',exact:true}));await close(p);await marked(p,false);await inline(p)",
           "assertion_scope": "star-card",
           "additional_assertion_sources": [
             {
@@ -2775,7 +2775,7 @@
       ],
       "browser_case": "star-menu",
       "browser_mode": "stars",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 48,
@@ -2813,12 +2813,12 @@
         },
         {
           "line": 53,
-          "ruby": "assert_selector \"button\", text: \"\u2605 Unstar\", wait: 10",
+          "ruby": "assert_selector \"button\", text: \"★ Unstar\", wait: 10",
           "rust_test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
-          "observation": "assert_selector \"button\", text: \"\u2605 Unstar\", wait: 10",
+          "observation": "assert_selector \"button\", text: \"★ Unstar\", wait: 10",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:428",
-          "assertion_anchor": "await menu(p).getByRole('menuitem',{name:'\u2606 Star',exact:true}).click();await visible(S,53,menu(p).getByRole('menuitem',{name:'\u2605 Unstar',exact:true}));await marked(p,true)",
+          "assertion_anchor": "await menu(p).getByRole('menuitem',{name:'☆ Star',exact:true}).click();await visible(S,53,menu(p).getByRole('menuitem',{name:'★ Unstar',exact:true}));await marked(p,true)",
           "assertion_scope": "star-menu",
           "additional_assertion_sources": [
             {
@@ -2859,12 +2859,12 @@
         },
         {
           "line": 59,
-          "ruby": "assert_selector \"button\", text: \"\u2606 Star\", wait: 10",
+          "ruby": "assert_selector \"button\", text: \"☆ Star\", wait: 10",
           "rust_test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
-          "observation": "assert_selector \"button\", text: \"\u2606 Star\", wait: 10",
+          "observation": "assert_selector \"button\", text: \"☆ Star\", wait: 10",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:429",
-          "assertion_anchor": "await menu(p).getByRole('menuitem',{name:'\u2605 Unstar',exact:true}).click();await visible(S,59,menu(p).getByRole('menuitem',{name:'\u2606 Star',exact:true}));await marked(p,false)",
+          "assertion_anchor": "await menu(p).getByRole('menuitem',{name:'★ Unstar',exact:true}).click();await visible(S,59,menu(p).getByRole('menuitem',{name:'☆ Star',exact:true}));await marked(p,false)",
           "assertion_scope": "star-menu",
           "additional_assertion_sources": [
             {
@@ -3003,7 +3003,7 @@
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
           "observation": "assert_no_selector \"#member-row-menu\", visible: true",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:433",
-          "assertion_anchor": "await menu(p).getByRole('menuitem',{name:'\u2606 Star',exact:true}).click();await marked(p,true);await menu(p).locator(\"[role='menuitem']\").press('Escape');await dismissed(p,79)",
+          "assertion_anchor": "await menu(p).getByRole('menuitem',{name:'☆ Star',exact:true}).click();await marked(p,true);await menu(p).locator(\"[role='menuitem']\").press('Escape');await dismissed(p,79)",
           "assertion_scope": "star-menu",
           "additional_assertion_sources": [
             {
@@ -3217,7 +3217,7 @@
       ],
       "browser_case": "star-escape",
       "browser_mode": "stars",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 93,
@@ -3335,7 +3335,7 @@
       ],
       "browser_case": "star-phone",
       "browser_mode": "stars",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 112,
@@ -3373,12 +3373,12 @@
         },
         {
           "line": 120,
-          "ruby": "assert_selector \"button\", text: \"\u2605 Unstar\", wait: 10",
+          "ruby": "assert_selector \"button\", text: \"★ Unstar\", wait: 10",
           "rust_test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions",
           "checks": "Same original selector, text, count, visibility, focus, geometry or current-path predicate on the real browser after its original interaction. Exact recipient sets, canonical room path and tour stamps are reloaded from the same HTTP server database; no substituted domain call. Private-helper and setup assertions are expanded below.",
-          "observation": "assert_selector \"button\", text: \"\u2605 Unstar\", wait: 10",
+          "observation": "assert_selector \"button\", text: \"★ Unstar\", wait: 10",
           "assertion_source": "rust/reference-tools/users/original_browser_assertions.mjs:447",
-          "assertion_anchor": "await open(p);await p.locator('#user_card').getByRole('button',{name:'\u2606 Star',exact:true}).click();await visible(S,120,p.locator('#user_card').getByRole('button',{name:'\u2605 Unstar',exact:true}));await close(p);await marked(p,true);await inline(p)",
+          "assertion_anchor": "await open(p);await p.locator('#user_card').getByRole('button',{name:'☆ Star',exact:true}).click();await visible(S,120,p.locator('#user_card').getByRole('button',{name:'★ Unstar',exact:true}));await close(p);await marked(p,true);await inline(p)",
           "assertion_scope": "star-phone",
           "additional_assertion_sources": [
             {
@@ -3584,7 +3584,7 @@
       ],
       "browser_case": "served-worker",
       "browser_mode": "worker",
-      "execution": "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed.",
+      "execution": "Registered required Rust correctness (browsers) gate: seven exact ignored selectors in rust/ci/ignored-tests.json; normal binary built before replay. Per-head results are retained in that job and PR #248 checks; historical local execution evidence is preserved.",
       "assertions": [
         {
           "line": 58,
@@ -3622,5 +3622,8 @@
       "direct_assertion_sites": 141,
       "note": "Historical mapping retained; review refresh adds the runtime-pin predicates and fixes selector/count consumers."
     }
+  ],
+  "gate_history": [
+    "Explicit paired gate: rust/parity/system/ws12; future CI registration: PR #237 (rust/ci-full-gate), seven named ignored browser wrappers. Missing browser dependencies fail the paired gate. Current main toolchain CI skips these wrappers; no completed CI browser run is claimed."
   ]
 }

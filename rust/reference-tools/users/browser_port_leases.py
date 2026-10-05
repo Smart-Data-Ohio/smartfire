@@ -7,12 +7,22 @@ the entire Rails and Rust startup window. No filesystem lock or stale lock file
 is involved. The finite allocation scan is not a server-startup retry.
 """
 import errno
+import os
 import socket
 from pathlib import Path
 
 DEFAULT_BASE = 24000
 BLOCKS = 64
 WIDTH = 3
+
+
+def reserve_system_ports(scenario):
+    # Share host-wide coordination with the original-assertion wrappers. Keep
+    # all three sockets available through Rails boot and candidate startup;
+    # an outbound byte-forwarder connection cannot take a leased server port.
+    modes = ['pages', 'budget', 'work', 'inbox', 'inbox-filter']
+    return reserve(int(os.environ.get('WS11UI_SYSTEM_PORT_BASE', str(DEFAULT_BASE))),
+                   preferred=32 + modes.index(scenario))
 
 
 class PortLease:

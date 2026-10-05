@@ -59,6 +59,9 @@ run_suite() {
       ;;
     browsers)
       browser_images
+      docker run --rm --init --network none --ipc host --cpus 2 \
+        --volume "$repo:/work:ro" "ws12-playwright:$(cat rust/parity/Dockerfile.playwright rust/parity/package.json rust/parity/package-lock.json | sha256sum | cut -c1-12)" \
+        node --test /work/rust/reference-tools/users/browser_navigation.test.mjs
       # The paired original-assertion wrappers launch the normal server, which
       # nextest's cfg(test) harness does not build.
       cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire

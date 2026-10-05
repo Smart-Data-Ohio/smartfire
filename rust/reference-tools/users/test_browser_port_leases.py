@@ -3,7 +3,7 @@ import multiprocessing
 import socket
 import unittest
 from pathlib import Path
-from browser_port_leases import reserve
+from browser_port_leases import reserve, reserve_system_ports
 
 
 def child_ports(pipe, base):
@@ -13,6 +13,16 @@ def child_ports(pipe, base):
 
 
 class BrowserPortLeases(unittest.TestCase):
+    def test_paired_system_hosts_use_disjoint_non_ephemeral_leases(self):
+        low, high = map(int, Path('/proc/sys/net/ipv4/ip_local_port_range').read_text().split())
+        with reserve_system_ports('work') as first, reserve_system_ports('work') as second, reserve() as originals:
+            self.assertTrue(all(not low <= port <= high for port in first.ports))
+            self.assertTrue(set(first.ports).isdisjoint(second.ports))
+            self.assertTrue(set(first.ports).isdisjoint(originals.ports))
+            for port in first.ports + second.ports:
+                with socket.socket() as server:
+                    server.bind(('127.0.0.1', port))
+
     def test_outbound_connections_cannot_acquire_a_reserved_port(self):
         low, high = map(int, Path('/proc/sys/net/ipv4/ip_local_port_range').read_text().split())
         with reserve() as lease, socket.socket() as listener:
