@@ -3933,8 +3933,7 @@
             }
           ],
           "rust_tests": [
-            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
-            "controllers::users::profile_sections_tests::drive_only"
+            "controllers::users::profile_sections_tests::profile_asks_to_reconnect_for_an_openid_email_only_grant"
           ],
           "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0171",
           "assertion_count": 4,

@@ -72,6 +72,20 @@
       "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Calendar permission needed, reconnect to publish events</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /><input type=\"hidden\" name=\"features[]\" value=\"drive\" /></form>\n      <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
     },
     {
+      "name": "openid_email",
+      "input": {
+        "calendar_configured": true,
+        "account_exists": true,
+        "connected": true,
+        "calendar": false,
+        "drive": false,
+        "email": "david@gmail.test"
+      },
+      "scopes": "openid email",
+      "reason": null,
+      "html": "<section class=\"margin-block pad-inline pad-block fill-shade border-radius\" aria-labelledby=\"google-calendar-title\">\n  <h2 id=\"google-calendar-title\" class=\"txt-large\">Google Calendar</h2>\n\n      <p>Calendar permission needed, reconnect to publish events</p>\n    <form data-turbo=\"false\" class=\"button_to\" method=\"post\" action=\"/google/connect\"><button class=\"btn\" type=\"submit\">Connect Google Calendar</button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/google/connect\" /></form>\n      <form data-turbo-confirm=\"Disconnect Google Calendar? Your published event entries will be removed.\" class=\"button_to\" method=\"post\" action=\"/google/connection\"><input type=\"hidden\" name=\"_method\" value=\"delete\" /><button class=\"btn btn--negative\" type=\"submit\">Disconnect</button><input type=\"hidden\" name=\"authenticity_token\" value=\"delete:/google/connection\" /></form>\n</section>\n"
+    },
+    {
       "name": "rejected_drive",
       "input": {
         "calendar_configured": true,

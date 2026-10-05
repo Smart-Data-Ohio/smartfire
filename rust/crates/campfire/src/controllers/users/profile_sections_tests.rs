@@ -291,3 +291,56 @@ async fn live_status_sections_show_cache_errors_disconnects_and_manual_return_da
     assert!(!body.contains("&lt;Network &amp; refresh&gt;"));
     assert!(!body.contains("type=\"checkbox\" name=\"user[meeting_status_enabled]\""));
 }
+
+#[tokio::test]
+async fn profile_asks_to_reconnect_for_an_openid_email_only_grant() {
+    calendar_case("openid_email").await;
+    let app = TestApp::boot_with_clock_and_env(
+        seed_clock(),
+        &[
+            ("GOOGLE_CLIENT_ID", "parity-client"),
+            ("GOOGLE_CLIENT_SECRET", "parity-secret"),
+        ],
+    )
+    .await
+    .expect("seed required");
+    app.db()
+        .write(|tx| {
+            // Match profiles_controller_test.rb:249. The parity seed adds
+            // unrelated connected panels absent from that test's fixtures.
+            for table in [
+                "google_accounts",
+                "github_connected_accounts",
+                "fizzy_connected_accounts",
+            ] {
+                tx.conn()
+                    .execute(&format!("DELETE FROM {table} WHERE user_id=?"), [DAVID])?;
+            }
+            tx.conn().execute(
+                "INSERT INTO google_accounts(user_id,email,scopes,created_at,updated_at) VALUES (?,?,?,?,?)",
+                rusqlite::params![DAVID, "david@gmail.test", "openid email", tx.now(), tx.now()],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let reply = app.david().get("/users/me/profile").await;
+    assert_eq!(reply.status, axum::http::StatusCode::OK);
+    let body = reply.text();
+    assert!(body.contains("Calendar permission needed, reconnect to publish events"));
+    assert!(!body.contains("Connected as"));
+    assert!(body.contains("Disconnect"));
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&body).unwrap();
+    let connect_forms = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|node| {
+            dom.name(*node) == "form"
+                && dom.attr(*node, "action") == Some("/google/connect")
+                && dom.attr(*node, "method") == Some("post")
+                && dom.attr(*node, "data-turbo") == Some("false")
+        })
+        .count();
+    assert_eq!(connect_forms, 1, "original connect form selector");
+}
