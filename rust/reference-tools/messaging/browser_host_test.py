@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from browser_host import prepare_source, build_host
+from browser_host import prepare_source, build_host, include_inputs
 
 
 class HostSourceTests(unittest.TestCase):
@@ -30,9 +30,13 @@ class HostSourceTests(unittest.TestCase):
                 "rust/parity/reference.sha": b"pinned",
                 "rust/reference-tools/messaging/browser-attachment-jobs.rs": b"explicit attachment job adapter",
                 "rust/crates/campfire/src/controllers/presenters/test_support.rs":
-                    b"async fn ws8bm_browser_host_without_jobs() {}",
+                    b'''async fn ws8bm_browser_host_without_jobs() {}
+                    include_str!("../../../../../../public/500.html");
+                    include_str!("../../../../../reference-tools/messaging/older_provider_callbacks.rb");
+                    include_str!("../../../../../reference-tools/users/new_harness.mjs");''',
                 "rust/reference-tools/messaging/older_provider_callbacks.rb": b"callback",
                 "rust/reference-tools/messaging/browser-drive-client.rs": b"external Drive client",
+                "rust/reference-tools/users/new_harness.mjs": b"new included harness",
                 "public/500.html": b"original error page",
                 "rust/reference-tools/views/agents_ui/extreme_cast_inputs.json.gz": b"extreme",
                 "rust/reference-tools/views/agents_ui/normalized_cast_inputs.json.gz": b"normalized",
@@ -44,12 +48,13 @@ class HostSourceTests(unittest.TestCase):
                 path = root / relative
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content)
-            tracked = "\n".join(inputs)
+            tracked = "\0".join(inputs) + "\0"
             with patch("browser_host.subprocess.check_output", return_value=tracked):
                 generated = prepare_source(root)
                 self.assertEqual((generated.parent / "public/500.html").read_bytes(), inputs["public/500.html"])
                 callback = generated / "reference-tools/messaging/older_provider_callbacks.rb"
                 self.assertEqual(callback.read_bytes(), b"callback")
+                self.assertEqual((generated / "reference-tools/users/new_harness.mjs").read_bytes(), b"new included harness")
                 for name in ("extreme_cast_inputs.json.gz", "normalized_cast_inputs.json.gz", "render_replay_inputs.json.gz", "casting_followups_inputs.json"):
                     relative = "reference-tools/views/agents_ui/" + name
                     self.assertEqual((generated / relative).read_bytes(), inputs["rust/" + relative])
@@ -63,11 +68,42 @@ class HostSourceTests(unittest.TestCase):
                 self.assertEqual((generated.parent / "public/500.html").read_bytes(), b"updated error page")
                 self.assertEqual(callback.read_bytes(), b"updated callback")
 
-    def test_requires_a_tracked_error_page(self):
+    def test_reports_the_source_and_missing_tracked_include(self):
         with tempfile.TemporaryDirectory() as directory:
-            with patch("browser_host.subprocess.check_output", return_value=""):
-                with self.assertRaisesRegex(RuntimeError, "tracked public/500.html"):
-                    prepare_source(Path(directory))
+            root = Path(directory)
+            source = Path("rust/crates/app/src/main.rs")
+            contents = {source: b'include_bytes!("../../../../public/missing.html");'}
+            for tracked in [set(), {Path("public/missing.html")}]:
+                with self.assertRaisesRegex(RuntimeError, "main.rs: tracked compile-time include missing: public/missing.html"):
+                    include_inputs(root, contents, tracked)
+
+    def test_resolves_manifest_concat_raw_paths_and_ignores_rust_literals(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "rust/crates/app").mkdir(parents=True)
+            (root / "rust/crates/app/Cargo.toml").write_text("")
+            target = Path("rust/reference-tools/new.bin")
+            (root / target).parent.mkdir(parents=True)
+            (root / target).write_bytes(b"included")
+            contents = {Path("rust/crates/app/src/main.rs"): b'''
+                // include_str!("missing comment");
+                /* nested /* include_bytes!("missing") */ comment */
+                let generated = r#"include_bytes!(\"missing generated code\")"#;
+                include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../reference-tools/new.bin",),);
+                include_str!(r#"../../../reference-tools/new.bin"#);
+            '''}
+            self.assertEqual(include_inputs(root, contents, {target}), {target})
+
+    def test_rejects_unknown_include_expressions_and_outside_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = Path("rust/crates/app/src/main.rs")
+            for content, message in [
+                (b'include_str!(env!("NEW_INPUT"));', "unsupported compile-time include path"),
+                (b'include_str!("../../../../../outside");', "compile-time include escapes the repository"),
+            ]:
+                with self.assertRaisesRegex(RuntimeError, message):
+                    include_inputs(root, {source: content}, set())
 
 
 if __name__ == "__main__":
