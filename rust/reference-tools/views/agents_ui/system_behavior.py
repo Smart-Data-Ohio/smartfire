@@ -7,6 +7,7 @@ import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, sys, te
 root = pathlib.Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(root/'rust/reference-tools/users'))
 from browser_port_leases import reserve_system_ports
+from reference_runtime import ReferenceNetwork
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
 p.add_argument('--scenario', choices=['all','pages','budget','work','inbox','inbox-filter'], default='all')
@@ -30,6 +31,8 @@ store = root / '.scratch/system-behavior'
 store.mkdir(parents=True, exist_ok=True)
 work = pathlib.Path(tempfile.mkdtemp(dir=store))
 env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11ui-system'), 'PARITY_OWNER':os.environ.get('PARITY_OWNER','ws11ui'), 'PARITY_SEED_DIR':str(work/'seeds'), 'WS11UI_INBOX_CASE':args.scenario, 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','campfire-reference')}
+network = ReferenceNetwork(env['PARITY_NAMESPACE'], work.name, env['PARITY_OWNER'])
+env['PARITY_NETWORK'] = network.name
 reference = root / 'rust/parity/bin/reference'
 child = None
 # Keep simultaneous worktrees' servers and teardown isolated.
@@ -114,5 +117,8 @@ finally:
             try: child.wait(timeout=5)
             except subprocess.TimeoutExpired: os.killpg(child.pid,signal.SIGKILL);child.wait()
     subprocess.run([str(reference),'down','--port',str(reference_port)],cwd=root,env=env,stdout=subprocess.DEVNULL,check=False)
-    lease.close()
-    shutil.rmtree(work)
+    try:
+        network.close()
+    finally:
+        lease.close()
+        shutil.rmtree(work)
