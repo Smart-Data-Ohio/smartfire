@@ -59,7 +59,7 @@ for anything that walks directories.
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on
-Rust and Rails comparison inputs. Every ordinary nextest group and runnable doctest is
+every pull request, building only when Rust or Rails comparison inputs changed. Every ordinary nextest group and runnable doctest is
 required; tests run as twelve nextest partitions beside seed validation and clippy/doctest
 jobs, and the `Rust port` job fails unless all of them succeeded.
 `ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold, and the CI-only

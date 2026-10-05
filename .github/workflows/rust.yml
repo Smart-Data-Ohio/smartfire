@@ -15,24 +15,10 @@ name: Rust
 on:
   push:
     branches: [ main ]
+  # Every pull request gets a "Rust port" result, so it can be a required check; the
+  # changes job decides whether the PR touched anything the Rust gates read.
   pull_request:
     branches: [ main ]
-    paths:
-      - "rust/**"
-      - "app/**"
-      - "config/**"
-      - "lib/**"
-      - "test/**"
-      - "db/**"
-      - "public/**"
-      - "vendor/**"
-      - "bin/**"
-      - "script/**"
-      - "Gemfile*"
-      - ".ruby-version"
-      - "Dockerfile"
-      - ".github/workflows/rust.yml"
-      - ".github/actions/rust-setup/**"
   schedule:
     - cron: "37 5 * * *"
   workflow_dispatch:
@@ -65,11 +51,74 @@ env:
   RUST_CI_CONTAINER_PREFIX: campfire-ci
 
 jobs:
+  # Rust-relevant inputs: the port itself, the Rails app it reads as its reference, and this
+  # workflow. A PR touching none of them (docs, deploy, other workflows) skips the build, and
+  # "Rust port" passes on that intentional skip. Pushes, the nightly run, manual runs, empty
+  # diffs and unavailable history all keep the full run.
+  changes:
+    name: Rust changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      rust: ${{ steps.scope.outputs.rust }}
+    steps:
+      - name: Checkout PR history
+        id: history
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Decide whether Rust gates are needed
+        id: scope
+        env:
+          HISTORY_OUTCOME: ${{ steps.history.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          PREFIXES = (b"rust/", b"app/", b"config/", b"lib/", b"test/", b"db/", b"public/",
+                      b"vendor/", b"bin/", b"script/", b"Gemfile", b".github/actions/rust-setup/")
+          FILES = (b".ruby-version", b"Dockerfile", b".github/workflows/rust.yml")
+
+          rust = True
+          try:
+              if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
+                  if os.environ["HISTORY_OUTCOME"] != "success":
+                      print("::warning::PR history checkout unavailable; running the full Rust gates.")
+                  else:
+                      with open(os.environ["GITHUB_EVENT_PATH"]) as event_file:
+                          pr = json.load(event_file)["pull_request"]
+                      # Include both sides of renames. An empty diff keeps full coverage.
+                      diff = subprocess.check_output([
+                          "git", "diff", "--no-renames", "--name-only", "-z",
+                          f'{pr["base"]["sha"]}...{pr["head"]["sha"]}', "--",
+                      ])
+                      paths = [path for path in diff.split(b"\0") if path]
+                      rust = not paths or any(
+                          path.startswith(PREFIXES) or path in FILES for path in paths
+                      )
+          except (OSError, KeyError, ValueError, TypeError, subprocess.CalledProcessError) as error:
+              rust = True
+              print(f"::warning::PR diff unavailable ({type(error).__name__}); running the full Rust gates.")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"rust={str(rust).lower()}\n")
+          print("Run the Rust gates" if rust else "No Rust inputs changed: skip the Rust gates")
+          PY
+
   # Builds or restores the pinned Rails reference image and the default/first_run/agents_ui
   # seeds, and validates them with Rails. Other jobs restore that exact seed cache entry
   # (or, on a miss, build and validate their own); both gates require this job.
   seeds:
     name: Rust seeds
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -91,7 +140,8 @@ jobs:
   # Every ordinary nextest test, split round-robin by nextest into twelve slices.
   test:
     name: Rust tests (${{ matrix.shard }})
-    if: inputs.scope != 'messaging-and-browsers'
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -165,7 +215,8 @@ jobs:
 
   clippy:
     name: Rust clippy, binaries and doctests
-    if: inputs.scope != 'messaging-and-browsers'
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -241,14 +292,20 @@ jobs:
   rust:
     # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.
     name: Rust port
-    needs: [seeds, test, clippy]
+    needs: [changes, seeds, test, clippy]
     if: ${{ always() && inputs.scope != 'messaging-and-browsers' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     timeout-minutes: 15
     steps:
+      - name: Require successful change detection
+        env:
+          CHANGE_RESULT: ${{ needs.changes.result }}
+        run: test "$CHANGE_RESULT" = success
+
       - name: Checkout code
+        if: needs.changes.outputs.rust == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
@@ -256,7 +313,7 @@ jobs:
           sparse-checkout: rust/ci
 
       - name: Collect test results
-        if: ${{ needs.test.result != 'skipped' || needs.clippy.result != 'skipped' }}
+        if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped') }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: rust-{tests-*,doctests}
@@ -264,6 +321,7 @@ jobs:
           merge-multiple: true
 
       - name: Summarize tests
+        if: needs.changes.outputs.rust == 'true'
         env:
           TEST_OUTCOME: ${{ needs.test.result }}
           DOC_OUTCOME: ${{ needs.clippy.result }}
@@ -275,17 +333,23 @@ jobs:
           for path in "$RUNNER_TEMP"/results/*-doc.log; do args+=(--doc-log "$path"); done
           python3 rust/ci/summarize-tests.py "${args[@]}"
 
-      # Every shard and prerequisite job must have succeeded: failed, cancelled and skipped
-      # all fail this check.
+      # When Rust inputs changed, every shard and prerequisite job must have succeeded:
+      # failed, cancelled and skipped all fail this check. When none changed, every one of
+      # them must have been skipped by that decision.
       - name: Gate on every Rust port job
         env:
           NEEDS: ${{ toJSON(needs) }}
+          RUST: ${{ needs.changes.outputs.rust }}
         run: |
           python3 - <<'PY'
           import json, os, sys
           results = {job: value["result"] for job, value in json.loads(os.environ["NEEDS"]).items()}
           print("\n".join(f"{job}: {result}" for job, result in results.items()))
-          sys.exit(any(result != "success" for result in results.values()))
+          expected = "success" if os.environ["RUST"] == "true" else "skipped"
+          if os.environ["RUST"] != "true":
+              print("No Rust inputs changed: the Rust gates were intentionally skipped.")
+          sys.exit(results.pop("changes") != "success"
+                   or any(result != expected for result in results.values()))
           PY
 
   correctness:

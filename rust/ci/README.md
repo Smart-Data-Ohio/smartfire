@@ -3,7 +3,11 @@
 `Rust port` gates clippy, the production-input binary build, all ordinary workspace
 nextest tests, and runnable doctests. It is an aggregator: it fails unless each of
 these jobs succeeded (a failed, cancelled or skipped one fails it), and its summary
-adds up every shard's JUnit receipt and doctest log:
+adds up every shard's JUnit receipt and doctest log. It reports on every pull request:
+`Rust changes` checks the PR's diff, and when it touches no Rust input (`rust/`, the
+Rails app the port reads as its reference, this workflow or its setup action) the jobs
+below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
+nightly and manual runs, empty diffs and unavailable history always run everything:
 
 | Job | Runs |
 | --- | --- |
