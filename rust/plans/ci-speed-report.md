@@ -7,16 +7,19 @@ Goal: a pull request's slowest required Rust check in about 10 minutes, the full
 
 | | Before | After |
 | --- | --- | --- |
-| Pull request (`Rust port`) | 43–70 min | **8.0 min** (slowest shard 7.8 min) |
-| Full matrix | 69–84 min (77 min on this base) | **22 min** |
+| Pull request (`Rust port`) | 43–70 min | **8–9 min** (slowest shard 7.5–8.6 min) |
+| Full matrix | 69–84 min (77 min on this base) | **22–23 min** |
 
 The pull-request target is met. The full matrix is not: its floor is one test (below).
 
 Before: main push [37379298592](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37379298592)
 on this branch's base (76.9 min: `Rust port` 71 min, messaging 77 min, browsers 64 min),
 dispatch 37350631485 (74.5 min), main push 37360757177 (84.2 min), and PR runs
-37350629501 (43.5 min) and 37362400997 (62.6 min). After: see the pull request for the
-measured runs on its head.
+37350629501 (43.5 min) and 37362400997 (62.6 min). After, on 3f8ca3aed: PR run
+[37389036857](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37389036857) (8.8 min)
+and full dispatch [37389035197](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37389035197)
+(23.1 min, every job green first time: messaging done at 13 min, browsers 21–22.5 min). The
+pull request lists the runs on its final head.
 
 ## Where the time went (before)
 
@@ -77,7 +80,13 @@ regex compilation, all at opt-level 0. Profiling one boot loop:
 4. **Waste removed**: the SDK deletion runs in the background; the Cargo caches hold only
    registry dependencies (`rust/ci/prune-target.py`: workspace crates rebuild after every
    checkout anyway), split into a `tests` and a `build` cache.
-5. **One test fix** (outside CI, see below): the stage join browser test now holds the
+5. **`Rust port` reports on every pull request**, so it can be a required check: the
+   `paths` filter became a `Rust changes` job (ci.yml's `changes` pattern, the same path
+   list). A PR touching no Rust input skips seeds, tests and clippy, and `Rust port` passes
+   only if all of them were skipped; with Rust inputs, any failed, skipped or cancelled job
+   still fails it. Pushes, nightly and manual runs, empty diffs and unavailable history run
+   everything.
+6. **One test fix** (outside CI, see below): the stage join browser test now holds the
    fake LiveKit server's validate request as well as its socket.
 
 ## Test counts
@@ -110,15 +119,15 @@ reports "failed". With optimized dependencies the Rust server returns the creden
 `livekit-client` ~50 ms after the synthetic event, so "failed" landed between the
 `Leave stage` assertion and the click (3 of 4 instrumented runs), and the click joined
 again. The test now holds the validate request too, as its comment intends. The
-assertions are unchanged.
+assertions are unchanged; four instrumented runs with the fix all passed with one join.
 
 ## Flaky downloads
 
 Two runs each lost one messaging behaviour shard to `curl: (16) Error in the HTTP2
 framing layer` while fetching pinned Debian packages for the prerequisite image, when
 sixteen shards fetched them at once. The behaviour shards now load that image from the
-`app` host job instead, so a run builds it 11 times rather than 27 (6 before). Those two
-failures were re-run, not worked around.
+`app` host job instead (about 45 s to download and load), so a run builds it 11 times rather
+than 27 (6 before). Those failures were infrastructure, so jobs were re-run, not worked around.
 
 ## Levers rejected
 
