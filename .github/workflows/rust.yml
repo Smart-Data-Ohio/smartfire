@@ -442,6 +442,25 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      # The sixteen behaviour shards load this image rather than each building it (and
+      # fetching its pinned packages) again.
+      - name: Build and export pinned correctness prerequisites
+        if: ${{ matrix.host == 'app' }}
+        shell: bash
+        run: |
+          docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+          docker save campfire-correctness | zstd -T0 -3 -q -o "$RUNNER_TEMP/correctness-image.tar.zst"
+
+      - name: Retain the prerequisite image
+        if: ${{ matrix.host == 'app' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-messaging-prerequisites-image
+          path: ${{ runner.temp }}/correctness-image.tar.zst
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
+
   correctness-messaging:
     name: Rust correctness (messaging behaviour ${{ matrix.shard }})
     needs: messaging-hosts
@@ -470,6 +489,8 @@ jobs:
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: reference
+          # The prerequisite image comes from the application host job.
+          toolchain: 'false'
       - name: Collect the Rust hosts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -481,8 +502,14 @@ jobs:
           mkdir -p rust/target
           for host in app test; do tar -C rust/target -xf "$RUNNER_TEMP/hosts/rust-messaging-host-$host/messaging-host.tar"; done
           echo "WS8BM_PREBUILT_TEST_HOST=$GITHUB_WORKSPACE/rust/target/$(cat rust/target/ws8bm-browser-host/executable)" >> "$GITHUB_ENV"
-      - name: Build pinned correctness prerequisites
-        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+      - name: Collect pinned correctness prerequisites
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: rust-messaging-prerequisites-image
+          path: ${{ runner.temp }}/prerequisites
+      - name: Load pinned correctness prerequisites
+        shell: bash
+        run: zstd -dc "$RUNNER_TEMP/prerequisites/correctness-image.tar.zst" | docker load
       - name: Permit native browser namespaces
         run: |
           if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then

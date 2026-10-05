@@ -29,7 +29,8 @@ ignored tests by the recorded `seconds` in `ignored-tests.json`, messaging behav
 splits whole case batches. `CORRECTNESS_PART` selects messaging's `behavior` cases or
 its `originals` (the WS14/WS15 declarations); unset runs both as before. The behaviour
 shards use the two Rust hosts the `Rust messaging host (app|test)` jobs build once with
-behavior-check.py's own commands.
+behavior-check.py's own commands, and load the prerequisite image the `app` job exports
+instead of building it sixteen times.
 
 | Job suffix | Execution |
 | --- | --- |
