@@ -464,10 +464,25 @@ pub fn query_pairs(qs: &str) -> Result<Vec<RawPair>, ParamError> {
 /// `Rack::Request#form_pairs` for an urlencoded body: Rack's limits, and the trailing `\0`
 /// Safari once appended is dropped.
 pub fn form_pairs(body: &[u8]) -> Result<Vec<RawPair>, ParamError> {
+    check_form_size(body)?;
+    form_pairs_within_limit(body.strip_suffix(b"\0").unwrap_or(body))
+}
+
+/// Rack strips one Safari NUL before its byte limit; disk PUTs opt into that order.
+pub(crate) fn disk_form_pairs(body: &[u8]) -> Result<Vec<RawPair>, ParamError> {
+    let body = body.strip_suffix(b"\0").unwrap_or(body);
+    check_form_size(body)?;
+    form_pairs_within_limit(body)
+}
+
+fn check_form_size(body: &[u8]) -> Result<(), ParamError> {
     if body.len() > FORM_BYTESIZE_LIMIT {
         return Err(ParamError::Limit(format!("total query size exceeds limit ({FORM_BYTESIZE_LIMIT})")));
     }
-    let body = body.strip_suffix(b"\0").unwrap_or(body);
+    Ok(())
+}
+
+fn form_pairs_within_limit(body: &[u8]) -> Result<Vec<RawPair>, ParamError> {
     // The body is bytes; %-decoding happens per component, so a lossless view is enough here.
     let text = String::from_utf8_lossy(body);
     let parts: Vec<&str> = split_pairs(&text).collect();
@@ -558,6 +573,11 @@ pub fn decode_www_form_component(s: &str) -> Result<Vec<u8>, ParamError> {
 
 /// `ActionDispatch::ParamBuilder.from_pairs`.
 pub fn from_pairs(pairs: impl IntoIterator<Item = RawPair>) -> Result<ParamMap, ParamError> {
+    from_pairs_with_depth_limit(pairs, DEPTH_LIMIT)
+}
+
+// Rack::Request#POST validates with Rack's 32-level builder before Rails rebuilds pairs.
+pub(crate) fn from_pairs_with_depth_limit(pairs: impl IntoIterator<Item = RawPair>, depth_limit: usize) -> Result<ParamMap, ParamError> {
     let mut params = ParamMap::new();
     for pair in pairs {
         let RawPair { key, value } = pair;
@@ -586,7 +606,7 @@ pub fn from_pairs(pairs: impl IntoIterator<Item = RawPair>) -> Result<ParamMap, 
                 }
             },
         };
-        store_nested_param(&mut params, &key, value, 0)?;
+        store_nested_param(&mut params, &key, value, 0, depth_limit)?;
     }
     Ok(params)
 }
@@ -636,8 +656,8 @@ impl Stored {
     }
 }
 
-fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize) -> Result<Stored, ParamError> {
-    if depth >= DEPTH_LIMIT {
+fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize, depth_limit: usize) -> Result<Stored, ParamError> {
+    if depth >= depth_limit {
         return Err(ParamError::TooDeep);
     }
 
@@ -681,11 +701,11 @@ fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize)
         let array = array_slot(params, k)?;
         match array.last_mut() {
             Some(Param::Hash(last)) if !params_hash_has_key(last, child_key) => {
-                store_nested_param(last, child_key, v, depth + 1)?;
+                store_nested_param(last, child_key, v, depth + 1, depth_limit)?;
             }
             _ => {
                 let mut child = ParamMap::new();
-                let stored = store_nested_param(&mut child, child_key, v, depth + 1)?;
+                let stored = store_nested_param(&mut child, child_key, v, depth + 1, depth_limit)?;
                 array.push(stored.into_param(child));
             }
         }
@@ -697,7 +717,7 @@ fn store_nested_param(params: &mut ParamMap, name: &str, v: Param, depth: usize)
                 return Err(ParamError::Type(format!("expected Hash (got {}) for param `{k}'", ruby_class(&other))));
             }
         };
-        let stored = store_nested_param(&mut child, after, v, depth + 1)?;
+        let stored = store_nested_param(&mut child, after, v, depth + 1, depth_limit)?;
         params.insert(k, stored.into_param(child));
     }
 

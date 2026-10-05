@@ -591,6 +591,7 @@ dependencies = [
  "hex",
  "hmac",
  "jiff",
+ "libc",
  "md-5",
  "pbkdf2",
  "rand 0.9.5",

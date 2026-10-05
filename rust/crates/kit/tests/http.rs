@@ -376,6 +376,37 @@ async fn malformed_params_are_400() {
 }
 
 #[tokio::test]
+async fn ordinary_form_limit_remains_four_mib_including_trailing_nul() {
+    // The disk parser's Rack-compatible NUL handling must not change the ordinary
+    // adapter or POST method-override middleware's existing size limit on main.
+    for method in [axum::http::Method::POST, axum::http::Method::PATCH] {
+        let bytes = vec![b'x'; campfire_kit::params::FORM_BYTESIZE_LIMIT];
+        let request = HttpRequest::builder().method(method.clone()).uri("/echo/1")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(AxumBody::from(bytes.clone())).unwrap();
+        assert_eq!(send(&app(), request).await.status, StatusCode::OK, "{method}");
+        let mut bytes = bytes;
+        bytes.push(0);
+        let request = HttpRequest::builder().method(method.clone()).uri("/echo/1")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(AxumBody::from(bytes)).unwrap();
+        assert_eq!(send(&app(), request).await.status, StatusCode::BAD_REQUEST, "{method}");
+    }
+}
+
+#[tokio::test]
+async fn ordinary_multipart_routes_retain_main_count_and_blank_filename_limits() {
+    for (filename, count) in [(Some("x.bin"), 128), (None, 4096), (Some(""), 129)] {
+        let file = filename.map(|name| format!("; filename=\"{name}\"")).unwrap_or_default();
+        let part = format!("--ordinary-boundary\r\nContent-Disposition: form-data; name=\"a[]\"{file}\r\n\r\nx\r\n");
+        let body = part.repeat(count) + "--ordinary-boundary--\r\n";
+        let request = post("/echo/1").header(header::CONTENT_TYPE, "multipart/form-data; boundary=ordinary-boundary")
+            .body(AxumBody::from(body)).unwrap();
+        assert_eq!(send(&app(), request).await.status, StatusCode::OK, "{filename:?}, {count}");
+    }
+}
+
+#[tokio::test]
 async fn method_override_from_form_param_and_header() {
     let app = app();
     let reply = send(&app, form_post("/echo/1", "_method=patch&x=1")).await;
@@ -991,4 +1022,57 @@ async fn rate_limit_hits_the_limit_then_resets() {
     clock.advance(jiff::SignedDuration::from_secs(1));
     assert_eq!(hit("10.0.0.1", "b").await.status, StatusCode::NO_CONTENT, "the window from the first request is over");
     assert_eq!(hit("10.0.0.3", "a").await.status, StatusCode::NO_CONTENT);
+}
+
+async fn disk_multipart_initial_close_case(body: Vec<u8>, expected: StatusCode) {
+    let kit = kit_with(KitConfig::default());
+    let routes = Router::new().route("/disk", axum::routing::put(campfire_kit::spooled_action(noop)));
+    let app = campfire_kit::app(routes, kit);
+    let request = HttpRequest::put("/disk")
+        .header(header::HOST, "chat.example.com")
+        .header(header::CONTENT_TYPE, "multipart/form-data; boundary=upload-boundary")
+        .header(header::CONTENT_LENGTH, body.len().to_string())
+        .body(AxumBody::from(body)).unwrap();
+    assert_eq!(send(&app, request).await.status, expected);
+}
+
+#[tokio::test]
+async fn disk_multipart_initial_close_only_control() {
+    disk_multipart_initial_close_case(b"--upload-boundary--\r\n".to_vec(), StatusCode::NO_CONTENT).await;
+}
+
+#[tokio::test]
+async fn disk_multipart_initial_close_small_epilogue_is_bad_request() {
+    disk_multipart_initial_close_case(b"--upload-boundary--\r\nx".to_vec(), StatusCode::BAD_REQUEST).await;
+}
+
+#[tokio::test]
+async fn disk_multipart_initial_close_large_epilogue_is_internal_error() {
+    let mut body = b"--upload-boundary--\r\n".to_vec();
+    body.extend(vec![b'x'; 2_000_000]);
+    disk_multipart_initial_close_case(body, StatusCode::INTERNAL_SERVER_ERROR).await;
+}
+
+#[tokio::test]
+async fn disk_multipart_initial_close_skips_to_later_opening() {
+    let closing = "--upload-boundary--\r\n";
+    let part = "--upload-boundary\r\nContent-Disposition: form-data; name=\"a[]\"; filename=\"x.bin\"\r\n\r\nx\r\n";
+    disk_multipart_initial_close_case(format!("{closing}{part}").into_bytes(), StatusCode::BAD_REQUEST).await;
+    disk_multipart_initial_close_case(format!("{closing}{}{closing}", part.repeat(128)).into_bytes(), StatusCode::INTERNAL_SERVER_ERROR).await;
+}
+
+#[tokio::test]
+async fn disk_multipart_initial_close_preamble_limit_counts_skipped_marker() {
+    let closing = "--upload-boundary--\r\n";
+    for (size, expected) in [(16_384, StatusCode::BAD_REQUEST), (16_385, StatusCode::INTERNAL_SERVER_ERROR)] {
+        let body = format!("{closing}{}", "x".repeat(size - closing.len()));
+        disk_multipart_initial_close_case(body.into_bytes(), expected).await;
+    }
+}
+
+#[tokio::test]
+async fn disk_multipart_opening_preamble_requires_crlf() {
+    let multipart = "--upload-boundary\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nx\r\n--upload-boundary--\r\n";
+    disk_multipart_initial_close_case(format!("preamble\r\n{multipart}").into_bytes(), StatusCode::NO_CONTENT).await;
+    disk_multipart_initial_close_case(format!("preamble{multipart}").into_bytes(), StatusCode::BAD_REQUEST).await;
 }

@@ -528,6 +528,7 @@ fn disk_serve(c: &mut Ctx) -> Result {
 /// `require_active_storage_authentication`.
 pub async fn disk_update(c: &mut Ctx) -> Result {
     require_active_storage_authentication(c).await?;
+    c.parse_spooled_params().await?;
     let storage = c.app().storage.clone();
     let encoded_token = c.param_str("encoded_token").unwrap_or("").to_string();
     let Some(token) = disk::decode_verified_token(&*storage.verifier, &encoded_token, c.now())

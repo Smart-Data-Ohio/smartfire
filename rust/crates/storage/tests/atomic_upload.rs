@@ -1,4 +1,4 @@
-//! A failed disk upload must leave neither partial files nor damage to a completed blob.
+//! Disk upload failures follow pinned Rails, without leaking staging files.
 use std::io::{self, Read};
 
 use campfire_storage::{DiskService, Error, key};
@@ -28,23 +28,45 @@ fn filenames(service: &DiskService, key: &str) -> Vec<String> {
 }
 
 #[test]
-fn failed_read_removes_the_staged_upload() {
-    let root = tempfile::tempdir().unwrap();
-    let service = DiskService::new(root.path(), "local");
-    let key = "atomicuploadreadfailure";
-    assert!(matches!(
-        service.upload(key, FailingReader::new(), Some("ignored")),
-        Err(Error::Io(_))
-    ));
-    assert!(!service.exist(key));
-    assert!(
-        filenames(&service, key).is_empty(),
-        "partial staging file remains"
-    );
+fn source_read_failures_match_rails_copied_bytes_for_fresh_uploads_and_retries() {
+    let vector: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/direct_upload_limits.json")).unwrap();
+    let cases: Vec<_> = vector["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["name"].as_str().unwrap().starts_with("reader_error"))
+        .collect();
+    assert_eq!(cases.len(), 2);
+    for case in cases {
+        let root = tempfile::tempdir().unwrap();
+        let service = DiskService::new(root.path(), "local");
+        let key = case["name"].as_str().unwrap();
+        if let Some(previous) = case["previous_body"].as_str() {
+            service
+                .upload(
+                    key,
+                    previous.as_bytes(),
+                    Some(&key::checksum(previous.as_bytes())),
+                )
+                .unwrap();
+        }
+        assert!(matches!(
+            service.upload(key, FailingReader::new(), Some("ignored")),
+            Err(Error::Io(_))
+        ));
+        assert_eq!(case["status"], 500);
+        assert_eq!(service.exist(key), case["file_exists"]);
+        assert_eq!(
+            service.download(key).unwrap(),
+            case["stored_body"].as_str().unwrap().as_bytes()
+        );
+        assert_eq!(filenames(&service, key), [key]);
+    }
 }
 
 #[test]
-fn failed_retry_preserves_the_completed_blob() {
+fn corrupt_retry_deletes_the_completed_blob_and_can_be_retried() {
     let root = tempfile::tempdir().unwrap();
     let service = DiskService::new(root.path(), "local");
     let key = "atomicuploadretry";
@@ -54,13 +76,6 @@ fn failed_retry_preserves_the_completed_blob() {
         .unwrap();
 
     assert!(matches!(
-        service.upload(key, FailingReader::new(), None),
-        Err(Error::Io(_))
-    ));
-    assert_eq!(service.download(key).unwrap(), original);
-    assert_eq!(filenames(&service, key), [key]);
-
-    assert!(matches!(
         service.upload(
             key,
             b"corrupt retry".as_slice(),
@@ -68,8 +83,8 @@ fn failed_retry_preserves_the_completed_blob() {
         ),
         Err(Error::Integrity)
     ));
-    assert_eq!(service.download(key).unwrap(), original);
-    assert_eq!(filenames(&service, key), [key]);
+    assert!(!service.exist(key));
+    assert!(filenames(&service, key).is_empty());
 
     let replacement = b"new complete blob";
     service
@@ -121,7 +136,7 @@ fn failed_publication_removes_the_verified_staging_file() {
 }
 
 #[test]
-fn checksum_mismatch_removes_only_the_staged_upload() {
+fn checksum_mismatch_removes_the_blob_and_staged_upload() {
     let root = tempfile::tempdir().unwrap();
     let service = DiskService::new(root.path(), "local");
     let key = "atomicuploadchecksumfailure";
@@ -131,4 +146,67 @@ fn checksum_mismatch_removes_only_the_staged_upload() {
     ));
     assert!(!service.exist(key));
     assert!(filenames(&service, key).is_empty());
+}
+
+#[cfg(unix)]
+#[test]
+fn write_failures_match_rails_partial_files_without_staging_leaks() {
+    const CHILD: &str = "CAMPFIRE_UPLOAD_WRITE_FAILURE_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "write_failures_match_rails_partial_files_without_staging_leaks",
+            ])
+            .env(CHILD, "1")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        return;
+    }
+    let vector: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/direct_upload_limits.json")).unwrap();
+    // Only this test subprocess changes its signal handler and resource limit.
+    unsafe {
+        libc::signal(libc::SIGXFSZ, libc::SIG_IGN);
+        assert_eq!(
+            libc::setrlimit(
+                libc::RLIMIT_FSIZE,
+                &libc::rlimit {
+                    rlim_cur: 4096,
+                    rlim_max: 4096
+                }
+            ),
+            0
+        );
+    }
+    let cases: Vec<_> = vector["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["name"].as_str().unwrap().starts_with("write_error"))
+        .collect();
+    assert_eq!(cases.len(), 2);
+    for case in cases {
+        let root = tempfile::tempdir().unwrap();
+        let service = DiskService::new(root.path(), "local");
+        let key = case["name"].as_str().unwrap();
+        if let Some(previous) = case["previous_body"].as_str() {
+            service.upload(key, previous.as_bytes(), None).unwrap();
+        }
+        let result = service.upload(key, &vec![b'x'; 65536][..], Some("ignored"));
+        assert!(
+            matches!(&result, Err(Error::Io(error)) if error.kind() == io::ErrorKind::FileTooLarge),
+            "{result:?}"
+        );
+        assert_eq!(case["status"], 500);
+        assert_eq!(service.exist(key), case["file_exists"]);
+        let path = service.path_for(key);
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().len(),
+            case["stored_bytes"]
+        );
+        assert_eq!(key::checksum_file(&path).unwrap(), case["stored_checksum"]);
+        assert_eq!(filenames(&service, key), [key]);
+    }
 }

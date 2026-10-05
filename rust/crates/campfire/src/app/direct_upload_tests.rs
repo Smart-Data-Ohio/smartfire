@@ -17,6 +17,34 @@ fn metadata(size: i64, checksum: &str, content_type: &str) -> Req {
 }
 
 #[tokio::test]
+async fn direct_upload_authentication_precedes_disk_params_without_changing_metadata_post() {
+    use base64::Engine;
+    let a = TestApp::boot().await.expect("default seed");
+    let mut browser = a.sign_in(DAVID).await;
+    let mut anonymous = a.anonymous();
+    for case in oracle()["cases"].as_array().unwrap() {
+        if case["kind"] == "authentication" {
+            let content_type = case["content_type"].as_str().unwrap();
+            let blob = browser.write(metadata(case["byte_size"].as_i64().unwrap(),
+                case["checksum"].as_str().unwrap(), content_type.split(';').next().unwrap())).await.json();
+            let reply = anonymous.send(Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
+                .header("content-type", content_type)
+                .header("content-length", &case["byte_size"].to_string())
+                .body(base64::engine::general_purpose::STANDARD.decode(case["body_base64"].as_str().unwrap()).unwrap())).await;
+            assert_eq!(reply.status.as_u16(), case["put_status"], "{}: {}", case["name"], reply.text());
+            assert_eq!(a.booted.app.storage.service.exist(blob["key"].as_str().unwrap()), case["file_exists"], "{}", case["name"]);
+        } else if case["kind"] == "metadata_authentication" {
+            let before: i64 = a.booted.app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| row.get(0))?)).await.unwrap();
+            let reply = anonymous.send(Req::new(Method::POST, "/rails/active_storage/direct_uploads")
+                .header("content-type", "application/json").body(case["body"].as_str().unwrap())).await;
+            assert_eq!(reply.status.as_u16(), case["status"], "{}: {}", case["name"], reply.text());
+            let after: i64 = a.booted.app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| row.get(0))?)).await.unwrap();
+            assert_eq!(after - before, case["allocated_blobs"], "{}", case["name"]);
+        }
+    }
+}
+
+#[tokio::test]
 async fn direct_upload_content_length_matches_rails_with_absent_and_chunked_headers() {
     let a = TestApp::boot().await.expect("default seed");
     let mut browser = a.sign_in(DAVID).await;
@@ -128,30 +156,190 @@ async fn direct_upload_destination_failures_return_500_without_staging_files() {
 }
 
 #[tokio::test]
-async fn direct_upload_checksum_mismatch_returns_422_and_preserves_a_complete_blob() {
+async fn direct_upload_corrupt_retry_matches_rails_deletion_and_recovery() {
     let a = TestApp::boot().await.expect("default seed");
     let mut browser = a.sign_in(DAVID).await;
+    let vector = oracle();
+    let cases: Vec<_> = vector["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["kind"] == "retry")
+        .collect();
+    assert_eq!(cases.len(), 3);
     let blob = browser
         .write(metadata(
             3,
-            &campfire_storage::key::checksum(b"xxx"),
+            cases[0]["checksum"].as_str().unwrap(),
             "application/octet-stream",
         ))
         .await
         .json();
-    let request = |body: &str| {
-        Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
-            .header("content-type", "application/octet-stream")
-            .header("content-length", "3")
-            .body(body)
-    };
+    let path = a
+        .booted
+        .app
+        .storage
+        .service
+        .path_for(blob["key"].as_str().unwrap());
+    for case in cases {
+        let reply = browser
+            .send(
+                Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
+                    .header("content-type", "application/octet-stream")
+                    .header("content-length", "3")
+                    .body(case["body"].as_str().unwrap()),
+            )
+            .await;
+        assert_eq!(
+            reply.status.as_u16(),
+            case["put_status"],
+            "{}",
+            case["name"]
+        );
+        assert_eq!(path.exists(), case["file_exists"], "{}", case["name"]);
+        if path.exists() {
+            assert_eq!(
+                campfire_storage::key::checksum_file(&path).unwrap(),
+                case["stored_checksum"]
+            );
+        }
+        assert!(
+            std::fs::read_dir(path.parent().unwrap())
+                .unwrap()
+                .all(|entry| !entry
+                    .unwrap()
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with(".upload-"))
+        );
+    }
+}
+
+#[tokio::test]
+async fn direct_upload_body_parsers_match_pinned_rails_before_storing_files() {
+    use base64::Engine;
+    let a = TestApp::boot().await.expect("default seed");
+    let mut browser = a.sign_in(DAVID).await;
+    let vector = oracle();
+    let cases: Vec<_> = vector["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|case| case["kind"] == "parser")
+        .collect();
+    assert!(cases.len() >= 30);
+    for case in cases {
+        let content_type = case["content_type"].as_str().unwrap();
+        let bytes = if let Some(encoded) = case["body_base64"].as_str() {
+            base64::engine::general_purpose::STANDARD
+                .decode(encoded)
+                .unwrap()
+        } else {
+            let recipe = &case["body_recipe"];
+            let mut body = recipe["unit"]
+                .as_str()
+                .unwrap()
+                .repeat(recipe["repeat"].as_u64().unwrap() as usize);
+            body.insert_str(0, recipe["prefix"].as_str().unwrap_or(""));
+            body.push_str(recipe["suffix"].as_str().unwrap());
+            body.into_bytes()
+        };
+        let created = browser
+            .write(metadata(
+                case["byte_size"].as_i64().unwrap(),
+                case["checksum"].as_str().unwrap(),
+                content_type.split(';').next().unwrap(),
+            ))
+            .await;
+        assert_eq!(
+            created.status.as_u16(),
+            case["metadata_status"],
+            "{}",
+            case["name"]
+        );
+        let blob = created.json();
+        let mut request = Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
+            .header("content-type", content_type)
+            .body(bytes);
+        for (name, value) in case["framing"].as_object().unwrap() {
+            request = request.header(name, value.as_str().unwrap());
+        }
+        let reply = browser.send(request).await;
+        assert_eq!(
+            reply.status.as_u16(),
+            case["put_status"],
+            "{}: {}",
+            case["name"],
+            reply.text()
+        );
+        let path = a
+            .booted
+            .app
+            .storage
+            .service
+            .path_for(blob["key"].as_str().unwrap());
+        assert_eq!(path.exists(), case["file_exists"], "{}", case["name"]);
+        if path.exists() {
+            assert_eq!(
+                std::fs::metadata(&path).unwrap().len(),
+                case["stored_bytes"]
+            );
+            assert_eq!(
+                campfire_storage::key::checksum_file(&path).unwrap(),
+                case["stored_checksum"]
+            );
+        }
+        if path.parent().unwrap().exists() {
+            assert!(
+                std::fs::read_dir(path.parent().unwrap())
+                    .unwrap()
+                    .all(|entry| !entry
+                        .unwrap()
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with(".upload-")),
+                "{}",
+                case["name"]
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn direct_upload_large_json_is_validated_without_the_buffered_body_limit() {
+    let a = TestApp::boot().await.expect("default seed");
+    let mut browser = a.sign_in(DAVID).await;
+    let vector = oracle();
+    let case = vector["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["kind"] == "large_json")
+        .unwrap();
+    let mut bytes = vec![b'x'; case["byte_size"].as_u64().unwrap() as usize];
+    bytes[0] = b'"';
+    *bytes.last_mut().unwrap() = b'"';
+    let blob = browser
+        .write(metadata(
+            bytes.len() as i64,
+            case["checksum"].as_str().unwrap(),
+            "application/json",
+        ))
+        .await
+        .json();
+    let reply = browser
+        .send(
+            Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
+                .header("content-type", "application/json")
+                .header("content-length", &bytes.len().to_string())
+                .body(bytes),
+        )
+        .await;
     assert_eq!(
-        browser.send(request("xxx")).await.status,
-        StatusCode::NO_CONTENT
-    );
-    assert_eq!(
-        browser.send(request("yyy")).await.status,
-        StatusCode::UNPROCESSABLE_ENTITY
+        reply.status.as_u16(),
+        case["put_status"],
+        "{}",
+        reply.text()
     );
     let path = a
         .booted
@@ -159,10 +347,14 @@ async fn direct_upload_checksum_mismatch_returns_422_and_preserves_a_complete_bl
         .storage
         .service
         .path_for(blob["key"].as_str().unwrap());
-    assert_eq!(std::fs::read(&path).unwrap(), b"xxx");
+    assert_eq!(path.exists(), case["file_exists"]);
     assert_eq!(
-        std::fs::read_dir(path.parent().unwrap()).unwrap().count(),
-        1
+        std::fs::metadata(&path).unwrap().len(),
+        case["stored_bytes"]
+    );
+    assert_eq!(
+        campfire_storage::key::checksum_file(&path).unwrap(),
+        case["stored_checksum"]
     );
 }
 

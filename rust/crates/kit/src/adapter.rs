@@ -49,8 +49,15 @@ where
 #[derive(Clone)]
 pub struct ActionHandler<F> {
     action: F,
-    parse_body: bool,
+    body_parser: BodyParser,
     json_body_parser: Option<JsonBodyParser>,
+}
+
+#[derive(Clone, Copy)]
+enum BodyParser {
+    Buffered,
+    Unparsed,
+    Spooled,
 }
 
 /// A request-specific JSON cast, after the ordinary body-size bound. Forms and
@@ -69,7 +76,7 @@ pub fn action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, parse_body: true, json_body_parser: None }
+    ActionHandler { action: f, body_parser: BodyParser::Buffered, json_body_parser: None }
 }
 
 /// [`action`] for one that reads its own body ([`Ctx::read_body`]) and has no body params: the
@@ -80,7 +87,16 @@ pub fn unparsed_action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler { action: f, parse_body: false, json_body_parser: None }
+    ActionHandler { action: f, body_parser: BodyParser::Unparsed, json_body_parser: None }
+}
+
+/// Spool an upload, parsing Rack forms immediately and deferring JSON validation to
+/// [`Ctx::parse_spooled_params`] after before-action gates. Keep Rails' input position.
+pub fn spooled_action<F>(f: F) -> ActionHandler<F>
+where
+    F: for<'a> ActionFn<'a> + Clone,
+{
+    ActionHandler { action: f, body_parser: BodyParser::Spooled, json_body_parser: None }
 }
 
 #[doc(hidden)]
@@ -93,7 +109,7 @@ where
     type Future = Pin<Box<dyn Future<Output = axum::response::Response> + Send>>;
 
     fn call(self, req: axum::extract::Request, kit: Kit) -> Self::Future {
-        Box::pin(async move { dispatch(kit, req, self.action, self.parse_body, self.json_body_parser).await })
+        Box::pin(async move { dispatch(kit, req, self.action, self.body_parser, self.json_body_parser).await })
     }
 }
 
@@ -119,7 +135,7 @@ pub struct OriginalMethod(pub Method);
 #[derive(Debug, Clone)]
 pub struct RequestId(pub String);
 
-async fn dispatch<F>(kit: Kit, req: axum::extract::Request, action: F, parse_body: bool, json_body_parser: Option<JsonBodyParser>) -> axum::response::Response
+async fn dispatch<F>(kit: Kit, req: axum::extract::Request, action: F, body_parser: BodyParser, json_body_parser: Option<JsonBodyParser>) -> axum::response::Response
 where
     F: for<'a> ActionFn<'a>,
 {
@@ -128,14 +144,23 @@ where
         raw.iter().map(|(k, v)| (k.to_string(), Param::Str(v.to_string()))).collect::<ParamMap>()
     });
     let original_method = parts.extensions.get::<OriginalMethod>().map(|m| m.0.clone()).unwrap_or(parts.method.clone());
+    // DiskController's session gate precedes formatted JSON parsing. Rack form
+    // parsing still happens before that gate; keep its malformed-body precedence.
+    let defer_spooled_params = matches!(body_parser, BodyParser::Spooled)
+        && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON);
     let mut unread = None;
     let mut parsed = match parts.extensions.remove::<ParsedBody>() {
         Some(parsed) => Ok(parsed),
-        None if !parse_body => {
+        None if !matches!(body_parser, BodyParser::Buffered) => {
             match body::validate_unparsed(body, kit.config().max_body_bytes).await {
-                Ok(body) => {
+                Ok(mut body) => {
+                    let parsed = if matches!(body_parser, BodyParser::Spooled) && !defer_spooled_params {
+                        body::parse_spooled(&parts.headers, body.as_mut()).await
+                    } else {
+                        Ok(ParsedBody::empty())
+                    };
                     unread = body;
-                    Ok(ParsedBody::empty())
+                    parsed
                 }
                 Err(error) => Err(error),
             }
@@ -180,6 +205,9 @@ where
     );
     if let Some(body) = unread {
         ctx.leave_body_unread(body);
+    }
+    if defer_spooled_params {
+        ctx.defer_spooled_params();
     }
     let result = match failure {
         Some(error) => Err(error),
