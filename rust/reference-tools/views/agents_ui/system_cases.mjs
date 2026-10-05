@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import net from 'node:net';
 import { connectUpstream } from '../../../parity/capture/forward.ts';
 import path from 'node:path';
-import { createRequire } from 'node:module';
+import { createRequire } from 'node:module'; import { fillThreadName } from '../../users/thread_form.mjs';
 // Reject the broken host path before looking for any browser dependencies.
 if (process.env.WS11UI_HOST_NETWORK === fs.readlinkSync('/proc/self/ns/net')) throw new Error('browser must have an isolated network namespace');
 const require = createRequire(path.resolve('rust/parity/package.json'));
@@ -123,7 +123,7 @@ try {
       await page.locator("#thread-panel[aria-hidden='false']").waitFor({state:'visible',timeout:10000});
       await page.getByRole('button',{name:'New thread',exact:true}).click();
       await page.locator("#thread-panel [data-thread-panel-target='create']").waitFor({state:'visible',timeout:10000});
-      await page.locator("#thread-panel [data-thread-panel-target='createName']").fill('Agent owned thread');
+      await fillThreadName(page, 'Agent owned thread');
       await page.locator("#thread-panel [data-thread-panel-target='createMessage']").fill('Work the agent will pick up.');
       await page.locator("#thread-panel [data-thread-panel-target='createSubmit']").click();
       await contains(page.locator("#thread-panel [data-thread-panel-target='conversationTitle']"),'Agent owned thread',10000);

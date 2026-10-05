@@ -54,19 +54,35 @@ def validate_dependency_graph(packages, metadata):
                 raise ValueError(f"unlocked runtime dependency of {name}: {dependency}")
 
 
+def download_archives(packages, scratch):
+    # One sequential curl invocation retains its TLS connection cache between
+    # archives. --next resets transfer options, so repeat the HTTPS-only policy.
+    # --fail-early is global: an early transport/HTTP failure cannot be hidden by
+    # a later successful transfer. No retry or alternate archive is allowed.
+    command = ["curl", "--fail-early"]
+    archives = []
+    for package in packages:
+        archive = str(scratch / (package["package"] + ".deb"))
+        if archives:
+            command.append("--next")
+        command.extend(["--fail", "--silent", "--show-error", "--location",
+                        "--proto", "=https", "--proto-redir", "=https",
+                        package["url"], "--output", archive])
+        archives.append(archive)
+    if archives:
+        subprocess.run(command, check=True)
+    return archives
+
+
 def install(lock):
     validate_lock(lock)
     architecture = subprocess.check_output(["dpkg", "--print-architecture"], text=True).strip()
     if architecture != lock["architecture"]:
         raise ValueError(f"this prerequisite lock supports {lock['architecture']}, not {architecture}")
     with tempfile.TemporaryDirectory(prefix="ci-apt-") as scratch:
-        archives = []
-        for package in lock["packages"]:
-            archive = Path(scratch) / (package["package"] + ".deb")
-            subprocess.run(["curl", "--fail", "--silent", "--show-error", "--location",
-                            "--proto", "=https", "--proto-redir", "=https", package["url"], "--output", str(archive)], check=True)
-            verify_deb(package, archive)
-            archives.append(str(archive))
+        archives = download_archives(lock["packages"], Path(scratch))
+        for package, archive in zip(lock["packages"], archives):
+            verify_deb(package, Path(archive))
         # All bytes and identities are verified before package scripts can execute.
         # No repository update, dependency download, or unpinned fallback is allowed.
         metadata = {

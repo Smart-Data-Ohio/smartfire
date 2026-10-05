@@ -75,7 +75,7 @@ python3 rust/reference-tools/cutover/check-ws14-ws15.py --slice-log rust/target/
 python3 rust/reference-tools/check-cutover-ledgers.py --nextest-list rust/target/ledger-d-tools/nextest-list.json
 ```
 
-The Python registry regressions pass **6/6**; proxy regressions pass **4/4**. The registry source guard reports **67 CI correctness wrappers, 7 utilities, 0 unowned**. The original-browser checker verifies **53 declarations, 326 direct calls and 92 helper calls**, in addition to pinned input bytes. The ledger and per-assertion checkers pass: **445 records; 86 retained baseline receipts, 358 implementation receipts, 1 existing test-only outside-gate record, 0 open**. Historical partial WS8/WS11 cutover inventories remain outside this WS14/WS15 slice.
+The Python registry regressions pass **6/6**; proxy regressions pass **4/4**. The initial registry source guard reports **67 CI correctness wrappers, 7 utilities, 0 unowned**; after synchronization with main it reports **74 correctness wrappers, 7 utilities, 0 unowned**, retaining main's seven additional WS11 browser wrappers. The original-browser checker verifies **53 declarations, 326 direct calls and 92 helper calls**, in addition to pinned input bytes. The ledger and per-assertion checkers pass: **445 records; 86 retained baseline receipts, 358 implementation receipts, 1 existing test-only outside-gate record, 0 open**. Historical partial WS8/WS11 cutover inventories remain outside this WS14/WS15 slice.
 
 The compiled receipt listing is produced from `rust/` using:
 
@@ -88,3 +88,15 @@ Native mutations use `python3 rust/reference-tools/cutover/mutation-check.py MAN
 The final self-sweep and independent source review checked fixture values and starting mutations, room/user/event scoping, GET/HEAD/PUT/self-GET variants, missing/error/rejected input branches, exact job arguments, body/database changes, original geometry and nested helper execution. Rails sources, production JS/CSS assets and CodeQL configuration were not changed. The slim PR gate is Rust port; full correctness jobs remain registered for main/nightly.
 
 Nothing remains open in this requested 127-declaration slice.
+
+## Synchronization with concurrent main
+
+Main advanced to `be5cace8e` after the initial fetch and before PR creation. GitHub therefore reported a conflict and did not start any PR checks. The sole conflict was the documentation line counting ignored wrappers. The local resolution combines the 53 new D wrappers with main's 21: **74 correctness wrappers**, retaining main's browser registration and source changes. Application code merged without conflicts or manual producer changes. This synchronization was completed and verified locally before requesting an exception to the user's one-push limit.
+
+Final merged-source native/browser command from `rust/`:
+
+```bash
+CI=true CARGO_BUILD_JOBS=2 WS14_BROWSER_RUBY_IMAGE=ws8bm-browser-reference-78b9b1546 PATH="$PWD/target/ledger-d-tools:$PATH" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -p campfire_db -j 4 -E 'test(cutover_d_) | test(controller_time_and_parameter_casts_match_pinned_rails) | test(unicode_parity_manual_github_login_uses_downcase_without_folding) | test(controllers::ws14_original_browser_tests::) | test(controllers::ws15_original_github_browser_tests::)' --run-ignored all --no-fail-fast --success-output immediate --failure-output immediate
+```
+
+**104 passed, 0 failed, 4500 skipped**, including all 51 selected native tests and all 53 original browser wrappers. SHA-256: `907f25f0f67dfb8df535ba1a7ee06fdbc239e345f9ff090666f6ef7ccb784d99`. The same targeted view command above was rerun: **5 passed, 0 failed, 158 skipped**; SHA-256: `9b675f5c40224037de92c3c8a6a728e081b34331395045b5ed938f8f5fd4f41a`. The same strict four-crate clippy command passed again with zero warnings; SHA-256: `26d15a94b9306380f2f480374db444aab97a2044942d53b9f46430d4793604eb`. Original-browser, per-assertion, ledger and ignored-registry checkers passed again on merged source.

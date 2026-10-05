@@ -81,6 +81,48 @@
       "package": "campfire",
       "binary": "campfire",
       "test": "controllers::rooms::system_browser_tests::huddle_system_cases_in_real_browser"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_people_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+    },
+    {
+      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
+      "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
     }
   ],
   "livekit": [

@@ -1577,7 +1577,7 @@
           "ruby": "get user_url(users(:bender))"
         }
       ],
-      "reviewed_source": "test \"bot profile shows agent identity, status, rooms, and grants to a member\" do\n    agents(:bender_agent).update!(\n      provider: \"OpenAI\", runtime: \"Codex CLI 0.9\", description: \"Does things\",\n      status: \"working\", status_note: \"on it\", status_changed_at: 2.hours.ago\n    )\n    sign_in users(:kevin)\n\n    get user_url(users(:bender))\n\n    assert_response :ok\n    assert_select \"h1\", text: \"Bender Bot\"\n    assert_match \"Workspace agent, managed by David\", response.body\n    assert_match \"OpenAI \u00b7 Codex CLI 0.9\", response.body\n    assert_match \"Does things\", response.body\n    assert_select \".agent-status-badge--working\", text: \"Working\"\n    assert_select \".agent-status-note\", text: \"on it\"\n    assert_match(/since .* ago/, response.body)\n    assert_match \"never\", response.body\n    assert_select \"a[href='#{room_path(rooms(:bender_and_kevin))}']\", 1\n    assert_select \"a[href='#{room_path(rooms(:watercooler))}']\", 0\n    assert_match \"and 1 more\", response.body\n    assert_match \"legacy access (no grants recorded)\", response.body\n  end",
+      "reviewed_source": "test \"bot profile shows agent identity, status, rooms, and grants to a member\" do\n    agents(:bender_agent).update!(\n      provider: \"OpenAI\", runtime: \"Codex CLI 0.9\", description: \"Does things\",\n      status: \"working\", status_note: \"on it\", status_changed_at: 2.hours.ago\n    )\n    sign_in users(:kevin)\n\n    get user_url(users(:bender))\n\n    assert_response :ok\n    assert_select \"h1\", text: \"Bender Bot\"\n    assert_match \"Workspace agent, managed by David\", response.body\n    assert_match \"OpenAI · Codex CLI 0.9\", response.body\n    assert_match \"Does things\", response.body\n    assert_select \".agent-status-badge--working\", text: \"Working\"\n    assert_select \".agent-status-note\", text: \"on it\"\n    assert_match(/since .* ago/, response.body)\n    assert_match \"never\", response.body\n    assert_select \"a[href='#{room_path(rooms(:bender_and_kevin))}']\", 1\n    assert_select \"a[href='#{room_path(rooms(:watercooler))}']\", 0\n    assert_match \"and 1 more\", response.body\n    assert_match \"legacy access (no grants recorded)\", response.body\n  end",
       "rust_tests": [
         "controllers::users::agent_profile_tests::original_identity_and_two_room_visibility_match_rails"
       ],
@@ -1619,7 +1619,7 @@
         },
         {
           "rails_line": 69,
-          "ruby": "assert_match \"OpenAI \u00b7 Codex CLI 0.9\", response.body",
+          "ruby": "assert_match \"OpenAI · Codex CLI 0.9\", response.body",
           "rust_assertion": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
           "anchor": "fragment(actual),",
           "scope": "shared complete-fragment comparator",
@@ -2391,7 +2391,7 @@
           "ruby": "get users_url"
         }
       ],
-      "reviewed_source": "test \"index lists starred people first with a star marker\" do\n    sign_in :david\n    users(:david).user_stars.create!(starred_user: users(:kevin))\n\n    get users_url\n\n    assert_response :ok\n    rows = css_select(\".people-directory__row\").map do |row|\n      row.at_css(\"input[data-multi-select-target='checkbox']\")[\"data-user-id\"].to_i\n    end\n    assert_equal users(:kevin).id, rows.first\n    kevin_row = css_select(\".people-directory__row\").find do |row|\n      row.at_css(\"input[data-multi-select-target='checkbox']\")[\"data-user-id\"].to_i == users(:kevin).id\n    end\n    assert_equal \"\u2605\", kevin_row.at_css(\"[aria-label='Starred by you']\").text\n  end",
+      "reviewed_source": "test \"index lists starred people first with a star marker\" do\n    sign_in :david\n    users(:david).user_stars.create!(starred_user: users(:kevin))\n\n    get users_url\n\n    assert_response :ok\n    rows = css_select(\".people-directory__row\").map do |row|\n      row.at_css(\"input[data-multi-select-target='checkbox']\")[\"data-user-id\"].to_i\n    end\n    assert_equal users(:kevin).id, rows.first\n    kevin_row = css_select(\".people-directory__row\").find do |row|\n      row.at_css(\"input[data-multi-select-target='checkbox']\")[\"data-user-id\"].to_i == users(:kevin).id\n    end\n    assert_equal \"★\", kevin_row.at_css(\"[aria-label='Starred by you']\").text\n  end",
       "rust_tests": [
         "controllers::users::people_tests::directories_match_complete_rails_body_and_starred_order"
       ],
@@ -2422,7 +2422,7 @@
         },
         {
           "rails_line": 218,
-          "ruby": "assert_equal \"\u2605\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
+          "ruby": "assert_equal \"★\", kevin_row.at_css(\"[aria-label='Starred by you']\").text",
           "rust_assertion": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
           "anchor": "fragment(actual),",
           "scope": "shared complete-fragment comparator",
@@ -2771,7 +2771,7 @@
         {
           "rails_line": 28,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -2782,7 +2782,7 @@
         {
           "rails_line": 29,
           "ruby": "assert_equal \"John Doe\", users(:david).reload.name",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -2793,7 +2793,7 @@
         {
           "rails_line": 30,
           "ruby": "assert_equal \"Acrobat\", users(:david).bio",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -2804,7 +2804,7 @@
         {
           "rails_line": 31,
           "ruby": "assert_equal \"david@37signals.com\", users(:david).email_address",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:284",
           "anchor": "assert_eq!(campfire_db::User::find(conn, DAVID)?.email_address.as_deref(), Some(\"david@37signals.com\"));",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -2839,7 +2839,7 @@
         {
           "rails_line": 37,
           "ruby": "assert_equal \"Jason\", users(:jason).reload.name",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -4217,7 +4217,7 @@
         {
           "rails_line": 307,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -4228,7 +4228,7 @@
         {
           "rails_line": 308,
           "ruby": "assert_equal \"david-gh\", users(:david).reload.github_login",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -4651,7 +4651,7 @@
         {
           "rails_line": 386,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -4662,7 +4662,7 @@
         {
           "rails_line": 388,
           "ruby": "assert_equal \"push_to_talk\", user.voice_mode",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -4673,7 +4673,7 @@
         {
           "rails_line": 389,
           "ruby": "assert_equal \"CapsLock\", user.push_to_talk_key",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -4753,7 +4753,7 @@
         {
           "rails_line": 404,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -4764,7 +4764,7 @@
         {
           "rails_line": 405,
           "ruby": "assert_nil users(:david).reload.github_login",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5149,7 +5149,7 @@
         {
           "rails_line": 463,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5160,7 +5160,7 @@
         {
           "rails_line": 464,
           "ruby": "assert_equal \"dark\", users(:david).reload.theme",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5171,7 +5171,7 @@
         {
           "rails_line": 465,
           "ruby": "assert_equal \"Pacific Time (US & Canada)\", users(:david).time_zone",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5282,7 +5282,7 @@
         {
           "rails_line": 483,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5388,7 +5388,7 @@
         {
           "rails_line": 500,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5400,7 +5400,7 @@
         {
           "rails_line": 501,
           "ruby": "assert_equal \"America/New_York\", users(:david).reload.time_zone",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5412,7 +5412,7 @@
         {
           "rails_line": 502,
           "ruby": "assert users(:david).time_zone_explicit?",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5424,7 +5424,7 @@
         {
           "rails_line": 505,
           "ruby": "assert_redirected_to user_profile_url",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:263",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:277",
           "anchor": "response.location(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5436,7 +5436,7 @@
         {
           "rails_line": 506,
           "ruby": "assert_nil users(:david).reload.time_zone",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5448,7 +5448,7 @@
         {
           "rails_line": 507,
           "ruby": "assert users(:david).time_zone_explicit?",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5536,7 +5536,7 @@
         {
           "rails_line": 520,
           "ruby": "assert_response :unprocessable_entity",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "anchor": "response.status.as_u16(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5549,7 +5549,7 @@
         {
           "rails_line": 523,
           "ruby": "assert_response :unprocessable_entity",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "anchor": "response.status.as_u16(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5562,7 +5562,7 @@
         {
           "rails_line": 526,
           "ruby": "assert_response :unprocessable_entity",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:270",
           "anchor": "response.status.as_u16(),",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5575,7 +5575,7 @@
         {
           "rails_line": 528,
           "ruby": "assert_equal \"system\", users(:david).reload.theme",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5588,7 +5588,7 @@
         {
           "rails_line": 529,
           "ruby": "assert_equal \"default\", users(:david).text_size",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -5601,7 +5601,7 @@
         {
           "rails_line": 530,
           "ruby": "assert_nil users(:david).time_zone",
-          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:281",
+          "rust_assertion": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:295",
           "anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "scope": "manual_profile_settings_match_pinned_rails_patch_vectors",
           "test": "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
@@ -6051,7 +6051,7 @@
           "ruby": "get user_card_url(users(:jason))"
         }
       ],
-      "reviewed_source": "test \"card shows the presence dot and custom status badge\" do\n    jason_session = users(:jason).sessions.create!(user_agent: \"test\", ip_address: \"127.0.0.1\")\n    WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)\n    users(:jason).update!(custom_status_emoji: \"\ud83d\ude82\", custom_status_text: \"On a train\")\n\n    get user_card_url(users(:jason))\n\n    assert_response :success\n    assert_select \".user-status-badge .avatar__presence[data-presence='online']\", 1\n    assert_select \".user-status-badge__label\", text: \"Online\"\n    assert_select \".user-status-badge__custom\", text: \"\ud83d\ude82 On a train\"\n  end",
+      "reviewed_source": "test \"card shows the presence dot and custom status badge\" do\n    jason_session = users(:jason).sessions.create!(user_agent: \"test\", ip_address: \"127.0.0.1\")\n    WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)\n    users(:jason).update!(custom_status_emoji: \"🚂\", custom_status_text: \"On a train\")\n\n    get user_card_url(users(:jason))\n\n    assert_response :success\n    assert_select \".user-status-badge .avatar__presence[data-presence='online']\", 1\n    assert_select \".user-status-badge__label\", text: \"Online\"\n    assert_select \".user-status-badge__custom\", text: \"🚂 On a train\"\n  end",
       "rust_tests": [
         "controllers::users::people_tests::card_shows_presence_dot_and_custom_status_badge"
       ],
@@ -6093,7 +6093,7 @@
         },
         {
           "rails_line": 44,
-          "ruby": "assert_select \".user-status-badge__custom\", text: \"\ud83d\ude82 On a train\"",
+          "ruby": "assert_select \".user-status-badge__custom\", text: \"🚂 On a train\"",
           "rust_assertion": "rust/crates/campfire/src/controllers/users/people_tests.rs:159",
           "anchor": "fragment(actual),",
           "scope": "shared complete-fragment comparator",

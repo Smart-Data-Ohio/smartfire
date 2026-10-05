@@ -23,6 +23,13 @@ filter = 'package(campfire) & (test(ws12_browser_) | test(huddle_system_cases_in
 test-group = "browser"
 
 [[profile.ci.overrides]]
+# A paired wrapper owns Rails/Redis, Rust, Chromium and byte-forwarder workers.
+# Account for those child workers in the four-slot CI budget; the default
+# profile still exercises the seven wrappers concurrently at -j 4.
+filter = 'package(campfire) & test(ws11ui_original_browser_tests) & not test(original_browser_port_leases)'
+threads-required = 4
+
+[[profile.ci.overrides]]
 # These hardening tests assert elapsed CPU time. Unlike libtest's sequential test binaries,
 # nextest could run them alongside the large corpus suites and exceed their unchanged bounds.
 filter = 'package(campfire_richtext) & binary(hardening) & (test(deeply_nested_content_attachments_render_quickly) | test(many_bare_domains_autolink_in_linear_time))'

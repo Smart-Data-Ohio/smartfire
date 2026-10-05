@@ -23730,14 +23730,34 @@
           "failed": 0,
           "skipped": 158,
           "elapsed": "0.104s"
+        },
+        {
+          "command": "CI=true CARGO_BUILD_JOBS=2 WS14_BROWSER_RUBY_IMAGE=ws8bm-browser-reference-78b9b1546 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -p campfire_db -j 4 -E 'test(cutover_d_) | test(controller_time_and_parameter_casts_match_pinned_rails) | test(unicode_parity_manual_github_login_uses_downcase_without_folding) | test(controllers::ws14_original_browser_tests::) | test(controllers::ws15_original_github_browser_tests::)' --run-ignored all --no-fail-fast --success-output immediate --failure-output immediate",
+          "cwd": "rust",
+          "raw_log": "rust/target/ledger-d-tools/main-merged-final.log",
+          "raw_log_sha256": "907f25f0f67dfb8df535ba1a7ee06fdbc239e345f9ff090666f6ef7ccb784d99",
+          "passed": 104,
+          "failed": 0,
+          "skipped": 4500,
+          "elapsed": "151.837s"
+        },
+        {
+          "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire_views -j 4 -E 'test(event_cards_are_byte_identical_to_rails_fragments) | test(event_card_collections_match_rails_empty_and_populated) | test(wide_calendar_time_) | binary(event_pages)' --no-fail-fast",
+          "cwd": "rust",
+          "raw_log": "rust/target/ledger-d-tools/views-main-merged.log",
+          "raw_log_sha256": "9b675f5c40224037de92c3c8a6a728e081b34331395045b5ed938f8f5fd4f41a",
+          "passed": 5,
+          "failed": 0,
+          "skipped": 158,
+          "elapsed": "0.108s"
         }
       ],
       "clippy": {
         "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo clippy --locked -p campfire -p campfire_db -p campfire_views -p rails_compat --all-targets -- -D warnings",
         "cwd": "rust",
         "exit_code": 0,
-        "raw_log": "rust/target/ledger-d-tools/clippy-restored-final.log",
-        "raw_log_sha256": "a316fd299bacddeaad3d86209673172977a76c6590ddb5c8fc528dc7be40ae2a"
+        "raw_log": "rust/target/ledger-d-tools/clippy-main-merged.log",
+        "raw_log_sha256": "26d15a94b9306380f2f480374db444aab97a2044942d53b9f46430d4793604eb"
       },
       "mutation_receipt": "rust/plans/ledger-ws14-ws15-d-mutations.json",
       "mutation_attempts": 34,
@@ -23755,7 +23775,21 @@
         "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
         "validated_checks": 73
       },
-      "full_workspace_run": false
+      "full_workspace_run": false,
+      "previous_clippy": {
+        "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo clippy --locked -p campfire -p campfire_db -p campfire_views -p rails_compat --all-targets -- -D warnings",
+        "cwd": "rust",
+        "exit_code": 0,
+        "raw_log": "rust/target/ledger-d-tools/clippy-restored-final.log",
+        "raw_log_sha256": "a316fd299bacddeaad3d86209673172977a76c6590ddb5c8fc528dc7be40ae2a"
+      },
+      "base_synchronization": {
+        "main": "be5cace8e",
+        "reason": "Main advanced after the initial fetch; sole merge conflict is the combined ignored-wrapper count in rust/ci/README.md.",
+        "source_correctness_tests": 74,
+        "source_utilities": 7,
+        "manual_producer_edits": false
+      }
     }
   }
 }

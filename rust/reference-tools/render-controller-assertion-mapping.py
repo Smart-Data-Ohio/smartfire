@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """Render every original assertion, including reopened gaps, for human review."""
+import argparse
 import json
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
-manifest = json.loads((root / 'plans/ledger-ws8br-ws17-ws11ui-b-receipts.json').read_text())
-lines = ['# PR #244 per-assertion audit', '',
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--manifest',type=Path,default=root/'plans/ledger-ws8br-ws17-ws11ui-b-receipts.json')
+parser.add_argument('--output',type=Path,default=root/'plans/ledger-ws8br-ws17-ws11ui-b-assertions.md')
+args=parser.parse_args()
+manifest = json.loads(args.manifest.read_text())
+lines = ['# Individual original assertion audit', '',
          f"Original declarations and runtime fixtures use Rails {manifest['reference']}.", '',
          'Every row names the original assertion and the actual Rust check. Whole-byte/DOM checks retain tags, attributes, text and cardinality; their fixture cases are named below. Reopened gaps are explicit and retain the previous insufficient claim in JSON history.', '']
 for row in manifest['records']:
@@ -22,7 +27,9 @@ for row in manifest['records']:
         if additional:
             pointer += '; ' + additional
         lines += [f"| `{row['file']}:{assertion['line']}` — `{ruby}` | {pointer} | {observation} |"]
+    for helper in row.get('helper_expansion', []):
+        lines += [f"| `{helper['ruby_file']}:{helper['line']}` — `{helper['ruby']}` (private helper) | {helper['rust_assertion']['path']} | The calling original case executes this routed-response assertion. |"]
     lines += ['']
-output = root / 'plans/ledger-ws8br-ws17-ws11ui-b-assertions.md'
-output.write_text('\n'.join(lines) + '\n')
+output = args.output
+output.write_text('\n'.join(lines).rstrip() + '\n')
 print(f'Assertion mapping: {len(manifest["records"])} declarations; {sum(len(r["assertions"]) for r in manifest["records"])} explicit rows')
