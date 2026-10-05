@@ -237,51 +237,9 @@ fn simple_format(text: &str) -> Result<String> {
         .collect::<Vec<_>>()
         .join("\n\n"))
 }
+mod index;
 pub fn index(conn: &Connection, room: &Room, user: &User, now: Timestamp) -> Result<IndexView> {
-    let events = query_all(
-        conn,
-        "SELECT id FROM events WHERE room_id=? ORDER BY starts_at,id",
-        [room.id],
-        |r| r.get::<_, i64>(0),
-    )?
-    .into_iter()
-    .map(|id| CalendarEvent::find(conn, id))
-    .collect::<Result<Vec<_>>>()?;
-    let upcoming: Vec<_> = events
-        .iter()
-        .filter(|e| !e.cancelled() && e.ends_at.unwrap_or(e.starts_at) >= now)
-        .collect();
-    let mut counts = std::collections::BTreeMap::new();
-    for e in &upcoming {
-        if let Some(id) = e.series_id {
-            *counts.entry(id).or_insert(0) += 1;
-        }
-    }
-    let mut seen = std::collections::BTreeSet::new();
-    let upcoming = upcoming
-        .into_iter()
-        .filter(|e| e.series_id.is_none_or(|id| seen.insert(id)))
-        .map(|e| page_event(conn, e, user, e.series_id.map(|id| counts[&id])))
-        .collect::<Result<_>>()?;
-    let past = events
-        .iter()
-        .rev()
-        .filter(|e| !e.cancelled() && e.ends_at.unwrap_or(e.starts_at) < now)
-        .map(|e| page_event(conn, e, user, None))
-        .collect::<Result<_>>()?;
-    let cancelled = events
-        .iter()
-        .rev()
-        .filter(|e| e.cancelled())
-        .map(|e| page_event(conn, e, user, None))
-        .collect::<Result<_>>()?;
-    Ok(IndexView {
-        room_id: room.id,
-        room_name: room_name(conn, room, user)?,
-        upcoming,
-        past,
-        cancelled,
-    })
+    index::load(conn,room,user,now)
 }
 pub fn show(conn: &Connection, room: &Room, user: &User, e: &CalendarEvent) -> Result<ShowView> {
     Ok(ShowView {

@@ -13,6 +13,7 @@ import hashlib
 import json
 import pathlib
 import re
+import subprocess
 
 root = pathlib.Path(__file__).resolve().parents[3]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -45,6 +46,38 @@ remaining_ids = re.findall(r'^\| (WS\d+[eg]-\d+) \|', remaining, re.MULTILINE)
 open_ids = {r['id'] for r in records if r['disposition'] == 'unsupported_assertion'}
 assert len(remaining_ids) == len(set(remaining_ids)), 'Duplicate remaining record'
 assert set(remaining_ids) == open_ids, 'Remaining list differs from ledger'
+continuation = data.get('continuation_audit')
+continuation_ids = set()
+continuation_closed = set()
+continuation_reopened = set()
+if continuation:
+    for file in continuation['maps']:
+        mapping = json.loads((root / file).read_text())
+        for entry in mapping['records']:
+            assert entry['id'] not in continuation_ids
+            continuation_ids.add(entry['id'])
+            record = next(r for r in records if r['id'] == entry['id'])
+            if record['disposition'] == 'implemented':
+                assert all(a['disposition'] == 'covered' and a['rust'] for a in entry['assertions']), entry['id']
+                continuation_closed.add(entry['id'])
+            else:
+                assert record['disposition'] == 'unsupported_assertion', entry['id']
+                assert entry['review_disposition'] == 'reopened', entry['id']
+                assert any(a['disposition'] == 'unsupported_assertion' and not a['rust']
+                           and a.get('reason') for a in entry['assertions']), entry['id']
+                assert record['review243']['previous_evidence'], entry['id']
+                continuation_reopened.add(entry['id'])
+            assert record['evidence']['test'] == entry['test'], entry['id']
+            assert record['evidence']['assertion_map']['file'] == file, entry['id']
+    # The separate continuation schema checks every Rails call, exact native
+    # assertion bytes and physical source locations; it is not an audit waiver.
+    subprocess.run(['python3', str(root / 'rust/reference-tools/cutover/assertion-maps.py'),
+                    *(str(root / f) for f in continuation['maps'])], check=True)
+    assert len(continuation_closed) == continuation['closed_records']
+    assert continuation_reopened == set(continuation.get('reopened_records', []))
+    assert continuation['parent_open_total'] - len(continuation_closed) == len(open_ids)
+    assert continuation['parent_open_total'] == data['closure_audit']['open_total']
+    assert len(open_ids) == continuation['open_total']
 audited = []
 assertion_count = 0
 mapped_count = 0
@@ -109,7 +142,10 @@ for r in records:
         assert f"| {r['id']} |" not in remaining, r['id']
     audit = r.get('assertion_audit')
     if not audit:
-        assert r['disposition'] == 'unsupported_assertion', r['id']
+        if r['id'] in continuation_ids:
+            assert r['continuation'] in {'rust/ledger-ws14-ws15-b', 'rust/ledger-ws14-ws15-c'}, r['id']
+        else:
+            assert r['disposition'] == 'unsupported_assertion', r['id']
         continue
     audited.append(r)
     assert r['prior_disposition'] in {'passed', 'implemented', 'outside_gate'}, r['id']
@@ -168,10 +204,11 @@ assert set(summary['retained']) == retained
 assert set(summary['reopened']) == reopened
 assert set(summary['outside_gate']) == outside == {'WS14g-268'}
 assert set(summary['closed_with_new_assertions']) == strengthened
-assert len(open_ids) == summary['open_total']
+if not continuation:
+    assert len(open_ids) == summary['open_total']
 if args.nextest_log:
     raw = args.nextest_log.read_bytes()
-    receipt = summary['verification']['nextest']
+    receipt = (continuation['verification']['nextest'] if continuation else summary['verification']['nextest'])
     assert hashlib.sha256(raw).hexdigest() == receipt['raw_log_sha256']
     text = raw.decode()
     names = [package + ' ' + name for package, name in
@@ -196,4 +233,4 @@ if args.ci_log:
     print('CI receipt verification: 4948 PASS entries; 0 FAIL entries; all cited names/lines match run 37200618245')
 if args.nextest_log:
     print(f"Final local run: {receipt['passed']} distinct PASS entries; 0 FAIL entries; "
-          f"{receipt['skipped']} skipped; all {len(retained)} retained closures have named PASS receipts")
+          f"{receipt['skipped']} skipped; all {sum(r['disposition'] in {'passed', 'implemented'} for r in records)} retained closures have named PASS receipts")

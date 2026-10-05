@@ -101,6 +101,21 @@ pub fn delete(tx: &mut Tx<'_>, entry: &Entry) -> Result<()> {
         .execute("DELETE FROM event_calendar_entries WHERE id=?", [entry.id])?;
     Ok(())
 }
+/// EventCalendarEntry#destroy: capture the remote identity, then enqueue after commit.
+/// Reconciliation uses `delete` instead, because the remote copy is already gone.
+pub fn destroy(tx: &mut Tx<'_>, entry: &Entry) -> Result<()> {
+    if tx.conn().execute("DELETE FROM event_calendar_entries WHERE id=?", [entry.id])? != 0 {
+        tx.emit_after_commit(crate::Event::job(&crate::models::room_delete::RemoteDeleteJob((
+            entry.user_id,
+            entry.google_event_id.clone(),
+        ))));
+    }
+    Ok(())
+}
+/// Association delete_all bypasses remote-delete callbacks for disconnect cleanup.
+pub fn delete_all_for_user(tx: &mut Tx<'_>, user_id: i64) -> Result<usize> {
+    Ok(tx.conn().execute("DELETE FROM event_calendar_entries WHERE user_id=?", [user_id])?)
+}
 pub fn response_is_notifying(
     conn: &Connection,
     event_id: i64,
