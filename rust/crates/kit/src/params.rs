@@ -464,10 +464,25 @@ pub fn query_pairs(qs: &str) -> Result<Vec<RawPair>, ParamError> {
 /// `Rack::Request#form_pairs` for an urlencoded body: Rack's limits, and the trailing `\0`
 /// Safari once appended is dropped.
 pub fn form_pairs(body: &[u8]) -> Result<Vec<RawPair>, ParamError> {
+    check_form_size(body)?;
+    form_pairs_within_limit(body.strip_suffix(b"\0").unwrap_or(body))
+}
+
+/// Rack strips one Safari NUL before its byte limit; disk PUTs opt into that order.
+pub(crate) fn disk_form_pairs(body: &[u8]) -> Result<Vec<RawPair>, ParamError> {
     let body = body.strip_suffix(b"\0").unwrap_or(body);
+    check_form_size(body)?;
+    form_pairs_within_limit(body)
+}
+
+fn check_form_size(body: &[u8]) -> Result<(), ParamError> {
     if body.len() > FORM_BYTESIZE_LIMIT {
         return Err(ParamError::Limit(format!("total query size exceeds limit ({FORM_BYTESIZE_LIMIT})")));
     }
+    Ok(())
+}
+
+fn form_pairs_within_limit(body: &[u8]) -> Result<Vec<RawPair>, ParamError> {
     // The body is bytes; %-decoding happens per component, so a lossless view is enough here.
     let text = String::from_utf8_lossy(body);
     let parts: Vec<&str> = split_pairs(&text).collect();

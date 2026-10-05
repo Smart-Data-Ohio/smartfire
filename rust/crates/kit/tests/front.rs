@@ -452,6 +452,7 @@ fn kit_app() -> Router {
         Ok(c.head(campfire_kit::StatusCode::NO_CONTENT))
     }
     async fn file(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+        c.parse_spooled_params().await?;
         let body = c.take_body_file().await.map_err(campfire_kit::Error::internal)?;
         let size = body.metadata().map_err(campfire_kit::Error::internal)?.len();
         Ok(c.render_as(campfire_kit::StatusCode::OK, "text/plain", size.to_string()))

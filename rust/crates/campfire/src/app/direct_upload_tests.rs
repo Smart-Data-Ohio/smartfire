@@ -17,6 +17,34 @@ fn metadata(size: i64, checksum: &str, content_type: &str) -> Req {
 }
 
 #[tokio::test]
+async fn direct_upload_authentication_precedes_disk_params_without_changing_metadata_post() {
+    use base64::Engine;
+    let a = TestApp::boot().await.expect("default seed");
+    let mut browser = a.sign_in(DAVID).await;
+    let mut anonymous = a.anonymous();
+    for case in oracle()["cases"].as_array().unwrap() {
+        if case["kind"] == "authentication" {
+            let content_type = case["content_type"].as_str().unwrap();
+            let blob = browser.write(metadata(case["byte_size"].as_i64().unwrap(),
+                case["checksum"].as_str().unwrap(), content_type.split(';').next().unwrap())).await.json();
+            let reply = anonymous.send(Req::new(Method::PUT, blob["direct_upload"]["url"].as_str().unwrap())
+                .header("content-type", content_type)
+                .header("content-length", &case["byte_size"].to_string())
+                .body(base64::engine::general_purpose::STANDARD.decode(case["body_base64"].as_str().unwrap()).unwrap())).await;
+            assert_eq!(reply.status.as_u16(), case["put_status"], "{}: {}", case["name"], reply.text());
+            assert_eq!(a.booted.app.storage.service.exist(blob["key"].as_str().unwrap()), case["file_exists"], "{}", case["name"]);
+        } else if case["kind"] == "metadata_authentication" {
+            let before: i64 = a.booted.app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| row.get(0))?)).await.unwrap();
+            let reply = anonymous.send(Req::new(Method::POST, "/rails/active_storage/direct_uploads")
+                .header("content-type", "application/json").body(case["body"].as_str().unwrap())).await;
+            assert_eq!(reply.status.as_u16(), case["status"], "{}: {}", case["name"], reply.text());
+            let after: i64 = a.booted.app.db.read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM active_storage_blobs", [], |row| row.get(0))?)).await.unwrap();
+            assert_eq!(after - before, case["allocated_blobs"], "{}", case["name"]);
+        }
+    }
+}
+
+#[tokio::test]
 async fn direct_upload_content_length_matches_rails_with_absent_and_chunked_headers() {
     let a = TestApp::boot().await.expect("default seed");
     let mut browser = a.sign_in(DAVID).await;

@@ -56,6 +56,7 @@ pub struct Ctx {
     live: bool,
     /// The validated, spooled body of an [`crate::unparsed_action`].
     unread_body: Option<tokio::fs::File>,
+    spooled_params_pending: bool,
 }
 
 /// Options for `redirect_to`.
@@ -121,11 +122,32 @@ impl Ctx {
             rendered_format: None,
             live: false,
             unread_body: None,
+            spooled_params_pending: false,
         }
     }
 
     pub(crate) fn leave_body_unread(&mut self, body: tokio::fs::File) {
         self.unread_body = Some(body);
+    }
+
+    pub(crate) fn defer_spooled_params(&mut self) {
+        self.spooled_params_pending = true;
+    }
+
+    /// Validate a spooled action's pending JSON after its authentication/before-action gates,
+    /// as DiskController does when it first accesses params[:encoded_token].
+    pub async fn parse_spooled_params(&mut self) -> Result<()> {
+        if !self.spooled_params_pending {
+            return Ok(());
+        }
+        self.spooled_params_pending = false;
+        let parsed = crate::body::parse_spooled(&self.request.headers, self.unread_body.as_mut())
+            .await.map_err(|error| Error::Status(error.status()))?;
+        self.request_params = parsed.params?;
+        self.params = self.request_params.clone();
+        self.params.merge(&self.query_params);
+        self.params.merge(&self.path_params);
+        Ok(())
     }
 
     /// Take a validated upload without buffering it in memory. Unparsed actions rewind

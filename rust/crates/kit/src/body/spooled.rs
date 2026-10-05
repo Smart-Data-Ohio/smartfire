@@ -9,7 +9,7 @@ use regex::Regex;
 use serde::Deserialize;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 
-use super::{BodyError, ParsedBody, parse_multipart};
+use super::{BodyError, MultipartPolicy, ParsedBody, parse_multipart};
 use crate::{format, params, request::media_type};
 
 pub(crate) async fn parse_spooled(
@@ -53,9 +53,14 @@ pub(crate) async fn parse_spooled(
     };
     let parsing_multipart = boundary.is_some();
     let parsed = if let Some(boundary) = boundary {
+        // Rack rejects the declared total size before reading, even if it would
+        // stop at a closing boundary before a large epilogue.
+        if length > super::MULTIPART_BYTESIZE_LIMIT {
+            return Err(multipart_error());
+        }
         let mut input = file.try_clone().await?.into_std().await;
         let checked_boundary = boundary.clone();
-        tokio::task::spawn_blocking(move || {
+        let position = tokio::task::spawn_blocking(move || {
             validate_multipart_buffers(&mut input, &checked_boundary)
         })
         .await
@@ -71,11 +76,22 @@ pub(crate) async fn parse_spooled(
             chunk.truncate(size);
             Ok(Some((chunk, input)))
         });
-        match parse_multipart(Body::from_stream(stream), boundary, None, 32).await {
+        let parsed = match parse_multipart(
+            Body::from_stream(stream),
+            boundary,
+            None,
+            MultipartPolicy::Disk,
+        )
+        .await
+        {
             // Rack::Multipart::BoundaryTooLongError (also its byte-size error) maps to 500.
             Err(BodyError::TooLarge) => return Err(multipart_error()),
             other => other?,
-        }
+        };
+        // Rack reads 1 MiB at a time and stops at the closing boundary. Multer has
+        // different read-ahead; restore Rack's position for DiskService's subsequent copy.
+        file.seek(std::io::SeekFrom::Start(position)).await?;
+        parsed
     } else if multipart || media.as_deref() == Some("application/x-www-form-urlencoded") {
         // Rack bounds urlencoded bodies at 4 MiB, even when the uploaded file is larger.
         let mut bytes = Vec::new();
@@ -85,7 +101,7 @@ pub(crate) async fn parse_spooled(
             .await?;
         ParsedBody {
             raw: Default::default(),
-            params: params::form_pairs(&bytes)
+            params: params::disk_form_pairs(&bytes)
                 .and_then(|pairs| params::from_pairs_with_depth_limit(pairs, 32)),
         }
     } else {
@@ -124,7 +140,7 @@ fn boundary(content_type: &str) -> Result<Option<String>, BodyError> {
 
 /// Rack reads 1 MiB at a time and bounds unfinished preambles/headers. Multer
 /// otherwise buffers an unterminated header indefinitely, so check before it parses.
-fn validate_multipart_buffers(file: &mut std::fs::File, boundary: &str) -> Result<(), BodyError> {
+fn validate_multipart_buffers(file: &mut std::fs::File, boundary: &str) -> Result<u64, BodyError> {
     enum State {
         Preamble,
         Headers,
@@ -138,7 +154,7 @@ fn validate_multipart_buffers(file: &mut std::fs::File, boundary: &str) -> Resul
     loop {
         let count = file.read(&mut chunk)?;
         if count == 0 {
-            return Ok(());
+            return Ok(file.stream_position()?);
         } // EOF syntax errors belong to the multipart parser.
         buffered.extend_from_slice(&chunk[..count]);
         loop {
@@ -162,7 +178,7 @@ fn validate_multipart_buffers(file: &mut std::fs::File, boundary: &str) -> Resul
                     };
                     if let Some((end, closing)) = find_boundary(&buffered, marker) {
                         if closing {
-                            return Ok(());
+                            return Ok(file.stream_position()?);
                         }
                         buffered.drain(..end);
                         state = State::Headers;

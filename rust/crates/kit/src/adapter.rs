@@ -90,8 +90,8 @@ where
     ActionHandler { action: f, body_parser: BodyParser::Unparsed, json_body_parser: None }
 }
 
-/// Validate Rails body parameters from a spool, retaining the file for a disk upload.
-/// JSON values are discarded rather than keeping an unbounded document in memory.
+/// Spool an upload, parsing Rack forms immediately and deferring JSON validation to
+/// [`Ctx::parse_spooled_params`] after before-action gates. Keep Rails' input position.
 pub fn spooled_action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
@@ -144,13 +144,17 @@ where
         raw.iter().map(|(k, v)| (k.to_string(), Param::Str(v.to_string()))).collect::<ParamMap>()
     });
     let original_method = parts.extensions.get::<OriginalMethod>().map(|m| m.0.clone()).unwrap_or(parts.method.clone());
+    // DiskController's session gate precedes formatted JSON parsing. Rack form
+    // parsing still happens before that gate; keep its malformed-body precedence.
+    let defer_spooled_params = matches!(body_parser, BodyParser::Spooled)
+        && format::content_mime_type(parts.headers.get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok())).ok().flatten() == Some(&format::JSON);
     let mut unread = None;
     let mut parsed = match parts.extensions.remove::<ParsedBody>() {
         Some(parsed) => Ok(parsed),
         None if !matches!(body_parser, BodyParser::Buffered) => {
             match body::validate_unparsed(body, kit.config().max_body_bytes).await {
                 Ok(mut body) => {
-                    let parsed = if matches!(body_parser, BodyParser::Spooled) {
+                    let parsed = if matches!(body_parser, BodyParser::Spooled) && !defer_spooled_params {
                         body::parse_spooled(&parts.headers, body.as_mut()).await
                     } else {
                         Ok(ParsedBody::empty())
@@ -201,6 +205,9 @@ where
     );
     if let Some(body) = unread {
         ctx.leave_body_unread(body);
+    }
+    if defer_spooled_params {
+        ctx.defer_spooled_params();
     }
     let result = match failure {
         Some(error) => Err(error),

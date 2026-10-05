@@ -376,6 +376,37 @@ async fn malformed_params_are_400() {
 }
 
 #[tokio::test]
+async fn ordinary_form_limit_remains_four_mib_including_trailing_nul() {
+    // The disk parser's Rack-compatible NUL handling must not change the ordinary
+    // adapter or POST method-override middleware's existing size limit on main.
+    for method in [axum::http::Method::POST, axum::http::Method::PATCH] {
+        let bytes = vec![b'x'; campfire_kit::params::FORM_BYTESIZE_LIMIT];
+        let request = HttpRequest::builder().method(method.clone()).uri("/echo/1")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(AxumBody::from(bytes.clone())).unwrap();
+        assert_eq!(send(&app(), request).await.status, StatusCode::OK, "{method}");
+        let mut bytes = bytes;
+        bytes.push(0);
+        let request = HttpRequest::builder().method(method.clone()).uri("/echo/1")
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(AxumBody::from(bytes)).unwrap();
+        assert_eq!(send(&app(), request).await.status, StatusCode::BAD_REQUEST, "{method}");
+    }
+}
+
+#[tokio::test]
+async fn ordinary_multipart_routes_retain_main_count_and_blank_filename_limits() {
+    for (filename, count) in [(Some("x.bin"), 128), (None, 4096), (Some(""), 129)] {
+        let file = filename.map(|name| format!("; filename=\"{name}\"")).unwrap_or_default();
+        let part = format!("--ordinary-boundary\r\nContent-Disposition: form-data; name=\"a[]\"{file}\r\n\r\nx\r\n");
+        let body = part.repeat(count) + "--ordinary-boundary--\r\n";
+        let request = post("/echo/1").header(header::CONTENT_TYPE, "multipart/form-data; boundary=ordinary-boundary")
+            .body(AxumBody::from(body)).unwrap();
+        assert_eq!(send(&app(), request).await.status, StatusCode::OK, "{filename:?}, {count}");
+    }
+}
+
+#[tokio::test]
 async fn method_override_from_form_param_and_header() {
     let app = app();
     let reply = send(&app, form_post("/echo/1", "_method=patch&x=1")).await;

@@ -171,6 +171,7 @@ parser_cases = [
   ["form_over_limit", "application/x-www-form-urlencoded", { unit: "x", repeat: 4 * 1024 * 1024 + 1, suffix: "" }],
   ["form_limit_trailing_nul", "application/x-www-form-urlencoded", { unit: "x", repeat: 4 * 1024 * 1024, suffix: "\0" }],
   ["form_limit_trailing_nul_empty_checksum", "application/x-www-form-urlencoded", { unit: "x", repeat: 4 * 1024 * 1024, suffix: "\0" }, false, "1B2M2Y8AsgTpgAmY7PhCfg=="],
+  ["form_limit_two_trailing_nuls", "application/x-www-form-urlencoded", { unit: "x", repeat: 4 * 1024 * 1024, suffix: "\0\0" }],
   ["form_bad_percent", "application/x-www-form-urlencoded", "a=%zz"],
   ["form_type_conflict", "application/x-www-form-urlencoded", "a=1&a[b]=2"],
   ["form_bad_utf8", "application/x-www-form-urlencoded", "a=%FF"],
@@ -200,6 +201,34 @@ parser_cases = [
   ["multipart_boundary_space", "multipart/form-data; boundary =upload-boundary", multipart],
   ["multipart_boundary_duplicate", "multipart/form-data; boundary=upload-boundary; boundary=again", multipart]
 ]
+empty_checksum = Base64.strict_encode64(Digest::MD5.digest(""))
+multipart_type = "multipart/form-data; boundary=upload-boundary"
+file_part = "--upload-boundary\r\nContent-Disposition: form-data; name=\"a[]\"; filename=\"x.bin\"\r\n\r\nx\r\n"
+blank_part = file_part.sub('filename="x.bin"', 'filename=""')
+text_part = "--upload-boundary\r\nContent-Disposition: form-data; name=\"a[]\"\r\n\r\nx\r\n"
+[127, 128].each do |count|
+  parser_cases << ["multipart_files_#{count}", multipart_type, { unit: file_part, repeat: count, suffix: "--upload-boundary--\r\n" }]
+end
+[4095, 4096].each do |count|
+  parser_cases << ["multipart_parts_#{count}", multipart_type, { unit: text_part, repeat: count, suffix: "--upload-boundary--\r\n" }]
+end
+[127, 128, 129].each do |count|
+  parser_cases << ["multipart_blank_files_#{count}", multipart_type, { unit: blank_part, repeat: count, suffix: "--upload-boundary--\r\n" }]
+end
+parser_cases << ["multipart_blank_files_127_empty_checksum", multipart_type,
+  { unit: blank_part, repeat: 127, suffix: "--upload-boundary--\r\n" }, false, empty_checksum]
+parser_cases << ["multipart_mixed_blank_file_limit", multipart_type,
+  { prefix: blank_part * 64, unit: file_part, repeat: 64, suffix: "--upload-boundary--\r\n" }]
+# Rack reads exactly 1 MiB chunks and leaves the suffix after that read-ahead for DiskService.
+[ ["large", 2_000_000], ["at_read_boundary", 1_048_576 - multipart.bytesize],
+  ["past_read_boundary", 1_048_577 - multipart.bytesize] ].each do |label, size|
+  recipe = { prefix: multipart, unit: "x", repeat: size, suffix: "" }
+  parser_cases << ["multipart_epilogue_#{label}_empty_checksum", multipart_type, recipe, false, empty_checksum]
+  if label != "at_read_boundary"
+    suffix_checksum = Base64.strict_encode64(Digest::MD5.digest("x" * (multipart.bytesize + size - 1_048_576)))
+    parser_cases << ["multipart_epilogue_#{label}_suffix_checksum", multipart_type, recipe, false, suffix_checksum]
+  end
+end
 parser_cases.each do |name, content_type, body, chunked, signed_checksum|
   recipe = body if body.is_a?(Hash)
   body = recipe.fetch(:prefix, "") + recipe[:unit] * recipe[:repeat] + recipe[:suffix] if recipe
@@ -234,6 +263,37 @@ parser_cases.each do |name, content_type, body, chunked, signed_checksum|
   if File.exist?(path)
     cases.last.merge!(stored_bytes: File.size(path), stored_checksum: Base64.strict_encode64(Digest::MD5.file(path).digest))
   end
+end
+
+# No parser runs before DiskController's session gate. Include the metadata POST
+# controls too: that separate controller retains CSRF/parameter parsing before its gate.
+[
+  ["anonymous_json_malformed", "application/json", "{"],
+  ["anonymous_json_comment", "application/json", "/*comment*/{}"],
+  ["anonymous_json_alias_text", "text/x-json", "{"],
+  ["anonymous_json_alias_request", "application/jsonrequest", "{"],
+  ["anonymous_json_alias_problem", "application/problem+json", "{"],
+  ["anonymous_form_malformed", "application/x-www-form-urlencoded", "a=%zz"],
+  ["anonymous_multipart_truncated", multipart_type, multipart.sub(/--upload-boundary--\r\n\z/, '')],
+  ["anonymous_multipart_limit", multipart_type, file_part * 128 + "--upload-boundary--\r\n"]
+].each do |name, content_type, body|
+  checksum = Base64.strict_encode64(Digest::MD5.digest(body))
+  metadata = create.call(body.bytesize, checksum, "anonymous.bin", content_type.split(';', 2).first)
+  raise "#{name} metadata: #{metadata.code}" unless metadata.code == "200"
+  blob = JSON.parse(metadata.body)
+  put = send_request.call("put", blob.fetch("direct_upload").fetch("url"),
+    { "Cookie" => "", "Content-Type" => content_type, "Content-Length" => body.bytesize.to_s }, body)
+  path = ActiveStorage::Blob.service.send(:path_for, blob.fetch("key"))
+  cases << { name: name, kind: "authentication", byte_size: body.bytesize, checksum: checksum,
+    content_type: content_type, body_base64: Base64.strict_encode64(body),
+    metadata_status: metadata.code.to_i, put_status: put.code.to_i, file_exists: File.exist?(path) }
+end
+[ ["anonymous_metadata_malformed", "{"], ["anonymous_metadata_valid_json", "{}"] ].each do |name, body|
+  count = ActiveStorage::Blob.count
+  reply = send_request.call("post", "/rails/active_storage/direct_uploads",
+    { "Cookie" => "", "Content-Type" => "application/json" }, body)
+  cases << { name: name, kind: "metadata_authentication", body: body,
+    status: reply.code.to_i, allocated_blobs: ActiveStorage::Blob.count - count }
 end
 
 body = "xxx"
