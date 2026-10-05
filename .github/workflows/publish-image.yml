@@ -6,7 +6,6 @@ on:
       - main
     tags:
       - 'v*'
-  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -31,10 +30,14 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
-      # Pull requests only prove the amd64 image builds; main and tags build and
-      # publish both architectures.
       matrix:
-        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"runner":"ubuntu-latest","platform":"linux/amd64","arch":"amd64"}]' || '[{"runner":"ubuntu-latest","platform":"linux/amd64","arch":"amd64"},{"runner":"ubuntu-24.04-arm","platform":"linux/arm64","arch":"arm64"}]') }}
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
@@ -104,17 +107,15 @@ jobs:
             APP_VERSION=${{ steps.version.outputs.version }}
             GIT_REVISION=${{ github.sha }}
           platforms: ${{ matrix.platform }}
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.platform }}
-          # Only main and tags write the layer cache; pull requests read it.
-          cache-to: ${{ github.event_name != 'pull_request' && format('type=gha,scope={0},mode=max', matrix.platform) || '' }}
+          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
           sbom: false
           provenance: false
 
       - name: Attest image provenance (per-arch)
-        if: github.event_name != 'pull_request'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ steps.vars.outputs.canonical }}
@@ -124,7 +125,6 @@ jobs:
   manifest:
     name: Create multi-arch manifest and sign
     needs: build
-    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -219,5 +219,4 @@ jobs:
             echo "Signing $tag"
             cosign sign --yes "$tag"
           done <<< "$tags"
-
 

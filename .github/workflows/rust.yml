@@ -7,12 +7,14 @@ name: Rust
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
 # nothing is pushed or published. Deploys stay behind the manual Deploy to GCP workflow, which
-# requires this complete workflow for Rust candidates.
+# requires a full main/nightly run for Rust candidates.
 
 on:
   push:
     branches: [ main ]
-    paths: &rust-inputs
+  pull_request:
+    branches: [ main ]
+    paths:
       - "rust/**"
       - "app/**"
       - "config/**"
@@ -28,17 +30,22 @@ on:
       - "Dockerfile"
       - ".github/workflows/rust.yml"
       - ".github/actions/rust-setup/**"
-  pull_request:
-    branches: [ main ]
-    paths: *rust-inputs
+  schedule:
+    - cron: "37 5 * * *"
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit to test (defaults to the workflow ref)
+        type: string
+        required: false
+        default: ''
 
 permissions: {}
 
 # A new push to a pull request supersedes the run for its previous commit.
 # Pushes to main are never cancelled, so every main commit keeps a full run.
 concurrency:
-  group: rust-${{ github.event_name == 'pull_request' && github.head_ref || github.sha }}
+  group: rust-${{ github.event_name == 'pull_request' && github.head_ref || inputs.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -57,6 +64,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Check ignored-test coverage
@@ -64,9 +72,9 @@ jobs:
 
       - name: Prepare shared Rust CI inputs
         id: setup
-        uses: ./.github/actions/rust-setup
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          save-caches: 'true'
+          save-caches: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
 
       - name: Clippy
         run: bash rust/ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
@@ -159,6 +167,7 @@ jobs:
 
   correctness:
     name: Rust correctness (${{ matrix.suite }})
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -175,12 +184,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
           # The external harnesses read original case bodies and the approved layout commit.
           fetch-depth: 0
 
       - name: Prepare shared Rust CI inputs
-        uses: ./.github/actions/rust-setup
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
 
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust

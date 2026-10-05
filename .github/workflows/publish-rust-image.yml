@@ -9,9 +9,6 @@ on:
   push:
     branches: [main]
     paths: ["rust/**", "app/assets/**", "app/javascript/**", "vendor/javascript/**", "public/**", "config/importmap.rb", "config/initializers/assets.rb", ".github/workflows/publish-rust-image.yml"]
-  pull_request:
-    branches: [main]
-    paths: ["rust/**", "app/assets/**", "app/javascript/**", "vendor/javascript/**", "public/**", "config/importmap.rb", "config/initializers/assets.rb", ".github/workflows/publish-rust-image.yml"]
 
 concurrency:
   group: publish-rust-gcp-${{ github.workflow }}-${{ github.ref }}
@@ -25,32 +22,6 @@ env:
   REGISTRY: us-central1-docker.pkg.dev
 
 jobs:
-  pull-request:
-    name: Build Rust image (no publish)
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    timeout-minutes: 90
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - name: Build without registry credentials or writes
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: rust
-          file: rust/Dockerfile
-          build-contexts: reference=.
-          platforms: linux/amd64
-          push: false
-          build-args: |
-            CARGO_BUILD_JOBS=4
-            GIT_REVISION=${{ github.sha }}
-          cache-from: type=gha,scope=rust-image
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Build and push linux/amd64 image

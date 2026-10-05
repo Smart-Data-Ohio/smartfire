@@ -289,9 +289,11 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
+          # PR runs omit correctness. Dispatch can check out an input ref that
+          # differs from the run's head_sha, so only main/nightly runs prove SHA.
           url="$(gh api --method GET "repos/${REPO}/actions/workflows/rust.yml/runs" \
             -f head_sha="$SHA" -f status=completed \
-            --jq '[.workflow_runs[] | select(.conclusion == "success")] | first | .html_url // ""')"
+            --jq '[.workflow_runs[] | select(.conclusion == "success" and (.event == "push" or .event == "schedule"))] | first | .html_url // ""')"
           if [ -n "$url" ]; then
             echo "Rust checks passed for ${SHA}: ${url}"
           elif [ "$ENVIRONMENT" = production ]; then
