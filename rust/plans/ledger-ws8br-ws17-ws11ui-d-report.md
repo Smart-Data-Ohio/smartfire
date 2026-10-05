@@ -194,8 +194,11 @@ python -m unittest discover -s rust/reference-tools/messaging -p browser_host_te
 python rust/ci/ignored_tests.py
 ```
 
-**5 Python tests passed** (1 fixture reset, 4 generated-host cases). The ignored
-registry has **25 correctness tests, 8 utilities, zero unowned ignores**. A fresh
+**25 Python tests passed** after merging main (1 fixture reset, 24 generated-host cases,
+including this branch's include-input case on main's #251 include audit). The ignored
+registry has **25 correctness tests and 7 compiled workspace utilities, zero unowned
+ignores** (the source guard prints 8 because it also counts
+`ws8bm_browser_host_without_jobs`, which only the generated messaging host compiles). A fresh
 generated build tree carries all **934 literal crate include sites** (933 inside
 `rust/`, referencing 651 distinct inputs, plus the root `public/500.html` fixture),
 including plan/receipt inputs outside the old whitelist; a filtered generated host compile
