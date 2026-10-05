@@ -304,3 +304,37 @@ cargo nextest run --manifest-path rust/Cargo.toml --locked -p campfire -j 4 --no
 ```text
      Summary [  28.938s] 19 tests run: 19 passed, 2962 skipped
 ```
+
+## Post-push CI prerequisite correction (not yet published)
+
+The one authorized push is `8b454102d173df2dbf29109d26d2a67335e53e58`.
+Rust CI run 37287341208 is in progress. The local positive receipts above used
+the canonical correctness image, which includes Node. After the push, checking
+the ordinary Rust CI toolchain exposed an environment defect: Node is absent.
+The new enabled P0276 subprocess test therefore cannot pass in that image. The
+three sampled review fixes remain verified; P0276 needs this CI prerequisite
+before claiming that all 120 closures pass the ordinary CI gate.
+
+A local follow-up adds the same pinned Node 26.10.0 binary already used by the
+correctness image to `rust/Dockerfile`'s toolchain stage. Production stages still
+start from media-base. The producer/test code is unchanged. A derived ordinary
+toolchain image with exactly that COPY instruction proves the fix, using the
+same built test and fixture inputs. No retries, assertions or deadlines change.
+No second push was made, as requested.
+
+The actual ordinary-toolchain probe and corrected-image probe both execute:
+
+```sh
+cargo nextest run --manifest-path rust/Cargo.toml --locked -p campfire -j 4 --no-fail-fast -E 'test(=controllers::pwa::tests::original_service_worker_logic_checks_the_real_http_script)'
+```
+
+The first uses `campfire-toolchain-ci-rust-speedups` (Rust 1.98.1, no Node); the
+second derives from that exact image and COPYs Node from the pinned Node stage.
+The first fails with `CI's Node prerequisite: ... NotFound`; the second passes.
+A preliminary probe with the older unconfigured toolchain tag lacked nextest and
+was discarded as invalid environment setup, not counted as a test result.
+
+```text
+     Summary [   0.650s] 1 test run: 0 passed, 1 failed, 2980 skipped
+     Summary [   0.664s] 1 test run: 1 passed, 2980 skipped
+```
