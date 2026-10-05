@@ -119,6 +119,32 @@
       "nav": "  <div class=\"flex-item-justify-start\">\n    <a class=\"btn\" href=\"/\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>\n  </div>\n\n  <div class=\"flex align-center gap flex-item-justify-end\">\n  </div>\n"
     },
     {
+      "name": "original_identity",
+      "viewer": "kevin",
+      "original_memberships": true,
+      "attrs": {
+        "provider": "OpenAI",
+        "runtime": "Codex CLI 0.9",
+        "description": "Does things",
+        "status": "working",
+        "status_note": "on it",
+        "status_changed_at": "2026-03-02T14:00:00Z"
+      },
+      "room_id": 486777696,
+      "viewer_id": 712064548,
+      "html": "\n\n<section class=\"panel txt-align-center\">\n  <div class=\"flex flex-column gap \">\n    <div class=\"avatar txt-xx-large center\" style=\"background: white\">\n      <img alt=\"Profile avatar\" class=\"avatar\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" />\n    </div>\n\n      <div class=\"flex flex-column gap\" style=\"--row-gap: calc(var(--block-space) / 3)\">\n        <h1 class=\"txt-x-large txt-tight-lines margin-none\">Bender Bot</h1>\n\n          <turbo-cable-stream-source channel=\"AgentsChannel\" signed-stream-name=\"ImFnZW50czphbGwi--ecc02d58225edb48f8e11897ebb23bdbe6748e1953cce55992e6b54aad01da15\"></turbo-cable-stream-source>\n\n          <div class=\"txt-small\">Workspace agent, managed by David</div>\n\n            <div class=\"txt-small\">OpenAI · Codex CLI 0.9</div>\n\n            <div>Does things</div>\n\n          <div class=\"txt-small\">\n            <span id=\"status_badge_agent_773018776\" class=\"agent-status\">\n    <span class=\"agent-status-badge agent-status-badge--working\">Working</span>\n      <span class=\"agent-status-note\">on it</span>\n    <span class=\"agent-status-since\">since about 2 hours ago</span>\n</span>\n\n          </div>\n\n          <div class=\"txt-small\">\n            never\n          </div>\n\n            <div class=\"txt-small\">\n              Rooms: <a href=\"/rooms/340026324\">Bender Bot</a>, and 1 more\n            </div>\n\n          <div class=\"txt-small\">Grants: legacy access (no grants recorded)</div>\n\n      </div>\n\n      <div class=\"pad-double--inline push--inline push--block-start\">\n          <form class=\"button_to\" method=\"post\" action=\"/rooms/directs?user_ids%5B%5D=394959859\"><button class=\"btn btn--primary full-width txt--large\" aria-label=\"Message Bender Bot\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/messages-9395d503.svg\" /></button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/directs?user_ids%5B%5D=394959859\" /></form>\n      </div>\n  </div>\n</section>\n",
+      "nav": "  <div class=\"flex-item-justify-start\">\n    <a class=\"btn\" href=\"/\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>\n  </div>\n\n  <div class=\"flex align-center gap flex-item-justify-end\">\n  </div>\n"
+    },
+    {
+      "name": "original_private_rooms",
+      "viewer": "jz",
+      "original_memberships": true,
+      "room_id": 486777696,
+      "viewer_id": 773523953,
+      "html": "\n\n<section class=\"panel txt-align-center\">\n  <div class=\"flex flex-column gap \">\n    <div class=\"avatar txt-xx-large center\" style=\"background: white\">\n      <img alt=\"Profile avatar\" class=\"avatar\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260102200000\" />\n    </div>\n\n      <div class=\"flex flex-column gap\" style=\"--row-gap: calc(var(--block-space) / 3)\">\n        <h1 class=\"txt-x-large txt-tight-lines margin-none\">Bender Bot</h1>\n\n          <turbo-cable-stream-source channel=\"AgentsChannel\" signed-stream-name=\"ImFnZW50czphbGwi--ecc02d58225edb48f8e11897ebb23bdbe6748e1953cce55992e6b54aad01da15\"></turbo-cable-stream-source>\n\n          <div class=\"txt-small\">Workspace agent, managed by David</div>\n\n\n\n          <div class=\"txt-small\">\n            <span id=\"status_badge_agent_773018776\" class=\"agent-status\">\n    <span class=\"agent-status-badge agent-status-badge--idle\">Idle</span>    <span class=\"agent-status-since\">since less than a minute ago</span>\n</span>\n\n          </div>\n\n          <div class=\"txt-small\">\n            never\n          </div>\n\n            <div class=\"txt-small\">\n              Rooms: and 2 more\n            </div>\n\n          <div class=\"txt-small\">Grants: legacy access (no grants recorded)</div>\n\n      </div>\n\n      <div class=\"pad-double--inline push--inline push--block-start\">\n          <form class=\"button_to\" method=\"post\" action=\"/rooms/directs?user_ids%5B%5D=394959859\"><button class=\"btn btn--primary full-width txt--large\" aria-label=\"Message Bender Bot\" type=\"submit\"><img aria-hidden=\"true\" src=\"/assets/messages-9395d503.svg\" /></button><input type=\"hidden\" name=\"authenticity_token\" value=\"post:/rooms/directs?user_ids%5B%5D=394959859\" /></form>\n      </div>\n  </div>\n</section>\n",
+      "nav": "  <div class=\"flex-item-justify-start\">\n    <a class=\"btn\" href=\"/\"><img aria-hidden=\"true\" src=\"/assets/arrow-left-abe40556.svg\" width=\"20\" height=\"20\" /><span class=\"for-screen-reader\">Go Back</span></a>\n  </div>\n\n  <div class=\"flex align-center gap flex-item-justify-end\">\n  </div>\n"
+    },
+    {
       "name": "minimal_bot",
       "viewer": "kevin",
       "no_agent": true,

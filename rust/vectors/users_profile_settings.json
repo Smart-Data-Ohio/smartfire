@@ -2,6 +2,173 @@
   "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "profiles": [
     {
+      "name": "original_form_profile",
+      "path": "/users/me/profile",
+      "params": {
+        "name": "John Doe",
+        "bio": "Acrobat"
+      },
+      "before": {},
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "John Doe",
+        "bio": "Acrobat",
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "voice_mode": null,
+        "push_to_talk_key": null,
+        "inbox_preferences": null,
+        "github_login": null,
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "encoding": "form"
+    },
+    {
+      "name": "original_form_foreign_name",
+      "path": "/users/149087659/profile",
+      "params": {
+        "name": "John Doe"
+      },
+      "before": {},
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "John Doe",
+        "bio": null,
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "voice_mode": null,
+        "push_to_talk_key": null,
+        "inbox_preferences": null,
+        "github_login": null,
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "encoding": "form"
+    },
+    {
+      "name": "original_form_theme_zone",
+      "path": "/users/me/profile",
+      "params": {
+        "theme": "dark",
+        "time_zone": "Pacific Time (US & Canada)"
+      },
+      "before": {},
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "David",
+        "bio": null,
+        "theme": "dark",
+        "text_size": "default",
+        "time_zone": "Pacific Time (US & Canada)",
+        "time_zone_explicit": true,
+        "voice_mode": null,
+        "push_to_talk_key": null,
+        "inbox_preferences": null,
+        "github_login": null,
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "encoding": "form"
+    },
+    {
+      "name": "original_form_voice",
+      "path": "/users/me/profile",
+      "params": {
+        "voice_mode": "push_to_talk",
+        "push_to_talk_key": "CapsLock"
+      },
+      "before": {},
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "David",
+        "bio": null,
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "voice_mode": "push_to_talk",
+        "push_to_talk_key": "CapsLock",
+        "inbox_preferences": null,
+        "github_login": null,
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "encoding": "form"
+    },
+    {
+      "name": "original_form_github",
+      "path": "/users/me/profile",
+      "params": {
+        "github_login": "  David-GH "
+      },
+      "before": {},
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "David",
+        "bio": null,
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "voice_mode": null,
+        "push_to_talk_key": null,
+        "inbox_preferences": null,
+        "github_login": "david-gh",
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "encoding": "form"
+    },
+    {
+      "name": "original_form_github_clear",
+      "path": "/users/me/profile",
+      "params": {
+        "github_login": ""
+      },
+      "before": {
+        "github_login": "david-gh"
+      },
+      "connection": false,
+      "reason": null,
+      "duplicate": false,
+      "status": 302,
+      "state": {
+        "name": "David",
+        "bio": null,
+        "theme": "system",
+        "text_size": "default",
+        "time_zone": null,
+        "time_zone_explicit": false,
+        "voice_mode": null,
+        "push_to_talk_key": null,
+        "inbox_preferences": null,
+        "github_login": null,
+        "other_name": "Jason",
+        "updated_at": "2026-03-02T16:00:00.000000Z"
+      },
+      "encoding": "form"
+    },
+    {
       "name": "appearance",
       "path": "/users/me/profile",
       "params": {
@@ -86,7 +253,10 @@
       "params": {
         "time_zone": ""
       },
-      "before": {},
+      "before": {
+        "time_zone": "America/New_York",
+        "time_zone_explicit": true
+      },
       "connection": false,
       "reason": null,
       "duplicate": false,

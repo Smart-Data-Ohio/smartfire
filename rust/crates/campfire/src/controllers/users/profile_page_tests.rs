@@ -18,18 +18,36 @@ fn vectors() -> Value {
     ))
     .unwrap()
 }
-async fn profile_case(markup:bool) {
+async fn profile_case(markup: bool) {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let v = vectors();
     if markup {
-        let setup=v["markup"]["setup"].clone();
-        app.db().write(move |tx| {
-            for table in ["users","rooms"] {for (id,attrs) in setup[table].as_object().unwrap() {for (key,value) in attrs.as_object().unwrap() {
-                tx.conn().execute(&format!("UPDATE {table} SET {key}=? WHERE id=?"),rusqlite::params![value.as_str().unwrap(),id.parse::<i64>().unwrap()])?;
-            }}}
-            for (key,value) in setup["account"].as_object().unwrap() {tx.conn().execute(&format!("UPDATE accounts SET {key}=?"),[value.as_str().unwrap()])?;}
-            Ok(())
-        }).await.unwrap();
+        let setup = v["markup"]["setup"].clone();
+        app.db()
+            .write(move |tx| {
+                for table in ["users", "rooms"] {
+                    for (id, attrs) in setup[table].as_object().unwrap() {
+                        for (key, value) in attrs.as_object().unwrap() {
+                            tx.conn().execute(
+                                &format!("UPDATE {table} SET {key}=? WHERE id=?"),
+                                rusqlite::params![
+                                    value.as_str().unwrap(),
+                                    id.parse::<i64>().unwrap()
+                                ],
+                            )?;
+                        }
+                    }
+                }
+                for (key, value) in setup["account"].as_object().unwrap() {
+                    tx.conn().execute(
+                        &format!("UPDATE accounts SET {key}=?"),
+                        [value.as_str().unwrap()],
+                    )?;
+                }
+                Ok(())
+            })
+            .await
+            .unwrap();
     }
     let now = SEED_NOW.parse().unwrap();
     let (user, account, memberships, appearance, mut sections, avatar) = app
@@ -80,17 +98,41 @@ async fn profile_case(markup:bool) {
         })
         .await
         .unwrap();
-    let (preferences, chrome) = app.db().read(move |c| Ok((
-        presenters::view_context::user_preferences(c, DAVID, now)?,
-        presenters::view_context::chrome(c, Some(DAVID))?,
-    ))).await.unwrap();
-    let github = presenters::github::connection(&app.booted.app, DAVID).await.unwrap();
-    let settings = app.db().read(move |conn| {
-        let user = campfire_db::UserStatusSettings::find(conn, DAVID)?;
-        presenters::status_settings::forms(conn, &user, campfire_db::Errors::default(), campfire_db::Timestamp::from_jiff(now), false)
-    }).await.unwrap();
-    sections.fizzy = presenters::fizzy_profile::connection(&app.booted.app, DAVID).await.unwrap();
-    let expected=if markup {&v["markup"]["html"]} else {&v["html"]};
+    let (preferences, chrome) = app
+        .db()
+        .read(move |c| {
+            Ok((
+                presenters::view_context::user_preferences(c, DAVID, now)?,
+                presenters::view_context::chrome(c, Some(DAVID))?,
+            ))
+        })
+        .await
+        .unwrap();
+    let github = presenters::github::connection(&app.booted.app, DAVID)
+        .await
+        .unwrap();
+    let settings = app
+        .db()
+        .read(move |conn| {
+            let user = campfire_db::UserStatusSettings::find(conn, DAVID)?;
+            presenters::status_settings::forms(
+                conn,
+                &user,
+                campfire_db::Errors::default(),
+                campfire_db::Timestamp::from_jiff(now),
+                false,
+            )
+        })
+        .await
+        .unwrap();
+    sections.fizzy = presenters::fizzy_profile::connection(&app.booted.app, DAVID)
+        .await
+        .unwrap();
+    let expected = if markup {
+        &v["markup"]["html"]
+    } else {
+        &v["html"]
+    };
     let summary = presenters::user_summary(&app.booted.app.secrets, &user);
     let transfer = presenters::accounts::transfer_id(&app.booted.app.secrets, DAVID, now);
     let mut current = presenters::view_context::current_user(&app.booted.app.secrets, &user);
@@ -159,9 +201,13 @@ async fn profile_case(markup:bool) {
     );
 }
 #[tokio::test]
-async fn whole_profile_matches_rails_seed_without_masks() {profile_case(false).await;}
+async fn whole_profile_matches_rails_seed_without_masks() {
+    profile_case(false).await;
+}
 #[tokio::test]
-async fn review_whole_profile_markup_matches_rails() {profile_case(true).await;}
+async fn review_whole_profile_markup_matches_rails() {
+    profile_case(true).await;
+}
 #[tokio::test]
 async fn profile_route_renders_owner_sections_and_ws9_security_directly() {
     let app = TestApp::boot_frozen().await.expect("seed required");
@@ -224,6 +270,24 @@ async fn edge_only_user_agent_gets_rails_edge_install_instructions() {
     assert_eq!(page.status, axum::http::StatusCode::OK);
     assert!(page.text().contains("install-edge-"));
     assert!(page.text().contains("Click <em>Install</em>"));
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&page.text()).unwrap();
+    assert!(
+        dom.descendants(root)
+            .into_iter()
+            .any(|id| dom.name(id) == "details"
+                && dom.attr(id, "class").is_some_and(|classes| classes
+                    .split_ascii_whitespace()
+                    .any(|class| class == "pwa__instructions"))
+                && dom
+                    .descendants(id)
+                    .into_iter()
+                    .any(|image| dom.name(image) == "img"
+                        && dom
+                            .attr(image, "src")
+                            .is_some_and(|src| src.contains("install-edge")))),
+        "Edge image is inside the original details.pwa__instructions selector"
+    );
 }
 #[tokio::test]
 async fn dnd_switch_tracks_expired_and_live_timers() {
@@ -253,6 +317,17 @@ async fn dnd_switch_tracks_expired_and_live_timers() {
             .next()
             .unwrap();
         assert_eq!(field.contains("checked=\"checked\""), checked);
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&body).unwrap();
+        let checked_switches = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|id| {
+                dom.attr(*id, "id") == Some("user_dnd_enabled")
+                    && dom.attr(*id, "checked").is_some()
+            })
+            .count();
+        assert_eq!(checked_switches, usize::from(checked));
     }
 }
 #[tokio::test]

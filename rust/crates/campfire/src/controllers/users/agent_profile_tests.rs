@@ -19,6 +19,7 @@ async fn replay(name: &str) {
     let setup = row.clone();
     app.db().write(move |tx| {
         tx.conn().execute("DELETE FROM agent_events WHERE agent_id=?", [agent_id])?;
+        if setup["original_memberships"] == true { tx.conn().execute("DELETE FROM memberships WHERE user_id=? AND room_id NOT IN (?,?)", [BENDER,ALL_TALK,DIRECT_KEVIN_BENDER])?; }
         if let Some(attrs)=setup["attrs"].as_object() {
             for (key,value) in attrs {
                 let value=match value { Value::String(s) if key.ends_with("_at")=>rusqlite::types::Value::Text(campfire_db::Timestamp::from_jiff(s.parse().unwrap()).to_db()),Value::String(s)=>rusqlite::types::Value::Text(s.clone()),Value::Number(n)=>rusqlite::types::Value::Integer(n.as_i64().unwrap()),_=>panic!("unsupported setup") };
@@ -102,6 +103,7 @@ async fn replay(name: &str) {
     let response = browser.get(&format!("/users/{BENDER}")).await;
     assert_eq!(response.status, axum::http::StatusCode::OK);
     let body = response.text();
+    super::people_tests::assert_http_fragment(&body, row["html"].as_str().unwrap(), "section", "class", "panel txt-align-center");
     assert!(body.contains(&campfire_views::helpers::escape(&summary.name)));
     assert_eq!(body.contains("Manage capability grants"), manage);
     assert_eq!(
@@ -134,3 +136,6 @@ scenario!(suspended, "suspended");
 scenario!(minimal_bot, "minimal_bot");
 
 scenario!(review_agent_markup_matches_rails, "review_markup");
+
+scenario!(original_identity_and_two_room_visibility_match_rails, "original_identity");
+scenario!(original_nonmember_hides_both_rooms_match_rails, "original_private_rooms");

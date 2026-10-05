@@ -59,45 +59,93 @@ async fn invalid_profile_settings_roll_back_security_and_core_changes() {
 
 #[tokio::test]
 async fn manual_timezone_choice_is_rendered_and_blocks_browser_detection() {
-    let app = TestApp::boot_frozen().await.expect("seed required");
-    let mut browser = app.david();
-    let response = browser
-        .write(Req::new(Method::PATCH, "/users/me/profile").form(&[
-            ("user[theme]", "dark"),
-            ("user[text_size]", "larger"),
-            ("user[time_zone]", "America/New_York"),
-        ]))
-        .await;
-    assert_eq!(response.status, StatusCode::FOUND);
-    let profile = browser.get("/users/me/profile").await;
-    assert_eq!(profile.status, StatusCode::OK);
-    assert!(
-        profile
-            .text()
-            .contains("<option selected=\"selected\" value=\"America/New_York\">")
-    );
-    assert!(profile.text().contains("data-theme=\"dark\""));
-    assert!(profile.text().contains("data-text-size=\"larger\""));
-    let detected = browser
-        .write(
-            Req::new(Method::PATCH, "/users/me/time_zone").form(&[("time_zone", "Europe/London")]),
-        )
-        .await;
-    assert_eq!(detected.status, StatusCode::OK);
-    let zone = app
-        .db()
-        .read(|conn| campfire_db::User::saved_time_zone(conn, DAVID))
-        .await
-        .unwrap();
-    assert_eq!(zone.as_deref(), Some("America/New_York"));
-    let clear=browser.write(Req::new(Method::PATCH,"/users/me/profile").form(&[("user[time_zone]","")])).await;
-    assert_eq!(clear.status,StatusCode::FOUND);
-    let profile=browser.get("/users/me/profile").await;
-    assert_eq!(profile.status,StatusCode::OK);
-    assert!(profile.text().contains("<meta name=\"current-user-time-zone\" content=\"\""));
-    let detected=browser.write(Req::new(Method::PATCH,"/users/me/time_zone").form(&[("time_zone","Europe/London")])).await;
-    assert_eq!(detected.status,StatusCode::OK);
-    assert_eq!(app.db().read(|conn|campfire_db::User::saved_time_zone(conn,DAVID)).await.unwrap(),None);
+    for method in [Method::PUT, Method::PATCH] {
+        let app = TestApp::boot_frozen().await.expect("seed required");
+        let mut browser = app.david();
+        let response = browser
+            .write(Req::new(method.clone(), "/users/me/profile").form(&[
+                ("user[theme]", "dark"),
+                ("user[text_size]", "larger"),
+                ("user[time_zone]", "America/New_York"),
+            ]))
+            .await;
+        assert_eq!(response.status, StatusCode::FOUND);
+        let profile = browser.get("/users/me/profile").await;
+        assert_eq!(profile.status, StatusCode::OK);
+        assert!(
+            profile
+                .text()
+                .contains("<option selected=\"selected\" value=\"America/New_York\">")
+        );
+        assert!(profile.text().contains("data-theme=\"dark\""));
+        assert!(profile.text().contains("data-text-size=\"larger\""));
+        let detected = browser
+            .write(
+                Req::new(Method::PATCH, "/users/me/time_zone")
+                    .form(&[("time_zone", "Europe/London")]),
+            )
+            .await;
+        assert_eq!(detected.status, StatusCode::OK);
+        let zone = app
+            .db()
+            .read(|conn| campfire_db::User::saved_time_zone(conn, DAVID))
+            .await
+            .unwrap();
+        assert_eq!(zone.as_deref(), Some("America/New_York"));
+        let clear = browser
+            .write(Req::new(method.clone(), "/users/me/profile").form(&[("user[time_zone]", "")]))
+            .await;
+        assert_eq!(clear.status, StatusCode::FOUND);
+        let cleared: (Option<String>, bool) = app
+            .db()
+            .read(|conn| {
+                Ok(conn.query_row(
+                    "SELECT time_zone,time_zone_explicit FROM users WHERE id=?",
+                    [DAVID],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )?)
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            cleared,
+            (None, true),
+            "clear the previously selected zone and retain the explicit choice"
+        );
+        let profile = browser.get("/users/me/profile").await;
+        assert_eq!(profile.status, StatusCode::OK);
+        assert!(
+            profile
+                .text()
+                .contains("<meta name=\"current-user-time-zone\" content=\"\"")
+        );
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&profile.text()).unwrap();
+        let unset_zones = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|id| {
+                dom.name(*id) == "meta"
+                    && dom.attr(*id, "name") == Some("current-user-time-zone")
+                    && dom.attr(*id, "content") == Some("")
+            })
+            .count();
+        assert_eq!(unset_zones, 1);
+        let detected = browser
+            .write(
+                Req::new(Method::PATCH, "/users/me/time_zone")
+                    .form(&[("time_zone", "Europe/London")]),
+            )
+            .await;
+        assert_eq!(detected.status, StatusCode::OK);
+        assert_eq!(
+            app.db()
+                .read(|conn| campfire_db::User::saved_time_zone(conn, DAVID))
+                .await
+                .unwrap(),
+            None
+        );
+    }
 }
 
 #[tokio::test]
@@ -158,16 +206,21 @@ async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
     ))
     .unwrap();
     let mut browser = app.david();
-    for case in cases["profiles"].as_array().unwrap() {
-        let setup = case.clone();
-        app.db().write(move |tx|{
+    for method in [Method::PUT, Method::PATCH] {
+        for case in cases["profiles"].as_array().unwrap() {
+            let setup = case.clone();
+            app.db().write(move |tx|{
             let case=&setup;
             tx.conn().execute("UPDATE users SET name='David',bio=NULL,theme='system',text_size='default',time_zone=NULL,time_zone_explicit=0,voice_mode=NULL,push_to_talk_key=NULL,inbox_preferences=NULL,github_login=NULL,updated_at='2026-03-02 15:00:00' WHERE id=?",[DAVID])?;
             tx.conn().execute("DELETE FROM github_connected_accounts WHERE user_id=?",[DAVID])?;
             if let Some(before)=case["before"].as_object() {
                 for (key,value) in before {
-                    assert!(["theme","inbox_preferences","github_login"].contains(&key.as_str()));
-                    let value=value.as_str().map(str::to_owned).unwrap_or_else(||value.to_string());
+                    assert!(["theme","inbox_preferences","github_login","time_zone","time_zone_explicit"].contains(&key.as_str()));
+                    let value = match value {
+                        serde_json::Value::Bool(value) => rusqlite::types::Value::Integer(i64::from(*value)),
+                        serde_json::Value::String(value) => rusqlite::types::Value::Text(value.clone()),
+                        value => rusqlite::types::Value::Text(value.to_string()),
+                    };
                     tx.conn().execute(&format!("UPDATE users SET {key}=? WHERE id=?"),rusqlite::params![value,DAVID])?;
                 }
             }
@@ -177,21 +230,44 @@ async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
             tx.conn().execute("UPDATE users SET github_login=? WHERE id=?",rusqlite::params![if case["duplicate"]==true {Some("shared-login")} else {None},JASON])?;
             Ok(())
         }).await.unwrap();
-        let response = browser
-            .write(
-                Req::new(Method::PATCH, case["path"].as_str().unwrap())
+            let mut request = Req::new(method.clone(), case["path"].as_str().unwrap())
+                .header("accept", "text/html");
+            if case["encoding"] == "form" {
+                let fields: Vec<_> = case["params"]
+                    .as_object()
+                    .unwrap()
+                    .iter()
+                    .map(|(key, value)| {
+                        (format!("user[{key}]"), value.as_str().unwrap().to_owned())
+                    })
+                    .collect();
+                let pairs: Vec<_> = fields
+                    .iter()
+                    .map(|(key, value)| (key.as_str(), value.as_str()))
+                    .collect();
+                request = request.form(&pairs);
+            } else {
+                request = request
                     .header("content-type", "application/json")
-                    .header("accept", "text/html")
-                    .body(serde_json::to_vec(&serde_json::json!({"user":case["params"]})).unwrap()),
-            )
-            .await;
-        assert_eq!(
-            response.status.as_u16(),
-            case["status"].as_u64().unwrap() as u16,
-            "{}",
-            case["name"]
-        );
-        let state=app.db().read(|conn| {
+                    .body(serde_json::to_vec(&serde_json::json!({"user":case["params"]})).unwrap());
+            }
+            let response = browser.write(request).await;
+            assert_eq!(
+                response.status.as_u16(),
+                case["status"].as_u64().unwrap() as u16,
+                "{}",
+                case["name"]
+            );
+            if response.status == StatusCode::FOUND {
+                assert_eq!(
+                    response.location(),
+                    Some("http://campfire.test/users/me/profile"),
+                    "{}",
+                    case["name"]
+                );
+            }
+            let state=app.db().read(|conn| {
+            assert_eq!(campfire_db::User::find(conn, DAVID)?.email_address.as_deref(), Some("david@37signals.com"));
             let other_name:String=conn.query_row("SELECT name FROM users WHERE id=?",[JASON],|r|r.get(0))?;
             let mut stmt=conn.prepare("SELECT theme,text_size,time_zone,time_zone_explicit,voice_mode,push_to_talk_key,inbox_preferences,github_login,name,updated_at,bio FROM users WHERE id=?")?;
             let state=stmt.query_row([DAVID],|r|{
@@ -202,9 +278,10 @@ async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
             })?;
             Ok(state)
         }).await.unwrap();
-        assert_eq!(state, case["state"], "{}", case["name"]);
-        if response.status == StatusCode::UNPROCESSABLE_ENTITY {
-            assert!(response.text().contains("<form"));
+            assert_eq!(state, case["state"], "{}", case["name"]);
+            if response.status == StatusCode::UNPROCESSABLE_ENTITY {
+                assert!(response.text().contains("<form"));
+            }
         }
     }
 }

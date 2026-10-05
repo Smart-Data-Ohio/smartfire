@@ -1,3 +1,8 @@
+> Current continuation: [controller assertion receipts](ledger-ws8br-ws17-ws11ui-b-report.md)
+> and [exact remaining inventory](ledger-ws8br-ws17-ws11ui-remaining.json).
+> The complete #240 checkpoint below is preserved as history; its remaining counts
+> are historical, not the continuation branch's active counts.
+
 # WS8br / WS17 / WS11-UI cutover reconciliation — partial
 
 Base: `78b9b1546bdab4c6c1c9b8ddb94512f661289112`, pinned Rails `d7c7de92`

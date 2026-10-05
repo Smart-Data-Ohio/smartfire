@@ -158,6 +158,13 @@ covered.update({
 })
 rows = []
 starting_count = 0
+# Reopened by the PR #244 per-assertion audit; preserve covered sets above as history.
+import json
+receipt_audit = json.loads((root / "plans/ledger-ws8br-ws17-ws11ui-b-receipts.json").read_text())
+for record in receipt_audit["records"]:
+    if record.get("record_status") == "reopened":
+        covered.get(record["file"].removeprefix("test/"), set()).discard(record["test"])
+
 for file, owner in files.items():
     source = subprocess.check_output(["git", "show", f"{PIN_FULL}:test/{file}"], cwd=root, text=True)
     names = re.findall(r'^\s*test\s+"([^"]+)"', source, re.M)

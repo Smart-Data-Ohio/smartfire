@@ -74,17 +74,6 @@ async fn configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies
                 assert!(body.contains(&format!("@{}", domain.as_str().unwrap())));
             }
         }
-        let links = body
-            .split_once("aria-label=\"About this workspace\"")
-            .unwrap()
-            .1
-            .split_once("</nav>")
-            .unwrap()
-            .0;
-        for path in ["/about", "/privacy", "/terms"] {
-            assert!(links.contains(&format!(
-                "<a target=\"_blank\" rel=\"noopener\" href=\"{path}\">"
-            )));
-        }
+        super::tests::assert_public_links(&body);
     }
 }

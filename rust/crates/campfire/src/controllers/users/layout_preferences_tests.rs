@@ -56,6 +56,71 @@ async fn check_cases(names: &[&str]) {
         let page = app.david().get("/users/me/profile").await;
         assert_eq!(page.status, axum::http::StatusCode::OK, "{name}");
         let body = page.text();
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&body).unwrap();
+        let nodes = dom.descendants(root);
+        let html_start = body.find("<html ").unwrap();
+        let html_end = html_start + body[html_start..].find('>').unwrap();
+        let html_tag = body[html_start..=html_end].replacen("<html", "<div", 1);
+        let mut html_dom = campfire_richtext::dom::Dom::new();
+        let html_root = html_dom.parse_fragment(&(html_tag + "</div>")).unwrap();
+        for (name, value) in [("data-theme", "theme"), ("data-text-size", "text_size")] {
+            assert_eq!(
+                html_dom
+                    .descendants(html_root)
+                    .into_iter()
+                    .filter(|id| html_dom.name(*id) == "div"
+                        && html_dom.attr(*id, name) == case["attributes"][value].as_str())
+                    .count(),
+                1,
+                "{name}: exact html selector"
+            );
+        }
+        let expected_meta = format!(
+            "{}{}{}",
+            case["sound_meta"].as_str().unwrap(),
+            case["drive_meta"].as_str().unwrap(),
+            case["time_zone_meta"].as_str().unwrap()
+        );
+        let mut expected_dom = campfire_richtext::dom::Dom::new();
+        let expected_root = expected_dom.parse_fragment(&expected_meta).unwrap();
+        for name in [
+            "notification-dnd",
+            "quiet-hours",
+            "quiet-hours-zone",
+            "meeting-quiet",
+            "ooo-quiet",
+            "google-drive-previews",
+            "current-user-time-zone",
+        ] {
+            let actual: Vec<_> = nodes
+                .iter()
+                .filter(|id| dom.name(**id) == "meta" && dom.attr(**id, "name") == Some(name))
+                .map(|id| dom.attr(*id, "content"))
+                .collect();
+            let expected: Vec<_> = expected_dom
+                .descendants(expected_root)
+                .into_iter()
+                .filter(|id| {
+                    expected_dom.name(*id) == "meta" && expected_dom.attr(*id, "name") == Some(name)
+                })
+                .map(|id| expected_dom.attr(id, "content"))
+                .collect();
+            assert_eq!(
+                actual, expected,
+                "{name}: exact meta selector values and cardinality"
+            );
+        }
+        // ProfilesControllerTest's light theme also pins the exact color-scheme cardinality.
+        if *name == "manual_dnd" {
+            assert_eq!(
+                nodes.iter().filter(|id| dom.name(**id) == "meta"
+                    && dom.attr(**id, "name") == Some("color-scheme")
+                    && dom.attr(**id, "content") == Some("light")).count(),
+                1,
+                "original light color-scheme meta selector"
+            );
+        }
         // Read the whole helper's rendered line verbatim; tokens/nonces elsewhere stay real.
         let actual = body
             .split_once("<meta name=\"time-zone-url\" content=\"/users/me/time_zone\">\n      ")
@@ -107,14 +172,14 @@ macro_rules! cases {
 cases!(
     layout_theme_zone_and_manual_sound_state => ["default", "manual_dnd", "expired_dnd", "boundary_dnd", "running_dnd"],
     layout_dnd_presence_mutes_sounds => ["dnd_presence"],
-    layout_quiet_hours_window_and_zone => ["quiet_hours", "quiet_hours_off", "quiet_hours_incomplete", "quiet_hours_equal", "quiet_hours_zone_default"],
+    layout_quiet_hours_window_and_zone => ["quiet_hours", "quiet_hours_off", "quiet_hours_incomplete", "quiet_hours_equal", "quiet_hours_zone_default", "original_quiet_hours_disabled"],
     layout_meeting_windows_include_all_cached_pairs => ["meeting_current", "cache_order_and_offsets", "cache_malformed_pairs"],
     layout_future_meeting_windows_before_start => ["meeting_future"],
     layout_empty_or_missing_meeting_cache => ["meeting_empty", "meeting_missing"],
     layout_meeting_status_off_sends_no_windows => ["meeting_status_off"],
     layout_manual_ooo_windows => ["manual_ooo", "expired_ooo", "boundary_ooo", "ooo_manual_and_calendar"],
     layout_future_calendar_ooo_windows => ["calendar_ooo_future", "calendar_ooo_off"],
-    layout_ooo_notifications_kept_sends_no_windows => ["ooo_notifications_kept"],
+    layout_ooo_notifications_kept_sends_no_windows => ["ooo_notifications_kept", "original_manual_ooo_notifications_kept"],
     layout_meeting_quiet_off_sends_no_windows => ["meeting_quiet_off"],
-    layout_drive_previews_uses_exact_scope => ["drive_missing", "drive_calendar_only", "drive_current_scope", "drive_retired_scope", "drive_disconnected", "drive_ascii_separators", "drive_wrong_case", "drive_unicode_separator"],
+    layout_drive_previews_uses_exact_scope => ["drive_missing", "drive_calendar_only", "drive_current_scope", "drive_retired_scope", "drive_disconnected", "drive_ascii_separators", "drive_wrong_case", "drive_unicode_separator", "original_drive_legacy_calendar", "original_drive_full_scope"],
 );

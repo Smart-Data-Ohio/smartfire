@@ -92,6 +92,14 @@ async fn account_settings_body_navigation_and_footer_match_pinned_rails() {
         assert_eq!(app.anonymous().get("/account/edit").await.status,StatusCode::FOUND);
         let reply=app.sign_in(viewer).await.get("/account/edit").await;
         assert_eq!(reply.status,StatusCode::OK);
+        crate::controllers::users::people_tests::assert_http_fragment(&reply.text(), case["html"].as_str().unwrap(), "turbo-frame", "id", "account_users");
+        if viewer == DAVID {
+            let full = reply.text();
+            let body = full.split_once("id=\"account_users\"").expect("account users frame").1.split_once("</turbo-frame>").unwrap().0;
+            let divider = body.find("separator full-width").expect("original administrator divider");
+            for name in ["David", "Jason"] { assert!(body.find(&format!("<strong>{name}</strong>")).expect("administrator row") < divider); }
+            for name in ["Kevin", "JZ"] { assert!(body.find(&format!("<strong>{name}</strong>")).expect("member row") > divider); }
+        }
         assert_eq!(reply.text().contains("Manage workspace icons"),viewer==DAVID);
     }
 }

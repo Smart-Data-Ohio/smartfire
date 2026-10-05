@@ -56,6 +56,7 @@ mod tests {
                 assert_eq!(response.status.as_u16(), vector["status"].as_u64().unwrap() as u16);
                 assert_eq!(response.content_type(), vector["content_type"].as_str());
                 assert_eq!(response.text(), vector["body"].as_str().unwrap(), "{seed} {}", vector["path"]);
+                if vector["path"] == "/offline.html" { assert_eq!(response.header("set-cookie"), None); }
             }
         }
     }
@@ -75,4 +76,36 @@ mod tests {
         assert_eq!(offline.status, StatusCode::OK);
         assert_eq!(offline.body, std::fs::read(campfire_db::fixtures::reference_root().join("public/offline.html")).unwrap());
     }
+    #[tokio::test]
+    async fn original_service_worker_logic_checks_the_real_http_script() {
+        let app = TestApp::boot_frozen().await.expect("seed required");
+        let reply = app.anonymous().get("/service-worker.js").await;
+        assert_eq!(reply.status, StatusCode::OK);
+        let dir = tempfile::tempdir().unwrap();
+        let script = dir.path().join("app/views/pwa/service_worker.js");
+        let harness = dir.path().join("test/scripts/service_worker_harness.mjs");
+        std::fs::create_dir_all(script.parent().unwrap()).unwrap();
+        std::fs::create_dir_all(harness.parent().unwrap()).unwrap();
+        std::fs::write(script, &reply.body).unwrap();
+        std::fs::write(
+            &harness,
+            include_str!("../../../../reference-tools/users/service_worker_original_harness.mjs"),
+        )
+        .unwrap();
+        let output = std::process::Command::new("node")
+            .arg(harness)
+            .output()
+            .expect("CI's Node prerequisite");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            output.status.success(),
+            "original worker harness failed:\n{stdout}\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            stdout.contains("all checks passed"),
+            "original harness success receipt: {stdout}"
+        );
+    }
+
 }

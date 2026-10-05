@@ -209,3 +209,6 @@ mod fizzy_profile_tests;
 
 #[cfg(test)]
 mod stars_tests;
+
+#[cfg(test)]
+mod cutover_receipts_tests;

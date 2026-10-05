@@ -1,0 +1,499 @@
+{
+  "reviewed_head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+  "phase_instructions": "Before results were measured on the reviewed head before changing any assertions/vectors. After results use the current branch. Compiler errors and invalid setup attempts are excluded; every after result includes an actual assertion panic. The existing worker byte check was already discriminating.",
+  "patches": [
+    [
+      "rust/crates/campfire/src/controllers/public_pages.rs",
+      "    let formats = c.formats()?;",
+      "    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"anonymous-head\") && c.request.method == axum::http::Method::HEAD && !c.request.headers.contains_key(\"cookie\") { return Ok(c.head(StatusCode::UNAUTHORIZED)); }\n    let formats = c.formats()?;"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/users/profiles.rs",
+      "    sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));",
+      "    sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));\n    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"missing-meeting\") && !sections.google.account_exists { sections.status.meeting_enabled = false; }"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/presenters/profile_sections.rs",
+      "        fields.google.email = account.email;",
+      "        fields.google.email = account.email;\n        if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"rejected-full-drive\") && !fields.google.connected && fields.google.calendar { fields.google.drive = false; }\n        if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"active-full-drive\") && fields.google.connected && account.scopes.as_deref() == Some(\"openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file\") { fields.google.drive = false; }\n        if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"partial-drive-identity\") && account.scopes.as_deref() == Some(\"openid email https://www.googleapis.com/auth/drive.file\") { fields.google.connected = false; }\n        if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"retired-full-grant\") && account.scopes.as_deref() == Some(\"openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly\") { fields.google.drive = true; }\n        if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"rejected-legacy\") && !fields.google.connected && account.scopes.is_none() { fields.google.account_exists = false; }\n        if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"original-calendar-email\") && fields.google.connected && fields.google.calendar && fields.google.email == \"david@gmail.test\" { fields.google.email = \"changed@example.test\".into(); }\n"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/users/profiles.rs",
+      "pub async fn update(c: &mut Ctx) -> Result {",
+      "pub async fn update(c: &mut Ctx) -> Result {\n    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"profile-put\") && c.request.method == axum::http::Method::PUT { return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)); }\n    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"appearance-combined\") && c.params.get(\"user\").and_then(|u|u.get(\"theme\")).and_then(|p|p.to_s()).as_deref() == Some(\"dark\") && c.params.get(\"user\").and_then(|u|u.get(\"time_zone\")).and_then(|p|p.to_s()).as_deref() == Some(\"Pacific Time (US & Canada)\") { return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)); }"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/users.rs",
+      "    let user = find_user(c, \"id\").await?;",
+      "    let user = find_user(c, \"id\").await?;\n    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"own-show\") && user.id == concerns::require_current_user(c)?.id { return Ok(c.head(StatusCode::NOT_FOUND)); }"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/users.rs",
+      "        Ok(user) => {",
+      "        Ok(user) => {\n            if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"signup-default\") && c.params.get(\"user\").and_then(|u|u.get(\"role\")).is_none() { return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)); }"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/presenters/layout_preferences.rs",
+      "        let quiet: bool = row.get(\"quiet_hours_enabled\")?;",
+      "        let quiet: bool = row.get(\"quiet_hours_enabled\")?;\n        let quiet = quiet || (std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"quiet-off-utc\") && row.get::<_,Option<String>>(\"time_zone\")?.as_deref() == Some(\"UTC\"));"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/presenters/layout_preferences.rs",
+      "ooo_quiet: if keep_notifications {",
+      "ooo_quiet: if keep_notifications && !(std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"manual-only-ooo\") && !row.get::<_,bool>(\"ooo_calendar_enabled\")?) {"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/presenters/layout_preferences.rs",
+      "        Ok(self.preferences)",
+      "        if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"layout-full-drive\") && scopes.as_deref() == Some(\"openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file\") { self.preferences.google_drive = false; }\n        Ok(self.preferences)"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/public_pages.rs",
+      "        &policy.operator_name,",
+      "        &operator_name,"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/users/profiles.rs",
+      "    sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));",
+      "    sections.status.fetch_error = settings_form.fetch_error.clone().filter(|s| !campfire_richtext::ruby::is_blank(s));\n    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"original-fetch-error\") && sections.status.fetch_error.as_deref() == Some(\"Google Calendar couldn't be reached; calendar status will retry.\") { sections.status.fetch_error = None; }"
+    ],
+    [
+      "rust/crates/db/src/models/user/profile_settings.rs",
+      "    if let Some(login) = changes.github_login {",
+      "    if let Some(login) = changes.github_login && !(std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"clear-existing-login\") && is_blank(&login)) {"
+    ],
+    [
+      "rust/crates/db/src/models/user/profile_settings.rs",
+      "            let login = unicode::downcase(strip(&login));",
+      "            let login = unicode::downcase(strip(&login));\n            let login = if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"original-github-link\") && login == \"david-gh\" { \"David-GH\".to_owned() } else { login };"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/users/profiles.rs",
+      "pub async fn update(c: &mut Ctx) -> Result {",
+      "pub async fn update(c: &mut Ctx) -> Result {\n    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"original-correct-email\") && c.params.get(\"user\").and_then(|u|u.get(\"email_address\")).and_then(|p|p.to_s()).as_deref() == Some(\"david@smartdata.net\") { return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)); }\n    if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"original-case-only\") && c.params.get(\"user\").and_then(|u|u.get(\"name\")).and_then(|p|p.to_s()).as_deref() == Some(\"Dave\") && c.params.get(\"user\").and_then(|u|u.get(\"email_address\")).and_then(|p|p.to_s()).as_deref() == Some(\"David@37signals.com\") { return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY)); }"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/pwa.rs",
+      "    Ok(c.render_as(StatusCode::OK, \"text/javascript; charset=utf-8\", pwa::SERVICE_WORKER_JS))",
+      "    let body = if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"worker-cache\") { pwa::SERVICE_WORKER_JS.replace(\"url.pathname.startsWith(\\\"/assets/\\\")\", \"true\") } else { pwa::SERVICE_WORKER_JS.to_owned() };\n    Ok(c.render_as(StatusCode::OK, \"text/javascript; charset=utf-8\", body))"
+    ],
+    [
+      "rust/crates/campfire/src/controllers/public_pages.rs",
+      "    let body = public_pages::render(",
+      "    let operator_name = if std::env::var(\"WS244_R3_MUTATION\").as_deref() == Ok(\"configured-original\") && policy.operator_name.as_deref() == Some(\"Acme Widgets\") { Some(\"changed\".to_owned()) } else { policy.operator_name.clone() };\n    let body = public_pages::render("
+    ]
+  ],
+  "controls": [
+    {
+      "name": "anonymous-head",
+      "before_tests": [
+        "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+      ],
+      "after_tests": [
+        "controllers::public_pages::tests::public_pages_accept_anonymous_head_without_a_body"
+      ],
+      "record_ids": [
+        "P0100"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.653s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.648s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: /about: anonymous HEAD"
+    },
+    {
+      "name": "missing-meeting",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+      ],
+      "after_tests": [
+        "controllers::users::profile_sections_tests::profile_missing_google_account_keeps_the_meeting_reconnect_link"
+      ],
+      "record_ids": [
+        "P0155"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.769s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.770s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: missing_account: original reconnect selector"
+    },
+    {
+      "name": "rejected-full-drive",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_drive"
+      ],
+      "after_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_drive"
+      ],
+      "record_ids": [
+        "P0173"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.998s] 2 tests run: 2 passed, 2968 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.455s] 2 tests run: 1 passed, 1 failed, 2979 skipped",
+      "assertion_failure": "assertion `left == right` failed: complete routed section[aria-labelledby=google-calendar-title] fragment"
+    },
+    {
+      "name": "profile-put",
+      "before_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+        "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "after_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+        "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "record_ids": [
+        "P0148",
+        "P0149",
+        "P0176",
+        "P0184",
+        "P0186",
+        "P0187",
+        "P0188",
+        "P0189",
+        "P0190",
+        "P0191",
+        "P0193",
+        "P0195",
+        "P0197",
+        "P0199"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [  10.536s] 3 tests run: 3 passed, 2967 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.752s] 3 tests run: 0 passed, 3 failed, 2978 skipped",
+      "assertion_failure": "assertion `left == right` failed"
+    },
+    {
+      "name": "active-full-drive",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_drive"
+      ],
+      "after_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_drive"
+      ],
+      "record_ids": [
+        "P0168"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.994s] 2 tests run: 2 passed, 2968 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.293s] 2 tests run: 1 passed, 1 failed, 2979 skipped",
+      "assertion_failure": "assertion `left == right` failed: complete routed section[aria-labelledby=google-calendar-title] fragment"
+    },
+    {
+      "name": "partial-drive-identity",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::drive_only"
+      ],
+      "after_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::drive_only"
+      ],
+      "record_ids": [
+        "P0172"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.992s] 2 tests run: 2 passed, 2968 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.348s] 2 tests run: 1 passed, 1 failed, 2979 skipped",
+      "assertion_failure": "assertion `left == right` failed: complete routed section[aria-labelledby=google-calendar-title] fragment"
+    },
+    {
+      "name": "retired-full-grant",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::retired_metadata"
+      ],
+      "after_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::retired_metadata"
+      ],
+      "record_ids": [
+        "P0169"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   1.006s] 2 tests run: 2 passed, 2968 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.524s] 2 tests run: 1 passed, 1 failed, 2979 skipped",
+      "assertion_failure": "assertion `left == right` failed: complete routed section[aria-labelledby=google-calendar-title] fragment"
+    },
+    {
+      "name": "rejected-legacy",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_calendar"
+      ],
+      "after_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_calendar"
+      ],
+      "record_ids": [
+        "P0166",
+        "P0174"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.992s] 2 tests run: 2 passed, 2968 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.429s] 2 tests run: 1 passed, 1 failed, 2979 skipped",
+      "assertion_failure": "assertion `left == right` failed: complete routed section[aria-labelledby=google-calendar-title] fragment"
+    },
+    {
+      "name": "original-calendar-email",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms"
+      ],
+      "after_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms"
+      ],
+      "record_ids": [
+        "P0153",
+        "P0165",
+        "P0167"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.988s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.267s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: complete routed section[aria-labelledby=google-calendar-title] fragment"
+    },
+    {
+      "name": "own-show",
+      "before_tests": [
+        "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name"
+      ],
+      "after_tests": [
+        "controllers::users::people_tests::own_public_profile_matches_the_original_show_request"
+      ],
+      "record_ids": [
+        "P0113"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.720s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.671s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: original own-user GET"
+    },
+    {
+      "name": "signup-default",
+      "before_tests": [
+        "controllers::users::joining_tests::join_writes_match_rails_duplicate_scope_open_rooms_and_sessions"
+      ],
+      "after_tests": [
+        "controllers::users::joining_tests::join_writes_match_rails_duplicate_scope_open_rooms_and_sessions"
+      ],
+      "record_ids": [
+        "P0128"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   1.415s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.394s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed"
+    },
+    {
+      "name": "quiet-off-utc",
+      "before_tests": [
+        "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone"
+      ],
+      "after_tests": [
+        "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone"
+      ],
+      "record_ids": [
+        "P0202"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.885s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.913s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: quiet-hours: exact meta selector values and cardinality"
+    },
+    {
+      "name": "manual-only-ooo",
+      "before_tests": [
+        "controllers::users::layout_preferences_tests::layout_ooo_notifications_kept_sends_no_windows"
+      ],
+      "after_tests": [
+        "controllers::users::layout_preferences_tests::layout_ooo_notifications_kept_sends_no_windows"
+      ],
+      "record_ids": [
+        "P0163"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.755s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.783s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: ooo-quiet: exact meta selector values and cardinality"
+    },
+    {
+      "name": "layout-full-drive",
+      "before_tests": [
+        "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope"
+      ],
+      "after_tests": [
+        "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope"
+      ],
+      "record_ids": [
+        "P0175"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.979s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   1.032s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: google-drive-previews: exact meta selector values and cardinality"
+    },
+    {
+      "name": "appearance-combined",
+      "before_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "after_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "record_ids": [
+        "P0193"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.862s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.748s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: \"original_form_theme_zone\""
+    },
+    {
+      "name": "configured-original",
+      "before_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "before_rejected": false,
+      "after_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "record_ids": [
+        "P0102"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   2.284s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.959s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "\"original_configured\" about: first differing byte 3091"
+    },
+    {
+      "name": "original-fetch-error",
+      "before_tests": [
+        "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+      ],
+      "before_rejected": false,
+      "after_tests": [
+        "controllers::users::profile_sections_tests::profile_failed_calendar_refresh_keeps_the_original_notice"
+      ],
+      "record_ids": [
+        "P0154"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.748s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.747s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "fetch_error: original escaped refresh failure"
+    },
+    {
+      "name": "clear-existing-login",
+      "before_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "before_rejected": false,
+      "after_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "record_ids": [
+        "P0186"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.854s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.764s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: \"original_form_github_clear\""
+    },
+    {
+      "name": "original-github-link",
+      "before_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "before_rejected": false,
+      "after_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "record_ids": [
+        "P0176"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [   0.859s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.752s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: \"original_form_github\""
+    },
+    {
+      "name": "original-correct-email",
+      "before_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "before_rejected": false,
+      "after_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "record_ids": [
+        "P0190"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [  10.785s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   3.406s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: original_correct:"
+    },
+    {
+      "name": "original-case-only",
+      "before_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "before_rejected": false,
+      "after_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "record_ids": [
+        "P0191"
+      ],
+      "before_exit": 0,
+      "before_summary": "Summary [  10.823s] 1 test run: 1 passed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   4.145s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "assertion `left == right` failed: original_case_only:"
+    },
+    {
+      "name": "worker-cache",
+      "before_tests": [
+        "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
+      ],
+      "before_rejected": true,
+      "after_tests": [
+        "controllers::pwa::tests::original_service_worker_logic_checks_the_real_http_script"
+      ],
+      "record_ids": [
+        "P0276"
+      ],
+      "before_exit": 100,
+      "before_summary": "Summary [   0.649s] 1 test run: 0 passed, 1 failed, 2969 skipped",
+      "after_exit": 100,
+      "after_summary": "Summary [   0.696s] 1 test run: 0 passed, 1 failed, 2980 skipped",
+      "assertion_failure": "original worker harness failed:"
+    }
+  ]
+}

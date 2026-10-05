@@ -49,6 +49,24 @@ mod tests {
     use crate::controllers::presenters::test_support::{Req, TestApp};
     use axum::http::{Method, StatusCode};
 
+    /// PublicPagesControllerTest uses nav ancestry and real links, which comments cannot satisfy.
+    pub(super) fn assert_public_links(body: &str) {
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(body).unwrap();
+        let navs = dom.descendants(root).into_iter().filter(|id| {
+            dom.name(*id) == "nav" && dom.attr(*id, "aria-label") == Some("About this workspace")
+        }).collect::<Vec<_>>();
+        assert_eq!(navs.len(), 1, "exact About this workspace nav selector");
+        for path in ["/about", "/privacy", "/terms"] {
+            let links = dom.descendants(navs[0]).into_iter().filter(|id| {
+                dom.name(*id) == "a" && dom.attr(*id, "href") == Some(path)
+                    && dom.attr(*id, "target") == Some("_blank")
+                    && dom.attr(*id, "rel") == Some("noopener")
+            }).count();
+            assert_eq!(links, 1, "exact nav public link selector for {path}");
+        }
+    }
+
     #[tokio::test]
     async fn unconfigured_sign_in_links_all_public_pages_in_new_tabs() {
         // PublicPagesControllerTest at d7c7de92; render WS9's sign-in page directly.
@@ -57,21 +75,7 @@ mod tests {
         assert_eq!(response.status, StatusCode::OK);
         assert!(!response.text().contains("Sign in with Google"));
         let body = response.text();
-        let links = body
-            .split_once("aria-label=\"About this workspace\"")
-            .unwrap()
-            .1
-            .split_once("</nav>")
-            .unwrap()
-            .0;
-        for path in ["/about", "/privacy", "/terms"] {
-            assert!(
-                links.contains(&format!(
-                    "<a target=\"_blank\" rel=\"noopener\" href=\"{path}\">"
-                )),
-                "missing protected public link {path}"
-            );
-        }
+        assert_public_links(&body);
     }
 
     #[tokio::test]
@@ -79,6 +83,8 @@ mod tests {
         let Some(app) = TestApp::boot().await else {
             return;
         };
+        assert!(!app.booted.app.config.google_client.configured());
+        assert!(!app.booted.app.google.sign_in().config.configured());
         for ua in [
             "",
             "curl/8.0",
@@ -105,6 +111,10 @@ mod tests {
                     "csrf-token",
                     "csrf-param",
                     "noindex",
+                    "action-cable",
+                    "turbo-prefetch",
+                    "google-drive-previews",
+                    "Upgrade to a supported web browser",
                 ] {
                     assert!(
                         !response.text().contains(private),
@@ -118,6 +128,7 @@ mod tests {
             let response = browser.get(path).await;
             assert_eq!(response.status, StatusCode::OK);
             assert_eq!(response.header("set-cookie"), None);
+            assert_eq!(response.text(), app.anonymous().get(path).await.text());
             let head = browser.send(Req::new(Method::HEAD, path)).await;
             assert_eq!(head.status, StatusCode::OK);
             assert!(head.body.is_empty());
@@ -136,6 +147,7 @@ mod tests {
                     .send(Req::new(Method::GET, path).header("accept", accept))
                     .await;
                 assert_eq!(response.status, StatusCode::OK);
+                assert!(response.text().contains("<title>Smartfire"));
             }
             for accept in [
                 "application/json",
@@ -219,4 +231,14 @@ mod tests {
             );
         }
     }
+    #[tokio::test]
+    async fn public_pages_accept_anonymous_head_without_a_body() {
+        let app = TestApp::boot_frozen().await.expect("seed required");
+        for path in ["/about", "/privacy", "/terms"] {
+            let reply = app.anonymous().send(Req::new(Method::HEAD, path)).await;
+            assert_eq!(reply.status, StatusCode::OK, "{path}: anonymous HEAD");
+            assert!(reply.body.is_empty(), "{path}: original empty HEAD body");
+        }
+    }
+
 }

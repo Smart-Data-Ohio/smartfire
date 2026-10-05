@@ -16,6 +16,7 @@ original = agent.attributes
 original_user = bot.attributes
 room = Room.find(486777696)
 original_room = room.attributes
+original_memberships = bot.memberships.map(&:attributes)
 inputs = [
   {name:"admin_grants", viewer:"david"},
   {name:"owner_grants", viewer:"kevin", attrs:{owner_id:users[:kevin]}},
@@ -27,9 +28,14 @@ inputs = [
   {name:"private_rooms_hidden", viewer:"jz"},
   {name:"suspended", viewer:"kevin", attrs:{suspended_at:Time.current.iso8601}},
   {name:"review_markup", viewer:"david", attrs:{provider:'<b>provider & "</b>',runtime:'<i>runtime</i>',description:'<script>description()</script>',status:"working",status_note:'<img src=x onerror="note()">'}, user_attrs:{name:'<b>Agent & "</b>',bio:'<i>agent bio</i>'}, room_attrs:{name:'<b>Room & "</b>'}},
+  {name:"original_identity", viewer:"kevin", original_memberships:true, attrs:{provider:"OpenAI",runtime:"Codex CLI 0.9",description:"Does things",status:"working",status_note:"on it",status_changed_at:(Time.current-2.hours).iso8601}},
+  {name:"original_private_rooms", viewer:"jz", original_memberships:true},
   {name:"minimal_bot", viewer:"kevin", no_agent:true}
 ]
 rows = inputs.map do |input|
+  Membership.where(user_id:bot.id).delete_all
+  Membership.insert_all!(original_memberships)
+  Membership.where(user_id:bot.id).where.not(room_id:[room.id,340026324]).delete_all if input[:original_memberships]
   User.where(id:bot.id).update_all(original_user.except("id"))
   Room.where(id:room.id).update_all(original_room.except("id"))
   bot.update_columns(input[:user_attrs]) if input[:user_attrs]

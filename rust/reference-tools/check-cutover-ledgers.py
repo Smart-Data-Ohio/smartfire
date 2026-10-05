@@ -52,8 +52,7 @@ assert 'controllers::ws12_browser_remaining_tests -- --ignored' in entry
 assert 'cargo build --locked' in entry and 'WS11UI_BROWSER_BINARY' in entry
 assert all(r['test'] in active for r in receipts['review240_assertion_tests'])
 remaining = load('ledger-ws8br-ws17-ws11ui-remaining.json')
-assert len(remaining['ws8br_broad_original_receipts']) == 328
-assert len(receipts['ws8br_broad_closed_records']) == 9
+assert not ({r['id'] for r in remaining['ws8br_broad_original_receipts']} & {r['id'] for r in receipts['ws8br_broad_closed_records']})
 assert len(remaining['ws8br_broad_original_receipts']) + len(receipts['ws8br_broad_closed_records']) == 337
 assert len(remaining['ws8br_sidebar_original_receipts']) == 8
 assert len(remaining['ws8br2_original_criteria']) == 14
@@ -66,14 +65,18 @@ for group in ['ws8br_broad_original_receipts', 'ws8br_sidebar_original_receipts'
     for row in remaining[group]:
         assert (row['file'], row['test']) in original, f"remainder is not an original declaration: {row}"
 assert ws8['cutover_reconciliation']['partial'] and remaining['partial']
+assert ws8['cutover_reconciliation']['broad_original_receipts_pending'] == len(remaining['ws8br_broad_original_receipts'])
+assertion_receipts = load('ledger-ws8br-ws17-ws11ui-b-receipts.json')
+new_tests = {name for row in assertion_receipts['records'] for name in row['rust_tests']}
+assert new_tests <= active, f'missing or ignored assertion-receipt tests: {new_tests-active}'
 if args.native_log:
     passed = set(re.findall(r'^\s*PASS\s+\[[^\]]+\]\s+\([^)]+\)\s+\S+\s+(\S+)', args.native_log.read_text(), re.M))
-    credited = {r['test'] for r in receipts['ci_passes']} | {r['rust_test'] for r in changed if 'rust_test' in r}
+    credited = {r['test'] for r in receipts['ci_passes']} | {r['rust_test'] for r in changed if 'rust_test' in r} | new_tests | {r['test'] for r in receipts['review240_assertion_tests']}
     assert credited <= passed, f'credited current tests did not pass: {sorted(credited-passed)}'
-    print(f'Cutover current branch: {len(credited)} credited test identities passed in the current nextest run')
+    print(f'Cutover current branch: {len(credited)} credited test identities passed in the supplied current workspace run')
 if args.browser_log:
     passed = set(re.findall(r'^\s*PASS\s+\[[^\]]+\]\s+\([^)]+\)\s+\S+\s+(\S+)', args.browser_log.read_text(), re.M))
     assert browser_tests <= passed, f'registered browser tests did not pass: {sorted(browser_tests-passed)}'
     print('Cutover current branch: 3 registered ignored tests passed with paired browser sequences and writer controls')
-print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; 9 broad WS8 supersessions; 1 approved queue supersession; 0 inconsistent records")
-print('Cutover ledger remains partial: 328 broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')
+print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; {len(receipts['ws8br_broad_closed_records'])} broad WS8 closures; 1 approved queue supersession; 0 inconsistent records")
+print(f'Cutover ledger remains partial: {len(remaining["ws8br_broad_original_receipts"])} broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')

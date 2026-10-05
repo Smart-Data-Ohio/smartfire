@@ -463,6 +463,1388 @@
         "log_line": 4353,
         "result": "PASS"
       }
+    },
+    {
+      "id": "P0146",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "show",
+      "rust_tests": [
+        "controllers::users::profile_page_tests::profile_route_renders_owner_sections_and_ws9_security_directly"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0146",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0147",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "show gives the Edge install instructions to a browser identifying only as Edge",
+      "rust_tests": [
+        "controllers::users::profile_page_tests::edge_only_user_agent_gets_rails_edge_install_instructions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0147",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0148",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "update",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0148",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0149",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "updates are limited to the current user",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0149",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0150",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows Google Calendar as not configured without credentials",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0150",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0151",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile offers a connect button without an account",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::missing"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0151",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0152",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile links to connect for meeting status without an account",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::missing"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0152",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0153",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile offers the meeting toggle for a connected account",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_only"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0153",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0155",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile asks to reconnect for meeting status left on after disconnect",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0155",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0156",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile lists the quiet-during-meetings switch",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0156",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0157",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends meeting windows for the live sound gate",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_meeting_windows_include_all_cached_pairs"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0157",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0158",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends future meeting windows before the meeting starts",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_future_meeting_windows_before_start"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0158",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0159",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends no meeting windows without cached intervals",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_empty_or_missing_meeting_cache"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0159",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0160",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends no meeting windows when meeting status itself is off",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_meeting_status_off_sends_no_windows"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0160",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0161",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends OOO windows for the live sound gate",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_manual_ooo_windows"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0161",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0162",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends future calendar OOO windows before the OOO starts",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_future_calendar_ooo_windows"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0162",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0163",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends no OOO windows when keeping notifications while out",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_ooo_notifications_kept_sends_no_windows"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0163",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0164",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout leaves sounds alone for meetings when quiet-during-meetings is off",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_meeting_quiet_off_sends_no_windows"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0164",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0166",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile offers a reconnect when Google rejected the connection",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_calendar"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0166",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0167",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile offers Drive previews for a connected account without the Drive scope",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_only"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0167",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0168",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows Drive previews as enabled when the account has the Drive scope",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::calendar_drive"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0168",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0169",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile offers Drive previews again for the retired metadata grant",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::retired_metadata"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0169",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0170",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows no Drive row when Google is not configured",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0170",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0171",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile asks to reconnect when the grant lacks the calendar scope",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::drive_only"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0171",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0172",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows Disconnect for a partial grant with Drive still active",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::drive_only"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0172",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0173",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "reconnect preserves a granted Drive scope",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_drive"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0173",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0174",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "reconnect without Drive requests the calendar scope only",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::rejected_calendar"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0174",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0175",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "layout carries the Drive previews meta tag only with the Drive scope",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0175",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0177",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "a github login cannot be claimed by a second user",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0177",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0178",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile lists the notification switches with explanations",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0178",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0179",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile saves the notification switches",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0179",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0180",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile rejects non-boolean notification input",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_bad_notification_preserves_saved_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0180",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0181",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "DND switch reflects the effective state after a timed expiry",
+      "rust_tests": [
+        "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0181",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0182",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "DND switch stays on while a timer runs",
+      "rust_tests": [
+        "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0182",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0183",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile lists the call settings with their defaults",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0183",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0184",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile saves the call settings",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0184",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0185",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile rejects an unknown microphone mode",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_bad_voice_preserves_saved_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0185",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0187",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "changing email requires the current password",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0187",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0188",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "changing email with a wrong current password is refused",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0188",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0189",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "a new password cannot stand in for the current one",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0189",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0192",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile asks for the current password only when the account has one",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0192",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0193",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "update saves the theme and time zone",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0193",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0194",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "update saves the text size",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_text_size_save_matches_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0194",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0195",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "an IANA time zone round-trips through the form",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0195",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0196",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "a legacy Rails time zone name still shows selected",
+      "rust_tests": [
+        "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0196",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0197",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "choosing a time zone or Not set records an explicit choice",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0197",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0198",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout marks an explicit Not set so the browser skips detection",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0198",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0199",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "update rejects an unknown theme or time zone",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0199",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0200",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout carries the theme, time zone, and sound state",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0200",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0201",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout mutes sounds for the DND presence",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_dnd_presence_mutes_sounds"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0201",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0202",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "the layout sends the quiet-hours window and zone for the sound gate",
+      "rust_tests": [
+        "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0202",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0089",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "about renders signed-out with stable title and navigation",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0089",
+      "assertion_count": 8,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0090",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "privacy renders signed-out with Google disclosures",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0090",
+      "assertion_count": 8,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0091",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "privacy discloses picker-only Drive previews",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0091",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0092",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "terms renders signed-out with software-license framing",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0092",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0093",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "public pages never redirect to sign-in and set no session cookie",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0093",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0094",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "public pages ignore the modern-browser gate, even for crawlers",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0094",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0095",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "public pages render without OAuth configured",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0095",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0096",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "public pages disclose no private state, credentials, or scripts",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0096",
+      "assertion_count": 12,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0097",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "public pages allow zoom and honor color schemes",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0097",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0098",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "non-HTML formats expose nothing",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_pages_are_html_only_and_allow_wildcard_accept"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0098",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0099",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "wildcard Accept header receives the HTML page",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_pages_are_html_only_and_allow_wildcard_accept"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0099",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0100",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "HEAD requests succeed",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0100",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0101",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "unconfigured installation uses generic wording without env names",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0101",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0103",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "operator name is escaped and malicious contact email is dropped",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0103",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0104",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "public pages open in a new tab so following them never disturbs the current tab",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0104",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0105",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "sign-in page links the public pages without OAuth",
+      "rust_tests": [
+        "controllers::public_pages::tests::unconfigured_sign_in_links_all_public_pages_in_new_tabs"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0105",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0106",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "sign-in page keeps public links beside Google sign-in when configured",
+      "rust_tests": [
+        "controllers::public_pages::sign_in_google_tests::configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0106",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0113",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "show",
+      "rust_tests": [
+        "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0113",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0114",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "profile message buttons carry the accessible name",
+      "rust_tests": [
+        "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0114",
+      "assertion_count": 7,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0115",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile links to capability grants for admins",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::admin_grants"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0115",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0116",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile links to capability grants for the agent owner",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::owner_grants"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0116",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0117",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile hides capability grants from anyone else",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::peer_hides_grants"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0117",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0118",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile shows agent identity, status, rooms, and grants to a member",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::original_identity_and_two_room_visibility_match_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0118",
+      "assertion_count": 13,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0119",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile shows the 24-hour activity line to the owner",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::owner_activity"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0119",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0120",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile shows the 24-hour activity line to an admin",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::admin_activity"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0120",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0121",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile hides the 24-hour activity line from another member",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::peer_hides_activity"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0121",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0122",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot profile hides rooms the viewer is not a member of",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::original_nonmember_hides_both_rooms_match_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0122",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0123",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "suspended agent profile shows Suspended",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::suspended"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0123",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0124",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "bot without an agent keeps the minimal profile",
+      "rust_tests": [
+        "controllers::users::agent_profile_tests::minimal_bot"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0124",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0125",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "new",
+      "rust_tests": [
+        "controllers::users::joining_tests::join_page_matches_complete_rails_body_and_access_checks"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0125",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0126",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "new does not allow a signed in user",
+      "rust_tests": [
+        "controllers::users::joining_tests::join_page_matches_complete_rails_body_and_access_checks"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0126",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0127",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "new requires a join code",
+      "rust_tests": [
+        "controllers::users::joining_tests::join_page_matches_complete_rails_body_and_access_checks"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0127",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0128",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "create",
+      "rust_tests": [
+        "controllers::users::joining_tests::join_writes_match_rails_duplicate_scope_open_rooms_and_sessions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0128",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0129",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "creating a new user with an existing email address will redirect to login screen",
+      "rust_tests": [
+        "controllers::users::joining_tests::join_writes_match_rails_duplicate_scope_open_rooms_and_sessions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0129",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0130",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "index lists active members with presence and selection",
+      "rust_tests": [
+        "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0130",
+      "assertion_count": 9,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0131",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "index lists starred people first with a star marker",
+      "rust_tests": [
+        "controllers::users::people_tests::directories_match_complete_rails_body_and_starred_order"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0131",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0132",
+      "file": "test/controllers/users_controller_test.rb",
+      "test": "index requires sign-in",
+      "rust_tests": [
+        "controllers::users::people_tests::directory_requires_sign_in_and_excludes_the_viewer"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0132",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0141",
+      "file": "test/controllers/users/tours_controller_test.rb",
+      "test": "update stamps the tour as completed",
+      "rust_tests": [
+        "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0141",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0142",
+      "file": "test/controllers/users/tours_controller_test.rb",
+      "test": "update is idempotent",
+      "rust_tests": [
+        "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0142",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0143",
+      "file": "test/controllers/users/tours_controller_test.rb",
+      "test": "update requires sign-in",
+      "rust_tests": [
+        "controllers::users::preferences_tests::preference_writes_require_session_and_csrf_and_scope_to_current_user"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0143",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0144",
+      "file": "test/controllers/users/tours_controller_test.rb",
+      "test": "room pages carry the tour shell for members who never completed it",
+      "rust_tests": [
+        "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0144",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0145",
+      "file": "test/controllers/users/tours_controller_test.rb",
+      "test": "room pages skip auto-start once the tour completed",
+      "rust_tests": [
+        "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0145",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0207",
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "test": "card shows identity, presence, role, and actions for a peer",
+      "rust_tests": [
+        "controllers::users::people_tests::card_shows_identity_presence_role_and_actions_for_a_peer"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0207",
+      "assertion_count": 10,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0208",
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "test": "offline peers read offline",
+      "rust_tests": [
+        "controllers::users::people_tests::offline_peers_read_offline"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0208",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0209",
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "test": "card shows the presence dot and custom status badge",
+      "rust_tests": [
+        "controllers::users::people_tests::card_shows_presence_dot_and_custom_status_badge"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0209",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0210",
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "test": "your own card offers editing your profile instead",
+      "rust_tests": [
+        "controllers::users::people_tests::own_card_offers_editing_your_profile"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0210",
+      "assertion_count": 6,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0211",
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "test": "agents can be messaged but not called",
+      "rust_tests": [
+        "controllers::users::people_tests::agents_can_be_messaged_but_not_called"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0211",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0212",
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "test": "inactive users show status without message actions",
+      "rust_tests": [
+        "controllers::users::people_tests::inactive_users_show_status_without_message_actions"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0212",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0213",
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "test": "card requires sign-in",
+      "rust_tests": [
+        "controllers::users::people_tests::cards_require_sign_in_and_unknown_people_are_not_found"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0213",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0222",
+      "file": "test/controllers/users/time_zones_controller_test.rb",
+      "test": "detects the browser zone when none is saved",
+      "rust_tests": [
+        "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0222",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0223",
+      "file": "test/controllers/users/time_zones_controller_test.rb",
+      "test": "a hand-picked zone wins over later detections",
+      "rust_tests": [
+        "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0223",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0224",
+      "file": "test/controllers/users/time_zones_controller_test.rb",
+      "test": "detection never overwrites an explicit choice, not even Not set",
+      "rust_tests": [
+        "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0224",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0225",
+      "file": "test/controllers/users/time_zones_controller_test.rb",
+      "test": "an unknown zone is ignored",
+      "rust_tests": [
+        "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0225",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0226",
+      "file": "test/controllers/accounts_controller_test.rb",
+      "test": "edit",
+      "rust_tests": [
+        "controllers::accounts::view_tests::account_settings_body_navigation_and_footer_match_pinned_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0226",
+      "assertion_count": 1,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0227",
+      "file": "test/controllers/accounts_controller_test.rb",
+      "test": "edit groups administrators separately from members with a divider",
+      "rust_tests": [
+        "controllers::accounts::view_tests::account_settings_body_navigation_and_footer_match_pinned_rails"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0227",
+      "assertion_count": 7,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0228",
+      "file": "test/controllers/accounts_controller_test.rb",
+      "test": "update",
+      "rust_tests": [
+        "controllers::accounts::mutation_tests::account_mutations_and_audits_match_pinned_rails_http_vectors"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0228",
+      "assertion_count": 3,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0229",
+      "file": "test/controllers/accounts_controller_test.rb",
+      "test": "non-admins cannot update",
+      "rust_tests": [
+        "controllers::accounts::mutation_tests::account_and_ban_mutations_authorize_before_writes_and_audits"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0229",
+      "assertion_count": 2,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0272",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "test": "service worker serves as JavaScript with the fetch and notification handlers",
+      "rust_tests": [
+        "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0272",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0273",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "test": "service worker caches static assets only",
+      "rust_tests": [
+        "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0273",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0274",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "test": "notification clicks focus an existing window before opening a new one",
+      "rust_tests": [
+        "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0274",
+      "assertion_count": 4,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0275",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "test": "offline shell renders signed-out with reconnect behavior",
+      "rust_tests": [
+        "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+      ],
+      "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0275",
+      "assertion_count": 5,
+      "execution": "Current branch native nextest; see b report. Historical main CI pass counts are unchanged."
+    },
+    {
+      "id": "P0165",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows the connected account with a disconnect button",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+        "controllers::users::profile_sections_tests::original_calendar"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0176",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "linking a github login strips and downcases it",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0190",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "changing email with the current password records a self-change",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0154",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "profile shows the meeting fetch notice when a refresh failed",
+      "rust_tests": [
+        "controllers::users::profile_sections_tests::profile_failed_calendar_refresh_keeps_the_original_notice"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0186",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "clearing a github login unlinks it",
+      "rust_tests": [
+        "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0102",
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "test": "configured installation names the operator and contact",
+      "rust_tests": [
+        "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0191",
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "test": "other profile edits and case-only email edits need no password and record nothing",
+      "rust_tests": [
+        "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The security corpus checks Submitted name rather than the original Dave name."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
+    },
+    {
+      "id": "P0276",
+      "file": "test/controllers/pwa_controller_test.rb",
+      "test": "service worker fetch and notification logic",
+      "rust_tests": [
+        "controllers::pwa::tests::original_service_worker_logic_checks_the_real_http_script"
+      ],
+      "evidence": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
+      "history": [
+        {
+          "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+          "status": "reopened",
+          "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
+        }
+      ],
+      "validation": "Targeted current tests; subsequent CI run supplies remote execution; historical main CI is not credited to the strengthened assertions."
     }
   ],
   "review240_assertion_tests": [
@@ -545,5 +1927,60 @@
       "failed": 0
     },
     "ci_receipt": "exact-head native CI and combined-branch browser CI are pending"
-  }
+  },
+  "assertion_receipt_branch_validation": {
+    "source_head": "2963f36aafb82b178ec080f4b2fdfec50b1b16d8",
+    "fresh_clone": true,
+    "ci": true,
+    "seeds": [
+      "default",
+      "first_run",
+      "agents_ui"
+    ],
+    "nextest_threads": 4,
+    "rustc_throttle_unchanged": true,
+    "nextest_summary": "Summary [2198.109s] 4961 tests run: 4961 passed (15 slow), 20 skipped",
+    "clippy_summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 46s",
+    "clippy_exit_code": 0,
+    "release_input_summary": "Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 38s",
+    "release_input_exit_code": 0,
+    "doctests": {
+      "passed": 0,
+      "failed": 0,
+      "ignored": 2
+    },
+    "original_declarations": 120,
+    "assertion_sites": 399,
+    "enabled_passed_native_identities": 70,
+    "rails_corpora_compared": 8,
+    "rails_byte_differences": 0,
+    "node_receipt": "Original pinned Rails service-worker event harness passed on fresh Rust HTTP bytes; external receipt, not ordinary native CI execution.",
+    "ci_execution_note": "These are local fresh-clone executions. Historical main CI evidence is kept separately; newly strengthened assertions are enabled for subsequent CI.",
+    "producer_controls": {
+      "actual_defects_rejected": 5,
+      "invalid_controls": 0,
+      "source_bytes_restored": true,
+      "restored_baseline_summary": "Summary [   2.877s] 5 tests run: 5 passed, 2853 skipped"
+    }
+  },
+  "history": [
+    {
+      "date": "2026-10-04",
+      "previous_broad_closed_count": 129,
+      "reopened_original_ids": [
+        "P0102",
+        "P0154",
+        "P0165",
+        "P0176",
+        "P0186",
+        "P0190",
+        "P0191",
+        "P0276"
+      ]
+    },
+    {
+      "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+      "reason": "Full branch sweep with eight original-value receipts closed; historical full-suite claims remain historical."
+    }
+  ]
 }

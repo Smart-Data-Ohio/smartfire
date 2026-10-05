@@ -39,7 +39,11 @@ pub(super) fn render(app: &TestApp, f: impl FnOnce(&ViewContext) -> String) -> S
     render_with(app, |_| {}, f)
 }
 
-pub(crate) fn render_with(app: &TestApp, configure: impl FnOnce(&mut ViewContext), f: impl FnOnce(&ViewContext) -> String) -> String {
+pub(crate) fn render_with(
+    app: &TestApp,
+    configure: impl FnOnce(&mut ViewContext),
+    f: impl FnOnce(&ViewContext) -> String,
+) -> String {
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {
@@ -103,6 +107,61 @@ fn assert_bytes(name: &str, actual: &str, expected: &str) {
     assert_eq!(actual, expected, "{name}: complete Rails bytes");
 }
 
+/// The complete fragment byte oracle remains above. At the HTTP boundary compare the
+/// same DOM, retaining every attribute/text node except the random CSRF value.
+/// None of the original Rails assertions inspect that random value.
+pub(crate) fn assert_http_fragment(
+    actual: &str,
+    expected: &str,
+    tag: &str,
+    attr: &str,
+    value: &str,
+) {
+    use campfire_richtext::dom::{Dom, NodeData, NodeId};
+    fn project(dom: &Dom, id: NodeId) -> serde_json::Value {
+        match &dom.node(id).data {
+            NodeData::Element(element) => {
+                let mut attrs = dom.attrs(id);
+                if dom.name(id) == "input" && dom.attr(id, "name") == Some("authenticity_token") {
+                    attrs.retain(|(name, _)| name != "value");
+                }
+                attrs.sort();
+                serde_json::json!([
+                    element.name.local.to_string(),
+                    attrs,
+                    dom.children(id)
+                        .iter()
+                        .map(|id| project(dom, *id))
+                        .collect::<Vec<_>>()
+                ])
+            }
+            NodeData::Text(text) => serde_json::json!(["text", text]),
+            NodeData::Comment(text) => serde_json::json!(["comment", text]),
+            _ => panic!("unexpected node inside HTTP fragment"),
+        }
+    }
+    let fragment = |body| {
+        let mut dom = Dom::new();
+        let root = dom.parse_fragment(body).unwrap();
+        let matches = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|id| dom.name(*id) == tag && dom.attr(*id, attr) == Some(value))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            matches.len(),
+            1,
+            "exact HTTP {tag}[{attr}={value}] cardinality"
+        );
+        project(&dom, matches[0])
+    };
+    assert_eq!(
+        fragment(actual),
+        fragment(expected),
+        "complete routed {tag}[{attr}={value}] fragment"
+    );
+}
+
 async fn card_case(name: &str) {
     let app = TestApp::boot_frozen().await.expect("seed required");
     let vectors = vectors();
@@ -138,6 +197,23 @@ async fn card_case(name: &str) {
             .render()
             .unwrap()
     });
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&reply.text()).unwrap();
+    let status_links = dom.descendants(root).into_iter().filter(|node| {
+        dom.name(*node) == "a" && dom.text_content(*node).trim() == "Set a status"
+    }).collect::<Vec<_>>();
+    assert_eq!(status_links.len(), usize::from(id == DAVID), "only your own card offers Set a status");
+    if id == DAVID {
+        assert_eq!(dom.attr(status_links[0], "href"), Some(campfire_routes::edit_user_status().as_str()));
+        assert_eq!(dom.attr(status_links[0], "data-turbo-frame"), None, "status link uses normal navigation");
+    }
+    assert_http_fragment(
+        &reply.text(),
+        case["html"].as_str().unwrap(),
+        "turbo-frame",
+        "id",
+        "user_card",
+    );
     assert_bytes(name, &actual, case["html"].as_str().unwrap());
 }
 
@@ -210,6 +286,15 @@ async fn directories_match_complete_rails_body_and_starred_order() {
                 .unwrap()
         });
         assert_bytes("directory", &actual, case["html"].as_str().unwrap());
+        let reply = app.david().get("/users").await;
+        assert_eq!(reply.status, StatusCode::OK);
+        assert_http_fragment(
+            &reply.text(),
+            case["html"].as_str().unwrap(),
+            "ul",
+            "class",
+            "people-directory",
+        );
     }
 }
 
@@ -220,8 +305,8 @@ async fn cards_require_sign_in_and_unknown_people_are_not_found() {
         app.anonymous()
             .get(&campfire_routes::user_card(JASON))
             .await
-            .status,
-        StatusCode::FOUND
+            .location(),
+        Some("http://campfire.test/session/new")
     );
     assert_eq!(
         app.david()
@@ -235,9 +320,11 @@ async fn cards_require_sign_in_and_unknown_people_are_not_found() {
 #[tokio::test]
 async fn directory_requires_sign_in_and_excludes_the_viewer() {
     let app = TestApp::boot().await.expect("seed required");
+    let anonymous = app.anonymous().get("/users").await;
+    assert_eq!(anonymous.status, StatusCode::FOUND);
     assert_eq!(
-        app.anonymous().get("/users").await.status,
-        StatusCode::FOUND
+        anonymous.location(),
+        Some("http://campfire.test/session/new")
     );
     let reply = app.david().get("/users").await;
     assert_eq!(reply.status, StatusCode::OK);
@@ -268,11 +355,47 @@ async fn index_lists_active_members_with_presence_and_selection() {
     let reply = app.david().get("/users").await;
     assert_eq!(reply.status, StatusCode::OK);
     let html = reply.text();
+    let mut dom = campfire_richtext::dom::Dom::new();
+    let root = dom.parse_fragment(&html).unwrap();
+    for (id, expected) in [(JASON, 1), (DAVID, 0), (inactive, 0)] {
+        let id = id.to_string();
+        let checkboxes = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|node| {
+                dom.name(*node) == "input"
+                    && dom.attr(*node, "data-multi-select-target") == Some("checkbox")
+                    && dom.attr(*node, "data-user-id") == Some(id.as_str())
+            })
+            .count();
+        assert_eq!(checkboxes, expected, "original selection selector for {id}");
+    }
+    let bars = dom
+        .descendants(root)
+        .into_iter()
+        .filter(|node| dom.attr(*node, "data-multi-select-target") == Some("bar"))
+        .count();
+    assert_eq!(bars, 1);
     assert!(html.contains(&format!("id=\"select_user_{JASON}\"")));
     assert!(!html.contains(&format!("id=\"select_user_{inactive}\"")));
-    assert!(html.contains("people-directory__presence\">Online"));
-    assert!(html.contains("profile-card__badge\">Agent"));
-    assert!(html.contains("data-multi-select-target=\"bar\""));
+    let has_class = |node, class: &str| dom.attr(node, "class").is_some_and(|value| value.split_ascii_whitespace().any(|value| value == class));
+    let nodes = dom.descendants(root);
+    assert!(nodes.iter().any(|node| has_class(*node, "people-directory__presence") && dom.text_content(*node).trim() == "Online"), "original Online presence selector");
+    assert!(nodes.iter().any(|node| has_class(*node, "profile-card__badge") && dom.text_content(*node).trim() == "Agent"), "original Agent badge selector");
+    assert!(nodes.iter().filter(|node| has_class(**node, "people-directory__row")).count() >= 2, "original minimum two directory row elements");
+    assert!(!html.contains(&format!("id=\"select_user_{DAVID}\"")));
+    assert!(!nodes.iter().any(|node| has_class(*node, "people-directory__row") && dom.text_content(*node).contains("JZ")), "inactive JZ has no directory row");
+    // users_controller_test.rb:200 excludes every JZ input, independently of
+    // whether it participates in the multi-select controller.
+    let inactive_id = inactive.to_string();
+    let inactive_inputs = nodes
+        .iter()
+        .filter(|node| {
+            dom.name(**node) == "input"
+                && dom.attr(**node, "data-user-id") == Some(inactive_id.as_str())
+        })
+        .count();
+    assert_eq!(inactive_inputs, 0, "original inactive-user input selector");
 }
 
 #[tokio::test]
@@ -282,12 +405,48 @@ async fn profile_message_buttons_carry_the_accessible_name() {
         let reply = app.david().get(&campfire_routes::user(id)).await;
         assert_eq!(reply.status, StatusCode::OK);
         let html = reply.text();
-        assert!(html.contains(&format!("aria-label=\"Message {name}\"")));
-        for image in html.split("<img").skip(1) {
-            assert!(!image.split('>').next().unwrap().contains("aria-label="));
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(&html).unwrap();
+        let label = format!("Message {name}");
+        let buttons = dom
+            .descendants(root)
+            .into_iter()
+            .filter(|node| {
+                dom.name(*node) == "button" && dom.attr(*node, "aria-label") == Some(label.as_str())
+            })
+            .count();
+        assert_eq!(buttons, 1, "exact Message button selector");
+        if id == KEVIN {
+            assert!(
+                dom.descendants(root)
+                    .into_iter()
+                    .any(|node| dom.name(node) == "button"
+                        && dom.text_content(node).trim() == "Ban Kevin"),
+                "original Ban Kevin button selector"
+            );
         }
+        assert_eq!(
+            html.matches(&format!("aria-label=\"Message {name}\""))
+                .count(),
+            1
+        );
+        if id == KEVIN {
+            assert!(html.contains("Ban Kevin"));
+        }
+        assert_eq!(dom.descendants(root).into_iter().filter(|node| {
+            dom.name(*node) == "img" && dom.attr(*node, "aria-label").is_some()
+        }).count(), 0, "original img[aria-label] selector");
     }
 }
 
 #[tokio::test]
-async fn review_card_markup_matches_rails() {card_case("review_markup").await;}
+async fn review_card_markup_matches_rails() {
+    card_case("review_markup").await;
+}
+
+#[tokio::test]
+async fn own_public_profile_matches_the_original_show_request() {
+    let app = TestApp::boot_frozen().await.expect("seed required");
+    let reply = app.david().get(&campfire_routes::user(DAVID)).await;
+    assert_eq!(reply.status, StatusCode::OK, "original own-user GET");
+}

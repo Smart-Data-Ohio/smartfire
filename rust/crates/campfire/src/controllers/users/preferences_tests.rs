@@ -115,14 +115,19 @@ async fn preference_writes_require_session_and_csrf_and_scope_to_current_user() 
     app.db().write(|tx| { tx.conn().execute("UPDATE users SET tour_completed_at=NULL,time_zone=NULL,time_zone_explicit=0 WHERE id IN (?,?)", [DAVID, JASON])?; Ok(()) }).await.unwrap();
     let mut member = app.sign_in(JASON).await;
     let response = member
-        .write(Req::new(Method::PATCH, &format!("/users/{DAVID}/time_zone")).form(&[
-            ("time_zone", "America/New_York"),
-            ("user_id", &DAVID.to_string()),
-        ]))
+        .write(
+            Req::new(Method::PATCH, &format!("/users/{DAVID}/time_zone")).form(&[
+                ("time_zone", "America/New_York"),
+                ("user_id", &DAVID.to_string()),
+            ]),
+        )
         .await;
     assert_eq!(response.status, StatusCode::OK);
     let response = member
-        .write(Req::new(Method::PATCH, &format!("/users/{DAVID}/tour")).form(&[("user_id", &DAVID.to_string())]))
+        .write(
+            Req::new(Method::PATCH, &format!("/users/{DAVID}/tour"))
+                .form(&[("user_id", &DAVID.to_string())]),
+        )
         .await;
     assert_eq!(response.status, StatusCode::NO_CONTENT);
     app.db()
@@ -199,6 +204,25 @@ async fn tour_touch_matches_rails_and_refreshes_on_repeated_completion() {
 
 #[tokio::test]
 async fn tour_stamp_controls_the_room_layout_auto_start() {
+    let assert_shell = |body: &str, auto_start: &str| {
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(body).unwrap();
+        let nodes = dom.descendants(root);
+        let tours = nodes
+            .iter()
+            .filter(|id| {
+                dom.attr(**id, "id") == Some("tour")
+                    && dom.attr(**id, "data-controller") == Some("tour")
+                    && dom.attr(**id, "data-tour-auto-start-value") == Some(auto_start)
+            })
+            .count();
+        assert_eq!(tours, 1, "exact original tour shell selector");
+        let help = nodes
+            .iter()
+            .filter(|id| dom.attr(**id, "id") == Some("help-menu-button"))
+            .count();
+        assert_eq!(help, 1, "exact Help control cardinality");
+    };
     let Some(app) = TestApp::boot().await else {
         return;
     };
@@ -215,6 +239,7 @@ async fn tour_stamp_controls_the_room_layout_auto_start() {
     let mut browser = app.david();
     let before = browser.get("/rooms/486777696").await;
     assert_eq!(before.status, StatusCode::OK);
+    assert_shell(&before.text(), "true");
     assert!(
         before
             .text()
@@ -229,6 +254,9 @@ async fn tour_stamp_controls_the_room_layout_auto_start() {
         StatusCode::NO_CONTENT
     );
     let after = browser.get("/rooms/486777696").await;
+    assert_eq!(after.status, StatusCode::OK);
+    assert_shell(&after.text(), "false");
+    assert!(after.text().contains("id=\"help-menu-button\""));
     assert!(
         after
             .text()

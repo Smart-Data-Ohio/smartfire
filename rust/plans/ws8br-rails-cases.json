@@ -1,5 +1,5 @@
 {
-  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "reference": "d7c7de92",
   "note": "Source declarations are distinct from actual executions. Rails reference passes are recorded per file from the supplied raw log; they do not imply Rust case completion. Named Rust ports require their own cargo receipts.",
   "files": [
     {
@@ -1267,117 +1267,548 @@
       "declared_cases": [
         {
           "name": "about renders signed-out with stable title and navigation",
-          "line": 21,
+          "line": 22,
           "cutover_id": "P0089",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "about renders signed-out with stable title and navigation",
+                "line": 21,
+                "cutover_id": "P0089",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 21,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0089",
+          "assertion_count": 8,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "privacy renders signed-out with Google disclosures",
-          "line": 34,
+          "line": 35,
           "cutover_id": "P0090",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "privacy renders signed-out with Google disclosures",
+                "line": 34,
+                "cutover_id": "P0090",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 34,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0090",
+          "assertion_count": 8,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "privacy discloses picker-only Drive previews",
-          "line": 47,
+          "line": 48,
           "cutover_id": "P0091",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "privacy discloses picker-only Drive previews",
+                "line": 47,
+                "cutover_id": "P0091",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 47,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0091",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "terms renders signed-out with software-license framing",
-          "line": 57,
+          "line": 58,
           "cutover_id": "P0092",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "terms renders signed-out with software-license framing",
+                "line": 57,
+                "cutover_id": "P0092",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 57,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0092",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "public pages never redirect to sign-in and set no session cookie",
-          "line": 67,
+          "line": 68,
           "cutover_id": "P0093",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "public pages never redirect to sign-in and set no session cookie",
+                "line": 67,
+                "cutover_id": "P0093",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 67,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0093",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "public pages ignore the modern-browser gate, even for crawlers",
-          "line": 76,
+          "line": 77,
           "cutover_id": "P0094",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "public pages ignore the modern-browser gate, even for crawlers",
+                "line": 76,
+                "cutover_id": "P0094",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 76,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0094",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "public pages render without OAuth configured",
-          "line": 87,
+          "line": 88,
           "cutover_id": "P0095",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "public pages render without OAuth configured",
+                "line": 87,
+                "cutover_id": "P0095",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 87,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0095",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "public pages disclose no private state, credentials, or scripts",
-          "line": 97,
+          "line": 98,
           "cutover_id": "P0096",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "public pages disclose no private state, credentials, or scripts",
+                "line": 97,
+                "cutover_id": "P0096",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 97,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_pages_bypass_authentication_browser_and_private_state"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0096",
+          "assertion_count": 12,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "public pages allow zoom and honor color schemes",
-          "line": 115,
+          "line": 116,
           "cutover_id": "P0097",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "public pages allow zoom and honor color schemes",
+                "line": 115,
+                "cutover_id": "P0097",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 115,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0097",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "non-HTML formats expose nothing",
-          "line": 123,
+          "line": 124,
           "cutover_id": "P0098",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "non-HTML formats expose nothing",
+                "line": 123,
+                "cutover_id": "P0098",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 123,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_pages_are_html_only_and_allow_wildcard_accept"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0098",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "wildcard Accept header receives the HTML page",
-          "line": 137,
+          "line": 138,
           "cutover_id": "P0099",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "wildcard Accept header receives the HTML page",
+                "line": 137,
+                "cutover_id": "P0099",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 137,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_pages_are_html_only_and_allow_wildcard_accept"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0099",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "HEAD requests succeed",
-          "line": 146,
+          "line": 147,
           "cutover_id": "P0100",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "HEAD requests succeed",
+                "line": 146,
+                "cutover_id": "P0100",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 146,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_pages_accept_anonymous_head_without_a_body"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0100",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "unconfigured installation uses generic wording without env names",
-          "line": 154,
+          "line": 155,
           "cutover_id": "P0101",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "unconfigured installation uses generic wording without env names",
+                "line": 154,
+                "cutover_id": "P0101",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 154,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0101",
+          "assertion_count": 6,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "configured installation names the operator and contact",
-          "line": 165,
+          "line": 166,
           "cutover_id": "P0102",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "configured installation names the operator and contact",
+                "line": 165,
+                "cutover_id": "P0102",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "configured installation names the operator and contact",
+                "line": 165,
+                "cutover_id": "P0102",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
+                "assertion_count": 5
+              },
+              "reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 165,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0102",
+          "assertion_count": 5,
+          "cutover_reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "operator name is escaped and malicious contact email is dropped",
-          "line": 180,
+          "line": 181,
           "cutover_id": "P0103",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "operator name is escaped and malicious contact email is dropped",
+                "line": 180,
+                "cutover_id": "P0103",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 180,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0103",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "public pages open in a new tab so following them never disturbs the current tab",
-          "line": 193,
+          "line": 194,
           "cutover_id": "P0104",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "public pages open in a new tab so following them never disturbs the current tab",
+                "line": 193,
+                "cutover_id": "P0104",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 193,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0104",
+          "assertion_count": 6,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "sign-in page links the public pages without OAuth",
-          "line": 204,
+          "line": 205,
           "cutover_id": "P0105",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "sign-in page links the public pages without OAuth",
+                "line": 204,
+                "cutover_id": "P0105",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 204,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::tests::unconfigured_sign_in_links_all_public_pages_in_new_tabs"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0105",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "sign-in page keeps public links beside Google sign-in when configured",
-          "line": 213,
+          "line": 214,
           "cutover_id": "P0106",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "sign-in page keeps public links beside Google sign-in when configured",
+                "line": 213,
+                "cutover_id": "P0106",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 213,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::public_pages::sign_in_google_tests::configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0106",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 18,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 18 active original declarations; 0 geometry-only excluded",
+      "status": "partial-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -1393,9 +1824,17 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 18 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0089, P0090, P0091, P0092, P0093, P0094, P0095, P0096, P0097, P0098, P0099, P0100, P0101, P0102, P0103, P0104, P0105, P0106; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/first_runs_controller_test.rb",
@@ -1674,129 +2113,589 @@
       "declared_cases": [
         {
           "name": "show",
-          "line": 7,
+          "line": 8,
           "cutover_id": "P0113",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "show",
+                "line": 7,
+                "cutover_id": "P0113",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 7,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::own_public_profile_matches_the_original_show_request"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0113",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile message buttons carry the accessible name",
-          "line": 13,
+          "line": 14,
           "cutover_id": "P0114",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile message buttons carry the accessible name",
+                "line": 13,
+                "cutover_id": "P0114",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 13,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::profile_message_buttons_carry_the_accessible_name"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0114",
+          "assertion_count": 7,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile links to capability grants for admins",
-          "line": 28,
+          "line": 29,
           "cutover_id": "P0115",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile links to capability grants for admins",
+                "line": 28,
+                "cutover_id": "P0115",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 28,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::admin_grants"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0115",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile links to capability grants for the agent owner",
-          "line": 37,
+          "line": 38,
           "cutover_id": "P0116",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile links to capability grants for the agent owner",
+                "line": 37,
+                "cutover_id": "P0116",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 37,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::owner_grants"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0116",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile hides capability grants from anyone else",
-          "line": 47,
+          "line": 48,
           "cutover_id": "P0117",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile hides capability grants from anyone else",
+                "line": 47,
+                "cutover_id": "P0117",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 47,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::peer_hides_grants"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0117",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile shows agent identity, status, rooms, and grants to a member",
-          "line": 56,
+          "line": 57,
           "cutover_id": "P0118",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile shows agent identity, status, rooms, and grants to a member",
+                "line": 56,
+                "cutover_id": "P0118",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 56,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::original_identity_and_two_room_visibility_match_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0118",
+          "assertion_count": 13,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile shows the 24-hour activity line to the owner",
-          "line": 80,
+          "line": 81,
           "cutover_id": "P0119",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile shows the 24-hour activity line to the owner",
+                "line": 80,
+                "cutover_id": "P0119",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 80,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::owner_activity"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0119",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile shows the 24-hour activity line to an admin",
-          "line": 93,
+          "line": 94,
           "cutover_id": "P0120",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile shows the 24-hour activity line to an admin",
+                "line": 93,
+                "cutover_id": "P0120",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 93,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::admin_activity"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0120",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile hides the 24-hour activity line from another member",
-          "line": 103,
+          "line": 104,
           "cutover_id": "P0121",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile hides the 24-hour activity line from another member",
+                "line": 103,
+                "cutover_id": "P0121",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 103,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::peer_hides_activity"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0121",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot profile hides rooms the viewer is not a member of",
-          "line": 112,
+          "line": 113,
           "cutover_id": "P0122",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot profile hides rooms the viewer is not a member of",
+                "line": 112,
+                "cutover_id": "P0122",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 112,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::original_nonmember_hides_both_rooms_match_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0122",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "suspended agent profile shows Suspended",
-          "line": 123,
+          "line": 124,
           "cutover_id": "P0123",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "suspended agent profile shows Suspended",
+                "line": 123,
+                "cutover_id": "P0123",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 123,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::suspended"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0123",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "bot without an agent keeps the minimal profile",
-          "line": 133,
+          "line": 134,
           "cutover_id": "P0124",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "bot without an agent keeps the minimal profile",
+                "line": 133,
+                "cutover_id": "P0124",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 133,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::agent_profile_tests::minimal_bot"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0124",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "new",
-          "line": 145,
+          "line": 146,
           "cutover_id": "P0125",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "new",
+                "line": 145,
+                "cutover_id": "P0125",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 145,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::joining_tests::join_page_matches_complete_rails_body_and_access_checks"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0125",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "new does not allow a signed in user",
-          "line": 150,
+          "line": 151,
           "cutover_id": "P0126",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "new does not allow a signed in user",
+                "line": 150,
+                "cutover_id": "P0126",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 150,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::joining_tests::join_page_matches_complete_rails_body_and_access_checks"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0126",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "new requires a join code",
-          "line": 157,
+          "line": 158,
           "cutover_id": "P0127",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "new requires a join code",
+                "line": 157,
+                "cutover_id": "P0127",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 157,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::joining_tests::join_page_matches_complete_rails_body_and_access_checks"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0127",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "create",
-          "line": 162,
+          "line": 163,
           "cutover_id": "P0128",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "create",
+                "line": 162,
+                "cutover_id": "P0128",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 162,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::joining_tests::join_writes_match_rails_duplicate_scope_open_rooms_and_sessions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0128",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "creating a new user with an existing email address will redirect to login screen",
-          "line": 174,
+          "line": 175,
           "cutover_id": "P0129",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "creating a new user with an existing email address will redirect to login screen",
+                "line": 174,
+                "cutover_id": "P0129",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 174,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::joining_tests::join_writes_match_rails_duplicate_scope_open_rooms_and_sessions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0129",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "index lists active members with presence and selection",
-          "line": 182,
+          "line": 183,
           "cutover_id": "P0130",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "index lists active members with presence and selection",
+                "line": 182,
+                "cutover_id": "P0130",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 182,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::index_lists_active_members_with_presence_and_selection"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0130",
+          "assertion_count": 9,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "index lists starred people first with a star marker",
-          "line": 203,
+          "line": 204,
           "cutover_id": "P0131",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "index lists starred people first with a star marker",
+                "line": 203,
+                "cutover_id": "P0131",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 203,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::directories_match_complete_rails_body_and_starred_order"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0131",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "index requires sign-in",
-          "line": 220,
+          "line": 221,
           "cutover_id": "P0132",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "index requires sign-in",
+                "line": 220,
+                "cutover_id": "P0132",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 220,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::directory_requires_sign_in_and_excludes_the_viewer"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0132",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 20,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 20 active original declarations; 0 geometry-only excluded",
+      "status": "ported-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -1812,15 +2711,23 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 20 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0113, P0114, P0115, P0116, P0117, P0118, P0119, P0120, P0121, P0122, P0123, P0124, P0125, P0126, P0127, P0128, P0129, P0130, P0131, P0132; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
       "owner": "WS8br",
       "reference_file_present": true,
-      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
+      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
       "declared_cases": [
         {
           "name": "show",
@@ -1830,25 +2737,25 @@
         },
         {
           "name": "unread directs",
-          "line": 36,
+          "line": 29,
           "rust_test": "controllers::rooms::sidebars_rails_cases::unread_directs",
           "rust_result": "passed"
         },
         {
           "name": "unread other",
-          "line": 43,
+          "line": 36,
           "rust_test": "controllers::rooms::sidebars_rails_cases::unread_other",
           "rust_result": "passed"
         },
         {
           "name": "quiet rows keep the room name as their exact link text",
-          "line": 51,
+          "line": 44,
           "rust_test": "controllers::rooms::sidebars_rails_cases::quiet_rows_keep_the_room_name_as_their_exact_link_text",
           "rust_result": "passed"
         },
         {
           "name": "channel row shows the live huddle stack with names and count",
-          "line": 61,
+          "line": 54,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1868,7 +2775,7 @@
         },
         {
           "name": "board row shows the live huddle stack with names and count",
-          "line": 80,
+          "line": 73,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1888,7 +2795,7 @@
         },
         {
           "name": "direct row shows the live huddle stack when the peer is in the call",
-          "line": 99,
+          "line": 92,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1908,7 +2815,7 @@
         },
         {
           "name": "quiet rows keep an empty stack target with no visible presence",
-          "line": 113,
+          "line": 106,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1928,7 +2835,7 @@
         },
         {
           "name": "direct row re-renders when a participant joins",
-          "line": 126,
+          "line": 119,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1948,7 +2855,7 @@
         },
         {
           "name": "group direct rooms render member names and a huddle stack",
-          "line": 154,
+          "line": 147,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1968,13 +2875,13 @@
         },
         {
           "name": "direct rows keep avatar card triggers as siblings of the room link",
-          "line": 168,
+          "line": 161,
           "rust_test": "controllers::rooms::sidebars_rails_cases::direct_rows_keep_avatar_card_triggers_as_siblings_of_the_room_link",
           "rust_result": "passed"
         },
         {
           "name": "no channel or DM stacks without huddle configuration",
-          "line": 188,
+          "line": 181,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -1994,7 +2901,7 @@
         },
         {
           "name": "sidebar query count does not grow with quiet channels, DMs, boards, and stages",
-          "line": 200,
+          "line": 193,
           "rust_result": "acceptance-receipt-pending",
           "deferred_to": "WS8br cutover named receipt; WS13 source implementation is already merged",
           "history": [
@@ -2014,7 +2921,7 @@
         },
         {
           "name": "sidebar query count does not grow with group DMs, named or not",
-          "line": 222,
+          "line": 215,
           "rust_test": "controllers::rooms::sidebars_rails_cases::sidebar_query_count_does_not_grow_with_group_dms_named_or_not",
           "rust_result": "passed"
         }
@@ -2061,37 +2968,147 @@
           "name": "update stamps the tour as completed",
           "line": 4,
           "cutover_id": "P0141",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update stamps the tour as completed",
+                "line": 4,
+                "cutover_id": "P0141",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0141",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "update is idempotent",
-          "line": 13,
+          "line": 14,
           "cutover_id": "P0142",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update is idempotent",
+                "line": 13,
+                "cutover_id": "P0142",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 13,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::tour_touch_matches_rails_and_refreshes_on_repeated_completion"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0142",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "update requires sign-in",
-          "line": 26,
+          "line": 27,
           "cutover_id": "P0143",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update requires sign-in",
+                "line": 26,
+                "cutover_id": "P0143",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 26,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::preference_writes_require_session_and_csrf_and_scope_to_current_user"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0143",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "room pages carry the tour shell for members who never completed it",
-          "line": 32,
+          "line": 33,
           "cutover_id": "P0144",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "room pages carry the tour shell for members who never completed it",
+                "line": 32,
+                "cutover_id": "P0144",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 32,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0144",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "room pages skip auto-start once the tour completed",
-          "line": 43,
+          "line": 44,
           "cutover_id": "P0145",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "room pages skip auto-start once the tour completed",
+                "line": 43,
+                "cutover_id": "P0145",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 43,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::tour_stamp_controls_the_room_layout_auto_start"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0145",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 5 active original declarations; 0 geometry-only excluded",
+      "status": "ported-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -2107,9 +3124,17 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 5 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0141, P0142, P0143, P0144, P0145; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/users/profiles_controller_test.rb",
@@ -2119,351 +3144,1780 @@
       "declared_cases": [
         {
           "name": "show",
-          "line": 9,
+          "line": 10,
           "cutover_id": "P0146",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "show",
+                "line": 9,
+                "cutover_id": "P0146",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 9,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_page_tests::profile_route_renders_owner_sections_and_ws9_security_directly"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0146",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "show gives the Edge install instructions to a browser identifying only as Edge",
-          "line": 15,
+          "line": 16,
           "cutover_id": "P0147",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "show gives the Edge install instructions to a browser identifying only as Edge",
+                "line": 15,
+                "cutover_id": "P0147",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 15,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_page_tests::edge_only_user_agent_gets_rails_edge_install_instructions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0147",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "update",
-          "line": 24,
+          "line": 25,
           "cutover_id": "P0148",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update",
+                "line": 24,
+                "cutover_id": "P0148",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 24,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0148",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "updates are limited to the current user",
-          "line": 33,
+          "line": 34,
           "cutover_id": "P0149",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "updates are limited to the current user",
+                "line": 33,
+                "cutover_id": "P0149",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 33,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0149",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile shows Google Calendar as not configured without credentials",
-          "line": 39,
+          "line": 40,
           "cutover_id": "P0150",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows Google Calendar as not configured without credentials",
+                "line": 39,
+                "cutover_id": "P0150",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 39,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0150",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile offers a connect button without an account",
-          "line": 48,
+          "line": 49,
           "cutover_id": "P0151",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile offers a connect button without an account",
+                "line": 48,
+                "cutover_id": "P0151",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 48,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::missing"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0151",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile links to connect for meeting status without an account",
-          "line": 55,
+          "line": 56,
           "cutover_id": "P0152",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile links to connect for meeting status without an account",
+                "line": 55,
+                "cutover_id": "P0152",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 55,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::missing"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0152",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile offers the meeting toggle for a connected account",
-          "line": 63,
+          "line": 64,
           "cutover_id": "P0153",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile offers the meeting toggle for a connected account",
+                "line": 63,
+                "cutover_id": "P0153",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 63,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_calendar"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0153",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile shows the meeting fetch notice when a refresh failed",
-          "line": 73,
+          "line": 74,
           "cutover_id": "P0154",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows the meeting fetch notice when a refresh failed",
+                "line": 73,
+                "cutover_id": "P0154",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows the meeting fetch notice when a refresh failed",
+                "line": 73,
+                "cutover_id": "P0154",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_sections_tests::live_status_sections_show_cache_errors_disconnects_and_manual_return_date"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
+                "assertion_count": 2
+              },
+              "reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 73,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::profile_failed_calendar_refresh_keeps_the_original_notice"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0154",
+          "assertion_count": 2,
+          "cutover_reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile asks to reconnect for meeting status left on after disconnect",
-          "line": 85,
+          "line": 86,
           "cutover_id": "P0155",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile asks to reconnect for meeting status left on after disconnect",
+                "line": 85,
+                "cutover_id": "P0155",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 85,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::profile_missing_google_account_keeps_the_meeting_reconnect_link"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0155",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile lists the quiet-during-meetings switch",
-          "line": 94,
+          "line": 95,
           "cutover_id": "P0156",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile lists the quiet-during-meetings switch",
+                "line": 94,
+                "cutover_id": "P0156",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 94,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0156",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends meeting windows for the live sound gate",
-          "line": 102,
+          "line": 103,
           "cutover_id": "P0157",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends meeting windows for the live sound gate",
+                "line": 102,
+                "cutover_id": "P0157",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 102,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_meeting_windows_include_all_cached_pairs"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0157",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends future meeting windows before the meeting starts",
-          "line": 116,
+          "line": 117,
           "cutover_id": "P0158",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends future meeting windows before the meeting starts",
+                "line": 116,
+                "cutover_id": "P0158",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 116,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_future_meeting_windows_before_start"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0158",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends no meeting windows without cached intervals",
-          "line": 127,
+          "line": 128,
           "cutover_id": "P0159",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends no meeting windows without cached intervals",
+                "line": 127,
+                "cutover_id": "P0159",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 127,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_empty_or_missing_meeting_cache"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0159",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends no meeting windows when meeting status itself is off",
-          "line": 137,
+          "line": 138,
           "cutover_id": "P0160",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends no meeting windows when meeting status itself is off",
+                "line": 137,
+                "cutover_id": "P0160",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 137,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_meeting_status_off_sends_no_windows"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0160",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends OOO windows for the live sound gate",
-          "line": 148,
+          "line": 149,
           "cutover_id": "P0161",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends OOO windows for the live sound gate",
+                "line": 148,
+                "cutover_id": "P0161",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 148,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_manual_ooo_windows"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0161",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends future calendar OOO windows before the OOO starts",
-          "line": 157,
+          "line": 158,
           "cutover_id": "P0162",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends future calendar OOO windows before the OOO starts",
+                "line": 157,
+                "cutover_id": "P0162",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 157,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_future_calendar_ooo_windows"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0162",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends no OOO windows when keeping notifications while out",
-          "line": 168,
+          "line": 169,
           "cutover_id": "P0163",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends no OOO windows when keeping notifications while out",
+                "line": 168,
+                "cutover_id": "P0163",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 168,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_ooo_notifications_kept_sends_no_windows"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0163",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout leaves sounds alone for meetings when quiet-during-meetings is off",
-          "line": 177,
+          "line": 178,
           "cutover_id": "P0164",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout leaves sounds alone for meetings when quiet-during-meetings is off",
+                "line": 177,
+                "cutover_id": "P0164",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 177,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_meeting_quiet_off_sends_no_windows"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0164",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile shows the connected account with a disconnect button",
-          "line": 189,
+          "line": 190,
           "cutover_id": "P0165",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows the connected account with a disconnect button",
+                "line": 189,
+                "cutover_id": "P0165",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows the connected account with a disconnect button",
+                "line": 189,
+                "cutover_id": "P0165",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+                  "controllers::users::profile_sections_tests::calendar_only"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
+                "assertion_count": 2
+              },
+              "reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 189,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_calendar"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0165",
+          "assertion_count": 2,
+          "cutover_reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile offers a reconnect when Google rejected the connection",
-          "line": 198,
+          "line": 199,
           "cutover_id": "P0166",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile offers a reconnect when Google rejected the connection",
+                "line": 198,
+                "cutover_id": "P0166",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 198,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_rejected_calendar"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0166",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile offers Drive previews for a connected account without the Drive scope",
-          "line": 208,
+          "line": 209,
           "cutover_id": "P0167",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile offers Drive previews for a connected account without the Drive scope",
+                "line": 208,
+                "cutover_id": "P0167",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 208,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_calendar"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0167",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile shows Drive previews as enabled when the account has the Drive scope",
-          "line": 220,
+          "line": 221,
           "cutover_id": "P0168",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows Drive previews as enabled when the account has the Drive scope",
+                "line": 220,
+                "cutover_id": "P0168",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 220,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_calendar_drive"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0168",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile offers Drive previews again for the retired metadata grant",
-          "line": 229,
+          "line": 230,
           "cutover_id": "P0169",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile offers Drive previews again for the retired metadata grant",
+                "line": 229,
+                "cutover_id": "P0169",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 229,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_retired_metadata"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0169",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile shows no Drive row when Google is not configured",
-          "line": 238,
+          "line": 239,
           "cutover_id": "P0170",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows no Drive row when Google is not configured",
+                "line": 238,
+                "cutover_id": "P0170",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 238,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0170",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile asks to reconnect when the grant lacks the calendar scope",
-          "line": 247,
+          "line": 248,
           "cutover_id": "P0171",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile asks to reconnect when the grant lacks the calendar scope",
+                "line": 247,
+                "cutover_id": "P0171",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 247,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::profile_asks_to_reconnect_for_an_openid_email_only_grant"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0171",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile shows Disconnect for a partial grant with Drive still active",
-          "line": 258,
+          "line": 259,
           "cutover_id": "P0172",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile shows Disconnect for a partial grant with Drive still active",
+                "line": 258,
+                "cutover_id": "P0172",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 258,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_drive_only"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0172",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "reconnect preserves a granted Drive scope",
-          "line": 269,
+          "line": 270,
           "cutover_id": "P0173",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "reconnect preserves a granted Drive scope",
+                "line": 269,
+                "cutover_id": "P0173",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 269,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_rejected_calendar_drive"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0173",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "reconnect without Drive requests the calendar scope only",
-          "line": 280,
+          "line": 281,
           "cutover_id": "P0174",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "reconnect without Drive requests the calendar scope only",
+                "line": 280,
+                "cutover_id": "P0174",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 280,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_sections_tests::configured_calendar_profile_uses_real_account_metadata_and_forms",
+            "controllers::users::profile_sections_tests::original_rejected_calendar"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0174",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "layout carries the Drive previews meta tag only with the Drive scope",
-          "line": 290,
+          "line": 291,
           "cutover_id": "P0175",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "layout carries the Drive previews meta tag only with the Drive scope",
+                "line": 290,
+                "cutover_id": "P0175",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 290,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_drive_previews_uses_exact_scope"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0175",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "linking a github login strips and downcases it",
-          "line": 303,
+          "line": 304,
           "cutover_id": "P0176",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "linking a github login strips and downcases it",
+                "line": 303,
+                "cutover_id": "P0176",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "linking a github login strips and downcases it",
+                "line": 303,
+                "cutover_id": "P0176",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
+                "assertion_count": 2
+              },
+              "reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 303,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0176",
+          "assertion_count": 2,
+          "cutover_reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "a github login cannot be claimed by a second user",
-          "line": 310,
+          "line": 311,
           "cutover_id": "P0177",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "a github login cannot be claimed by a second user",
+                "line": 310,
+                "cutover_id": "P0177",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 310,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_duplicate_login_is_rejected"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0177",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile lists the notification switches with explanations",
-          "line": 320,
+          "line": 321,
           "cutover_id": "P0178",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile lists the notification switches with explanations",
+                "line": 320,
+                "cutover_id": "P0178",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 320,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0178",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile saves the notification switches",
-          "line": 331,
+          "line": 332,
           "cutover_id": "P0179",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile saves the notification switches",
+                "line": 331,
+                "cutover_id": "P0179",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 331,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_notification_switch_save_matches_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0179",
+          "assertion_count": 6,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile rejects non-boolean notification input",
-          "line": 349,
+          "line": 350,
           "cutover_id": "P0180",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile rejects non-boolean notification input",
+                "line": 349,
+                "cutover_id": "P0180",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 349,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_bad_notification_preserves_saved_state"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0180",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "DND switch reflects the effective state after a timed expiry",
-          "line": 356,
+          "line": 357,
           "cutover_id": "P0181",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "DND switch reflects the effective state after a timed expiry",
+                "line": 356,
+                "cutover_id": "P0181",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 356,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0181",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "DND switch stays on while a timer runs",
-          "line": 365,
+          "line": 366,
           "cutover_id": "P0182",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "DND switch stays on while a timer runs",
+                "line": 365,
+                "cutover_id": "P0182",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 365,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_page_tests::dnd_switch_tracks_expired_and_live_timers"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0182",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile lists the call settings with their defaults",
-          "line": 374,
+          "line": 375,
           "cutover_id": "P0183",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile lists the call settings with their defaults",
+                "line": 374,
+                "cutover_id": "P0183",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 374,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0183",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile saves the call settings",
-          "line": 382,
+          "line": 383,
           "cutover_id": "P0184",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile saves the call settings",
+                "line": 382,
+                "cutover_id": "P0184",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 382,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0184",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile rejects an unknown microphone mode",
-          "line": 391,
+          "line": 392,
           "cutover_id": "P0185",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile rejects an unknown microphone mode",
+                "line": 391,
+                "cutover_id": "P0185",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 391,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_bad_voice_preserves_saved_state"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0185",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "clearing a github login unlinks it",
-          "line": 398,
+          "line": 399,
           "cutover_id": "P0186",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "clearing a github login unlinks it",
+                "line": 398,
+                "cutover_id": "P0186",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "clearing a github login unlinks it",
+                "line": 398,
+                "cutover_id": "P0186",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
+                "assertion_count": 2
+              },
+              "reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 398,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0186",
+          "assertion_count": 2,
+          "cutover_reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "changing email requires the current password",
-          "line": 407,
+          "line": 408,
           "cutover_id": "P0187",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "changing email requires the current password",
+                "line": 407,
+                "cutover_id": "P0187",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 407,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0187",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "changing email with a wrong current password is refused",
-          "line": 416,
+          "line": 417,
           "cutover_id": "P0188",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "changing email with a wrong current password is refused",
+                "line": 416,
+                "cutover_id": "P0188",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 416,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0188",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "a new password cannot stand in for the current one",
-          "line": 424,
+          "line": 425,
           "cutover_id": "P0189",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "a new password cannot stand in for the current one",
+                "line": 424,
+                "cutover_id": "P0189",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 424,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0189",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "changing email with the current password records a self-change",
-          "line": 432,
+          "line": 433,
           "cutover_id": "P0190",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "changing email with the current password records a self-change",
+                "line": 432,
+                "cutover_id": "P0190",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "changing email with the current password records a self-change",
+                "line": 432,
+                "cutover_id": "P0190",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
+                "assertion_count": 3
+              },
+              "reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 432,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0190",
+          "assertion_count": 3,
+          "cutover_reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "other profile edits and case-only email edits need no password and record nothing",
-          "line": 442,
+          "line": 443,
           "cutover_id": "P0191",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "other profile edits and case-only email edits need no password and record nothing",
+                "line": 442,
+                "cutover_id": "P0191",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "other profile edits and case-only email edits need no password and record nothing",
+                "line": 442,
+                "cutover_id": "P0191",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
+                "assertion_count": 3
+              },
+              "reason": "The security corpus checks Submitted name rather than the original Dave name."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 442,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0191",
+          "assertion_count": 3,
+          "cutover_reason": "The security corpus checks Submitted name rather than the original Dave name.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "profile asks for the current password only when the account has one",
-          "line": 450,
+          "line": 451,
           "cutover_id": "P0192",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "profile asks for the current password only when the account has one",
+                "line": 450,
+                "cutover_id": "P0192",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 450,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails",
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0192",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "update saves the theme and time zone",
-          "line": 459,
+          "line": 460,
           "cutover_id": "P0193",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update saves the theme and time zone",
+                "line": 459,
+                "cutover_id": "P0193",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 459,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0193",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "update saves the text size",
-          "line": 467,
+          "line": 468,
           "cutover_id": "P0194",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update saves the text size",
+                "line": 467,
+                "cutover_id": "P0194",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 467,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_text_size_save_matches_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0194",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "an IANA time zone round-trips through the form",
-          "line": 474,
+          "line": 475,
           "cutover_id": "P0195",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "an IANA time zone round-trips through the form",
+                "line": 474,
+                "cutover_id": "P0195",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 474,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection",
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http",
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0195",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "a legacy Rails time zone name still shows selected",
-          "line": 489,
+          "line": 490,
           "cutover_id": "P0196",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "a legacy Rails time zone name still shows selected",
+                "line": 489,
+                "cutover_id": "P0196",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 489,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::cutover_receipts_tests::original_profile_defaults_and_zone_options_match_rails_through_http"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0196",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "choosing a time zone or Not set records an explicit choice",
-          "line": 497,
+          "line": 498,
           "cutover_id": "P0197",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "choosing a time zone or Not set records an explicit choice",
+                "line": 497,
+                "cutover_id": "P0197",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 497,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors",
+            "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0197",
+          "assertion_count": 6,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout marks an explicit Not set so the browser skips detection",
-          "line": 509,
+          "line": 510,
           "cutover_id": "P0198",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout marks an explicit Not set so the browser skips detection",
+                "line": 509,
+                "cutover_id": "P0198",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 509,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0198",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "update rejects an unknown theme or time zone",
-          "line": 517,
+          "line": 518,
           "cutover_id": "P0199",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update rejects an unknown theme or time zone",
+                "line": 517,
+                "cutover_id": "P0199",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 517,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0199",
+          "assertion_count": 6,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout carries the theme, time zone, and sound state",
-          "line": 532,
+          "line": 533,
           "cutover_id": "P0200",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout carries the theme, time zone, and sound state",
+                "line": 532,
+                "cutover_id": "P0200",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 532,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_theme_zone_and_manual_sound_state"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0200",
+          "assertion_count": 6,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout mutes sounds for the DND presence",
-          "line": 545,
+          "line": 546,
           "cutover_id": "P0201",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout mutes sounds for the DND presence",
+                "line": 545,
+                "cutover_id": "P0201",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 545,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_dnd_presence_mutes_sounds"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0201",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "the layout sends the quiet-hours window and zone for the sound gate",
-          "line": 554,
+          "line": 555,
           "cutover_id": "P0202",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "the layout sends the quiet-hours window and zone for the sound gate",
+                "line": 554,
+                "cutover_id": "P0202",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 554,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::layout_preferences_tests::layout_quiet_hours_window_and_zone"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0202",
+          "assertion_count": 6,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 57,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 57 active original declarations; 0 geometry-only excluded",
+      "status": "partial-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -2479,9 +4933,17 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 57 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0146, P0147, P0148, P0149, P0150, P0151, P0152, P0153, P0154, P0155, P0156, P0157, P0158, P0159, P0160, P0161, P0162, P0163, P0164, P0165, P0166, P0167, P0168, P0169, P0170, P0171, P0172, P0173, P0174, P0175, P0176, P0177, P0178, P0179, P0180, P0181, P0182, P0183, P0184, P0185, P0186, P0187, P0188, P0189, P0190, P0191, P0192, P0193, P0194, P0195, P0196, P0197, P0198, P0199, P0200, P0201, P0202; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/users/avatars_controller_test.rb",
@@ -2583,55 +5045,216 @@
       "file": "test/controllers/users/cards_controller_test.rb",
       "owner": "WS8br2",
       "reference_file_present": true,
-      "source_sha256": "fc4ad3fb952d1cac3601157e44715bb30c19f53f58a39b0e426bd08f370c5c94",
+      "source_sha256": "3d814cf70fe76721f69cf9437ab87ed081eef99361b4d26496ec93f7c4ee845c",
       "declared_cases": [
         {
           "name": "card shows identity, presence, role, and actions for a peer",
-          "line": 7,
+          "line": 8,
           "cutover_id": "P0207",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "card shows identity, presence, role, and actions for a peer",
+                "line": 7,
+                "cutover_id": "P0207",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 7,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::card_shows_identity_presence_role_and_actions_for_a_peer"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0207",
+          "assertion_count": 11,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "offline peers read offline",
-          "line": 26,
+          "line": 27,
           "cutover_id": "P0208",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "offline peers read offline",
+                "line": 25,
+                "cutover_id": "P0208",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 25,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::offline_peers_read_offline"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0208",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "card shows the presence dot and custom status badge",
-          "line": 33,
+          "line": 34,
           "cutover_id": "P0209",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "card shows the presence dot and custom status badge",
+                "line": 32,
+                "cutover_id": "P0209",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 32,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::card_shows_presence_dot_and_custom_status_badge"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0209",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "your own card offers editing your profile instead",
-          "line": 46,
+          "line": 47,
           "cutover_id": "P0210",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "your own card offers editing your profile instead",
+                "line": 45,
+                "cutover_id": "P0210",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 45,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::own_card_offers_editing_your_profile"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0210",
+          "assertion_count": 7,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "agents can be messaged but not called",
-          "line": 58,
+          "line": 59,
           "cutover_id": "P0211",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "agents can be messaged but not called",
+                "line": 56,
+                "cutover_id": "P0211",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 56,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::agents_can_be_messaged_but_not_called"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0211",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "inactive users show status without message actions",
-          "line": 70,
+          "line": 71,
           "cutover_id": "P0212",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "inactive users show status without message actions",
+                "line": 68,
+                "cutover_id": "P0212",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 68,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::inactive_users_show_status_without_message_actions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0212",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "card requires sign-in",
-          "line": 81,
+          "line": 82,
           "cutover_id": "P0213",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "card requires sign-in",
+                "line": 79,
+                "cutover_id": "P0213",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 79,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::people_tests::cards_require_sign_in_and_unknown_people_are_not_found"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0213",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 7,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 7 active original declarations; 0 geometry-only excluded",
+      "status": "ported-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -2647,9 +5270,17 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 7 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0207, P0208, P0209, P0210, P0211, P0212, P0213; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/users/bans_controller_test.rb",
@@ -2737,33 +5368,125 @@
       "declared_cases": [
         {
           "name": "detects the browser zone when none is saved",
-          "line": 7,
+          "line": 8,
           "cutover_id": "P0222",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "detects the browser zone when none is saved",
+                "line": 7,
+                "cutover_id": "P0222",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 7,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0222",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "a hand-picked zone wins over later detections",
-          "line": 15,
+          "line": 16,
           "cutover_id": "P0223",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "a hand-picked zone wins over later detections",
+                "line": 15,
+                "cutover_id": "P0223",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 15,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0223",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "detection never overwrites an explicit choice, not even Not set",
-          "line": 24,
+          "line": 25,
           "cutover_id": "P0224",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "detection never overwrites an explicit choice, not even Not set",
+                "line": 24,
+                "cutover_id": "P0224",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 24,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0224",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "an unknown zone is ignored",
-          "line": 33,
+          "line": 34,
           "cutover_id": "P0225",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "an unknown zone is ignored",
+                "line": 33,
+                "cutover_id": "P0225",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 33,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::users::preferences_tests::time_zone_detection_matches_rails_validation_and_saved_choice_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0225",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 4,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 4 active original declarations; 0 geometry-only excluded",
+      "status": "ported-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -2779,9 +5502,17 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 4 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0222, P0223, P0224, P0225; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/accounts_controller_test.rb",
@@ -2791,33 +5522,125 @@
       "declared_cases": [
         {
           "name": "edit",
-          "line": 7,
+          "line": 8,
           "cutover_id": "P0226",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "edit",
+                "line": 7,
+                "cutover_id": "P0226",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 7,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::accounts::view_tests::account_settings_body_navigation_and_footer_match_pinned_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0226",
+          "assertion_count": 1,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "edit groups administrators separately from members with a divider",
-          "line": 12,
+          "line": 13,
           "cutover_id": "P0227",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "edit groups administrators separately from members with a divider",
+                "line": 12,
+                "cutover_id": "P0227",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 12,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::accounts::view_tests::account_settings_body_navigation_and_footer_match_pinned_rails"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0227",
+          "assertion_count": 7,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "update",
-          "line": 44,
+          "line": 45,
           "cutover_id": "P0228",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "update",
+                "line": 44,
+                "cutover_id": "P0228",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 44,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::accounts::mutation_tests::account_mutations_and_audits_match_pinned_rails_http_vectors"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0228",
+          "assertion_count": 3,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "non-admins cannot update",
-          "line": 53,
+          "line": 54,
           "cutover_id": "P0229",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "non-admins cannot update",
+                "line": 53,
+                "cutover_id": "P0229",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 53,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::accounts::mutation_tests::account_and_ban_mutations_authorize_before_writes_and_audits"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0229",
+          "assertion_count": 2,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 4,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 4 active original declarations; 0 geometry-only excluded",
+      "status": "ported-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -2833,9 +5656,17 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 4 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0226, P0227, P0228, P0229; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/accounts/users_controller_test.rb",
@@ -3309,37 +6140,164 @@
           "name": "service worker serves as JavaScript with the fetch and notification handlers",
           "line": 4,
           "cutover_id": "P0272",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "service worker serves as JavaScript with the fetch and notification handlers",
+                "line": 4,
+                "cutover_id": "P0272",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0272",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "service worker caches static assets only",
-          "line": 15,
+          "line": 16,
           "cutover_id": "P0273",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "service worker caches static assets only",
+                "line": 15,
+                "cutover_id": "P0273",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 15,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0273",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "notification clicks focus an existing window before opening a new one",
-          "line": 29,
+          "line": 30,
           "cutover_id": "P0274",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "notification clicks focus an existing window before opening a new one",
+                "line": 29,
+                "cutover_id": "P0274",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 29,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0274",
+          "assertion_count": 4,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "offline shell renders signed-out with reconnect behavior",
-          "line": 40,
+          "line": 41,
           "cutover_id": "P0275",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "offline shell renders signed-out with reconnect behavior",
+                "line": 40,
+                "cutover_id": "P0275",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 40,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::pwa::tests::pwa_http_bodies_match_rails_before_and_after_first_run"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0275",
+          "assertion_count": 5,
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         },
         {
           "name": "service worker fetch and notification logic",
-          "line": 50,
+          "line": 51,
           "cutover_id": "P0276",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "service worker fetch and notification logic",
+                "line": 50,
+                "cutover_id": "P0276",
+                "cutover_disposition": "acceptance-receipt-pending"
+              }
+            },
+            {
+              "date": "2026-10-04",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+              "previous": {
+                "name": "service worker fetch and notification logic",
+                "line": 50,
+                "cutover_id": "P0276",
+                "cutover_disposition": "ported-current-assertion-receipt",
+                "rust_tests": [
+                  "controllers::pwa::tests::ws17_service_worker_is_served_byte_identical_to_rails"
+                ],
+                "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
+                "assertion_count": 2
+              },
+              "reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output."
+            },
+            {
+              "reference": "d7c7de92",
+              "source_line": 50,
+              "note": "Historical declaration coordinate before current-pin assertion audit."
+            }
+          ],
+          "rust_tests": [
+            "controllers::pwa::tests::original_service_worker_logic_checks_the_real_http_script"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json#P0276",
+          "assertion_count": 2,
+          "cutover_reason": "The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output.",
+          "assertion_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 5 active original declarations; 0 geometry-only excluded",
+      "status": "partial-current-assertion-receipts",
       "history": [
         {
           "date": "2026-10-04",
@@ -3355,9 +6313,17 @@
             "rails_pass_count": 0,
             "status": "full-file acceptance deferred"
           }
+        },
+        {
+          "date": "2026-10-04",
+          "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+          "previous": {
+            "status": "cutover receipt pending: 5 active original declarations; 0 geometry-only excluded",
+            "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+          }
         }
       ],
-      "cutover_evidence": "The exact original named clauses still need mappings to enabled current tests or fresh Rails-derived replays. Existing broad file/component passes do not prove every clause. This is a receipt gap; absent production behaviour has not been established. Each remaining clause is enumerated by cutover_id in ledger-ws8br-ws17-ws11ui-remaining.json."
+      "cutover_evidence": "Current per-assertion receipts for P0272, P0273, P0274, P0275, P0276; see ledger-ws8br-ws17-ws11ui-b-receipts.json. Original source hashes, individual assertion sites, exact native test identities and Rails oracle cases are retained. Historical Rails file run counts are not new native test counts."
     },
     {
       "file": "test/controllers/qr_code_controller_test.rb",
@@ -3548,7 +6514,7 @@
       "file": "test/system/channel_members_test.rb",
       "owner": "WS8br",
       "reference_file_present": true,
-      "source_sha256": "fbf48ad6e1175b9c5ccfef62e7607796a1b25fa8e703f8a42ebe1f524f7c2d8b",
+      "source_sha256": "4ec15c976acd9a9d9fcf667926fdc6fb2f2b19e9e12f80436fec7e87bf68ca9a",
       "declared_cases": [
         {
           "name": "members are online across channels and go offline after signing out",
@@ -3685,7 +6651,7 @@
       "file": "test/system/first_run_tour_test.rb",
       "owner": "WS8br2",
       "reference_file_present": true,
-      "source_sha256": "f8dc49c86b6e9130bdebcc6343074c1ad9efa92202d7a8b0de5f3d02a07ebbc7",
+      "source_sha256": "4a553c1fccf9c3d8d93c50ed330096b7aaa875bea4c7027b28172457d94e46bf",
       "declared_cases": [
         {
           "name": "a new member is walked through the tour by keyboard and finishing persists",
@@ -3696,21 +6662,21 @@
         },
         {
           "name": "escape skips the tour and it never auto-starts again",
-          "line": 45,
+          "line": 44,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0301",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "the tour restarts from the help menu",
-          "line": 60,
+          "line": 58,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0302",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "members who completed the tour never see it auto-start",
-          "line": 75,
+          "line": 72,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0303",
           "cutover_disposition": "acceptance-receipt-pending"
@@ -4252,7 +7218,7 @@
       "file": "test/system/people_group_dms_test.rb",
       "owner": "WS8br DM/member shell; WS8br2 people/profile; WS13 configured calls; WS11 agents",
       "reference_file_present": true,
-      "source_sha256": "fed21f01a33769d460f7b5ff760fd3e5f7aded7cc98abb39b92db913d997e00f",
+      "source_sha256": "4e4e8311e972e3eb75eb8014d21add10f17fef1e8c6e00c51fd2baf778b8b35f",
       "declared_cases": [
         {
           "name": "clicking a message author opens their profile card and Message lands in the DM",
@@ -4369,21 +7335,21 @@
         },
         {
           "name": "starting a group huddle rings every other member",
-          "line": 344,
+          "line": 340,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0370",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "Esc closes only the profile card inside the mobile member panel",
-          "line": 364,
+          "line": 360,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0371",
           "cutover_disposition": "acceptance-receipt-pending"
         },
         {
           "name": "Tab cycles within the profile card opened from the member panel",
-          "line": 388,
+          "line": 384,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0372",
           "cutover_disposition": "acceptance-receipt-pending"
@@ -4559,7 +7525,7 @@
       "file": "test/system/service_worker_test.rb",
       "owner": "WS8br2",
       "reference_file_present": true,
-      "source_sha256": "ab8ed8be3e610b3ffdbfe328536a143b127e42ff0a7f78216c10e7652fef1b8c",
+      "source_sha256": "8f16fcce87f015abd7df2040b219dfd22bd2cf159c36197061b10bba74d52482",
       "declared_cases": [
         {
           "name": "the worker caches static assets and never authenticated responses",
@@ -4969,7 +7935,7 @@
       "file": "test/system/unread_rooms_test.rb",
       "owner": "WS8br",
       "reference_file_present": true,
-      "source_sha256": "e1faebcc4d71ccb18c10d73348d36314fdc873a9f62ba1ade482dd54955adaf1",
+      "source_sha256": "f900f9573626e923c07d0d97be3b094862702cc77b90d0543e3f4a04689c81c5",
       "declared_cases": [
         {
           "name": "sending messages between two users",
@@ -4980,7 +7946,7 @@
         },
         {
           "name": "channel and DM rows keep exactly one unread badge next to the huddle stack",
-          "line": 46,
+          "line": 27,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0412",
           "cutover_disposition": "acceptance-receipt-pending"
@@ -5156,10 +8122,52 @@
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
     "approved_queue_supersessions": 1,
     "sidebar_original_receipts_pending": 8,
-    "broad_original_receipts_pending": 328,
+    "broad_original_receipts_pending": 208,
     "geometry_only_excluded": 3,
     "partial": true,
-    "broad_original_receipts_superseded": 9
+    "broad_original_receipts_superseded": 9,
+    "history": [
+      {
+        "date": "2026-10-04",
+        "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+        "previous": {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "approved_queue_supersessions": 1,
+          "sidebar_original_receipts_pending": 8,
+          "broad_original_receipts_pending": 328,
+          "geometry_only_excluded": 3,
+          "partial": true,
+          "broad_original_receipts_superseded": 9
+        }
+      },
+      {
+        "date": "2026-10-04",
+        "branch": "rust/ledger-ws8br-ws17-ws11ui-b",
+        "previous": {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "approved_queue_supersessions": 1,
+          "sidebar_original_receipts_pending": 8,
+          "broad_original_receipts_pending": 271,
+          "geometry_only_excluded": 3,
+          "partial": true,
+          "broad_original_receipts_superseded": 9,
+          "broad_original_assertion_receipts": 57,
+          "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md"
+        }
+      },
+      {
+        "head": "1b83dda5a39c28b2fb7765184437fdb19ee0eca9",
+        "reason": "Original-setup sweep closes eight previously reopened B declarations.",
+        "broad_original_receipts_pending": 216,
+        "broad_original_assertion_receipts": 112
+      }
+    ],
+    "broad_original_assertion_receipts": 120,
+    "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-b-report.md"
   },
   "source_pin_refresh": {
     "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
@@ -5178,6 +8186,14 @@
         "line": 27,
         "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons"
       }
-    ]
+    ],
+    "pr244_assertion_audit": {
+      "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+      "declarations": 120,
+      "assertion_sites": 401,
+      "closed": 112,
+      "reopened": 8,
+      "manifest": "rust/plans/ledger-ws8br-ws17-ws11ui-b-receipts.json"
+    }
   }
 }
