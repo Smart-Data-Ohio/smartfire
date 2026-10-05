@@ -1,6 +1,8 @@
 //! `SetTimeZone`, ActiveSupport::TimeZone and the formats used by our Rails templates.
 
 mod rails_zones;
+mod calendar;
+pub use calendar::CalendarTime;
 
 /// An `ActiveSupport::TimeZone`.
 #[derive(Clone, Debug)]

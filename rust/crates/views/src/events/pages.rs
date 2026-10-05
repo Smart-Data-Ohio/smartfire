@@ -61,12 +61,12 @@ pub struct PageEvent {
 impl PageEvent {
     pub fn zone_label(&self) -> String {
         let z = crate::time::Zone::for_user(Some(&self.card.time_zone));
-        let mut t = z.format(self.card.starts_at, "%-I:%M %p");
+        let mut t = self.card.starts_at.format(&z, "%-I:%M %p");
         if let Some(end) = self.card.ends_at {
             t.push('–');
-            t.push_str(&z.format(end, "%-I:%M %p"));
+            t.push_str(&end.format(&z, "%-I:%M %p"));
         }
-        format!("({t} {})", z.format(self.card.starts_at, "%Z"))
+        format!("({t} {})", self.card.starts_at.format(&z, "%Z"))
     }
     pub fn response_label(&self) -> String {
         self.current_response

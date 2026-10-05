@@ -75,27 +75,34 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
         );
     }
     if let Some(login) = changes.github_login {
-        let reasons: Vec<Option<String>> = crate::sql::query_all(
+        let accounts: Vec<(String, Option<String>)> = crate::sql::query_all(
             tx.conn(),
-            "SELECT disconnected_reason FROM github_connected_accounts WHERE user_id=?",
+            "SELECT github_login,disconnected_reason FROM github_connected_accounts WHERE user_id=?",
             [user],
-            |r| r.get(0),
+            |r| Ok((r.get(0)?, r.get(1)?)),
         )?;
-        let verified = reasons
+        let verified_login = accounts
             .iter()
-            .any(|reason| reason.as_deref().is_none_or(is_blank));
-        if !verified {
-            let login = unicode::downcase(strip(&login));
-            attrs.insert(
-                "github_login".into(),
-                if is_blank(&login) {
-                    Value::Null
-                } else {
-                    Value::String(login)
-                },
-            );
+            .find(|(_, reason)| reason.as_deref().is_none_or(is_blank))
+            .map(|(login, _)| unicode::downcase(strip(login)));
+        let login = unicode::downcase(strip(&login));
+        let login = (!is_blank(&login)).then_some(login);
+        let previous: Option<String> =
+            tx.conn()
+                .query_row("SELECT github_login FROM users WHERE id=?", [user], |row| {
+                    row.get(0)
+                })?;
+        if login != previous && verified_login.is_some() && login != verified_login {
+            let mut errors = crate::Errors::default();
+            errors.add("github_login", "is set by your linked GitHub account");
+            return Err(crate::Error::RecordInvalid(errors));
         }
+        attrs.insert(
+            "github_login".into(),
+            login.map(Value::String).unwrap_or(Value::Null),
+        );
     }
+
     if let Some(preferences) = changes.inbox_preferences {
         let value = if let Some(preferences) = preferences.as_object() {
             let raw: Option<String> = tx.conn().query_row(

@@ -95,6 +95,9 @@ run_suite() {
       npm ci --prefix rust/parity
       node --test --test-concurrency=4 rust/reference-tools/messaging/*.test.mjs
       python3 rust/reference-tools/messaging/behavior-check.py --keep-going
+      # Pinned original WS14/WS15 declarations share the isolated native browser.
+      export WS14_BROWSER_RUBY_IMAGE="ws8bm-browser-reference-$(cut -c1-9 rust/parity/reference.sha)"
+      ignored
       ;;
     agents-ui)
       browser_images

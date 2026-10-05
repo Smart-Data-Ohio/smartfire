@@ -1300,3 +1300,9 @@ mod ws12_browser_remaining_tests;
 
 #[cfg(test)]
 mod template_coverage_tests;
+
+#[cfg(test)]
+mod ws14_original_browser_tests;
+
+#[cfg(test)]
+mod ws15_original_github_browser_tests;

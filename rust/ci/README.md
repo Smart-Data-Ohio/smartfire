@@ -6,8 +6,8 @@ summary, then explicit gates fail the job. No advisory correctness group remains
 
 The `Rust correctness (database|acme|browsers|livekit|messaging|agents-ui)` jobs share
 the same seed/reference/toolchain setup through `.github/actions/rust-setup`.
-They run on pull requests and pushes to main touching Rust or Rails comparison
-inputs. Branch protection is managed separately by the release lead.
+The slim pull-request gate runs only `Rust port`; correctness jobs run on main,
+nightly, and manual workflows. Branch protection is managed separately by the release lead.
 
 | Job suffix | Execution |
 | --- | --- |
@@ -15,7 +15,7 @@ inputs. Branch protection is managed separately by the release lead.
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
 | browsers | Pinned Playwright image and gateway `ws` lockfile, then exactly 7 WS12, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
-| messaging | Python/Node harness regression tests, then `python3 reference-tools/messaging/behavior-check.py --keep-going` (all scripted paired Rails/Rust cases, including native Selenium upload cases and persisted-row assertions) |
+| messaging | Python/Node harness regression tests, `python3 reference-tools/messaging/behavior-check.py --keep-going` (paired Rails/Rust cases), then 53 registered original WS14/WS15 browser declarations against Rust via the pinned native Selenium image |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget, work against Rails and Rust) |
 
 No external harness in the requested messaging/WS11 scope lacks a scripted entry
@@ -66,7 +66,7 @@ sequence and writer-control receipts. The ordinary job additionally runs `nextes
 --exclude html5ever --run-ignored only --ignore-default-filter --message-format json`
 against every compiled test binary. The package/binary/full-test-name set must
 equal the correctness selectors plus the explicit `ignored-utilities.json` list
-(14 correctness tests + 6 compiled utilities). This covers expanded conditional
+(67 correctness tests + 6 compiled utilities). This covers expanded conditional
 attributes, procedural macros and `include!` without inferring their output from source.
 Real compiler mutation probes exercise eight formatting/conditional/macro/include
 forms. A lexical source guard also covers inactive `cfg_attr` branches and the

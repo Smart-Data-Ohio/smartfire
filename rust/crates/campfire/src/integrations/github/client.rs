@@ -412,8 +412,13 @@ impl WriteClient {
         let (status, response) = self
             .http
             .request(API_HOST, method, path, headers, body)
-            .await?;
-        let raw = Http::body(response).await?;
+            .await
+            .inspect_err(|_| {
+                tracing::warn!("Github::WriteClient request failed: transport error")
+            })?;
+        let raw = Http::body(response).await.inspect_err(|_| {
+            tracing::warn!("Github::WriteClient request failed: transport error")
+        })?;
         let parsed: Value = serde_json::from_slice(&raw).unwrap_or_else(|_| json!({}));
         match status {
             200..=299 => Ok(parsed),
@@ -608,7 +613,10 @@ mod transport_merge_tests {
 
     #[test]
     fn ws15e_github_transport_defaults_and_errors_match_rails() {
-        let vectors: Value = serde_json::from_str(include_str!("../../../../../vectors/ws15e_github_transport.json")).unwrap();
+        let vectors: Value = serde_json::from_str(include_str!(
+            "../../../../../vectors/ws15e_github_transport.json"
+        ))
+        .unwrap();
         let app = AppClient::new(Some("fixture-client".into()), Some("fixture-secret".into()));
         let write = WriteClient::new("fixture-member".into());
         let read = ReadClient::new(None);
@@ -619,7 +627,11 @@ mod transport_merge_tests {
                 "read" => read.http.write_timeout,
                 other => panic!("unexpected Rails transport case {other}"),
             };
-            assert_eq!(actual.as_secs(), case["write_timeout"].as_u64().unwrap(), "{case}");
+            assert_eq!(
+                actual.as_secs(),
+                case["write_timeout"].as_u64().unwrap(),
+                "{case}"
+            );
         }
         for case in vectors["errors"].as_array().unwrap() {
             let error = match case["class"].as_str().unwrap() {
@@ -627,7 +639,11 @@ mod transport_merge_tests {
                 "EOFError" => HttpError::ConnectionClosed,
                 other => panic!("unexpected Rails transport error {other}"),
             };
-            assert_eq!(Error::transport(error).message, case["message"].as_str().unwrap(), "{case}");
+            assert_eq!(
+                Error::transport(error).message,
+                case["message"].as_str().unwrap(),
+                "{case}"
+            );
         }
     }
 }

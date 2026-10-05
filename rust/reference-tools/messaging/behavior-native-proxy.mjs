@@ -3,10 +3,14 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import net from 'node:net';
-export async function nativeAssetProxy(base,mutation,probe) {
+export async function nativeAssetProxy(base,mutation,probe,{sameOriginOnly=false}={}) {
   const origin=new URL(base).origin,sockets=new Set(),requests=new Set(),timers=new Set();
   const server=http.createServer((incoming,outgoing)=>{
     const url=new URL(incoming.url,base);
+    if(sameOriginOnly&&url.origin!==origin) {
+      probe.networkFailures.push(`unregistered proxy origin ${url.origin}`);
+      outgoing.writeHead(502);outgoing.end();return;
+    }
     const receipt={method:incoming.method,path:url.pathname};(probe.transport??=[]).push(receipt);
     const request=http.request(url,{method:incoming.method,headers:{...incoming.headers,'accept-encoding':'identity'}},response=>{
       receipt.status=response.statusCode;receipt.encoding=response.headers['content-encoding']||'identity';
@@ -40,6 +44,10 @@ export async function nativeAssetProxy(base,mutation,probe) {
   // CONNECT. Preserve the original Cable handshake and all frames verbatim.
   server.on('connect',(incoming,socket,head)=>{
     const endpoint=new URL('http://'+incoming.url);
+    if(sameOriginOnly&&endpoint.origin!==origin) {
+      probe.networkFailures.push(`unregistered proxy tunnel ${endpoint.origin}`);
+      socket.end('HTTP/1.1 502 Bad Gateway\r\n\r\n');return;
+    }
     const upstream=net.connect(Number(endpoint.port)||80,endpoint.hostname,()=>{
       socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
       if(head.length)upstream.write(head);upstream.pipe(socket);socket.pipe(upstream);
@@ -49,7 +57,12 @@ export async function nativeAssetProxy(base,mutation,probe) {
     socket.on('error',()=>upstream.destroy());socket.on('close',()=>upstream.destroy());
   });
   server.on('upgrade',(incoming,socket,head)=>{
-    const url=new URL(incoming.url,base),upstream=net.connect(Number(url.port)||80,url.hostname,()=>{
+    const url=new URL(incoming.url,base);
+    if(sameOriginOnly&&url.origin!==origin) {
+      probe.networkFailures.push(`unregistered proxy upgrade ${url.origin}`);
+      socket.end('HTTP/1.1 502 Bad Gateway\r\n\r\n');return;
+    }
+    const upstream=net.connect(Number(url.port)||80,url.hostname,()=>{
       upstream.write(`${incoming.method} ${url.pathname+url.search} HTTP/${incoming.httpVersion}\r\n`+Object.entries(incoming.headers).map(([name,value])=>`${name}: ${value}\r\n`).join('')+'\r\n');
       if(head.length)upstream.write(head);upstream.pipe(socket);socket.pipe(upstream);
     });

@@ -78,5 +78,24 @@ if args.browser_log:
     passed = set(re.findall(r'^\s*PASS\s+\[[^\]]+\]\s+\([^)]+\)\s+\S+\s+(\S+)', args.browser_log.read_text(), re.M))
     assert browser_tests <= passed, f'registered browser tests did not pass: {sorted(browser_tests-passed)}'
     print('Cutover current branch: 3 registered ignored tests passed with paired browser sequences and writer controls')
+ws14 = load('ledger-ws14-ws15.json')
+if ws14.get('cutover_d'):
+    closure = ws14['cutover_d']
+    current = {r['id']: r for r in ws14['records']}
+    registry = json.loads((root / 'ci/ignored-tests.json').read_text())
+    registered = {row['test'] for rows in registry.values() for row in rows}
+    names = set()
+    for rid in closure['records']:
+        row = current[rid]
+        assert row['disposition'] == 'implemented' and row['continuation'] == 'rust/ledger-ws14-ws15-d', rid
+        name = row['evidence']['test'].split(' ', 1)[1]
+        names.add(name)
+        assert name in active | ignored, ('missing D closure test', rid, name)
+        if name in ignored:
+            assert name in registered, ('unowned D browser closure', rid, name)
+    assert len(closure['records']) == closure['closed_records']
+    assert closure['remaining_records'] == sum(r['disposition'] == 'unsupported_assertion' for r in ws14['records'])
+    print(f'WS14/WS15 D: {closure["closed_records"]} exact declarations; {len(names)} compiled receipt tests; '
+          f'{closure["remaining_records"]} remaining; every ignored receipt registered')
 print(f"Cutover ledger receipts: {len(receipts['ci_passes'])} historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; {len(receipts['ws8br_broad_closed_records'])} broad WS8 closures; 1 approved queue supersession; 0 inconsistent records")
 print(f'Cutover ledger remains partial: {len(remaining["ws8br_broad_original_receipts"])} broad receipts; 8 sidebar receipts; 14 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions')

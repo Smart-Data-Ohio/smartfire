@@ -1,0 +1,2360 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "attempts": 34,
+  "attempted_closures": 32,
+  "killed_attempts": 32,
+  "killed_closures": 32,
+  "initial_survivors": 2,
+  "remaining_surviving_closures": [],
+  "production_restored": true,
+  "restoration": [
+    {
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "result_log": "rust/target/ledger-d-native-root-events-mutations/results.json",
+      "production_restored": true,
+      "source_hashes": {
+        "rust/crates/campfire/src/concerns/sudo.rs": "d56ef540fa851f5e5cb2ffde5bff6070382bdeea6ed7f7d1c83708fcaef4999e",
+        "rust/crates/campfire/src/controllers/sudos.rs": "2aef1c161db2af3d5063c1ffbd90ad35ff73dfd1f5d9c729d7cc1b22b9235ccb",
+        "rust/crates/campfire/src/concerns/session_keys.rs": "ff6e35ed8e34b094b9da76c6910e72087c326ba6395638848f14aa4ff0d7e9c7",
+        "rust/crates/campfire/src/integrations/google/meeting_refresh.rs": "f91eef9ab88bec1473ef41bc2be807b006ca5a7f0b44096c855585e59a0501e7",
+        "rust/crates/db/src/models/google_account.rs": "81ebb264c2319a0140bc78ce870356f197cdb4761a162e06d65354cd39674d62",
+        "rust/crates/db/src/models/calendar_event/attendance.rs": "392a643a4b0067c79bad4b523eed6050bf537710629a44cbb0a9a23ab3f727dc",
+        "rust/crates/db/src/models/calendar_event/changes.rs": "9f74d0ed46eeca675a89147ad57de1dad524a3c29d839f844c62f97516d14537",
+        "rust/crates/db/src/models/calendar_event/reminders.rs": "af9c3c2841c312ee685edf5cf408fc3fb28df6aaa1405ff2042f45e149bf3ea9"
+      }
+    },
+    {
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "result_log": "rust/target/ledger-d-native-github-mutations/results.json",
+      "production_restored": true,
+      "source_hashes": {
+        "rust/crates/campfire/src/integrations/github/agent_actions.rs": "8f231ce00ec75874fd1a753ab9430846aa2bb37bbfa78eeb1de772bf44c420ee",
+        "rust/crates/db/src/models/user/profile_settings.rs": "0a996a6d2dbb0af9947d2c0b79a989dccf3be2f5eefbc527b27ae31957284e0d",
+        "rust/crates/campfire/src/controllers/presenters/message_cache.rs": "8e2c92f543d56424b8e9dbe844f945568a03c097319dc832ea734ff339408dd7"
+      }
+    },
+    {
+      "manifest": "rust/reference-tools/cutover/d-github-retry-mutations.json",
+      "result_log": "rust/target/ledger-d-native-github-retry-mutations/results.json",
+      "production_restored": true,
+      "source_hashes": {
+        "rust/crates/db/src/models/message.rs": "fc892a69d0c062405d18a80e78df8385506e3eb17b6e70ad64247adad741abc5",
+        "rust/crates/campfire/src/controllers/presenters/message_cache.rs": "8e2c92f543d56424b8e9dbe844f945568a03c097319dc832ea734ff339408dd7"
+      }
+    }
+  ],
+  "results": [
+    {
+      "id": "WS14g-010",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.509s] 1 test run: 0 passed, 1 failed, 3070 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:19:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-010.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 19
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 38
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 45
+        }
+      ],
+      "log_sha256": "81434f861350741b5fb4206f9f47e8f49c2040db72e4ae9348e3daa9a35530a9",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/concerns/sudo.rs",
+        "scope": null,
+        "before": "state.register_verifier(\"totp\");",
+        "after": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-010\")) { state.register_verifier(\"totp\"); }"
+      },
+      "restored": true,
+      "package": "campfire",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 19,
+          "end_line": 26,
+          "function": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+          "text": "assert!(\n        a.booted\n            .app\n            .sudo\n            .extra_verifiers()\n            .iter()\n            .any(|name| name == \"totp\")\n    )"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 38,
+          "end_line": 38,
+          "function": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+          "text": "assert_eq!(verification, None)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 45,
+          "end_line": 45,
+          "function": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+          "text": "assert!(!available)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+        "line": 19,
+        "end_line": 26,
+        "function": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+        "text": "assert!(\n        a.booted\n            .app\n            .sudo\n            .extra_verifiers()\n            .iter()\n            .any(|name| name == \"totp\")\n    )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-016",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.865s] 1 test run: 0 passed, 1 failed, 3070 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:98:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-016.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 91
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 92
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 95
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 97
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 98
+        }
+      ],
+      "log_sha256": "82654fd489d494478b8caf5a3ba02c37f94d05e00b94e714f0ccb3302eb701ed",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/sudos.rs",
+        "scope": null,
+        "before": "if verified {\n        let now = c.now();",
+        "after": "if verified || std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-016\") {\n        let now = c.now();"
+      },
+      "restored": true,
+      "package": "campfire",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 91,
+          "end_line": 91,
+          "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+          "text": "assert_eq!(after, before + 1)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 92,
+          "end_line": 92,
+          "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+          "text": "assert_eq!(rejected.status, StatusCode::UNAUTHORIZED)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 95,
+          "end_line": 95,
+          "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+          "text": "assert_eq!(verifier, \"totp\")"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 97,
+          "end_line": 97,
+          "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+          "text": "assert_eq!(gated.status, StatusCode::FOUND)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 98,
+          "end_line": 98,
+          "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+          "text": "assert_eq!(gated.location(), Some(\"http://campfire.test/sudo/new\"))"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+        "line": 98,
+        "end_line": 98,
+        "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+        "text": "assert_eq!(gated.location(), Some(\"http://campfire.test/sudo/new\"))"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-021",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.816s] 1 test run: 0 passed, 1 failed, 3071 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:112:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-021.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 106
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 107
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 111
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 112
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 117
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 118
+        }
+      ],
+      "log_sha256": "bce7feaab994426538029d934b94fcea1a2d2fd22585acd8be651c0f920b1e5f",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+        "scope": "pub fn continue_after_sudo(",
+        "before": "SudoContinuation::Redirect(path)",
+        "after": "SudoContinuation::Redirect(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-021\") { root_path.into() } else { path })"
+      },
+      "restored": true,
+      "package": "campfire",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 106,
+          "end_line": 106,
+          "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+          "text": "assert_eq!(gated.status, StatusCode::FOUND)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 107,
+          "end_line": 107,
+          "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+          "text": "assert_eq!(gated.location(), Some(\"http://campfire.test/sudo/new\"))"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 111,
+          "end_line": 111,
+          "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+          "text": "assert_eq!(confirmed.status, StatusCode::FOUND)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 112,
+          "end_line": 115,
+          "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+          "text": "assert_eq!(\n        confirmed.location(),\n        Some(\"http://campfire.test/account/audit_log.csv\")\n    )"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 117,
+          "end_line": 117,
+          "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+          "text": "assert_eq!(csv.status, StatusCode::OK)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 118,
+          "end_line": 128,
+          "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+          "text": "assert_eq!(\n        csv.headers\n            .get(\"content-type\")\n            .unwrap()\n            .to_str()\n            .unwrap()\n            .split(';')\n            .next()\n            .unwrap(),\n        \"text/csv\"\n    )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+        "line": 112,
+        "end_line": 115,
+        "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+        "text": "assert_eq!(\n        confirmed.location(),\n        Some(\"http://campfire.test/account/audit_log.csv\")\n    )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-023",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.802s] 1 test run: 0 passed, 1 failed, 3071 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:152:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-023.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 151
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 152
+        }
+      ],
+      "log_sha256": "73f8d31aee37ba7a947443d499419617a4347d07900771506e2fe17fa067662d",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+        "scope": null,
+        "before": "verified_at > now - SUDO_TIMEOUT",
+        "after": "verified_at > now - (if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-023\") { SignedDuration::from_mins(13) } else if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-024\") { SignedDuration::from_mins(17) } else { SUDO_TIMEOUT })"
+      },
+      "restored": true,
+      "package": "campfire",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 151,
+          "end_line": 151,
+          "function": "cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+          "text": "assert_eq!(response.status, StatusCode::FOUND)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 152,
+          "end_line": 155,
+          "function": "cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+          "text": "assert_eq!(\n        response.location(),\n        Some(\"http://campfire.test/account/edit\")\n    )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+        "line": 152,
+        "end_line": 155,
+        "function": "cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+        "text": "assert_eq!(\n        response.location(),\n        Some(\"http://campfire.test/account/edit\")\n    )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-024",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.807s] 1 test run: 0 passed, 1 failed, 3071 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:161:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-024.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 160
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 161
+        }
+      ],
+      "log_sha256": "5c5445dd7e2bb17028a14db4daf437956fa1b987f7259d643b01db6fbfac7502",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/concerns/session_keys.rs",
+        "scope": "pub fn continue_after_sudo(",
+        "before": "SudoContinuation::Redirect(path)",
+        "after": "SudoContinuation::Redirect(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-021\") { root_path.into() } else { path })"
+      },
+      "restored": true,
+      "package": "campfire",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 160,
+          "end_line": 160,
+          "function": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+          "text": "assert_eq!(response.status, StatusCode::FOUND)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 161,
+          "end_line": 161,
+          "function": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+          "text": "assert_eq!(response.location(), Some(\"http://campfire.test/sudo/new\"))"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+        "line": 161,
+        "end_line": 161,
+        "function": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+        "text": "assert_eq!(response.location(), Some(\"http://campfire.test/sudo/new\"))"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-108",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.436s] 1 test run: 0 passed, 1 failed, 3071 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:265:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-108.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 258
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 265
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 266
+        }
+      ],
+      "log_sha256": "1e8b604c3692e59b83c8802639afa006680bad83767f0887cb924a308cc21652",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/integrations/google/meeting_refresh.rs",
+        "scope": null,
+        "before": "store_error(app, user_id, now, UNREACHABLE, true).await?;",
+        "after": "store_error(app, user_id, now, UNREACHABLE, !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-108\"))).await?;"
+      },
+      "restored": true,
+      "package": "campfire",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 258,
+          "end_line": 258,
+          "function": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+          "text": "assert_eq!(result, meeting_refresh::Result::Error)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 265,
+          "end_line": 265,
+          "function": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+          "text": "assert_eq!(cache.busy, busy)"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 266,
+          "end_line": 269,
+          "function": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+          "text": "assert_eq!(\n        cache.fetch_error.as_deref(),\n        Some(meeting_refresh::UNREACHABLE)\n    )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+        "line": 265,
+        "end_line": 265,
+        "function": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+        "text": "assert_eq!(cache.busy, busy)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-181",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_duplicate_google_account_is_invalid_before_persistence",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.446s] 1 test run: 0 passed, 1 failed, 3071 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/app/cutover_d_tests.rs:181:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-181.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 181
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 182
+        }
+      ],
+      "log_sha256": "886581ed79e219cf73eb665b707669022c7a17f55ed2fd3e73560a0f0fc18515",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/google_account.rs",
+        "scope": null,
+        "before": "if Self::for_user(conn, grant.user_id)?.is_some() {",
+        "after": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-181\")) && Self::for_user(conn, grant.user_id)?.is_some() {"
+      },
+      "restored": true,
+      "package": "campfire",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 181,
+          "end_line": 181,
+          "function": "cutover_d_duplicate_google_account_is_invalid_before_persistence",
+          "text": "assert!(!errors.is_empty())"
+        },
+        {
+          "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+          "line": 182,
+          "end_line": 182,
+          "function": "cutover_d_duplicate_google_account_is_invalid_before_persistence",
+          "text": "assert_eq!(errors.on(\"user_id\"), [\"has already been taken\"])"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+        "line": 181,
+        "end_line": 181,
+        "function": "cutover_d_duplicate_google_account_is_invalid_before_persistence",
+        "text": "assert!(!errors.is_empty())"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14e-015",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_attendance_member_holds_one_response_and_duplicate_creation_is_invalid",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.049s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:72:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14e-015.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 62
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 65
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 72
+        }
+      ],
+      "log_sha256": "124358f87ab50fcf691d727ebcd8fa52e1aa3f6f83d0c2af4edc0bdbccc37696",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/attendance.rs",
+        "scope": null,
+        "before": "                errors.into_result()?;",
+        "after": "                if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-015\") {\n                    return Ok(Self::find_for(tx.conn(), event_id, user_id)?.expect(\"existing attendance\"));\n                }\n                errors.into_result()?;"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 62,
+          "end_line": 62,
+          "function": "cutover_d_attendance_member_holds_one_response_and_duplicate_creation_is_invalid",
+          "text": "assert_eq!(attendance.response, \"maybe\")"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 65,
+          "end_line": 70,
+          "function": "cutover_d_attendance_member_holds_one_response_and_duplicate_creation_is_invalid",
+          "text": "assert_eq!(\n        t.read(|c| EventAttendance::find_for(c, id(\"launch_party\"), id(\"jason\")))\n            .unwrap()\n            .response,\n        \"going\"\n    )"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 72,
+          "end_line": 75,
+          "function": "cutover_d_attendance_member_holds_one_response_and_duplicate_creation_is_invalid",
+          "text": "assert!(matches!(\n        t.try_write(|tx| EventAttendance::create(tx, id(\"launch_party\"), id(\"jason\"), \"maybe\")),\n        Err(Error::RecordInvalid(_))\n    ))"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 72,
+        "end_line": 75,
+        "function": "cutover_d_attendance_member_holds_one_response_and_duplicate_creation_is_invalid",
+        "text": "assert!(matches!(\n        t.try_write(|tx| EventAttendance::create(tx, id(\"launch_party\"), id(\"jason\"), \"maybe\")),\n        Err(Error::RecordInvalid(_))\n    ))"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14e-031",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_recurrence_strictly_before_previous_rejects_both_scopes_and_preserves_series",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.054s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:133:9:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14e-031.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 133
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 138
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 144
+        }
+      ],
+      "log_sha256": "2bc185c81ab337ccc703153d45961440ba7f45c2d8f6cf7d31f7fcb64a2a33e1",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+        "scope": null,
+        "before": "            if previous.is_some_and(|e| start <= e.starts_at)",
+        "after": "            if (!(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-031\")) && previous.is_some_and(|e| start <= e.starts_at))"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 133,
+          "end_line": 133,
+          "function": "cutover_d_recurrence_strictly_before_previous_rejects_both_scopes_and_preserves_series",
+          "text": "assert!(matches!(&result, Err(Error::RecordInvalid(_))))"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 138,
+          "end_line": 141,
+          "function": "cutover_d_recurrence_strictly_before_previous_rejects_both_scopes_and_preserves_series",
+          "text": "assert_eq!(\n            errors.on(\"starts_at\"),\n            vec![\"must stay between the neighbouring occurrences in its series\"]\n        )"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 144,
+          "end_line": 150,
+          "function": "cutover_d_recurrence_strictly_before_previous_rejects_both_scopes_and_preserves_series",
+          "text": "assert_eq!(\n        rows(&t, h.id)\n            .iter()\n            .map(|e| e.starts_at)\n            .collect::<Vec<_>>(),\n        before.iter().map(|e| e.starts_at).collect::<Vec<_>>()\n    )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 133,
+        "end_line": 133,
+        "function": "cutover_d_recurrence_strictly_before_previous_rejects_both_scopes_and_preserves_series",
+        "text": "assert!(matches!(&result, Err(Error::RecordInvalid(_))))"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14e-034",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.059s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:241:9:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14e-034.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 226
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 241
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 243
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 245
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 249
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 251
+        }
+      ],
+      "log_sha256": "26c97663a00ce18aeba7359ee44599db19c1bbe5aadc89153ef4051fa7fe12a5",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+        "scope": null,
+        "before": "                if series_ids.contains(&source) {",
+        "after": "                if series_ids.contains(&source) && !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-034\")) {"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 226,
+          "end_line": 226,
+          "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+          "text": "assert_eq!(earlier.event_type, \"event_update\")"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 241,
+          "end_line": 241,
+          "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+          "text": "assert_eq!(unread.len(), 1)"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 243,
+          "end_line": 243,
+          "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+          "text": "assert_eq!(unread[0].0, \"event_update\")"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 245,
+          "end_line": 245,
+          "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+          "text": "assert_eq!(unread[0].1, h.id)"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 249,
+          "end_line": 249,
+          "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+          "text": "assert!(handled.handled_at.is_some())"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 251,
+          "end_line": 251,
+          "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+          "text": "assert_eq!(t.read(|c|Ok(c.query_row(\"SELECT COUNT(*) FROM activity_items WHERE user_id=? AND source_type='Event' AND source_id IN (SELECT value FROM json_each(?))\",params![id(\"david\"),json!(sources).to_string()],|r|r.get::<_,i64>(0))?)),0)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 241,
+        "end_line": 241,
+        "function": "cutover_d_recurrence_following_time_change_replaces_going_and_maybe_updates",
+        "text": "assert_eq!(unread.len(), 1)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14e-035",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.056s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:284:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14e-035.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 260
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 277
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 279
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 284
+        }
+      ],
+      "log_sha256": "bc5d447cfa5a2016a6b87aaaf7b8724da5b1182c77a8c97af457465e301c157f",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+        "scope": null,
+        "before": "            for user in self\n                .notification_recipient_ids(tx.conn())?\n                .into_iter()\n                .filter(|u| Some(*u) != actor)\n            {",
+        "after": "            for user in self\n                .notification_recipient_ids(tx.conn())?\n                .into_iter()\n                .filter(|u| Some(*u) != actor)\n                .chain((std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-035\")).then_some(712064548))\n            {"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 260,
+          "end_line": 260,
+          "function": "cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+          "text": "assert_eq!(occurrences.len(), 4)"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 277,
+          "end_line": 277,
+          "function": "cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+          "text": "assert!(excess.cancelled())"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 279,
+          "end_line": 282,
+          "function": "cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+          "text": "assert_eq!(\n        item(&t, excess.id, \"jz\").unwrap().event_type,\n        \"event_cancelled\"\n    )"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 284,
+          "end_line": 284,
+          "function": "cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+          "text": "assert_eq!(t.read(|c|Ok(c.query_row(\"SELECT COUNT(*) FROM activity_items WHERE user_id=? AND source_type='Event' AND source_id=? AND event_type='event_cancelled'\",params![id(\"kevin\"),excess.id],|r|r.get::<_,i64>(0))?)),0)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 284,
+        "end_line": 284,
+        "function": "cutover_d_recurrence_shortening_notifies_going_but_not_declined_on_same_excess_event",
+        "text": "assert_eq!(t.read(|c|Ok(c.query_row(\"SELECT COUNT(*) FROM activity_items WHERE user_id=? AND source_type='Event' AND source_id=? AND event_type='event_cancelled'\",params![id(\"kevin\"),excess.id],|r|r.get::<_,i64>(0))?)),0)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14e-045",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.053s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:334:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14e-045.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 329
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 334
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 339
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 350
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 356
+        }
+      ],
+      "log_sha256": "54081c3db8457db790c78d200fb3764ef19a1dc2b17562886550e9bce49054a5",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/reminders.rs",
+        "scope": null,
+        "before": "                    if reminders_enabled(&preferences) {",
+        "after": "                    if reminders_enabled(&preferences) || std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14e-045\") {"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 329,
+          "end_line": 332,
+          "function": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+          "text": "assert_eq!(\n        jobs(&t),\n        vec![(\"Event::ReminderPushJob\".into(), json!({\"event_id\":e.id}))]\n    )"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 334,
+          "end_line": 337,
+          "function": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+          "text": "assert_eq!(\n        item(&t, e.id, \"jason\").unwrap().event_type,\n        \"event_invitation\"\n    )"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 339,
+          "end_line": 339,
+          "function": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+          "text": "assert_eq!(item(&t, e.id, \"jz\").unwrap().event_type, \"event_reminder\")"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 350,
+          "end_line": 350,
+          "function": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+          "text": "assert_eq!(item(&t, e.id, \"jason\").unwrap().event_type, \"event_update\")"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 356,
+          "end_line": 359,
+          "function": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+          "text": "assert_eq!(\n        item(&t, followup.id, \"jason\").unwrap().event_type,\n        \"event_invitation\"\n    )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 334,
+        "end_line": 337,
+        "function": "cutover_d_reminder_preference_optout_preserves_invitation_updates_and_followup",
+        "text": "assert_eq!(\n        item(&t, e.id, \"jason\").unwrap().event_type,\n        \"event_invitation\"\n    )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-075",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_calendar_direct_attendance_creation_enqueues_exact_event_and_kevin",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.049s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:394:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-075.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 394
+        }
+      ],
+      "log_sha256": "2ff63d1610c3c809043fb78200d441bcaf52059ae2ffeaf596a634bf0b1494a3",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/attendance.rs",
+        "scope": null,
+        "before": "            Self::save_response(tx, &event, user_id, response, true)",
+        "after": "            Self::save_response(tx, &event, user_id, response, !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-075\")))"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 394,
+          "end_line": 400,
+          "function": "cutover_d_calendar_direct_attendance_creation_enqueues_exact_event_and_kevin",
+          "text": "assert_eq!(\n        jobs(&t),\n        vec![(\n            \"Calendar::SyncEntryJob\".into(),\n            json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"kevin\")})\n        )]\n    )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 394,
+        "end_line": 400,
+        "function": "cutover_d_calendar_direct_attendance_creation_enqueues_exact_event_and_kevin",
+        "text": "assert_eq!(\n        jobs(&t),\n        vec![(\n            \"Calendar::SyncEntryJob\".into(),\n            json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"kevin\")})\n        )]\n    )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-076",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_calendar_direct_response_update_enqueues_but_timestamp_only_save_does_not",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.050s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:429:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-076.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 412
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 429
+        }
+      ],
+      "log_sha256": "0e08e3ff49f21f8d0c76a48c2a5909daed9a811788e2dab420f3dc985aec5836",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/attendance.rs",
+        "scope": null,
+        "before": "            if let Some(stamp) = updated_at {",
+        "after": "            if let Some(stamp) = updated_at {\n                if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-076\") {\n                    tx.emit_after_commit(crate::Event::job(&SyncEntryJob { event_id: saved.event_id, user_id: saved.user_id }));\n                }"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 412,
+          "end_line": 418,
+          "function": "cutover_d_calendar_direct_response_update_enqueues_but_timestamp_only_save_does_not",
+          "text": "assert_eq!(\n        jobs(&t),\n        vec![(\n            \"Calendar::SyncEntryJob\".into(),\n            json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"jason\")})\n        )]\n    )"
+        },
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 429,
+          "end_line": 429,
+          "function": "cutover_d_calendar_direct_response_update_enqueues_but_timestamp_only_save_does_not",
+          "text": "assert!(jobs(&t).is_empty())"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 429,
+        "end_line": 429,
+        "function": "cutover_d_calendar_direct_response_update_enqueues_but_timestamp_only_save_does_not",
+        "text": "assert!(jobs(&t).is_empty())"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-081",
+      "test": "campfire_db tests::calendar_event_test::cutover_d_events_test::cutover_d_calendar_singleton_cancel_enqueues_each_of_two_distinct_users_entries",
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.052s] 1 test run: 0 passed, 1 failed, 1456 skipped"
+      ],
+      "panic": [
+        "crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs:447:5:"
+      ],
+      "log": "rust/target/ledger-d-native-root-events-mutations/WS14g-081.log",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 447
+        }
+      ],
+      "log_sha256": "2e5ab27d3d1991cd43b1c407194503cc5ecdf0d7095001763ef5f4087888b523",
+      "manifest": "rust/reference-tools/cutover/d-native-root-events-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/calendar_event/changes.rs",
+        "scope": null,
+        "before": "        for user_id in query_all(\n            tx.conn(),\n            \"SELECT user_id FROM event_calendar_entries WHERE event_id=? ORDER BY id\",\n            [self.id],\n            |r| r.get::<_, i64>(0),\n        )? {",
+        "after": "        for user_id in query_all(\n            tx.conn(),\n            \"SELECT user_id FROM event_calendar_entries WHERE event_id=? ORDER BY id\",\n            [self.id],\n            |r| r.get::<_, i64>(0),\n        )?.into_iter().take(if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS14g-081\") { 1 } else { usize::MAX }) {"
+      },
+      "restored": true,
+      "package": "campfire_db",
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-native-root-events-mutations.json rust/target/ledger-d-native-root-events-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+          "line": 447,
+          "end_line": 459,
+          "function": "cutover_d_calendar_singleton_cancel_enqueues_each_of_two_distinct_users_entries",
+          "text": "assert_eq!(\n        jobs(&t),\n        vec![\n            (\n                \"Calendar::SyncEntryJob\".into(),\n                json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"david\")})\n            ),\n            (\n                \"Calendar::SyncEntryJob\".into(),\n                json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"jason\")})\n            )\n        ]\n    )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/db/src/tests/calendar_event_test/cutover_d_events_test.rs",
+        "line": 447,
+        "end_line": 459,
+        "function": "cutover_d_calendar_singleton_cancel_enqueues_each_of_two_distinct_users_entries",
+        "text": "assert_eq!(\n        jobs(&t),\n        vec![\n            (\n                \"Calendar::SyncEntryJob\".into(),\n                json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"david\")})\n            ),\n            (\n                \"Calendar::SyncEntryJob\".into(),\n                json!({\"event_id\":id(\"launch_party\"),\"user_id\":id(\"jason\")})\n            )\n        ]\n    )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-002",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.892s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:1260:9:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-002.log",
+      "log_sha256": "9f093b261f5d2024e1da66c8f01e2315145259caa6ccf7cd7ccc5e36406af649",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1245,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(after, before + 1)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1246,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.2, \"delivered\")"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1247,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.1, id(\"watercooler\"))"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1248,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.3, None)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1260,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.4, expected)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1102,
+          "function": "approval",
+          "text": "assert!(a.errors().is_empty())"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/integrations/github/agent_actions.rs",
+        "scope": null,
+        "before": "data[\"url\"] = url;",
+        "after": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-002\")) { data[\"url\"] = url; }"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1267,
+          "end_line": 1267,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(after, before + 1)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1268,
+          "end_line": 1268,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.2, \"delivered\")"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1269,
+          "end_line": 1269,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.1, id(\"watercooler\"))"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1270,
+          "end_line": 1270,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.3, None)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1282,
+          "end_line": 1282,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.4, expected)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1124,
+          "end_line": 1124,
+          "function": "approval",
+          "text": "assert!(a.errors().is_empty())"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 1282,
+        "end_line": 1282,
+        "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+        "text": "assert_eq!(event.4, expected)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-003",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.638s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:1260:9:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-003.log",
+      "log_sha256": "7f5ce0a6586e5568332432191eb3c7a55ad888f5619db9d52a80597d5517c164",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1260,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.4, expected)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1102,
+          "function": "approval",
+          "text": "assert!(a.errors().is_empty())"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/integrations/github/agent_actions.rs",
+        "scope": null,
+        "before": "data[\"message\"] = message.into();",
+        "after": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-003\")) { data[\"message\"] = message.into(); }"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1282,
+          "end_line": 1282,
+          "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+          "text": "assert_eq!(event.4, expected)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 1124,
+          "end_line": 1124,
+          "function": "approval",
+          "text": "assert!(a.errors().is_empty())"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 1282,
+        "end_line": 1282,
+        "function": "cutover_d_approval_job_complete_failure_poll_ack_readability_and_ledger",
+        "text": "assert_eq!(event.4, expected)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-011",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.152s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:862:13:",
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:873:10:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-011.log",
+      "log_sha256": "10f47ebfbdb6bc1e1802422d8982c9b8543da6f1bf0406c867c188d9f7bfca2e",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 822,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert!(input.contains(\"disabled\"))"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 831,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(status, 302)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 832,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(headers[\"location\"], \"http://example.org/users/me/profile\")"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 837,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(\n                c.query_row(\n                    \"SELECT github_login FROM users WHERE id=?\",\n                    [id(\"david\")],\n                    |r| r.get::<_, Option<String>>(0)\n                )?\n                .as_deref(),\n                Some(\"octocat\")\n            )"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 846,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(u.name, \"Dave\")"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 862,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert!(rejected.is_err())"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 866,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert!(\n                e.on(\"github_login\")\n                    .contains(&\"is set by your linked GitHub account\")\n            )"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/user/profile_settings.rs",
+        "scope": null,
+        "before": "if login != previous && verified_login.is_some() && login != verified_login {",
+        "after": "if !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-011\")) && login != previous && verified_login.is_some() && login != verified_login {"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 844,
+          "end_line": 844,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert!(input.contains(\"disabled\"))"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 853,
+          "end_line": 853,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(status, 302)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 854,
+          "end_line": 854,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(headers[\"location\"], \"http://example.org/users/me/profile\")"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 859,
+          "end_line": 867,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(\n                c.query_row(\n                    \"SELECT github_login FROM users WHERE id=?\",\n                    [id(\"david\")],\n                    |r| r.get::<_, Option<String>>(0)\n                )?\n                .as_deref(),\n                Some(\"octocat\")\n            )"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 868,
+          "end_line": 868,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert_eq!(u.name, \"Dave\")"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 884,
+          "end_line": 884,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert!(rejected.is_err())"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 888,
+          "end_line": 891,
+          "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+          "text": "assert!(\n                e.on(\"github_login\")\n                    .contains(&\"is set by your linked GitHub account\")\n            )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 884,
+        "end_line": 884,
+        "function": "cutover_d_profile_verified_login_rejects_edit_until_disconnected",
+        "text": "assert!(rejected.is_err())"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-026",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.874s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:239:9:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-026.log",
+      "log_sha256": "b3024a9aed0a3104433551423920c6a8b99e007e2b0cc86068e0d6cda1d27c41",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 239,
+          "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+          "text": "assert_ne!(\n            before,\n            key(&f, parent).await,\n            \"frozen reply-count dependency delete={delete}\"\n        )"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": "thread_messages_count: records.reply_counts.get(&message.id).map(|c| *c as i64),",
+        "after": "thread_messages_count: if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-026\") { None } else { records.reply_counts.get(&message.id).map(|c| *c as i64) },"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 239,
+          "end_line": 243,
+          "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+          "text": "assert_ne!(\n            before,\n            key(&f, parent).await,\n            \"frozen reply-count dependency delete={delete}\"\n        )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 239,
+        "end_line": 243,
+        "function": "cutover_d_cache_frozen_reply_counts_add_delete_and_zero_queries",
+        "text": "assert_ne!(\n            before,\n            key(&f, parent).await,\n            \"frozen reply-count dependency delete={delete}\"\n        )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-029",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.851s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:314:5:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-029.log",
+      "log_sha256": "994e1630363795c08e89a04ff1a95fcd9e4e515b70750bc293cca44ca0a646de",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 314,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, first).await)"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": "streaming: message.streaming,\n                agent_steps:",
+        "after": "streaming: message.streaming && !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-029\")),\n                agent_steps:"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 314,
+          "end_line": 314,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, first).await)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 314,
+        "end_line": 314,
+        "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+        "text": "assert_ne!(before, key(&f, first).await)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-030",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.271s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:349:5:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-030.log",
+      "log_sha256": "863af78e836e7b89abd2b7ca7ce0af7de09b54fb7f53acf03726754599e60a35",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 349,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, step_message).await)"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": ".map(|s| s.updated_at.jiff())",
+        "after": ".filter(|_| !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-030\"))).map(|s| s.updated_at.jiff())"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 351,
+          "end_line": 351,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, step_message).await)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 351,
+        "end_line": 351,
+        "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+        "text": "assert_ne!(before, key(&f, step_message).await)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-034",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes)"
+      ],
+      "exit_code": 0,
+      "killed": false,
+      "summary": [
+        "     Summary [   2.747s] 1 test run: 1 passed, 3073 skipped"
+      ],
+      "panic": [],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-034.log",
+      "log_sha256": "332b194995e0603586e69d0082e44f5667833bc06a39cbbb9f94633bdad514d3",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 383,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, quote).await)"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": "let source = records.sources.get(id)?;",
+        "after": "if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-034\") { return None; }\n                    let source = records.sources.get(id)?;"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 387,
+          "end_line": 387,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, quote).await)"
+        }
+      ],
+      "cited_assertion_failed": false,
+      "survival_reason": "Removing the quoted-source cache projection leaves the legitimate quote-parent timestamp invalidation intact; the later retry breaks actual Message::destroy instead."
+    },
+    {
+      "id": "WS15g-035",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   2.293s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:424:5:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-035.log",
+      "log_sha256": "0e6cdc27440cb41949f3f0f5dc41d5b5254e1389c12ec8e280b0ec3b0ea078df",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 424,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, voted)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 431,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(voted, key(&f, question).await)"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": "poll: records.polls.get(&message.id).map(|p| p.updated_at.jiff()),",
+        "after": "poll: if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-035\") { None } else { records.polls.get(&message.id).map(|p| p.updated_at.jiff()) },"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 430,
+          "end_line": 430,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, voted)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 438,
+          "end_line": 438,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(voted, key(&f, question).await)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 430,
+        "end_line": 430,
+        "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+        "text": "assert_ne!(before, voted)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-036",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   2.833s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:452:5:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-036.log",
+      "log_sha256": "3919831b900c7826f8da71e7907fa2d58df9ee7f25193005a617902afbbdd921",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 452,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_eq!(key(&f, note).await.rsplit('/').nth(5), Some(\"true\"))"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 453,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_eq!(key(&f, first).await.rsplit('/').nth(5), Some(\"false\"))"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": "system_note: message.system_note,\n                streaming:",
+        "after": "system_note: message.system_note && !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-036\")),\n                streaming:"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 459,
+          "end_line": 459,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_eq!(key(&f, note).await.rsplit('/').nth(5), Some(\"true\"))"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 460,
+          "end_line": 460,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_eq!(key(&f, first).await.rsplit('/').nth(5), Some(\"false\"))"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 459,
+        "end_line": 459,
+        "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+        "text": "assert_eq!(key(&f, note).await.rsplit('/').nth(5), Some(\"true\"))"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-037",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin)"
+      ],
+      "exit_code": 0,
+      "killed": false,
+      "summary": [
+        "     Summary [   1.415s] 1 test run: 1 passed, 3073 skipped"
+      ],
+      "panic": [],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-037.log",
+      "log_sha256": "fa3a14ccbf22aeb1d5a559838cd98b6b523e2f56c27a10b1371b52d8203325a3",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 483,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(before, pinned)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 503,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": ".flat_map(|c| c.pins.iter().map(|t| t.jiff()))",
+        "after": ".filter(|_| !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-037\"))).flat_map(|c| c.pins.iter().map(|t| t.jiff()))"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 492,
+          "end_line": 492,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(before, pinned)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 521,
+          "end_line": 525,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+        }
+      ],
+      "cited_assertion_failed": false,
+      "survival_reason": "The initial test incorrectly left the clock advanced between travel blocks, so distinct parent timestamps hid removal of the pin stamp. Exact Rails clock restoration and retry kill this mutation."
+    },
+    {
+      "id": "WS15g-039",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.895s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:544:5:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-039.log",
+      "log_sha256": "000d0417bfac7b75619a47ee5236704555369fd65f86b1521c7490e8d8c6bea7",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 544,
+          "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+          "text": "assert_ne!(before, key(&f, message).await)"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": ".flat_map(|c| c.cards.iter().map(|t| t.jiff()))",
+        "after": ".filter(|_| !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-039\"))).flat_map(|c| c.cards.iter().map(|t| t.jiff()))"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 564,
+          "end_line": 564,
+          "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+          "text": "assert_ne!(before, key(&f, message).await)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 564,
+        "end_line": 564,
+        "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+        "text": "assert_ne!(before, key(&f, message).await)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-040",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_x_and_link_fetch_dependencies)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.362s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:565:5:"
+      ],
+      "log": "rust/target/ledger-d-native-github-mutations/WS15g-040.log",
+      "log_sha256": "37dd81e4fb3090e9d7938f1d17538af02260e48bb336f8faad2e126a5dd86c20",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 565,
+          "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+          "text": "assert_ne!(before, key(&f, message).await)"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": ".flat_map(|c| c.embeds.iter().map(|(id, t)| (*id, t.map(|t| t.jiff()))))",
+        "after": ".filter(|_| !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-040\"))).flat_map(|c| c.embeds.iter().map(|(id, t)| (*id, t.map(|t| t.jiff()))))"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-mutations.json rust/target/ledger-d-native-github-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 587,
+          "end_line": 587,
+          "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+          "text": "assert_ne!(before, key(&f, message).await)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 587,
+        "end_line": 587,
+        "function": "cutover_d_cache_x_and_link_fetch_dependencies",
+        "text": "assert_ne!(before, key(&f, message).await)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-034",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_streaming_steps_quotes_polls_and_system_notes)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   1.655s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:387:5:"
+      ],
+      "log": "rust/target/ledger-d-native-github-retry-mutations/WS15g-034.log",
+      "log_sha256": "1f3a7cbe5c2ff3717fa1c799c1701e995d78f827d1515f926bd1edaf27ed8b6a",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 387,
+          "end_line": 387,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, quote).await)"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-retry-mutations.json",
+      "producer": {
+        "file": "rust/crates/db/src/models/message.rs",
+        "scope": null,
+        "before": "pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {",
+        "after": "pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {\n        if std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-034\") { return Ok(()); }"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-retry-mutations.json rust/target/ledger-d-native-github-retry-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 387,
+          "end_line": 387,
+          "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+          "text": "assert_ne!(before, key(&f, quote).await)"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 387,
+        "end_line": 387,
+        "function": "cutover_d_cache_streaming_steps_quotes_polls_and_system_notes",
+        "text": "assert_ne!(before, key(&f, quote).await)"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS15g-037",
+      "test": "campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin",
+      "package": "campfire",
+      "command": [
+        "rust/target/ledger-d-tools/cargo-env",
+        "cargo",
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "campfire",
+        "-j",
+        "4",
+        "--no-fail-fast",
+        "-E",
+        "test(controllers::github::cutover_d_tests::cutover_d_cache_pins_and_newer_card_unpin)"
+      ],
+      "exit_code": 100,
+      "killed": true,
+      "summary": [
+        "     Summary [   0.894s] 1 test run: 0 passed, 1 failed, 3073 skipped"
+      ],
+      "panic": [
+        "crates/campfire/src/controllers/github/cutover_d_tests.rs:517:9:"
+      ],
+      "log": "rust/target/ledger-d-native-github-retry-mutations/WS15g-037.log",
+      "log_sha256": "0a81df3a9ff5f2d7bf68dd8280cef4650580e4abeec1291272c372c1a3d02415",
+      "expected_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 492,
+          "end_line": 492,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(before, pinned)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 517,
+          "end_line": 521,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+        }
+      ],
+      "manifest": "rust/reference-tools/cutover/d-github-retry-mutations.json",
+      "producer": {
+        "file": "rust/crates/campfire/src/controllers/presenters/message_cache.rs",
+        "scope": null,
+        "before": ".flat_map(|c| c.pins.iter().map(|t| t.jiff()))",
+        "after": ".filter(|_| !(std::env::var(\"CAMPFIRE_LEDGER_MUTATION\").as_deref() == Ok(\"WS15g-037\"))).flat_map(|c| c.pins.iter().map(|t| t.jiff()))"
+      },
+      "restored": true,
+      "runner_command": "python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-github-retry-mutations.json rust/target/ledger-d-native-github-retry-mutations -- rust/target/ledger-d-tools/cargo-env",
+      "current_cited_assertions": [
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 492,
+          "end_line": 492,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(before, pinned)"
+        },
+        {
+          "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+          "line": 521,
+          "end_line": 525,
+          "function": "cutover_d_cache_pins_and_newer_card_unpin",
+          "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+        }
+      ],
+      "failed_current_citation": {
+        "file": "rust/crates/campfire/src/controllers/github/cutover_d_tests.rs",
+        "line": 521,
+        "end_line": 525,
+        "function": "cutover_d_cache_pins_and_newer_card_unpin",
+        "text": "assert_ne!(\n            pinned,\n            key(&f, message).await,\n            \"newer referenced card={newer}\"\n        )"
+      },
+      "cited_assertion_failed": true
+    },
+    {
+      "id": "WS14g-232",
+      "producer": "controllers/drive_share_controller-",
+      "before": "include_granted_scopes: false",
+      "after": "include_granted_scopes: true",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 139,
+        "text": "assert_equal false, init_calls.first[\"include_granted_scopes\"]"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 139,
+        "end_line": 139,
+        "function": "original_browser_ws14g_232",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 139
+        },
+        "text": "assert_equal false, init_calls.first[\"include_granted_scopes\"]"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_232)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "36c2961dc4c0f36288c8f089a6de2626bcd5b4b8697739bd6969ccfee1bae42e",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-232.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes",
+      "killed": true,
+      "manifest": "rust/reference-tools/cutover/d-browser-mutations.json"
+    },
+    {
+      "id": "WS14g-233",
+      "producer": "controllers/drive_share_controller-",
+      "before": "const result = pinDriveAttachment(this.attachmentsStrip, review)",
+      "after": "const result = \"pinned\"",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 157,
+        "text": "assert_selector \".composer__drive-attachments .drive-attachment-chip\", text: \"Q3 Planning\""
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 157,
+        "end_line": 157,
+        "function": "original_browser_ws14g_233",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 157
+        },
+        "text": "assert_selector \".composer__drive-attachments .drive-attachment-chip\", text: \"Q3 Planning\""
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_233)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "c7efa3500c3b012c5ef5e8db32957d651b660601b7898f1dddaf6f4615bf05e5",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-233.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes",
+      "killed": true,
+      "manifest": "rust/reference-tools/cutover/d-browser-mutations.json"
+    },
+    {
+      "id": "WS14g-238",
+      "producer": "controllers/drive_share_controller-",
+      "before": "target?.focus({ preventScroll: true })\n  }\n\n  #armOutsideDismiss()",
+      "after": "this.form?.querySelector(\"textarea\")?.focus({ preventScroll: true })\n  }\n\n  #armOutsideDismiss()",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 296,
+        "text": "assert_attach_button_focused"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 296,
+        "end_line": 296,
+        "function": "original_browser_ws14g_238",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 296
+        },
+        "text": "assert_attach_button_focused"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_238)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "cdca4a4639a5458631eed1987015f5aee9cf85ef5037a2f2a838ad574d85b0c4",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-238.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes",
+      "killed": true,
+      "manifest": "rust/reference-tools/cutover/d-browser-mutations.json"
+    },
+    {
+      "id": "WS14g-252",
+      "producer": "drive-",
+      "before": ".drive-share-dialog {",
+      "after": ".drive-share-dialog { transform: translateX(-30px) !important;",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 583,
+        "text": "assert_operator geometry[\"left\"], :>=, 0"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 583,
+        "end_line": 583,
+        "function": "original_browser_ws14g_252",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 583
+        },
+        "text": "assert_operator geometry[\"left\"], :>=, 0"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_252)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "b2a16ba7b097cc8227e4e0655a2364cc8864fb4adf5fe76475e12f21d0e3ba55",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-252.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes",
+      "killed": true,
+      "manifest": "rust/reference-tools/cutover/d-browser-mutations.json"
+    },
+    {
+      "id": "WS14g-262",
+      "producer": "drive-",
+      "before": ".drive-share-dialog__recipient-name {",
+      "after": ".drive-share-dialog__recipient-name { overflow-wrap: normal !important;",
+      "rails_assertion": {
+        "file": "test/system/drive_share_test.rb",
+        "line": 849,
+        "text": "assert_equal \"anywhere\", styles[\"nameWrap\"]"
+      },
+      "rust_assertion": {
+        "file": "rust/reference-tools/users/original_browser/test/system/drive_share_test.rb",
+        "line": 849,
+        "end_line": 849,
+        "function": "original_browser_ws14g_262",
+        "kind": "original_browser",
+        "original": {
+          "file": "test/system/drive_share_test.rb",
+          "line": 849
+        },
+        "text": "assert_equal \"anywhere\", styles[\"nameWrap\"]"
+      },
+      "command": "mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(=controllers::ws14_original_browser_tests::original_browser_ws14g_262)' --run-ignored only --no-fail-fast --failure-output immediate",
+      "exit_code": 100,
+      "mutation_applied": true,
+      "cited_assertion_failed": true,
+      "log_sha256": "040c75a3bb7ca38e2fbe9dd5c77c27483445d27694685529ea2c1ab36f066f2d",
+      "log": "rust/target/ledger-d-browser-mutations/ws14g-262.log",
+      "restored": true,
+      "restore_method": "nativeAssetProxy scoped to the test browser; unchanged served producer restored when proxy closes",
+      "killed": true,
+      "manifest": "rust/reference-tools/cutover/d-browser-mutations.json"
+    }
+  ],
+  "note": "34 executions across 32 distinct closures. The two initial survivors remain in this receipt, with reasons; both later retries fail at mapped assertions. Test line numbers in raw panics are execution-time coordinates; failed_current_citation anchors the same assertion in final source. Native producer bytes and browser served assets are restored; final positive targeted tests follow all mutations."
+}

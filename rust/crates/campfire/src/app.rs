@@ -662,3 +662,6 @@ mod google_message_tests;
 
 #[cfg(test)]
 pub(crate) mod cutover_c_tests;
+
+#[cfg(test)]
+mod cutover_d_tests;

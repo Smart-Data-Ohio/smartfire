@@ -2,11 +2,10 @@
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, require_current_user, session_keys, sudo};
 use crate::controllers::presenters::page::framed_page;
-use campfire_db::{SudoVerifier, TwoFactorCredential};
+use campfire_db::SudoVerifier;
 use campfire_kit::{Ctx, Error, RateLimit, Redirect, Result, StatusCode, format, halt};
 use campfire_views::sudos;
 use jiff::SignedDuration;
-use rails_compat::ar_encryption::ArEncryption;
 use rusqlite::OptionalExtension;
 
 pub async fn new(c: &mut Ctx) -> Result {
@@ -48,26 +47,11 @@ pub async fn create(c: &mut Ctx) -> Result {
                 .and_then(|p| p.to_s())
                 .unwrap_or_default();
             let secrets = c.app().secrets.clone();
+            let app = c.app().clone();
             let verified = c
                 .app()
                 .db
-                .write(move |tx| {
-                    let Some(mut credential) = TwoFactorCredential::for_user(tx.conn(), user_id)?
-                        .filter(|credential| credential.enabled())
-                    else {
-                        return Ok(None);
-                    };
-                    if credential.locked_out(tx.now()) {
-                        return Ok(Some(false));
-                    }
-                    if credential.verify_code(tx, &ArEncryption::new(&secrets), &code)? {
-                        credential.register_challenge_success(tx)?;
-                        Ok(Some(true))
-                    } else {
-                        credential.register_challenge_failure(tx)?;
-                        Ok(Some(false))
-                    }
-                })
+                .write(move |tx| app.sudo.verify_totp(tx, user_id, &secrets, &code))
                 .await
                 .map_err(Error::internal)?;
             (verified, SudoVerifier::Totp)
@@ -239,17 +223,13 @@ async fn render_new(c: &mut Ctx, status: StatusCode) -> Result {
         .password_digest
         .as_ref()
         .is_some_and(|digest| !digest.trim().is_empty());
+    let app = c.app().clone();
     let totp = c
         .app()
-        .sudo
-        .extra_verifiers()
-        .iter()
-        .any(|name| name == "totp")
-        && c.app()
-            .db
-            .read(move |conn| user.two_factor_enabled(conn))
-            .await
-            .map_err(Error::internal)?;
+        .db
+        .read(move |conn| app.sudo.verifier_available(conn, "totp", user.id))
+        .await
+        .map_err(Error::internal)?;
     let google = c.app().sudo.google().is_some()
         && linked_subject(c, require_current_user(c)?.id)
             .await?

@@ -1,0 +1,395 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "records": [
+    {
+      "id": "WS14g-010",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 62,
+            "text": "assert_includes SudoMode.extra_verifiers, :totp"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 19,
+              "end_line": 26,
+              "function": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+              "text": "assert!(\n        a.booted\n            .app\n            .sudo\n            .extra_verifiers()\n            .iter()\n            .any(|name| name == \"totp\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 63,
+            "text": "assert_equal :unsupported, SudoMode.verify_with(:totp, users(:david), { totp_code: \"123456\" })"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 38,
+              "end_line": 38,
+              "function": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+              "text": "assert_eq!(verification, None)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 64,
+            "text": "assert_not SudoMode.verifier_available?(:totp, users(:david))"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 45,
+              "end_line": 45,
+              "function": "cutover_d_totp_is_registered_unsupported_and_unavailable_without_enrollment",
+              "text": "assert!(!available)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-016",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 122,
+            "text": "assert_difference -> { AuditLog.where(action: \"sudo.confirm.failure\").count }, +1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 91,
+              "end_line": 91,
+              "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+              "text": "assert_eq!(after, before + 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 126,
+            "text": "assert_response :unauthorized"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 92,
+              "end_line": 92,
+              "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+              "text": "assert_eq!(rejected.status, StatusCode::UNAUTHORIZED)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 127,
+            "text": "assert_equal \"totp\", AuditLog.where(action: \"sudo.confirm.failure\").order(:id).last.details[\"verifier\"]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 95,
+              "end_line": 95,
+              "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+              "text": "assert_eq!(verifier, \"totp\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 130,
+            "text": "assert_redirected_to new_sudo_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 97,
+              "end_line": 97,
+              "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+              "text": "assert_eq!(gated.status, StatusCode::FOUND)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 98,
+              "end_line": 98,
+              "function": "cutover_d_wrong_totp_audits_failure_and_initial_session_stays_gated",
+              "text": "assert_eq!(gated.location(), Some(\"http://campfire.test/sudo/new\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-021",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 200,
+            "text": "assert_redirected_to new_sudo_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 106,
+              "end_line": 106,
+              "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+              "text": "assert_eq!(gated.status, StatusCode::FOUND)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 107,
+              "end_line": 107,
+              "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+              "text": "assert_eq!(gated.location(), Some(\"http://campfire.test/sudo/new\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 203,
+            "text": "assert_redirected_to account_audit_log_url(format: :csv)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 111,
+              "end_line": 111,
+              "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+              "text": "assert_eq!(confirmed.status, StatusCode::FOUND)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 112,
+              "end_line": 115,
+              "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+              "text": "assert_eq!(\n        confirmed.location(),\n        Some(\"http://campfire.test/account/audit_log.csv\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 206,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 117,
+              "end_line": 117,
+              "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+              "text": "assert_eq!(csv.status, StatusCode::OK)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 207,
+            "text": "assert_equal \"text/csv\", response.media_type"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 118,
+              "end_line": 128,
+              "function": "cutover_d_gated_audit_csv_get_continues_and_returns_csv",
+              "text": "assert_eq!(\n        csv.headers\n            .get(\"content-type\")\n            .unwrap()\n            .to_str()\n            .unwrap()\n            .split(';')\n            .next()\n            .unwrap(),\n        \"text/csv\"\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-023",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 224,
+            "text": "assert_redirected_to edit_account_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 151,
+              "end_line": 151,
+              "function": "cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+              "text": "assert_eq!(response.status, StatusCode::FOUND)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 152,
+              "end_line": 155,
+              "function": "cutover_d_fourteen_minute_confirmation_allows_real_join_code_post",
+              "text": "assert_eq!(\n        response.location(),\n        Some(\"http://campfire.test/account/edit\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-024",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 234,
+            "text": "assert_redirected_to new_sudo_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 160,
+              "end_line": 160,
+              "function": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+              "text": "assert_eq!(response.status, StatusCode::FOUND)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 161,
+              "end_line": 161,
+              "function": "cutover_d_sixteen_minute_confirmation_gates_real_join_code_post",
+              "text": "assert_eq!(response.location(), Some(\"http://campfire.test/sudo/new\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-108",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/calendar/meeting_refresh_test.rb",
+            "line": 147,
+            "text": "assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 258,
+              "end_line": 258,
+              "function": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+              "text": "assert_eq!(result, meeting_refresh::Result::Error)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/calendar/meeting_refresh_test.rb",
+            "line": 150,
+            "text": "assert_equal busy, cache.busy_intervals"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 265,
+              "end_line": 265,
+              "function": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+              "text": "assert_eq!(cache.busy, busy)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/calendar/meeting_refresh_test.rb",
+            "line": 151,
+            "text": "assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 266,
+              "end_line": 269,
+              "function": "cutover_d_escaping_json_parser_keeps_existing_busy_intervals_and_records_error",
+              "text": "assert_eq!(\n        cache.fetch_error.as_deref(),\n        Some(meeting_refresh::UNREACHABLE)\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-181",
+      "test": "campfire::bin/campfire app::cutover_d_tests::cutover_d_duplicate_google_account_is_invalid_before_persistence",
+      "note": "Pinned Rails fixtures and starting state; real production model API or HTTP router. TOTP rejects before any successful confirmation; clock tests grant through HTTP then advance exactly 14 or 16 minutes. Escaping JSON parser error is injected at the Google client operation boundary used by production MeetingRefresh, distinct from malformed HTTP classification.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 11,
+            "text": "assert_not duplicate.valid?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 181,
+              "end_line": 181,
+              "function": "cutover_d_duplicate_google_account_is_invalid_before_persistence",
+              "text": "assert!(!errors.is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 12,
+            "text": "assert_equal [ \"has already been taken\" ], duplicate.errors[:user_id]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_d_tests.rs",
+              "line": 182,
+              "end_line": 182,
+              "function": "cutover_d_duplicate_google_account_is_invalid_before_persistence",
+              "text": "assert_eq!(errors.on(\"user_id\"), [\"has already been taken\"])"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    }
+  ]
+}

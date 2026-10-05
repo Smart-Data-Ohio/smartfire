@@ -19,6 +19,8 @@ root = pathlib.Path(__file__).resolve().parents[3]
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--ci-log', type=pathlib.Path)
 parser.add_argument('--nextest-log', type=pathlib.Path)
+parser.add_argument('--slice-log', action='append', type=pathlib.Path, default=[],
+                    help='targeted D native/browser log; validate its exact mapped test receipts')
 args = parser.parse_args()
 data = json.loads((root / 'rust/plans/ledger-ws14-ws15.json').read_text())
 records = data['records']
@@ -51,24 +53,31 @@ continuation_ids = set()
 continuation_closed = set()
 continuation_reopened = set()
 if continuation:
+    active_maps = {}
     for file in continuation['maps']:
         mapping = json.loads((root / file).read_text())
         for entry in mapping['records']:
-            assert entry['id'] not in continuation_ids
-            continuation_ids.add(entry['id'])
-            record = next(r for r in records if r['id'] == entry['id'])
-            if record['disposition'] == 'implemented':
-                assert all(a['disposition'] == 'covered' and a['rust'] for a in entry['assertions']), entry['id']
-                continuation_closed.add(entry['id'])
-            else:
-                assert record['disposition'] == 'unsupported_assertion', entry['id']
-                assert entry['review_disposition'] == 'reopened', entry['id']
-                assert any(a['disposition'] == 'unsupported_assertion' and not a['rust']
-                           and a.get('reason') for a in entry['assertions']), entry['id']
-                assert record['review243']['previous_evidence'], entry['id']
-                continuation_reopened.add(entry['id'])
-            assert record['evidence']['test'] == entry['test'], entry['id']
-            assert record['evidence']['assertion_map']['file'] == file, entry['id']
+            if entry['id'] in active_maps:
+                previous, previous_file = active_maps[entry['id']]
+                assert previous.get('superseded_by') == file, entry['id']
+                assert previous['review_disposition'] == 'reopened', entry['id']
+                assert all(a['disposition'] == 'covered' for a in entry['assertions']), entry['id']
+            active_maps[entry['id']] = (entry, file)
+    for rid, (entry, file) in active_maps.items():
+        continuation_ids.add(entry['id'])
+        record = next(r for r in records if r['id'] == entry['id'])
+        if record['disposition'] == 'implemented':
+            assert all(a['disposition'] == 'covered' and a['rust'] for a in entry['assertions']), entry['id']
+            continuation_closed.add(entry['id'])
+        else:
+            assert record['disposition'] == 'unsupported_assertion', entry['id']
+            assert entry['review_disposition'] == 'reopened', entry['id']
+            assert any(a['disposition'] == 'unsupported_assertion' and not a['rust']
+                       and a.get('reason') for a in entry['assertions']), entry['id']
+            assert record['review243']['previous_evidence'], entry['id']
+            continuation_reopened.add(entry['id'])
+        assert record['evidence']['test'] == entry['test'], entry['id']
+        assert record['evidence']['assertion_map']['file'] == file, entry['id']
     # The separate continuation schema checks every Rails call, exact native
     # assertion bytes and physical source locations; it is not an audit waiver.
     subprocess.run(['python3', str(root / 'rust/reference-tools/cutover/assertion-maps.py'),
@@ -143,7 +152,7 @@ for r in records:
     audit = r.get('assertion_audit')
     if not audit:
         if r['id'] in continuation_ids:
-            assert r['continuation'] in {'rust/ledger-ws14-ws15-b', 'rust/ledger-ws14-ws15-c'}, r['id']
+            assert r['continuation'] in {'rust/ledger-ws14-ws15-b', 'rust/ledger-ws14-ws15-c', 'rust/ledger-ws14-ws15-d'}, r['id']
         else:
             assert r['disposition'] == 'unsupported_assertion', r['id']
         continue
@@ -184,10 +193,18 @@ for r in records:
                             for file, numbers in sorted(rust_locations.items()))
         assert f'Assertions: {compact}.' in line, r['id']
     elif audit['outcome'] == 'reopen':
-        assert r['disposition'] == 'unsupported_assertion', r['id']
         assert audit['missing_assertions'], r['id']
-        assert r['evidence']['detail'] in line, r['id']
-        assert r['evidence']['detail'].replace('|', '&#124;') in remaining, r['id']
+        if r['id'] in continuation_closed:
+            # Retain the original reopen audit as history. A later complete,
+            # independently checked assertion map supplies the current closure.
+            current, _ = active_maps[r['id']]
+            current_calls = {a['rails']['line'] for a in current['assertions']}
+            assert rails_locations <= current_calls, r['id']
+            assert r['disposition'] == 'implemented' and r.get('continuation') == 'rust/ledger-ws14-ws15-d'
+        else:
+            assert r['disposition'] == 'unsupported_assertion', r['id']
+            assert r['evidence']['detail'] in line, r['id']
+            assert r['evidence']['detail'].replace('|', '&#124;') in remaining, r['id']
     else:
         assert r['disposition'] == 'outside_gate', r['id']
 
@@ -222,6 +239,23 @@ if args.nextest_log:
     for record in records:
         if record['disposition'] in {'passed', 'implemented'}:
             assert record['evidence']['test'] in names, record['id']
+
+if args.slice_log:
+    slice_data = data['cutover_d']
+    expected = {entry['test'] for file in slice_data['maps']
+                for entry in json.loads((root / file).read_text())['records']}
+    passed = set()
+    verified_hashes = {receipt['raw_log_sha256'] for receipt in
+                       slice_data['verification']['targeted_nextest']}
+    for path in args.slice_log:
+        raw = path.read_bytes()
+        assert hashlib.sha256(raw).hexdigest() in verified_hashes, ('Unregistered D execution log', path)
+        text = raw.decode()
+        assert not re.search(r'\bFAIL\s+\[', text), path
+        passed.update(package + ' ' + name for package, name in
+                      re.findall(r'PASS\s+\[.*?\]\s+\(.*?\)\s+(\S+)\s+([^\n]+)', text))
+    assert expected <= passed, ('D mapped tests missing PASS receipts', sorted(expected - passed))
+    print(f'Targeted D receipts: {len(expected)} distinct mapped tests passed; {slice_data["closed_records"]} exact declarations closed')
 
 counts = collections.Counter(r['disposition'] for r in records)
 print(f"Acceptance ledger: {len(records)} records checked; {counts['passed']} baseline-CI passed; "
