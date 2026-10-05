@@ -65,6 +65,12 @@ required; the app and workspace steps report all failures before explicit outcom
 their normal linker. Shared pinned Rails seed build/restore/validation lives in
 `.github/actions/rust-setup`.
 
+Dev, test and CI builds use the nightly in `rust-toolchain.toml`, and `.cargo/config.toml` builds
+the `campfire` crate with the Cranelift backend (everything else, and every release build, uses
+LLVM; the production image stays on the Dockerfile's stable toolchain). Cranelift can't unwind:
+tests of panic recovery need `--config 'profile.dev.package.campfire.codegen-backend="llvm"'`.
+Measurements and rejected options: `plans/build-speed-report.md`.
+
 Separate required correctness jobs run Rails differential/rollback, Pebble ACME,
 WS12/WS13 browsers and the gateway Node suite, project-local LiveKit, paired messaging,
 and WS11 agent UI. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
