@@ -7,64 +7,30 @@ name: Rust
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
 # nothing is pushed or published. Deploys stay behind the manual Deploy to GCP workflow, which
-# looks only at ci.yml's runs.
+# requires this complete workflow for Rust candidates.
 
 on:
   push:
-    branches: [ main, ci/rust-speedups ]
-    paths:
+    branches: [ main ]
+    paths: &rust-inputs
       - "rust/**"
-      # Embedded styles, images, sounds and emoji read by the Propshaft build.
-      - "app/assets/**"
-      # Application modules and controllers read by the importmap/Propshaft build.
-      - "app/javascript/**"
-      # Third-party application modules on the Propshaft load path.
-      - "vendor/javascript/**"
-      # Public files embedded and served by the asset crate.
+      - "app/**"
+      - "config/**"
+      - "lib/**"
+      - "test/**"
+      - "db/**"
       - "public/**"
-      # Pins and pin_all_from inputs expanded into the embedded importmap.
-      - "config/importmap.rb"
-      # Assets version included in Propshaft digests.
-      - "config/initializers/assets.rb"
-      # Vendored brand icon catalog checked against the Rails original.
-      - "config/icons.yml"
-      # Fixture records and media consumed by database/storage tests.
-      - "test/fixtures/**"
-      # Schema hash and declared migration versions checked by database tests.
-      - "db/schema.rb"
-      # Migration filename versions compared with the Rust schema manifest.
-      - "db/migrate/**"
-      # Built-in sound catalog checked against its Rails definition.
-      - "app/models/sound.rb"
+      - "vendor/**"
+      - "bin/**"
+      - "script/**"
+      - "Gemfile*"
+      - ".ruby-version"
+      - "Dockerfile"
       - ".github/workflows/rust.yml"
+      - ".github/actions/rust-setup/**"
   pull_request:
     branches: [ main ]
-    paths:
-      - "rust/**"
-      # Embedded styles, images, sounds and emoji read by the Propshaft build.
-      - "app/assets/**"
-      # Application modules and controllers read by the importmap/Propshaft build.
-      - "app/javascript/**"
-      # Third-party application modules on the Propshaft load path.
-      - "vendor/javascript/**"
-      # Public files embedded and served by the asset crate.
-      - "public/**"
-      # Pins and pin_all_from inputs expanded into the embedded importmap.
-      - "config/importmap.rb"
-      # Assets version included in Propshaft digests.
-      - "config/initializers/assets.rb"
-      # Vendored brand icon catalog checked against the Rails original.
-      - "config/icons.yml"
-      # Fixture records and media consumed by database/storage tests.
-      - "test/fixtures/**"
-      # Schema hash and declared migration versions checked by database tests.
-      - "db/schema.rb"
-      # Migration filename versions compared with the Rust schema manifest.
-      - "db/migrate/**"
-      # Built-in sound catalog checked against its Rails definition.
-      - "app/models/sound.rb"
-      - ".github/workflows/rust.yml"
-  # Manual reruns remain available alongside automatic checks of every live Rails input.
+    paths: *rust-inputs
   workflow_dispatch:
 
 permissions: {}
@@ -93,108 +59,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Test parity cache identities
-        run: python3 -m unittest discover -s rust/parity -p test_ci_seed.py
+      - name: Check ignored-test coverage
+        run: python3 -m unittest discover -s rust/ci -p 'test_*.py'
 
-      - name: Prepare pinned Rails reference
-        id: parity
-        shell: bash
-        run: |
-          echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
-          rust/parity/bin/ci-seed prepare >> "$GITHUB_OUTPUT"
-
-      # Exact keys only: a seed from a different Rails pin, image input or seed script
-      # is never reused. PRs can read trusted caches but cannot save either cache.
-      - name: Restore reference image
-        id: reference-cache
-        # zizmor: ignore[cache-poisoning] -- loaded only for tests; PRs cannot save it or publish anything
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Prepare shared Rust CI inputs
+        id: setup
+        uses: ./.github/actions/rust-setup
         with:
-          path: rust/parity/.ci/image
-          key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
-
-      - name: Restore parity seeds
-        id: seed-cache
-        # zizmor: ignore[cache-poisoning] -- PRs cannot save it; Rails validates every restored seed
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            rust/parity/.seed/default
-            rust/parity/.seed/first_run
-            rust/parity/.seed/agents_ui
-          key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
-
-      - name: Build or load pinned reference image
-        run: rust/parity/bin/ci-seed image
-
-      - name: Build parity seeds
-        if: ${{ steps.seed-cache.outputs.cache-hit != 'true' }}
-        run: rust/parity/bin/ci-seed build
-
-      - name: Validate parity seeds with Rails
-        run: rust/parity/bin/ci-seed validate
-
-      - name: Prove parity gates reject missing or corrupt inputs
-        run: python3 -m unittest discover -s rust/parity -p test_ci_seed_docker.py
-
-      # Only pushes to main save these caches; PRs and other branches only restore.
-      - name: Save reference image
-        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.reference-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: rust/parity/.ci/image
-          key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
-
-      - name: Save parity seeds
-        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.seed-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            rust/parity/.seed/default
-            rust/parity/.seed/first_run
-            rust/parity/.seed/agents_ui
-          key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
-
-      - name: Summarize parity setup time
-        env:
-          STARTED: ${{ steps.parity.outputs.started }}
-          IMAGE_HIT: ${{ steps.reference-cache.outputs.cache-hit }}
-          SEED_HIT: ${{ steps.seed-cache.outputs.cache-hit }}
-        run: |
-          echo "Parity setup: $(($(date +%s) - STARTED))s (image cache: ${IMAGE_HIT:-false}; seed cache: ${SEED_HIT:-false})" | tee -a "$GITHUB_STEP_SUMMARY"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      # The Dockerfile's toolchain stage: Rust with the image's own libvips and ffmpeg builds.
-      # Only pushes to main write caches. PRs and branch pushes may read but never write: this
-      # prevents cache poisoning and keeps their multi-gigabyte targets from evicting Rails/image
-      # caches. Use immutable GitHub context directly, never a step-writable environment variable.
-      - name: Build toolchain image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: rust
-          file: rust/Dockerfile
-          build-contexts: reference=.
-          target: toolchain
-          tags: campfire-toolchain
-          load: true
-          push: false
-          cache-from: type=gha,scope=rust-toolchain
-          cache-to: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,scope=rust-toolchain,mode=max' || '' }}
-
-      - name: Restore cargo registry and target
-        id: cargo-cache
-        # zizmor: ignore[cache-poisoning] -- nothing is published: the image above is only loaded locally
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            rust/.cargo-home/registry
-            rust/target
-          key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
-          restore-keys: |
-            rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-
-            rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-
+          save-caches: 'true'
 
       - name: Clippy
         run: bash rust/ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
@@ -204,13 +76,16 @@ jobs:
       - name: Build application binaries with production inputs
         run: bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
 
+      - name: Enumerate compiled ignored tests
+        run: bash rust/ci/verify-ignored.sh
+
       # Build with the same workspace/features as clippy and the following nextest run, then run
       # only the blocking database tests. The workspace filter below avoids executing them twice.
       - name: Tests (campfire_db)
         shell: bash
         run: |
           bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci --no-fail-fast -E 'package(campfire_db)'
+            --profile ci -j 4 --no-fail-fast -E 'package(campfire_db)'
           cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/db-junit.xml"
           # nextest does not run doctests; database doctests remain part of the blocking gate.
           bash rust/ci/cargo.sh test --locked -p campfire_db --doc --no-fail-fast 2>&1 |
@@ -225,23 +100,22 @@ jobs:
         run: |
           status=0
           bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci --no-fail-fast -E 'package(campfire)' 2>&1 |
+            --profile ci -j 4 --no-fail-fast -E 'package(campfire)' 2>&1 |
             tee "$RUNNER_TEMP/campfire-nextest.log" || status=$?
           cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/campfire-junit.xml"
           exit "$status"
 
-      # NON-BLOCKING until the rest of the port catches up with our Rails app. Database tests are
-      # gated above; reference failures still fail this step and are counted in the summary.
-      - name: Tests (non-blocking)
+      # Report the whole suite before promoting every failed outcome to job failure.
+      - name: Tests (other workspace)
         id: tests
         continue-on-error: true
         shell: bash
         run: |
           bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci --no-fail-fast -E 'not package(campfire_db) and not package(campfire)' 2>&1 |
+            --profile ci -j 4 --no-fail-fast -E 'not package(campfire_db) and not package(campfire)' 2>&1 |
             tee "$RUNNER_TEMP/nextest.log"
 
-      - name: Doctests (non-blocking)
+      - name: Doctests (other workspace)
         id: doctests
         if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
         continue-on-error: true
@@ -268,11 +142,66 @@ jobs:
           echo '::error::Seed-dependent campfire tests failed; see the campfire nextest log.'
           exit 1
 
+      - name: Gate workspace tests and doctests
+        if: ${{ !cancelled() && (steps.tests.outcome != 'success' || steps.doctests.outcome != 'success') }}
+        run: |
+          echo '::error::Workspace tests or doctests failed; see the test summary and logs.'
+          exit 1
+
       - name: Save cargo registry and target
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             rust/.cargo-home/registry
             rust/target
           key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+
+  correctness:
+    name: Rust correctness (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [database, acme, browsers, livekit, messaging, agents-ui]
+    env:
+      CI: "true"
+      RUST_CI_IMAGE: campfire-toolchain
+      RUST_CI_CONTAINER_PREFIX: campfire-ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The external harnesses read original case bodies and the approved layout commit.
+          fetch-depth: 0
+
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup
+
+      - name: Build pinned correctness prerequisites
+        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+
+      - name: Permit native browser namespaces
+        if: ${{ matrix.suite == 'messaging' }}
+        run: |
+          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
+            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
+            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
+          fi
+
+      - name: Run prerequisite-backed correctness suite
+        env:
+          SUITE: ${{ matrix.suite }}
+        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+
+      - name: Retain correctness receipts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-correctness-${{ matrix.suite }}
+          path: rust/target/ci-receipts/
+          if-no-files-found: error

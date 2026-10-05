@@ -30,7 +30,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
   const proof=mkdtempSync(scratch+'/proof-');
   // Chrome's Unix socket path must be short. This owned cache is authorized;
   // no /tmp path or another worker's files/listeners are used.
-  const cache='/home/riels/.cache/rust-port/ws8bm';mkdirSync(cache,{recursive:true});
+  const cache=process.env.WS8BM_BROWSER_SCRATCH||'/home/riels/.cache/rust-port/ws8bm';mkdirSync(cache,{recursive:true});
   const temp=mkdtempSync(cache+'/s-');
   let driver,log,proxy,network;
   const container='ws8bm-native-'+basename(temp);
@@ -75,7 +75,7 @@ export async function nativePhone(base,{sourcePath='test/system/threads_test.rb'
       extra.push('-v',`${storage}:/rails/storage/files`,'-v',`${storage}:/rails/tmp/storage`,'-e',`WS8BM_NATIVE_FIXTURES=${temp}`,'-e','WS8BM_TEST_JOB_ADAPTER=1');
     }
     if(database&&process.env.CI!==undefined) extra.push('-e',`CI=${process.env.CI}`);
-    const args=['run','--name',container,'--rm','--network','host','--cpus','2',...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'-e',`WS8BM_NATIVE_DRIVER_PORT=${driverPort}`,'--entrypoint','bundle',REFERENCE_IMAGE,'exec','ruby','/tools/behavior-native-phone.rb'];
+    const args=['run','--name',container,'--rm','--network','host','--cpus','2','--user',`${process.getuid()}:${process.getgid()}`,...extra,'-v',`${proof}:/proof:ro`,'-v',`${tools}:/tools:ro`,'-e',`WS8BM_NATIVE_BASE=${base}`,...(proxy?['-e',`WS8BM_NATIVE_PROXY=${proxy.url}`]:[]),'-e',`WS8BM_NATIVE_DRIVER_PORT=${driverPort}`,'--entrypoint','bundle',REFERENCE_IMAGE,'exec','ruby','/tools/behavior-native-phone.rb'];
     const result=await new Promise((resolve,reject)=>{
       const child=spawn('docker',args);let stdout='',stderr='';
       const timer=setTimeout(()=>{child.kill('SIGTERM');reject(new Error('Native browser process timeout'));},120000);

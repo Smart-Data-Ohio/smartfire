@@ -12,8 +12,11 @@
 # cannot fix that: it runs after the reset.
 #
 # before_teardown runs before #teardown, while the stubs are still
-# registered, so this module leaves the page and waits out the pending
-# server requests here. super runs first so a failed test still
+# registered, so this module resets every browser session and waits out
+# pending server requests here. With Capybara's shared server, the current
+# session can have an unused middleware counter: the session that first
+# booted the server owns the real counter. reset_sessions! visits all
+# sessions, draining the server-owning one last. super runs first so a failed test still
 # screenshots the real page, not the blank one.
 module WebMockSystemTestHelper
   extend ActiveSupport::Concern
@@ -25,11 +28,7 @@ module WebMockSystemTestHelper
 
   def before_teardown
     super
-    begin
-      visit "about:blank"
-    ensure
-      page.server&.wait_for_pending_requests
-    end
+    Capybara.reset_sessions!
   end
 
   # Belt and suspenders around the teardown above: WebMock must never leak

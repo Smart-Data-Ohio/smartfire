@@ -22,6 +22,7 @@ registerHooks({
     source = replaceOne(source, 'const SECRET = "gateway-secret-for-tests";', 'const SECRET = "ws13-fixture-gateway-secret";');
     source = replaceOne(source, 'const API_KEY = "livekit-api-key-for-tests";', 'const API_KEY = "ws13-fixture-api-key";');
     source = replaceOne(source, 'const API_SECRET = "livekit-api-secret-for-tests-which-is-long";', 'const API_SECRET = "ws13-fixture-api-secret";');
+    source = source.replaceAll('assert.equal(result.status, 101);', 'assert.equal(result.status, 101, JSON.stringify(harness.state.decisions));');
     source = replaceOne(source, '  const state = {', `  const fixtureResponse = await fetch(process.env.WS13_FIXTURE_CONTROL + "/start", { method: "POST" });
   assert.equal(fixtureResponse.status, 200);
   const fixture = await fixtureResponse.json();

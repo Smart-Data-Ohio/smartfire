@@ -1,14 +1,14 @@
 // Four original LiveKit Stage declarations, using an actual local media server.
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {fixture,text,absent,panel,row} from './ws13-support.mjs';
+import {fixture,text,absent,panel,row,connected} from './ws13-support.mjs';
 async function join(p){
   await p.getByRole('button',{name:'Join stage',exact:true}).click();
   await p.waitForFunction(()=>['prejoin','connecting','connected'].includes(document.getElementById('channel-huddle').dataset.state),null,{timeout:10000,polling:50});
   if(await p.locator('#channel-huddle[data-state="prejoin"]').count()) {
     await p.locator('[data-huddle-target="checkJoin"]:not([disabled])').waitFor({timeout:20000});await p.locator('[data-huddle-target="checkJoin"]').click();
   }
-  await p.locator('#channel-huddle[data-state="connected"]').waitFor({timeout:20000});
+  await connected(p);
 }
 const canPublish=p=>p.evaluate(()=>window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle')?.room?.localParticipant?.permissions?.canPublish??null);
 async function permission(p,value){await p.waitForFunction(value=>document.getElementById('channel-huddle').dataset.state==='connected'&&window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'),'huddle')?.room?.localParticipant?.permissions?.canPublish===value,value,{timeout:30000,polling:50});}
