@@ -36,4 +36,6 @@ docker run --rm --init --network host --user "$(id -u):$(id -g)" \
   --env WS14_BROWSER_SCRATCH="$scratch/ws14" \
   --env PARITY_IMAGE="${PARITY_IMAGE:-ws19b-ci-reference}" --env PARITY_CAPTURE_RUNTIME=docker \
   --env WS8BM_PINNED_BROWSER=1 \
+  --env CORRECTNESS_SHARD --env CORRECTNESS_PART --env WS8BM_PREBUILT_APP --env WS8BM_PREBUILT_TEST_HOST \
+  --env WS8BM_HOST_BUILD_JOBS \
   "${RUST_CORRECTNESS_IMAGE:-campfire-correctness}" "$@"
