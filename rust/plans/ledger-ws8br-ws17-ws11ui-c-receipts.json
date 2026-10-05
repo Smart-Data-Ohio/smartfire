@@ -1,12 +1,12 @@
 {
-  "reference": "d7c7de92",
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
   "stack_base": "f05c3f2a5146a586a80149840f79f2ea52c6d87c",
   "counting": "Broad original declarations and eight sidebar declarations are distinct. All rows pin actual individual assertions; helper expansion is explicit. Historical B reopenings remain history.",
   "records": [
     {
       "id": "P0239",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 12,
+      "line": 13,
       "test": "admins can browse the log",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -57,7 +57,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         },
         {
           "line": 20,
@@ -73,7 +78,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         },
         {
           "line": 21,
@@ -116,7 +126,7 @@
     {
       "id": "P0240",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 24,
+      "line": 25,
       "test": "members are forbidden",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -146,7 +156,7 @@
     {
       "id": "P0241",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 31,
+      "line": 32,
       "test": "visitors are sent to sign in",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -176,7 +186,7 @@
     {
       "id": "P0242",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 37,
+      "line": 38,
       "test": "visitors cannot export CSV",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -206,7 +216,7 @@
     {
       "id": "P0243",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 43,
+      "line": 44,
       "test": "members cannot export CSV",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -236,7 +246,7 @@
     {
       "id": "P0244",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 50,
+      "line": 51,
       "test": "filtering by actor matches names and emails in labels",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -298,7 +308,7 @@
     {
       "id": "P0245",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 61,
+      "line": 62,
       "test": "filtering by action and target type",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -349,7 +359,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         },
         {
           "line": 74,
@@ -392,7 +407,7 @@
     {
       "id": "P0246",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 77,
+      "line": 78,
       "test": "unknown filter values are ignored",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -427,7 +442,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         },
         {
           "line": 85,
@@ -443,7 +463,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         }
       ],
       "rust_tests": [
@@ -454,7 +479,7 @@
     {
       "id": "P0247",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 87,
+      "line": 88,
       "test": "filtering by date range",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -489,7 +514,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         },
         {
           "line": 96,
@@ -505,7 +535,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         },
         {
           "line": 100,
@@ -521,7 +556,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         },
         {
           "line": 101,
@@ -537,7 +577,12 @@
           "rust_source": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:194",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run",
-          "additional_assertion_sources": []
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/accounts/audit_logs/original_tests.rs:43",
+              "anchor": "\"codes\":tbody.iter().filter(|n|dom.name(**n)==\"td\").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)==\"code\").map(|n|dom.text_content(n)).collect::<Vec<_>>(),"
+            }
+          ]
         }
       ],
       "rust_tests": [
@@ -548,7 +593,7 @@
     {
       "id": "P0248",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 103,
+      "line": 104,
       "test": "paging walks older entries",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -642,7 +687,7 @@
     {
       "id": "P0249",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 122,
+      "line": 123,
       "test": "CSV export carries headers and the filtered rows",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -816,7 +861,7 @@
     {
       "id": "P0250",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 141,
+      "line": 142,
       "test": "CSV export neutralizes formula injection",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -846,7 +891,7 @@
     {
       "id": "P0253",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 190,
+      "line": 191,
       "test": "CSV export neutralizes formula injection in request columns",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -892,7 +937,7 @@
     {
       "id": "P0230",
       "file": "test/controllers/accounts/users_controller_test.rb",
-      "line": 8,
+      "line": 9,
       "test": "update",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "a92ecd773684bc76c8f3c03870183d86fa8f892e15c40bae38c9784025c69827",
@@ -954,7 +999,7 @@
     {
       "id": "P0231",
       "file": "test/controllers/accounts/users_controller_test.rb",
-      "line": 17,
+      "line": 18,
       "test": "destroy",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "a92ecd773684bc76c8f3c03870183d86fa8f892e15c40bae38c9784025c69827",
@@ -1016,7 +1061,7 @@
     {
       "id": "P0232",
       "file": "test/controllers/accounts/users_controller_test.rb",
-      "line": 26,
+      "line": 27,
       "test": "non-admins cannot perform actions",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "a92ecd773684bc76c8f3c03870183d86fa8f892e15c40bae38c9784025c69827",
@@ -1065,7 +1110,7 @@
     {
       "id": "P0254",
       "file": "test/controllers/accounts/custom_styles_controller_test.rb",
-      "line": 8,
+      "line": 9,
       "test": "edit",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "6ab446fb2b15995a072c28df17acf01221d8926a8b75e82f2a88be37ca5dde23",
@@ -1095,7 +1140,7 @@
     {
       "id": "P0255",
       "file": "test/controllers/accounts/custom_styles_controller_test.rb",
-      "line": 13,
+      "line": 14,
       "test": "update",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "6ab446fb2b15995a072c28df17acf01221d8926a8b75e82f2a88be37ca5dde23",
@@ -1157,7 +1202,7 @@
     {
       "id": "P0256",
       "file": "test/controllers/accounts/custom_styles_controller_test.rb",
-      "line": 22,
+      "line": 23,
       "test": "non-admins cannot update",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "6ab446fb2b15995a072c28df17acf01221d8926a8b75e82f2a88be37ca5dde23",
@@ -1203,7 +1248,7 @@
     {
       "id": "P0263",
       "file": "test/controllers/accounts/join_codes_controller_test.rb",
-      "line": 8,
+      "line": 9,
       "test": "create new join code",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "aceeeeea663ef058632b77bd510eab2d9a93f2841ceb15fd41690f77b2b009f9",
@@ -1249,7 +1294,7 @@
     {
       "id": "P0264",
       "file": "test/controllers/accounts/join_codes_controller_test.rb",
-      "line": 15,
+      "line": 16,
       "test": "only administrators can create new join codes",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "aceeeeea663ef058632b77bd510eab2d9a93f2841ceb15fd41690f77b2b009f9",
@@ -1279,7 +1324,7 @@
     {
       "id": "P0214",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 8,
+      "line": 9,
       "test": "create bans user and creates ban records from sessions",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1357,7 +1402,7 @@
     {
       "id": "P0215",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 22,
+      "line": 23,
       "test": "create destroys user sessions",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1387,7 +1432,7 @@
     {
       "id": "P0219",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 64,
+      "line": 65,
       "test": "non-admins cannot ban users",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1417,7 +1462,7 @@
     {
       "id": "P0220",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 72,
+      "line": 73,
       "test": "destroy removes ban records and sets user to active",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1511,7 +1556,7 @@
     {
       "id": "P0221",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 88,
+      "line": 89,
       "test": "non-admins cannot unban users",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1541,7 +1586,7 @@
     {
       "id": "P0216",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 31,
+      "line": 32,
       "test": "create succeeds when the user has a pending two-factor setup secret",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1603,7 +1648,7 @@
     {
       "id": "P0217",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 44,
+      "line": 45,
       "test": "create enqueues RemoveBannedContentJob",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1633,7 +1678,7 @@
     {
       "id": "P0218",
       "file": "test/controllers/users/bans_controller_test.rb",
-      "line": 52,
+      "line": 53,
       "test": "RemoveBannedContentJob deletes messages",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
@@ -1663,7 +1708,7 @@
     {
       "id": "P0233",
       "file": "test/controllers/accounts/icons_controller_test.rb",
-      "line": 7,
+      "line": 8,
       "test": "index lists icons with previews shortcodes titles and uploaders",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
@@ -1757,7 +1802,7 @@
     {
       "id": "P0234",
       "file": "test/controllers/accounts/icons_controller_test.rb",
-      "line": 19,
+      "line": 20,
       "test": "create uploads an icon",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
@@ -1851,7 +1896,7 @@
     {
       "id": "P0088",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 207,
+      "line": 208,
       "test": "workspace icon create and destroy are recorded",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -1977,7 +2022,7 @@
     {
       "id": "P0238",
       "file": "test/controllers/accounts/icons_controller_test.rb",
-      "line": 82,
+      "line": 83,
       "test": "members get forbidden on list create and delete",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
@@ -2055,7 +2100,7 @@
     {
       "id": "P0235",
       "file": "test/controllers/accounts/icons_controller_test.rb",
-      "line": 38,
+      "line": 39,
       "test": "create renders validation errors inline",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
@@ -2117,7 +2162,7 @@
     {
       "id": "P0236",
       "file": "test/controllers/accounts/icons_controller_test.rb",
-      "line": 53,
+      "line": 54,
       "test": "create reports a name that raced past validation as taken",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
@@ -2179,7 +2224,7 @@
     {
       "id": "P0237",
       "file": "test/controllers/accounts/icons_controller_test.rb",
-      "line": 70,
+      "line": 71,
       "test": "destroy removes the icon and its blob",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
@@ -2225,7 +2270,7 @@
     {
       "id": "P0265",
       "file": "test/controllers/workspace_icons_controller_test.rb",
-      "line": 7,
+      "line": 8,
       "test": "serves an SVG with the documented headers",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
@@ -2399,7 +2444,7 @@
     {
       "id": "P0266",
       "file": "test/controllers/workspace_icons_controller_test.rb",
-      "line": 22,
+      "line": 23,
       "test": "serves a PNG without the SVG-only headers",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
@@ -2513,7 +2558,7 @@
     {
       "id": "P0267",
       "file": "test/controllers/workspace_icons_controller_test.rb",
-      "line": 36,
+      "line": 37,
       "test": "supports conditional GETs with the blob checksum",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
@@ -2567,7 +2612,7 @@
     {
       "id": "P0268",
       "file": "test/controllers/workspace_icons_controller_test.rb",
-      "line": 45,
+      "line": 46,
       "test": "returns not found for unknown names",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
@@ -2601,7 +2646,7 @@
     {
       "id": "P0269",
       "file": "test/controllers/workspace_icons_controller_test.rb",
-      "line": 53,
+      "line": 54,
       "test": "returns not found for signed-out users",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
@@ -2635,7 +2680,7 @@
     {
       "id": "P0270",
       "file": "test/controllers/workspace_icons_controller_test.rb",
-      "line": 59,
+      "line": 60,
       "test": "unenrolled sessions are sent to setup instead of served the icon",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
@@ -2665,7 +2710,7 @@
     {
       "id": "P0271",
       "file": "test/controllers/workspace_icons_controller_test.rb",
-      "line": 67,
+      "line": 68,
       "test": "stale enrolled sessions are signed out instead of served the icon",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
@@ -2711,7 +2756,7 @@
     {
       "id": "P0257",
       "file": "test/controllers/accounts/logos_controller_test.rb",
-      "line": 8,
+      "line": 9,
       "test": "show stock",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
@@ -2783,7 +2828,7 @@
     {
       "id": "P0258",
       "file": "test/controllers/accounts/logos_controller_test.rb",
-      "line": 13,
+      "line": 14,
       "test": "show stock small size",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
@@ -2855,7 +2900,7 @@
     {
       "id": "P0259",
       "file": "test/controllers/accounts/logos_controller_test.rb",
-      "line": 18,
+      "line": 19,
       "test": "show custom",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
@@ -2927,7 +2972,7 @@
     {
       "id": "P0260",
       "file": "test/controllers/accounts/logos_controller_test.rb",
-      "line": 25,
+      "line": 26,
       "test": "show custom small size",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
@@ -2999,7 +3044,7 @@
     {
       "id": "P0261",
       "file": "test/controllers/accounts/logos_controller_test.rb",
-      "line": 32,
+      "line": 33,
       "test": "show stock when custom logo cannot be resized",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
@@ -3071,7 +3116,7 @@
     {
       "id": "P0262",
       "file": "test/controllers/accounts/logos_controller_test.rb",
-      "line": 39,
+      "line": 40,
       "test": "destroy",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
@@ -3117,7 +3162,7 @@
     {
       "id": "P0085",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 173,
+      "line": 174,
       "test": "logo removal is recorded",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3163,7 +3208,7 @@
     {
       "id": "P0072",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 8,
+      "line": 9,
       "test": "room create is recorded",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3273,7 +3318,7 @@
     {
       "id": "P0073",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 21,
+      "line": 22,
       "test": "failed room create writes no row",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3319,7 +3364,7 @@
     {
       "id": "P0074",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 29,
+      "line": 30,
       "test": "opening an existing direct room writes no row",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3365,7 +3410,7 @@
     {
       "id": "P0075",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 41,
+      "line": 42,
       "test": "room destroy is recorded with the room name",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3443,7 +3488,7 @@
     {
       "id": "P0076",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 54,
+      "line": 55,
       "test": "admin membership changes are recorded with names",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3521,7 +3566,7 @@
     {
       "id": "P0077",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 73,
+      "line": 74,
       "test": "re-saving unchanged membership writes no row",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3551,7 +3596,7 @@
     {
       "id": "P0078",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 81,
+      "line": 82,
       "test": "adding group members is recorded with the added users",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3629,7 +3674,7 @@
     {
       "id": "P0079",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 94,
+      "line": 95,
       "test": "adding no new members writes no row",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3659,7 +3704,7 @@
     {
       "id": "P0080",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 102,
+      "line": 103,
       "test": "the last member out destroys the group and records it",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3737,7 +3782,7 @@
     {
       "id": "P0081",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 120,
+      "line": 121,
       "test": "leaving without destroying the group writes no row",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3767,7 +3812,7 @@
     {
       "id": "P0082",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 128,
+      "line": 129,
       "test": "leaving a channel is recorded with the leaver as actor",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3861,7 +3906,7 @@
     {
       "id": "P0083",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 143,
+      "line": 144,
       "test": "leaving a group without destroying it is recorded",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -3939,7 +3984,7 @@
     {
       "id": "P0084",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 156,
+      "line": 157,
       "test": "account settings changes are recorded",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -4033,7 +4078,7 @@
     {
       "id": "P0086",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 183,
+      "line": 184,
       "test": "custom styles changes are recorded as size and digest",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -4143,7 +4188,7 @@
     {
       "id": "P0087",
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
-      "line": 199,
+      "line": 200,
       "test": "unchanged custom styles write no row",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "17cd29171b6a0c1aed57ca2e45822892ea2a7a8ab08790dc9864137ab5e718cd",
@@ -4173,7 +4218,7 @@
     {
       "id": "P0278",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 7,
+      "line": 8,
       "test": "create",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4267,7 +4312,7 @@
     {
       "id": "P0279",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 20,
+      "line": 21,
       "test": "create strips markup from the title and description",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4329,7 +4374,7 @@
     {
       "id": "P0280",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 32,
+      "line": 33,
       "test": "create with missing opengraph meta tags",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4359,7 +4404,7 @@
     {
       "id": "P0281",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 39,
+      "line": 40,
       "test": "create returns no content when the title and description are only a markup tag",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4389,7 +4434,7 @@
     {
       "id": "P0282",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 54,
+      "line": 55,
       "test": "create for a GitHub PR URL returns no content (PR cards render instead)",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4419,7 +4464,7 @@
     {
       "id": "P0283",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 59,
+      "line": 60,
       "test": "create for a Fizzy card URL returns no content (Fizzy cards render instead)",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4449,7 +4494,7 @@
     {
       "id": "P0284",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 64,
+      "line": 65,
       "test": "create with a missing URL",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4495,7 +4540,7 @@
     {
       "id": "P0285",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 71,
+      "line": 72,
       "test": "create for twitter.com",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4541,7 +4586,7 @@
     {
       "id": "P0286",
       "file": "test/controllers/unfurl_links_controller_test.rb",
-      "line": 79,
+      "line": 80,
       "test": "create for x.com",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
@@ -4587,7 +4632,7 @@
     {
       "id": "P0203",
       "file": "test/controllers/users/avatars_controller_test.rb",
-      "line": 7,
+      "line": 8,
       "test": "show initials",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "7bc9c2dca4f563a427a2efb6a20712eb31770bcb65310cf55f8b3eb104e65b03",
@@ -4617,7 +4662,7 @@
     {
       "id": "P0206",
       "file": "test/controllers/users/avatars_controller_test.rb",
-      "line": 28,
+      "line": 29,
       "test": "show image with invalid token responds 404",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "7bc9c2dca4f563a427a2efb6a20712eb31770bcb65310cf55f8b3eb104e65b03",
@@ -4647,7 +4692,7 @@
     {
       "id": "P0102",
       "file": "test/controllers/public_pages_controller_test.rb",
-      "line": 165,
+      "line": 166,
       "test": "configured installation names the operator and contact",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus.",
@@ -4742,7 +4787,7 @@
     {
       "id": "P0176",
       "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 303,
+      "line": 304,
       "test": "linking a github login strips and downcases it",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "The corpus normalizes Fixture-Login, but does not assert the original david-gh value.",
@@ -4789,7 +4834,7 @@
     {
       "id": "P0186",
       "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 398,
+      "line": 399,
       "test": "clearing a github login unlinks it",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "The clearing vector starts with no login, so it does not discriminate unlinking an existing login.",
@@ -4836,7 +4881,7 @@
     {
       "id": "P0154",
       "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 73,
+      "line": 74,
       "test": "profile shows the meeting fetch notice when a refresh failed",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE.",
@@ -4883,7 +4928,7 @@
     {
       "id": "P0165",
       "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 189,
+      "line": 190,
       "test": "profile shows the connected account with a disconnect button",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "The real-path test checks escaped fixture email, not the original connected account email david@gmail.test.",
@@ -4930,7 +4975,7 @@
     {
       "id": "P0190",
       "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 432,
+      "line": 433,
       "test": "changing email with the current password records a self-change",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value.",
@@ -4993,7 +5038,7 @@
     {
       "id": "P0191",
       "file": "test/controllers/users/profiles_controller_test.rb",
-      "line": 442,
+      "line": 443,
       "test": "other profile edits and case-only email edits need no password and record nothing",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "The security corpus checks Submitted name rather than the original Dave name.",
@@ -5055,15 +5100,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 54,
+      "line": 62,
       "test": "channel row shows the live huddle stack with names and count",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0054",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 62,
+          "line": 69,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_channel_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5084,7 +5129,7 @@
           ]
         },
         {
-          "line": 63,
+          "line": 70,
           "ruby": "assert_select \"##{dom_id(room, :list)} .voice-stack--live.voice-stack--huddle\" do",
           "rust_test": "controllers::users::sidebar_original_tests::original_channel_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5105,7 +5150,7 @@
           ]
         },
         {
-          "line": 64,
+          "line": 71,
           "ruby": "assert_select \".voice-stack__count\", text: \"2\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_channel_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5126,7 +5171,7 @@
           ]
         },
         {
-          "line": 65,
+          "line": 72,
           "ruby": "assert_select \"img.voice-stack__avatar[data-user-id='#{users(:david).id}'][title='David']\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_channel_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5147,7 +5192,7 @@
           ]
         },
         {
-          "line": 66,
+          "line": 73,
           "ruby": "assert_select \"img.voice-stack__avatar[data-user-id='#{users(:jason).id}'][title='Jason']\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_channel_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5168,7 +5213,7 @@
           ]
         },
         {
-          "line": 68,
+          "line": 75,
           "ruby": "assert_select \"##{dom_id(room, :list)} .voice-stack\" +",
           "rust_test": "controllers::users::sidebar_original_tests::original_channel_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5196,15 +5241,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 73,
+      "line": 81,
       "test": "board row shows the live huddle stack with names and count",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0073",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 81,
+          "line": 88,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_board_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5225,7 +5270,7 @@
           ]
         },
         {
-          "line": 82,
+          "line": 89,
           "ruby": "assert_select \"##{dom_id(board, :list)} .voice-room__trailing .voice-stack--live.voice-stack--huddle\" do",
           "rust_test": "controllers::users::sidebar_original_tests::original_board_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5246,7 +5291,7 @@
           ]
         },
         {
-          "line": 83,
+          "line": 90,
           "ruby": "assert_select \".voice-stack__count\", text: \"2\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_board_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5267,7 +5312,7 @@
           ]
         },
         {
-          "line": 84,
+          "line": 91,
           "ruby": "assert_select \"img.voice-stack__avatar[data-user-id='#{users(:david).id}'][title='David']\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_board_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5288,7 +5333,7 @@
           ]
         },
         {
-          "line": 85,
+          "line": 92,
           "ruby": "assert_select \"img.voice-stack__avatar[data-user-id='#{users(:jz).id}'][title='JZ']\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_board_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5309,7 +5354,7 @@
           ]
         },
         {
-          "line": 87,
+          "line": 94,
           "ruby": "assert_select \"##{dom_id(board, :list)} .voice-stack\" +",
           "rust_test": "controllers::users::sidebar_original_tests::original_board_live_stack_names_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5337,15 +5382,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 92,
+      "line": 100,
       "test": "direct row shows the live huddle stack when the peer is in the call",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0092",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 99,
+          "line": 106,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_direct_live_stack_peer_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5366,7 +5411,7 @@
           ]
         },
         {
-          "line": 100,
+          "line": 107,
           "ruby": "assert_select \"##{dom_id(room, :list)} .voice-stack--live\" do",
           "rust_test": "controllers::users::sidebar_original_tests::original_direct_live_stack_peer_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5387,7 +5432,7 @@
           ]
         },
         {
-          "line": 101,
+          "line": 108,
           "ruby": "assert_select \".voice-stack__count\", text: \"1\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_direct_live_stack_peer_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5408,7 +5453,7 @@
           ]
         },
         {
-          "line": 102,
+          "line": 109,
           "ruby": "assert_select \"img.voice-stack__avatar[data-user-id='#{users(:jason).id}']\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_direct_live_stack_peer_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5429,7 +5474,7 @@
           ]
         },
         {
-          "line": 104,
+          "line": 111,
           "ruby": "assert_select \"##{dom_id(room, :list)} .voice-stack[aria-label='1 in huddle: Jason']\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_direct_live_stack_peer_count_and_attributes",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5457,15 +5502,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 106,
+      "line": 114,
       "test": "quiet rows keep an empty stack target with no visible presence",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0106",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 110,
+          "line": 117,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_quiet_rows_have_empty_hidden_stack_targets",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5487,7 +5532,7 @@
           ]
         },
         {
-          "line": 111,
+          "line": 118,
           "ruby": "assert_select \"##{dom_id(rooms(:watercooler), :list)} .voice-stack:not(.voice-stack--live)\" +",
           "rust_test": "controllers::users::sidebar_original_tests::original_quiet_rows_have_empty_hidden_stack_targets",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5509,7 +5554,7 @@
           ]
         },
         {
-          "line": 113,
+          "line": 120,
           "ruby": "assert_select \".voice-stack__avatar\", count: 0",
           "rust_test": "controllers::users::sidebar_original_tests::original_quiet_rows_have_empty_hidden_stack_targets",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5531,7 +5576,7 @@
           ]
         },
         {
-          "line": 114,
+          "line": 121,
           "ruby": "assert_select \".voice-stack__count[hidden]\", text: \"\", visible: false",
           "rust_test": "controllers::users::sidebar_original_tests::original_quiet_rows_have_empty_hidden_stack_targets",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5553,7 +5598,7 @@
           ]
         },
         {
-          "line": 116,
+          "line": 123,
           "ruby": "assert_select \"##{dom_id(rooms(:david_and_jason), :list)} .voice-stack:not(.voice-stack--live)\" +",
           "rust_test": "controllers::users::sidebar_original_tests::original_quiet_rows_have_empty_hidden_stack_targets",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5582,15 +5627,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 119,
+      "line": 127,
       "test": "direct row re-renders when a participant joins",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0119",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 126,
+          "line": 133,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5613,7 +5658,7 @@
           ]
         },
         {
-          "line": 127,
+          "line": 134,
           "ruby": "assert_select \"##{dom_id(room, :list)} .voice-stack:not(.voice-stack--live)\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5626,52 +5671,6 @@
           "observation": "assert_select \"##{dom_id(room, :list)} .voice-stack:not(.voice-stack--live)\"",
           "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
           "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
-          "assertion_anchor": "assert_eq!(",
-          "assertion_scope": "assert_http_fragment",
-          "additional_assertion_sources": [
-            {
-              "path": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:135",
-              "anchor": "async fn original_cached_direct_rename_then_join_invalidates_only_on_participants() {"
-            }
-          ]
-        },
-        {
-          "line": 128,
-          "ruby": "assert_select \"##{dom_id(room, :list)}\", text: /Jason/",
-          "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
-          "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
-          "oracle": "rust/vectors/sidebar_originals.json",
-          "oracle_cases": [
-            "cache_before",
-            "cache_rename",
-            "cache_join"
-          ],
-          "observation": "assert_select \"##{dom_id(room, :list)}\", text: /Jason/",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
-          "assertion_anchor": "assert_eq!(",
-          "assertion_scope": "assert_http_fragment",
-          "additional_assertion_sources": [
-            {
-              "path": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:135",
-              "anchor": "async fn original_cached_direct_rename_then_join_invalidates_only_on_participants() {"
-            }
-          ]
-        },
-        {
-          "line": 134,
-          "ruby": "assert_response :success",
-          "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
-          "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
-          "oracle": "rust/vectors/sidebar_originals.json",
-          "oracle_cases": [
-            "cache_before",
-            "cache_rename",
-            "cache_join"
-          ],
-          "observation": "assert_response :success",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:81",
-          "rust_source": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:81",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "assert_http_fragment",
           "additional_assertion_sources": [
@@ -5705,30 +5704,7 @@
           ]
         },
         {
-          "line": 136,
-          "ruby": "assert_select \"##{dom_id(room, :list)}\", text: /Jordan/, count: 0",
-          "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
-          "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
-          "oracle": "rust/vectors/sidebar_originals.json",
-          "oracle_cases": [
-            "cache_before",
-            "cache_rename",
-            "cache_join"
-          ],
-          "observation": "assert_select \"##{dom_id(room, :list)}\", text: /Jordan/, count: 0",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
-          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
-          "assertion_anchor": "assert_eq!(",
-          "assertion_scope": "assert_http_fragment",
-          "additional_assertion_sources": [
-            {
-              "path": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:135",
-              "anchor": "async fn original_cached_direct_rename_then_join_invalidates_only_on_participants() {"
-            }
-          ]
-        },
-        {
-          "line": 142,
+          "line": 141,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5751,7 +5727,76 @@
           ]
         },
         {
+          "line": 142,
+          "ruby": "assert_select \"##{dom_id(room, :list)}\", text: /Jason/",
+          "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
+          "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
+          "oracle": "rust/vectors/sidebar_originals.json",
+          "oracle_cases": [
+            "cache_before",
+            "cache_rename",
+            "cache_join"
+          ],
+          "observation": "assert_select \"##{dom_id(room, :list)}\", text: /Jason/",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
+          "assertion_anchor": "assert_eq!(",
+          "assertion_scope": "assert_http_fragment",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:135",
+              "anchor": "async fn original_cached_direct_rename_then_join_invalidates_only_on_participants() {"
+            }
+          ]
+        },
+        {
           "line": 143,
+          "ruby": "assert_select \"##{dom_id(room, :list)}\", text: /Jordan/, count: 0",
+          "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
+          "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
+          "oracle": "rust/vectors/sidebar_originals.json",
+          "oracle_cases": [
+            "cache_before",
+            "cache_rename",
+            "cache_join"
+          ],
+          "observation": "assert_select \"##{dom_id(room, :list)}\", text: /Jordan/, count: 0",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
+          "rust_source": "rust/crates/campfire/src/controllers/users/people_tests.rs:158",
+          "assertion_anchor": "assert_eq!(",
+          "assertion_scope": "assert_http_fragment",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:135",
+              "anchor": "async fn original_cached_direct_rename_then_join_invalidates_only_on_participants() {"
+            }
+          ]
+        },
+        {
+          "line": 149,
+          "ruby": "assert_response :success",
+          "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
+          "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
+          "oracle": "rust/vectors/sidebar_originals.json",
+          "oracle_cases": [
+            "cache_before",
+            "cache_rename",
+            "cache_join"
+          ],
+          "observation": "assert_response :success",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:81",
+          "rust_source": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:81",
+          "assertion_anchor": "assert_eq!(",
+          "assertion_scope": "assert_http_fragment",
+          "additional_assertion_sources": [
+            {
+              "path": "rust/crates/campfire/src/controllers/users/sidebar_original_tests.rs:135",
+              "anchor": "async fn original_cached_direct_rename_then_join_invalidates_only_on_participants() {"
+            }
+          ]
+        },
+        {
+          "line": 150,
           "ruby": "assert_select \"##{dom_id(room, :list)} .voice-stack--live .voice-stack__count\", text: \"1\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5774,7 +5819,7 @@
           ]
         },
         {
-          "line": 144,
+          "line": 151,
           "ruby": "assert_select \"##{dom_id(room, :list)}\", text: /Jordan/",
           "rust_test": "controllers::users::sidebar_original_tests::original_cached_direct_rename_then_join_invalidates_only_on_participants",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5804,15 +5849,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 147,
+      "line": 155,
       "test": "group direct rooms render member names and a huddle stack",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0147",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 154,
+          "line": 161,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_group_direct_name_and_live_stack",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5833,7 +5878,7 @@
           ]
         },
         {
-          "line": 155,
+          "line": 162,
           "ruby": "assert_select \"##{dom_id(group, :list)}\", text: /Ping with Jason, Kevin/",
           "rust_test": "controllers::users::sidebar_original_tests::original_group_direct_name_and_live_stack",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5854,7 +5899,7 @@
           ]
         },
         {
-          "line": 156,
+          "line": 163,
           "ruby": "assert_select \"##{dom_id(group, :list)} .voice-stack--live.voice-stack--huddle\" do",
           "rust_test": "controllers::users::sidebar_original_tests::original_group_direct_name_and_live_stack",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5875,7 +5920,7 @@
           ]
         },
         {
-          "line": 157,
+          "line": 164,
           "ruby": "assert_select \".voice-stack__count\", text: \"1\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_group_direct_name_and_live_stack",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5896,7 +5941,7 @@
           ]
         },
         {
-          "line": 158,
+          "line": 165,
           "ruby": "assert_select \"img.voice-stack__avatar[data-user-id='#{users(:jason).id}'][title='Jason']\"",
           "rust_test": "controllers::users::sidebar_original_tests::original_group_direct_name_and_live_stack",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5924,15 +5969,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 181,
+      "line": 189,
       "test": "no channel or DM stacks without huddle configuration",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0181",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 188,
+          "line": 195,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_unconfigured_huddle_has_no_stacks_or_presence_controllers",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5953,7 +5998,7 @@
           ]
         },
         {
-          "line": 189,
+          "line": 196,
           "ruby": "assert_select \"#shared_rooms .voice-stack\", count: 0",
           "rust_test": "controllers::users::sidebar_original_tests::original_unconfigured_huddle_has_no_stacks_or_presence_controllers",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5974,7 +6019,7 @@
           ]
         },
         {
-          "line": 190,
+          "line": 197,
           "ruby": "assert_select \"#direct_rooms .voice-stack\", count: 0",
           "rust_test": "controllers::users::sidebar_original_tests::original_unconfigured_huddle_has_no_stacks_or_presence_controllers",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -5995,7 +6040,7 @@
           ]
         },
         {
-          "line": 191,
+          "line": 198,
           "ruby": "assert_select \"[data-controller~='huddle-presence']\", count: 0",
           "rust_test": "controllers::users::sidebar_original_tests::original_unconfigured_huddle_has_no_stacks_or_presence_controllers",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -6023,15 +6068,15 @@
     },
     {
       "file": "test/controllers/users/sidebars_controller_test.rb",
-      "line": 193,
+      "line": 201,
       "test": "sidebar query count does not grow with quiet channels, DMs, boards, and stages",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "reason": "Current call_navigation, HuddleGrant::participants_for and full-sidebar/callback regressions are installed. The exact original declaration has not been replayed here; source existence or a nearby component test alone does not earn its receipt.",
       "id": "S0193",
-      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "source_sha256": "978e172c3ecda52d6165e9a606642124020fb5bac49f951521161a2c35859c10",
       "assertions": [
         {
-          "line": 201,
+          "line": 208,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_mixed_quiet_sidebar_read_counts_stay_flat_with_one_grants_query",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -6053,7 +6098,7 @@
           ]
         },
         {
-          "line": 209,
+          "line": 216,
           "ruby": "assert_response :success",
           "rust_test": "controllers::users::sidebar_original_tests::original_mixed_quiet_sidebar_read_counts_stay_flat_with_one_grants_query",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -6075,7 +6120,7 @@
           ]
         },
         {
-          "line": 211,
+          "line": 218,
           "ruby": "assert_equal baseline.count, with_more_rooms.count,",
           "rust_test": "controllers::users::sidebar_original_tests::original_mixed_quiet_sidebar_read_counts_stay_flat_with_one_grants_query",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -6097,7 +6142,7 @@
           ]
         },
         {
-          "line": 213,
+          "line": 220,
           "ruby": "assert_equal 1, with_more_rooms.count { |sql| sql.include?(\"FROM \\\"huddle_grants\\\"\") }",
           "rust_test": "controllers::users::sidebar_original_tests::original_mixed_quiet_sidebar_read_counts_stay_flat_with_one_grants_query",
           "checks": "Actual complete scoped sidebar DOM preserves tags, text, all attributes and cardinality, comparing every original nested selector/count. Cached rename stays Jason until participant IDs change; unconfigured selectors are empty; quiet-room SELECT growth is flat and grants are queried once.",
@@ -6127,7 +6172,7 @@
     {
       "id": "P0251",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 155,
+      "line": 156,
       "test": "past the export cap the page warns and the CSV filename says truncated",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -6236,7 +6281,7 @@
     {
       "id": "P0252",
       "file": "test/controllers/accounts/audit_logs_controller_test.rb",
-      "line": 172,
+      "line": 173,
       "test": "within the export cap there is no truncation notice",
       "ledger": "rust/plans/ws8br-rails-cases.json",
       "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
@@ -6342,5 +6387,14 @@
         }
       ]
     }
-  ]
+  ],
+  "history": [
+    {
+      "reference": "d7c7de92",
+      "head": "dae59026",
+      "direct_assertion_sites": 279,
+      "note": "Historical mapping retained; review refresh adds the runtime-pin predicates and fixes selector/count consumers."
+    }
+  ],
+  "runtime_reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112"
 }

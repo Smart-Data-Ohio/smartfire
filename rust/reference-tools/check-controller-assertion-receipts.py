@@ -15,6 +15,8 @@ args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
 rust = root / 'rust'
 manifest = json.loads((args.manifest if args.manifest.is_absolute() else root / args.manifest).read_text())
+if 'runtime_reference' in manifest:
+    assert manifest['reference'] == manifest['runtime_reference'] == (rust / 'parity/reference.sha').read_text().strip(), 'current receipts must audit the runtime Rails pin'
 listing = json.loads(args.nextest_list.read_text())
 active = {name for suite in listing['rust-suites'].values()
           for name, info in suite['testcases'].items() if not info['ignored']}

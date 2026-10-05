@@ -84,7 +84,7 @@
       "response": {
         "status": 200,
         "shared_stacks": 0,
-        "direct_stacks": 4,
+        "direct_stacks": 0,
         "presence": 0
       }
     }

@@ -57,3 +57,22 @@ fn original_starred_people_assertions() {
 fn original_node_event_harness_assertions() {
     replay("worker");
 }
+
+// Runs in ordinary CI without Chromium, Rails or a server binary. The paired
+// ignored gate separately exercises these leases through both real servers.
+#[test]
+fn original_browser_port_leases_are_host_coordinated_and_ephemeral_safe() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let output = std::process::Command::new("python3")
+        .args(["-B", "-m", "unittest", "discover", "-s"])
+        .arg(root.join("reference-tools/users"))
+        .args(["-p", "test_browser_port_leases.py", "-v"])
+        .output()
+        .expect("kernel lease regressions must start");
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

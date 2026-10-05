@@ -8,7 +8,7 @@
     "Build the normal binary before ignored tests: cargo build --locked -p campfire --bin campfire; set WS11UI_BROWSER_BINARY to the target directory/debug/campfire"
   ],
   "registry": "Append these records to rust/ci/ignored-tests.json browsers; do not change existing records.",
-  "scheduling": "Seven explicit functions; mode-specific disjoint three-port leases; verified with nextest -j 4 without lowering concurrency.",
+  "scheduling": "Seven explicit ignored functions; kernel-coordinated three-port leases in 24000-24191, outside the outbound ephemeral range. Four nextest -j 4 runs: 28/28 wrappers passed, 0 startup failures. No retries or longer deadlines.",
   "records": [
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
@@ -52,5 +52,6 @@
       "binary": "campfire",
       "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
     }
-  ]
+  ],
+  "ordinary_ci_regression": "controllers::ws11ui_original_browser_tests::original_browser_port_leases_are_host_coordinated_and_ephemeral_safe (enabled; four real-kernel Python checks; no browser/image/seed required)"
 }

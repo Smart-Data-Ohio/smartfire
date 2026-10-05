@@ -40,7 +40,7 @@ fn observation(reply: &Reply, name: &str) -> Value {
         .collect::<Vec<_>>();
     json!({"status":reply.status.as_u16(),"location":reply.location(),
         "h1":nodes.iter().filter(|n|dom.name(**n)=="h1").map(|n|dom.text_content(*n)).collect::<Vec<_>>(),
-        "codes":tbody.iter().filter(|n|dom.name(**n)=="code").map(|n|dom.text_content(*n)).collect::<Vec<_>>(),
+        "codes":tbody.iter().filter(|n|dom.name(**n)=="td").flat_map(|n|dom.descendants(*n)).filter(|n|dom.name(*n)=="code").map(|n|dom.text_content(n)).collect::<Vec<_>>(),
         "cells":tbody.iter().filter(|n|dom.name(**n)=="td").map(|n|dom.text_content(*n)).collect::<Vec<_>>(),
         "rows":tbody.iter().filter(|n|dom.name(**n)=="tr").count(),
         "exports":nodes.iter().filter(|n|dom.name(**n)=="a" && dom.text_content(**n)=="Export CSV").map(|n|json!([dom.attr(*n,"href"),dom.text_content(*n)])).collect::<Vec<_>>(),

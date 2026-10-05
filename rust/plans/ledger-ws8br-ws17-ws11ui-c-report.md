@@ -202,6 +202,16 @@ Cutover ledger remains partial: 104 broad receipts; 0 sidebar receipts; 6 overla
 
 The first controller summary deliberately preserves #244's historical eight reopenings; the C mappings close those eight with new evidence. Browser receipt validation credits current local execution; future CI registration is separately pending as described above. This is the requested 120-declaration checkpoint, not a claim that the remaining ledger is complete.
 
+## PR #248 review follow-up
+
+The preceding summaries are historical. The current pinned assertion mappings,
+causal port-lease fix, stronger selector/visibility predicates, failing-first
+producer controls and fresh verification are recorded in
+[ledger-ws8br-ws17-ws11ui-c-review-report.md](ledger-ws8br-ws17-ws11ui-c-review-report.md).
+The current 120-declaration mapping contains 426 direct assertion sites against
+the runtime Rails pin, including six predicates absent from the historical
+420-site mapping. The per-declaration selector scan is recorded separately.
+
 Exact final validator commands, run from the worktree root:
 
 ```sh

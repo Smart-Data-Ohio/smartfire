@@ -1,6 +1,7 @@
-// Individual assertions from d7c7de92, through real routed forms and shipped assets.
+// Individual assertions from the runtime Rails pin, through real forms and shipped assets.
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
 import { chromium } from 'playwright'
 import { diagnostics } from './browser_diagnostics.mjs'
 import { network } from './original_browser_network.mjs'
@@ -10,13 +11,14 @@ const labels=JSON.parse(fs.readFileSync(process.env.WS11UI_BROWSER_LABELS,'utf8'
 const selected=process.env.WS11UI_BROWSER_CASE
 const mode=process.env.WS11UI_BROWSER_MODE
 const broken=process.env.WS11UI_BROWSER_CONTROL==='1'
+const mutation=process.env.WS11UI_BROWSER_MUTATION
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']})
 const requests=[]
 // Rails uses Capybara's two-second default, with explicit ten-second waits at
 // these original assertion sites. Keep that distinction in this translation.
 function assertionWait(file,line) {
  const explicit={
-  'test/system/people_group_dms_test.rb':[16,34,38,68,85,97,107,238,284,368,373,377,392,396],
+  'test/system/people_group_dms_test.rb':[16,34,38,68,85,97,107,238,284,340,341,372,377,381,396,400],
   'test/system/starred_people_test.rb':[26,36,53,59,100,105,115,120,134,140,144,154]
  }
  return explicit[file]?.includes(line)?10000:2000
@@ -41,6 +43,12 @@ async function visible(file,line,locator,text=null) {
 async function present(file,line,locator) {
   await locator.first().waitFor({state:'attached',timeout:assertionWait(file,line)})
   equal(file,line,await locator.count()>0,true)
+}
+async function visibleMinimum(file,line,p,selector,minimum) {
+ await p.waitForFunction(({selector,minimum})=>Array.from(document.querySelectorAll(selector)).filter(el=>{
+  const rect=el.getBoundingClientRect();return rect.width>0&&rect.height>0&&!['hidden','collapse'].includes(getComputedStyle(el).visibility)
+ }).length>=minimum,{selector,minimum},{timeout:assertionWait(file,line)})
+ equal(file,line,await p.locator(selector+':visible').count()>=minimum,true)
 }
 async function focused(file,line,p,selector) {
   equal(file,line,await p.locator(selector).evaluate(el=>el===document.activeElement),true)
@@ -140,8 +148,7 @@ async function people() {
  await scenario('member-huddle',async p=>{
   await controller(p,'member-panel');await controller(p,'multi-select')
   if(await p.getByRole('button',{name:'Show members',exact:true}).isVisible())await p.getByRole('button',{name:'Show members',exact:true}).click()
-  await p.locator('#channel-members .member-panel__member').first().waitFor()
-  equal(P,97,await p.locator('#channel-members .member-panel__member').count()>=3,true)
+  await visibleMinimum(P,97,p,'#channel-members .member-panel__member',3)
   if(broken)await mutate(p,'multi-select','counts')
   for(const u of ['jason','kevin'])await p.locator(`#channel-members [data-member-id='${labels['users.'+u]}'] button.profile-card-name`).click({modifiers:['Control']})
   const bar=p.locator("#channel-members [data-multi-select-target='bar']")
@@ -185,7 +192,7 @@ async function people() {
  },{path:'/users'})
 }
 const filter=p=>p.locator('#dm_picker_filter')
-const rows=p=>p.locator('.dm-picker__row:not([hidden])')
+const rows=p=>p.locator('.dm-picker__row:not([hidden]):visible')
 const pick=(p,u)=>p.locator('#pick_user_'+labels['users.'+u])
 const pickerBar=p=>p.locator("#direct_rooms_control [data-multi-select-target='bar']")
 async function picker(p,phone=false) {
@@ -195,8 +202,13 @@ async function picker(p,phone=false) {
 async function pickers() {
  await scenario('picker-filter',async p=>{
   await picker(p);if(broken)await mutate(p,'dm-picker','all-rows')
-  equal(P,189,await p.locator('#direct_rooms_control suggestion-option').count(),0)
+  equal(P,189,await p.locator('#direct_rooms_control suggestion-option:visible').count(),0)
   equal(P,190,(await p.locator('#direct_rooms_control').innerText()).includes('Start Ping'),false)
+  if(mutation==='picker-visibility') {
+   await p.addStyleTag({content:`.dm-picker__row:not(:has(#pick_user_${labels['users.chad']})):not(:has(#pick_user_${labels['users.renee']})) { visibility: hidden !important; }`})
+   assert.equal(await p.locator('.dm-picker__row:visible').count(),2,'INVALID_CONTROL two visible initial picker rows')
+   console.log('ORIGINAL_MUTATION only two initial picker rows visible; filter matches retained')
+  }
   const total=await rows(p).count();equal(P,192,total>2,true)
   for(const [q,line,text] of [['chad',195,'Chad Puterbaugh'],['CHA',198,'Chad Puterbaugh'],['renee',201,'Renée Dupont']]) {
    await filter(p).fill(q);equal(P,line,await rows(p).count(),1);equal(P,line,(await rows(p).innerText()).includes(text),true)
@@ -204,7 +216,7 @@ async function pickers() {
   await filter(p).fill('zzz-no-one');equal(P,204,await rows(p).count(),0)
   await visible(P,205,p.locator("[data-dm-picker-target='empty']"),'No one matches')
   await filter(p).fill('');equal(P,208,await rows(p).count(),total)
-  equal(P,209,await p.locator("[data-dm-picker-target='empty']:not([hidden])").count(),0)
+  equal(P,209,await p.locator("[data-dm-picker-target='empty']:not([hidden]):visible").count(),0)
  })
  await scenario('picker-post',async p=>{
   await picker(p);if(broken)await mutate(p,'multi-select','counts')
@@ -218,7 +230,7 @@ async function pickers() {
  await scenario('picker-enter',async p=>{
   await picker(p);if(broken)await mutate(p,'dm-picker','selectSingle')
   await filter(p).fill('j');equal(P,252,await rows(p).count()>=2,true)
-  await filter(p).press('Enter');equal(P,254,await p.locator("#direct_rooms_control [data-multi-select-target='bar']:not([hidden])").count(),0)
+  await filter(p).press('Enter');equal(P,254,await p.locator("#direct_rooms_control [data-multi-select-target='bar']:not([hidden]):visible").count(),0)
   await filter(p).fill('chad');await filter(p).press('Enter');equal(P,260,await pick(p,'chad').isChecked(),true)
   await filter(p).fill('kevin');await filter(p).press('Enter')
   equal(P,267,await pick(p,'chad').isChecked(),true);equal(P,268,await pick(p,'kevin').isChecked(),false)
@@ -244,19 +256,27 @@ async function settled(p) {
 async function members() {
  for(const kind of ['mobile-escape','mobile-tab'])await scenario(kind,async p=>{
   await controller(p,'member-panel');if(await p.getByRole('button',{name:'Show members',exact:true}).isVisible())await p.getByRole('button',{name:'Show members',exact:true}).click()
-  await p.locator('#channel-members .member-panel__member').first().waitFor()
-  equal(P,kind==='mobile-escape'?368:392,await p.locator('#channel-members .member-panel__member').count()>=3,true)
+  if(mutation==='member-visibility') {
+   await p.locator('#channel-members .member-panel__member').first().waitFor()
+   const first=await p.locator('#channel-members .member-panel__member').first().getAttribute('data-member-id')
+   await p.addStyleTag({content:`#channel-members .member-panel__member:not([data-member-id='${first}']):not([data-member-id='${labels['users.kevin']}']) { visibility: hidden !important; }`})
+   const rows=p.locator('#channel-members .member-panel__member')
+   assert.ok(await rows.count()>=3,'INVALID_CONTROL attached fixture rows')
+   assert.equal(await p.locator('#channel-members .member-panel__member:visible').count(),2,'INVALID_CONTROL expected exactly two visible rows')
+   console.log('ORIGINAL_MUTATION visible members reduced to two with attached rows retained')
+  }
+  await visibleMinimum(P,kind==='mobile-escape'?372:396,p,'#channel-members .member-panel__member',3)
   await settled(p);if(broken)await mutate(p,'profile-card',kind==='mobile-escape'?'close':'focus-cycle')
   const trigger=`#channel-members [data-member-id='${labels['users.kevin']}'] button.profile-card-name`
-  await p.locator(trigger).click();await visible(P,kind==='mobile-escape'?373:396,card(p))
+  await p.locator(trigger).click();await visible(P,kind==='mobile-escape'?377:400,card(p))
   if(kind==='mobile-escape') {
-   await p.locator('.profile-card-popover__panel').press('Escape');await present(P,377,hiddenCard(p))
-   await visible(P,378,p.locator('#channel-members'));await visible(P,379,p.getByRole('button',{name:'Close members',exact:true}));await focused(P,380,p,trigger)
+   await p.locator('.profile-card-popover__panel').press('Escape');await present(P,381,hiddenCard(p))
+   await visible(P,382,p.locator('#channel-members'));await visible(P,383,p.getByRole('button',{name:'Close members',exact:true}));await focused(P,384,p,trigger)
   } else {
-   await visible(P,397,name(p),'Kevin');await p.locator('.profile-card-popover__panel').press('Tab')
-   await focused(P,402,p,'.profile-card-popover__close');await p.locator('.profile-card-popover__close').press('Tab')
-   await focused(P,404,p,'#user_card .profile-card__actions form:nth-of-type(1) button');await p.locator('#user_card .profile-card__actions form:nth-of-type(1) button').press('Tab')
-   await focused(P,406,p,'#user_card .profile-card__actions form:nth-of-type(2) button')
+   await visible(P,401,name(p),'Kevin');await p.locator('.profile-card-popover__panel').press('Tab')
+   await focused(P,406,p,'.profile-card-popover__close');await p.locator('.profile-card-popover__close').press('Tab')
+   await focused(P,408,p,'#user_card .profile-card__actions form:nth-of-type(1) button');await p.locator('#user_card .profile-card__actions form:nth-of-type(1) button').press('Tab')
+   await focused(P,410,p,'#user_card .profile-card__actions form:nth-of-type(2) button')
   }
  },{phone:true})
 }
@@ -267,31 +287,57 @@ async function group() {
   await directoryBar(p).getByRole('button',{name:'Message (2)',exact:true}).click();await p.waitForURL(/\/rooms\/\d+$/)
   const room=Number(new URL(p.url()).pathname.split('/').at(-1))
   await p.locator(`nav a[href='/rooms/directs/${room}/edit']:visible`).click()
+  if(mutation==='group-notice') {
+   await p.route(`**/rooms/directs/${room}`,async route=>{
+    const response=await route.fetch();const body=await response.text()
+    assert.ok(body.includes('Group renamed.'),'INVALID_CONTROL real rename response notice')
+    await route.fulfill({response,body:body.replaceAll('Group renamed.','Notice removed by producer control')})
+    console.log('ORIGINAL_MUTATION actual rename response loses notice')
+   })
+  }
   if(broken){await p.locator("form:has(input[name='room[name]'])").evaluate(el=>el.addEventListener('submit',e=>e.preventDefault()));console.log('ORIGINAL_MUTATION real rename form submission suppressed')}
   await p.getByLabel('Group name',{exact:true}).fill('Weekend Plans');await p.getByRole('button',{name:'Save',exact:true}).click()
-  await p.waitForLoadState('networkidle');await p.reload()
-  equal(P,319,await p.getByLabel('Group name',{exact:true}).inputValue(),'Weekend Plans')
+  await visible(P,321,p.getByText('Group renamed.',{exact:true}).first())
+  equal(P,322,await p.getByLabel('Group name',{exact:true}).inputValue(),'Weekend Plans')
   await p.locator('#add_member_'+labels['users.jz']).check();await p.getByRole('button',{name:'Add to group',exact:true}).click()
-  await visible(P,323,p.locator('.directs--edit'),'JZ')
-  await p.goto(base+'/rooms/'+room);await visible(P,326,roomTitle(p),'Weekend Plans')
-  await visible(P,327,p.locator('.message__system-note'),'renamed the group to Weekend Plans')
-  await visible(P,328,p.locator('.message__system-note'),'added JZ to the group')
-  equal(P,329,/David\s+renamed the group to Weekend Plans/.test(await p.locator('body').innerText()),true)
-  equal(P,330,/David\s+added JZ to the group/.test(await p.locator('body').innerText()),true)
-  await p.goto(base+`/rooms/directs/${room}/edit`);p.on('dialog',d=>d.accept());await p.getByRole('button',{name:'Leave group',exact:true}).click()
-  await p.waitForURL(url=>url.pathname!='/rooms/'+room)
-  equal(P,337,new URL(p.url()).pathname!='/rooms/'+room,true);state('left',room,['david'])
+  await visible(P,326,p.locator('.directs--edit'),'JZ')
+  await p.goto(base+'/rooms/'+room);await visible(P,329,roomTitle(p),'Weekend Plans')
+  await visible(P,330,p.locator('.message__system-note'),'renamed the group to Weekend Plans')
+  await visible(P,331,p.locator('.message__system-note'),'added JZ to the group')
+  equal(P,332,/David\s+renamed the group to Weekend Plans/.test(await p.locator('body').innerText()),true)
+  equal(P,333,/David\s+added JZ to the group/.test(await p.locator('body').innerText()),true)
+  await p.goto(base+`/rooms/directs/${room}/edit`);p.on('dialog',d=>d.accept())
+  if(mutation==='group-navigation') {
+   await p.evaluate(()=>{document.addEventListener('turbo:before-visit',e=>e.preventDefault());document.addEventListener('turbo:before-render',e=>e.preventDefault())})
+   // Still submit the real leave action and verify its persisted membership below.
+   const leave=p.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname.endsWith('/leave'))
+   await p.getByRole('button',{name:'Leave group',exact:true}).click();await leave
+   console.log('ORIGINAL_MUTATION real leave saved but Turbo navigation suppressed')
+  } else await p.getByRole('button',{name:'Leave group',exact:true}).click()
+  await p.waitForURL(url=>url.pathname!==`/rooms/directs/${room}/edit`,{timeout:assertionWait(P,340)})
+  equal(P,340,new URL(p.url()).pathname!==`/rooms/directs/${room}/edit`,true)
+  await p.waitForURL(url=>url.pathname!='/rooms/'+room,{timeout:assertionWait(P,341)})
+  equal(P,341,new URL(p.url()).pathname!='/rooms/'+room,true);state('left',room,['david'])
  },{path:'/users'})
 }
 const tour=p=>p.locator('#tour .tour__card')
 const next=p=>p.locator("#tour [data-tour-target='next']")
 async function step(p,line,n) {await visible(T,line,p.locator('.tour__progress'),`Step ${n} of 5`)}
-async function complete(p,action,hiddenLine,stampLine) {
+async function stamped(p,action,hiddenLine,stampLine) {
  const response=p.waitForResponse(r=>new URL(r.url()).pathname==='/users/me/tour'&&r.request().method()!=='GET',{timeout:2000})
  await action();assert.equal((await response).status(),204,'real stamp request')
  await tour(p).waitFor({state:'hidden',timeout:2000});equal(T,hiddenLine,await tour(p).isVisible(),false)
+ // The 204 follows the save. Read the actual HTTP server's database now, before
+ // restart/navigation, matching assert_tour_completed's reloaded user predicate.
+ const db=new DatabaseSync(process.env.WS11UI_BROWSER_DATABASE,{readOnly:true})
+ try {equal(T,95,db.prepare('SELECT tour_completed_at FROM users WHERE id=?').get(labels['users.jz']).tour_completed_at!==null,true)} finally {db.close()}
  requests.push({kind:'tour',user:'jz',line:stampLine})
- await p.reload();await controller(p,'tour');equal(T,hiddenLine+4,await tour(p).isVisible(),false)
+}
+async function complete(p,action,hiddenLine,stampLine,attributeLine,finalLine) {
+ await stamped(p,action,hiddenLine,stampLine)
+ await p.reload();await controller(p,'tour')
+ await present(T,attributeLine,p.locator('#tour[data-tour-auto-start-value="false"]'))
+ equal(T,finalLine,await tour(p).isVisible(),false)
 }
 async function tours() {
  await scenario('tour-finish',async p=>{
@@ -302,22 +348,30 @@ async function tours() {
   await next(p).press('ArrowRight');await step(p,26,4);await visible(T,27,p.locator('.tour__title'),'Jump anywhere with Ctrl+K')
   await next(p).press('ArrowLeft');await step(p,30,3);await next(p).press('ArrowRight');await next(p).press('ArrowRight');await step(p,33,5)
   await visible(T,34,p.locator('.tour__title'),'Shortcuts live under ?');await visible(T,35,p.locator('#help-menu-button.tour__target'))
-  await complete(p,()=>next(p).click(),38,39)
+  await complete(p,()=>next(p).click(),38,39,42,43)
  },{user:'jz'})
  await scenario('tour-escape',async p=>{
-  await controller(p,'tour');await visible(T,49,tour(p));if(broken)await mutate(p,'tour','skip')
-  await complete(p,()=>next(p).press('Escape'),52,53)
+  await controller(p,'tour');await visible(T,50,tour(p));if(broken)await mutate(p,'tour','skip')
+  await complete(p,()=>next(p).press('Escape'),53,54,57,58)
  },{user:'jz'})
  await scenario('tour-restart',async p=>{
-  await controller(p,'tour');await p.getByRole('button',{name:'Skip tour',exact:true}).click();await tour(p).waitFor({state:'hidden',timeout:assertionWait(T,64)});equal(T,64,await tour(p).isVisible(),false)
+  if(mutation==='tour-stamp') {
+   await p.route('**/users/me/tour',route=>{console.log('ORIGINAL_MUTATION tour completion PATCH acknowledged without persistence');return route.fulfill({status:204,body:''})})
+  }
+  await controller(p,'tour');await stamped(p,()=>p.getByRole('button',{name:'Skip tour',exact:true}).click(),66,67)
   if(broken)await mutate(p,'tour','start')
   await p.locator('#help-menu-button').click();await p.getByRole('menuitem',{name:'Restart tour',exact:true}).click()
-  await visible(T,69,tour(p));await step(p,70,1)
+  await visible(T,72,tour(p));await step(p,73,1)
  },{user:'jz'})
  await scenario('tour-completed',async p=>{
   await controller(p,'tour')
+  if(mutation==='tour-auto-start') {
+   await p.locator('#tour').evaluate(el=>el.setAttribute('data-tour-auto-start-value','true'))
+   console.log('ORIGINAL_MUTATION completed page auto-start attribute incorrect')
+  }
   if(broken){await p.evaluate(()=>{const c=window.Stimulus.getControllerForElementAndIdentifier(document.querySelector('#tour'),'tour');c.start()});console.log('ORIGINAL_MUTATION completed tour started')}
-  equal(T,79,await tour(p).isVisible(),false);await visible(T,80,p.locator('#help-menu-button'))
+  await present(T,82,p.locator('#tour[data-tour-auto-start-value="false"]'))
+  equal(T,83,await tour(p).isVisible(),false);await visible(T,84,p.locator('#help-menu-button'))
  },{user:'jz'})
 }
 async function corruptStarPayload(p) {
@@ -331,7 +385,9 @@ async function corruptStarPayload(p) {
 }
 // Keep the four starred-people translations separate to retain each helper's checks.
 async function stars() {
- const id=labels['users.kevin'];const row=p=>p.locator(`#channel-members [data-member-id='${id}']`);const menu=p=>p.locator('#member-row-menu:not([hidden])')
+ let inlineCalls=0
+ const id=labels['users.kevin'];const row=p=>p.locator(`#channel-members [data-member-id='${id}']`);const menu=p=>p.locator('#member-row-menu:visible')
+ async function dismissed(p,line) {await menu(p).waitFor({state:'hidden',timeout:assertionWait(S,line)});equal(S,line,await menu(p).count(),0)}
  async function open(p) {await row(p).locator('button.profile-card-name').click();await visible(S,134,card(p));await visible(S,135,name(p),'Kevin')}
  async function close(p) {await p.locator('.profile-card-popover__close').click();await present(S,140,hiddenCard(p))}
  async function marked(p,yes) {
@@ -346,7 +402,11 @@ async function stars() {
   }
  }
  async function inline(p) {
-  await present(S,168,p.locator('#channel-members .member-panel__member .member-panel__identity'))
+  if(mutation==='identity-visibility'&&++inlineCalls===2) {
+   await p.addStyleTag({content:'#channel-members .member-panel__identity { visibility: hidden !important; }'})
+   console.log('ORIGINAL_MUTATION member identities hidden but layout retained')
+  }
+  await visible(S,168,p.locator('#channel-members .member-panel__member .member-panel__identity:visible'))
   const brokenRows=await p.locator('#channel-members .member-panel__member').evaluateAll(rows=>rows.filter(r=>{const a=r.querySelector('.member-panel__avatar').getBoundingClientRect();const i=r.querySelector('.member-panel__identity').getBoundingClientRect();return i.left<a.right||i.top>=a.bottom||i.width<80}).map(r=>r.dataset.memberId))
   equal(S,176,brokenRows,[])
  }
@@ -360,20 +420,24 @@ async function stars() {
  },{user:'jz'})
  await scenario('star-menu',async p=>{
   await ready(p);if(broken)await mutate(p,'member-panel','toggleRowMenuStar')
+  if(mutation==='menu-rendered') {
+   await p.addStyleTag({content:'#member-row-menu[hidden] { display: block !important; visibility: visible !important; opacity: 1 !important; pointer-events: none !important; }'})
+   console.log('ORIGINAL_MUTATION hidden menu CSS still renders dismissed menu')
+  }
   await row(p).click({button:'right'});await visible(S,48,menu(p));await focused(S,49,p,"#member-row-menu [role='menuitem']")
   await menu(p).getByRole('menuitem',{name:'☆ Star',exact:true}).click();await visible(S,53,menu(p).getByRole('menuitem',{name:'★ Unstar',exact:true}));await marked(p,true)
   await menu(p).getByRole('menuitem',{name:'★ Unstar',exact:true}).click();await visible(S,59,menu(p).getByRole('menuitem',{name:'☆ Star',exact:true}));await marked(p,false)
-  await menu(p).locator("[role='menuitem']").press('Escape');equal(S,64,await menu(p).count(),0)
+  await menu(p).locator("[role='menuitem']").press('Escape');await dismissed(p,64)
   equal(S,159,await row(p).evaluate(el=>el.contains(document.activeElement)),true)
   await row(p).locator('button.profile-card-name').focus();await p.keyboard.press('Shift+F10');await visible(S,72,menu(p));await focused(S,73,p,"#member-row-menu [role='menuitem']")
-  await menu(p).getByRole('menuitem',{name:'☆ Star',exact:true}).click();await marked(p,true);await menu(p).locator("[role='menuitem']").press('Escape');equal(S,79,await menu(p).count(),0)
-  await p.locator(`#channel-members [data-member-id='${labels['users.jz']}']`).click({button:'right'});equal(S,83,await menu(p).count(),0);await inline(p)
+  await menu(p).getByRole('menuitem',{name:'☆ Star',exact:true}).click();await marked(p,true);await menu(p).locator("[role='menuitem']").press('Escape');await dismissed(p,79)
+  await p.locator(`#channel-members [data-member-id='${labels['users.jz']}']`).click({button:'right'});await dismissed(p,83);await inline(p)
  },{user:'jz'})
  await scenario('star-escape',async p=>{
   await ready(p);await row(p).click({button:'right'});await visible(S,93,menu(p))
-  await row(p).locator('button.profile-card-avatar').click();await visible(S,100,card(p));await present(S,101,menu(p))
+  await row(p).locator('button.profile-card-avatar').click();await visible(S,100,card(p));await present(S,101,p.locator('#member-row-menu:not([hidden])'))
   if(broken)await mutate(p,'profile-card','close')
-  await p.locator('.profile-card-popover__close').press('Escape');await present(S,105,hiddenCard(p));equal(S,106,await menu(p).count(),0)
+  await p.locator('.profile-card-popover__close').press('Escape');await present(S,105,hiddenCard(p));await dismissed(p,106)
  },{user:'jz'})
  await scenario('star-phone',async p=>{
   await ready(p);await p.setViewportSize({width:390,height:844});await p.locator('#channel-members').waitFor({state:'hidden',timeout:assertionWait(S,112)});

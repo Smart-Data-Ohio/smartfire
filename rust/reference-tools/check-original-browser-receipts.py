@@ -8,6 +8,7 @@ p.add_argument('--browser-log',type=Path,required=True)
 p.add_argument('--controls-dir',type=Path,required=True)
 a=p.parse_args();root=Path(__file__).resolve().parents[2]
 m=json.loads((root/'rust/plans/ledger-ws8br-ws17-ws11ui-c-browser-receipts.json').read_text())
+assert m['reference']==(root/'rust/parity/reference.sha').read_text().strip(),'original assertions must use the runtime Rails pin'
 tests={n:v for s in json.loads(a.nextest_list.read_text())['rust-suites'].values() for n,v in s['testcases'].items()}
 log='\n'.join(line[4:] if line.startswith('    ') else line for line in a.browser_log.read_text().splitlines());passed=set(re.findall(r'^test (\S+) \.\.\. ok$',log,re.M))
 # --show-output is required: a pass line alone cannot prove original assertion coverage.
@@ -43,8 +44,8 @@ for record in m['records']:
    if record['file'].endswith('people_group_dms_test.rb') and n in [87,109,240]:
     assert 'ORIGINAL_PATH '+target+': canonical group' in section
     if n==109:assert 'ORIGINAL_ASSERTION '+record['file']+':109' in section
-   elif record['file'].endswith('people_group_dms_test.rb') and n==338:assert '"kind": "left"' in section and 'ORIGINAL_DB '+target in section
-   elif record['file'].endswith('first_run_tour_test.rb') and n in [39,53]:assert f'"line": {n}' in section and 'ORIGINAL_DB '+target in section
+   elif record['file'].endswith('people_group_dms_test.rb') and n==342:assert '"kind": "left"' in section and 'ORIGINAL_DB '+target in section
+   elif ruby=='assert_tour_completed':assert f'"line": {n}' in section and 'ORIGINAL_DB '+target in section
    else:assert 'ORIGINAL_ASSERTION '+record['file']+':'+str(n) in section,(target,record['id'],n)
 for mode in sorted({r['browser_mode'] for r in m['records']}):
  count=sum(r['browser_mode']==mode for r in m['records'])

@@ -43,14 +43,15 @@ User.find(149087659).update!(name:'Jordan')
 rows << {name:'cache_rename',response:get_row(browser,direct)}
 g.record_seen!
 rows << {name:'cache_join',response:get_row(browser,direct)}
+# Each following original declaration starts without the cache-test override.
+# Otherwise cached configured direct rows leak voice stacks into this case.
+Rails.cache=ActiveSupport::Cache::NullStore.new
+ActionView::PartialRenderer.collection_cache=Rails.cache
+ActionController::Base.perform_caching=false
 reset_grants;grant(149087659,room);ENV.delete('LIVEKIT_GATEWAY_SECRET')
 browser.get '/users/me/sidebar';ActiveSupport::IsolatedExecutionState.clear
 dom=Nokogiri::HTML(browser.response.body)
 rows << {name:'unconfigured',response:{status:browser.response.status,shared_stacks:dom.css('#shared_rooms .voice-stack').size,direct_stacks:dom.css('#direct_rooms .voice-stack').size,presence:dom.css('[data-controller~="huddle-presence"]').size}}
-# Original query case runs without the previous declaration's cache override.
-Rails.cache=ActiveSupport::Cache::NullStore.new
-ActionView::PartialRenderer.collection_cache=Rails.cache
-ActionController::Base.perform_caching=false
 # Original two-size mixed quiet-room SELECT and one-grants-read assertions.
 ENV['LIVEKIT_GATEWAY_SECRET']='fixture-gateway-secret'
 reset_grants

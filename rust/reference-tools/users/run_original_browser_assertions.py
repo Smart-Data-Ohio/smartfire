@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Paired original browser assertions with isolated fixtures and actual DB checks."""
-import argparse,hashlib,json,os,re,shutil,socket,sqlite3,subprocess,tempfile,time,urllib.request
+import argparse,atexit,hashlib,json,os,re,shutil,sqlite3,subprocess,tempfile,time,urllib.request
 from pathlib import Path
+from browser_port_leases import DEFAULT_BASE, reserve
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('mode',choices=['people','pickers','members','group','tours','stars','worker'])
 parser.add_argument('--controls',action='store_true')
+parser.add_argument('--mutation',choices=['tour-stamp','tour-auto-start','group-notice','group-navigation','member-visibility','menu-rendered','identity-visibility','picker-visibility'])
 args=parser.parse_args()
 root=Path(__file__).resolve().parents[2]
 labels=json.loads((root/'parity/.seed/default/labels.json').read_text())
@@ -14,14 +16,18 @@ cases={
 'members':['mobile-escape','mobile-tab'],'group':['group-lifecycle'],
 'tours':['tour-finish','tour-escape','tour-restart','tour-completed'],
 'stars':['star-card','star-menu','star-escape','star-phone'],'worker':['served-worker'],}
-# Disjoint mode leases preserve the future four-worker ignored-test gate.
-base_port=int(os.environ.get('WS11UI_ORIGINAL_PORT','52710'))+3*list(cases).index(args.mode)
-ports=[base_port+i for i in range(3)]
-for port in ports:
- with socket.socket() as check:
-  check.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-  check.bind(('127.0.0.1',port))
-scratch=root.parent/'.scratch';scratch.mkdir(exist_ok=True)
+if args.mutation:
+ mutation_cases={'tour-stamp':('tours','tour-restart'),'tour-auto-start':('tours','tour-completed'),'group-notice':('group','group-lifecycle'),'group-navigation':('group','group-lifecycle'),'member-visibility':('members','mobile-tab'),'menu-rendered':('stars','star-menu'),'identity-visibility':('stars','star-card'),'picker-visibility':('pickers','picker-filter')}
+ mutation_mode,mutation_case=mutation_cases[args.mutation]
+ assert args.mode==mutation_mode,'mutation must use its original mode'
+ cases[args.mode]=[mutation_case]
+# The lease survives all startup work. Its kernel names coordinate independent
+# invocations/worktrees; outbound forwarder connections cannot consume this range.
+lease=reserve(int(os.environ.get('WS11UI_ORIGINAL_PORT',str(DEFAULT_BASE))),list(cases).index(args.mode))
+atexit.register(lease.close)
+ports=lease.ports
+print(f'ORIGINAL_PORT_LEASE {args.mode}: {ports}',flush=True)
+scratch=root/'.scratch';scratch.mkdir(exist_ok=True)
 run=Path(tempfile.mkdtemp(prefix='ws11ui-originals-',dir=scratch))
 seed=root/'parity/.seed'/run.name;shutil.copytree(root/'parity/.seed/default',seed)
 with sqlite3.connect(seed/'db/production.sqlite3') as db:
@@ -55,9 +61,10 @@ if subprocess.run(['docker','image','inspect',image],stdout=subprocess.DEVNULL,s
 subprocess.run(['docker','image','inspect',image],check=True,stdout=subprocess.DEVNULL)
 binary=Path(os.environ.get('WS11UI_BROWSER_BINARY',str(Path(os.environ.get('CARGO_TARGET_DIR',str(root/'target')))/'debug/campfire')))
 server=None
-net_root=Path.home()/'.cache/rust-port/ws11ui/originals-network';net_root.mkdir(parents=True,exist_ok=True)
+net_root=scratch/'originals-network';net_root.mkdir(parents=True,exist_ok=True)
 net_dir=Path(tempfile.mkdtemp(prefix='net-',dir=net_root));sock=net_dir/'upstream.sock'
-forward=subprocess.Popen(['node',str(root/'parity/capture/forward.ts'),str(sock)],stdout=subprocess.DEVNULL)
+# Relative socket paths avoid Linux's 108-byte Unix-address limit in deep worktrees.
+forward=subprocess.Popen(['node',str(root/'parity/capture/forward.ts'),str(sock.relative_to(root))],cwd=root,stdout=subprocess.DEVNULL)
 deadline=time.monotonic()+10
 while not sock.exists():
  if forward.poll() is not None or time.monotonic()>deadline:raise RuntimeError('forwarder did not start')
@@ -102,11 +109,11 @@ try:
     if time.monotonic()>deadline:raise RuntimeError('Rust server failed startup')
     time.sleep(.25)
   for target,port in [('Rails',ports[0]),('Rust',ports[1])]:
-   if args.controls and target=='Rails':continue
+   if (args.controls or args.mutation) and target=='Rails':continue
    for case in cases[args.mode]:
     fixture(target,case)
     script='original_worker_assertions.mjs' if args.mode=='worker' else 'original_browser_assertions.mjs'
-    cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root.parent}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{port}','-e',f'WS11UI_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}',image,'node','/work/rust/reference-tools/users/'+script]
+    cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root.parent}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{port}','-e',f'WS11UI_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json','-e',f'WS11UI_BROWSER_DATABASE=/work/{db_path(target).relative_to(root.parent)}','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/rust/reference-tools/users/'+script]
     result=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
     print(f'Original {target} {case}:',flush=True);print(result.stdout,flush=True)
     if args.controls:
