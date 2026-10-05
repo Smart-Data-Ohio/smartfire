@@ -229,6 +229,48 @@ parser_cases << ["multipart_mixed_blank_file_limit", multipart_type,
     parser_cases << ["multipart_epilogue_#{label}_suffix_checksum", multipart_type, recipe, false, suffix_checksum]
   end
 end
+# Rack's fast-forward state accepts an initial closing marker only when its entire
+# first read is that marker plus CRLF. Otherwise it keeps looking for an opening.
+closing = "--upload-boundary--\r\n"
+[
+  ["only", closing],
+  ["epilogue", closing + "x"],
+  ["no_crlf", closing.delete_suffix("\r\n")],
+  ["lf", closing.delete_suffix("\r\n") + "\n"],
+  ["extra_crlf", closing + "\r\n"],
+  ["trailing_space", closing + " "],
+  ["trailing_tab", closing + "\t"],
+  ["padding_before_crlf", "--upload-boundary-- \r\n"],
+  ["leading_crlf", "\r\n" + closing],
+  ["leading_lf", "\n" + closing],
+  ["leading_space", " " + closing],
+  ["leading_tab", "\t" + closing],
+  ["preamble_crlf", "preamble\r\n" + closing],
+  ["preamble_inline", "preamble" + closing],
+  ["preamble_lf", "preamble\n" + closing],
+  ["preamble_large", { prefix: "", unit: "x", repeat: 16_385, suffix: "\r\n" + closing }],
+  ["epilogue_at_preamble_limit", { prefix: closing, unit: "x", repeat: 16_384 - closing.bytesize, suffix: "" }],
+  ["epilogue_past_preamble_limit", { prefix: closing, unit: "x", repeat: 16_385 - closing.bytesize, suffix: "" }],
+  ["large_epilogue", { prefix: closing, unit: "x", repeat: 2_000_000, suffix: "" }],
+  ["then_valid", closing + multipart],
+  ["then_truncated_part", closing + multipart.sub(/--upload-boundary--\r\n\z/, '')],
+  ["then_file_limit", { prefix: closing, unit: file_part, repeat: 128, suffix: closing }]
+].each do |label, body|
+  parser_cases << ["multipart_initial_close_#{label}_empty_checksum", multipart_type, body, false, empty_checksum]
+end
+parser_cases << ["multipart_initial_close_only_body_checksum", multipart_type, closing]
+parser_cases << ["multipart_initial_close_epilogue_body_checksum", multipart_type, closing + "x"]
+large_initial_close = { prefix: closing, unit: "x", repeat: 2_000_000, suffix: "" }
+parser_cases << ["multipart_initial_close_large_epilogue_body_checksum", multipart_type, large_initial_close]
+suffix_checksum = Base64.strict_encode64(Digest::MD5.digest("x" * (closing.bytesize + 2_000_000 - 1_048_576)))
+parser_cases << ["multipart_initial_close_large_epilogue_suffix_checksum", multipart_type, large_initial_close, false, suffix_checksum]
+[
+  ["crlf", "preamble\r\n" + multipart],
+  ["inline", "preamble" + multipart],
+  ["large", { prefix: "", unit: "x", repeat: 16_385, suffix: "\r\n" + multipart }]
+].each do |label, body|
+  parser_cases << ["multipart_opening_preamble_#{label}_empty_checksum", multipart_type, body, false, empty_checksum]
+end
 parser_cases.each do |name, content_type, body, chunked, signed_checksum|
   recipe = body if body.is_a?(Hash)
   body = recipe.fetch(:prefix, "") + recipe[:unit] * recipe[:repeat] + recipe[:suffix] if recipe
@@ -265,7 +307,8 @@ parser_cases.each do |name, content_type, body, chunked, signed_checksum|
   end
 end
 
-# No parser runs before DiskController's session gate. Include the metadata POST
+# JSON parsing follows DiskController's session gate; Rack forms run before it.
+# Include the metadata POST
 # controls too: that separate controller retains CSRF/parameter parsing before its gate.
 [
   ["anonymous_json_malformed", "application/json", "{"],
@@ -275,9 +318,10 @@ end
   ["anonymous_json_alias_problem", "application/problem+json", "{"],
   ["anonymous_form_malformed", "application/x-www-form-urlencoded", "a=%zz"],
   ["anonymous_multipart_truncated", multipart_type, multipart.sub(/--upload-boundary--\r\n\z/, '')],
-  ["anonymous_multipart_limit", multipart_type, file_part * 128 + "--upload-boundary--\r\n"]
-].each do |name, content_type, body|
-  checksum = Base64.strict_encode64(Digest::MD5.digest(body))
+  ["anonymous_multipart_limit", multipart_type, file_part * 128 + "--upload-boundary--\r\n"],
+  ["anonymous_multipart_initial_close_epilogue", multipart_type, closing + "x", empty_checksum]
+].each do |name, content_type, body, signed_checksum|
+  checksum = signed_checksum || Base64.strict_encode64(Digest::MD5.digest(body))
   metadata = create.call(body.bytesize, checksum, "anonymous.bin", content_type.split(';', 2).first)
   raise "#{name} metadata: #{metadata.code}" unless metadata.code == "200"
   blob = JSON.parse(metadata.body)

@@ -65,7 +65,9 @@ pub(crate) async fn parse_spooled(
         })
         .await
         .map_err(std::io::Error::other)??;
-        file.rewind().await?;
+        // Multer accepts an initial closing marker even when Rack skips it while
+        // looking for a later opening. Start at the boundary Rack actually accepted.
+        file.seek(std::io::SeekFrom::Start(position.start)).await?;
         let input = file.try_clone().await?;
         let stream = futures_util::stream::try_unfold(input, |mut input| async move {
             let mut chunk = vec![0; 64 * 1024];
@@ -90,7 +92,8 @@ pub(crate) async fn parse_spooled(
         };
         // Rack reads 1 MiB at a time and stops at the closing boundary. Multer has
         // different read-ahead; restore Rack's position for DiskService's subsequent copy.
-        file.seek(std::io::SeekFrom::Start(position)).await?;
+        file.seek(std::io::SeekFrom::Start(position.consumed))
+            .await?;
         parsed
     } else if multipart || media.as_deref() == Some("application/x-www-form-urlencoded") {
         // Rack bounds urlencoded bodies at 4 MiB, even when the uploaded file is larger.
@@ -138,9 +141,18 @@ fn boundary(content_type: &str) -> Result<Option<String>, BodyError> {
     Ok(Some(boundary.to_owned()))
 }
 
+/// Rack's accepted initial boundary and its final read-ahead position.
+struct MultipartPosition {
+    start: u64,
+    consumed: u64,
+}
+
 /// Rack reads 1 MiB at a time and bounds unfinished preambles/headers. Multer
 /// otherwise buffers an unterminated header indefinitely, so check before it parses.
-fn validate_multipart_buffers(file: &mut std::fs::File, boundary: &str) -> Result<u64, BodyError> {
+fn validate_multipart_buffers(
+    file: &mut std::fs::File,
+    boundary: &str,
+) -> Result<MultipartPosition, BodyError> {
     enum State {
         Preamble,
         Headers,
@@ -149,13 +161,23 @@ fn validate_multipart_buffers(file: &mut std::fs::File, boundary: &str) -> Resul
     let first = format!("--{boundary}");
     let subsequent = format!("\r\n--{boundary}");
     let mut state = State::Preamble;
+    let mut start = 0;
+    let mut preamble_cursor = 0;
     let mut chunk = vec![0; 1024 * 1024];
     let mut buffered = Vec::new();
     loop {
         let count = file.read(&mut chunk)?;
         if count == 0 {
-            return Ok(file.stream_position()?);
-        } // EOF syntax errors belong to the multipart parser.
+            // Rack's FAST_FORWARD keeps reading if it has not accepted an opening;
+            // its EmptyContentError maps to 400, even if Multer accepts the close.
+            if matches!(state, State::Preamble) {
+                return Err(BodyError::Read("empty multipart content".into()));
+            }
+            return Ok(MultipartPosition {
+                start,
+                consumed: file.stream_position()?,
+            });
+        } // Other EOF syntax errors belong to the multipart parser.
         buffered.extend_from_slice(&chunk[..count]);
         loop {
             match state {
@@ -170,33 +192,66 @@ fn validate_multipart_buffers(file: &mut std::fs::File, boundary: &str) -> Resul
                         break;
                     }
                 }
-                State::Preamble | State::Body => {
-                    let marker = if matches!(state, State::Preamble) {
-                        first.as_bytes()
+                State::Preamble => {
+                    if let Some((end, closing)) =
+                        find_initial_boundary(&buffered, first.as_bytes(), preamble_cursor)
+                    {
+                        preamble_cursor = end;
+                        if closing {
+                            // Rack::Multipart::Parser#handle_fast_forward: the sole
+                            // closing-only exception is an exact first buffer plus CRLF.
+                            if end == first.len() + 2 && buffered[end..] == *b"\r\n" {
+                                return Ok(MultipartPosition {
+                                    start: 0,
+                                    consumed: file.stream_position()?,
+                                });
+                            }
+                            continue;
+                        }
+                        start = (end - first.len() - 2) as u64;
+                        buffered.drain(..end);
+                        state = State::Headers;
                     } else {
-                        subsequent.as_bytes()
-                    };
+                        if buffered.len() > 16 * 1024 {
+                            return Err(multipart_error());
+                        }
+                        preamble_cursor = buffered.len();
+                        break;
+                    }
+                }
+                State::Body => {
+                    let marker = subsequent.as_bytes();
                     if let Some((end, closing)) = find_boundary(&buffered, marker) {
                         if closing {
-                            return Ok(file.stream_position()?);
+                            return Ok(MultipartPosition {
+                                start,
+                                consumed: file.stream_position()?,
+                            });
                         }
                         buffered.drain(..end);
                         state = State::Headers;
                     } else {
-                        if matches!(state, State::Preamble) {
-                            if buffered.len() > 16 * 1024 {
-                                return Err(multipart_error());
-                            }
-                        } else {
-                            let retained = buffered.len().min(marker.len() + 1);
-                            buffered.drain(..buffered.len() - retained);
-                        }
+                        let retained = buffered.len().min(marker.len() + 1);
+                        buffered.drain(..buffered.len() - retained);
                         break;
                     }
                 }
             }
         }
     }
+}
+
+// Rack's initial boundary regex requires the marker at byte zero or after CRLF.
+fn find_initial_boundary(bytes: &[u8], marker: &[u8], mut offset: usize) -> Option<(usize, bool)> {
+    while let Some((end, closing)) = find_boundary(&bytes[offset..], marker) {
+        let end = offset + end;
+        let start = end - marker.len() - 2;
+        if start == 0 || (start >= 2 && bytes[start - 2..start] == *b"\r\n") {
+            return Some((end, closing));
+        }
+        offset = start + marker.len();
+    }
+    None
 }
 
 fn find_boundary(bytes: &[u8], marker: &[u8]) -> Option<(usize, bool)> {
