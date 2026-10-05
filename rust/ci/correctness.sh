@@ -83,7 +83,7 @@ run_suite() {
         --volume "$repo/rust/parity:$repo/rust/parity:ro" --volume "$TMPDIR:$TMPDIR" \
         --env TMPDIR="$TMPDIR" --workdir "$repo/rust/parity" \
         "$WS13_PLAYWRIGHT_IMAGE" node --test --test-concurrency=4 \
-        system/ws13-browser-poll.test.mjs system/ws13-media-network.test.mjs
+        system/ws13-browser-poll.test.mjs system/ws13-media-network.test.mjs system/ws13-gateway-readiness.test.mjs
       ignored
       ;;
     messaging)

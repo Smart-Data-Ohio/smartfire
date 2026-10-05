@@ -87,3 +87,8 @@ startup log on failure before the full 145-case paired suite starts.
 Each correctness job uploads its full log, selected-test JUnit (where applicable),
 and a JSON head/duration/exit receipt under `target/ci-receipts`. A red external
 browser receipt stays red; the job supplies no correctness retries or exclusions.
+
+The LiveKit gateway publishes its port marker by atomic rename after writing all
+bytes. Rust waits on that marker before configuring its public endpoint. A real
+filesystem regression pauses the writer with an empty file and asserts that the
+ready marker remains absent until the complete port is published.
