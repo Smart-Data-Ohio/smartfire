@@ -4,7 +4,7 @@ Nineteen distinct new native tests: 19 behavior mutations killed at mapped asser
 
 | Mutation | Native test | Actual discriminating panic | Raw summary |
 |---|---|---|---|
-| organizer_bot | `cutover_event_rejects_bot_and_nonmember_organizers` | `crates/db/src/tests/calendar_event_test/cutover_event_test.rs:87:5:` | `Summary [   0.171s] 1 test run: 0 passed, 1 failed, 5053 skipped` |
+| organizer_bot | `cutover_event_rejects_bot_and_nonmember_organizers` | `crates/db/src/tests/calendar_event_test/cutover_event_test.rs:87:5:` | `Summary [   0.926s] 1 test run: 0 passed, 1 failed, 5107 skipped` |
 | deleted_venue | `cutover_event_rejects_soft_deleted_venue` | `crates/db/src/tests/calendar_event_test/cutover_event_test.rs:114:5:` | `Summary [   0.142s] 1 test run: 0 passed, 1 failed, 5053 skipped` |
 | invisible_invites | `cutover_event_off_and_invisible_members_get_no_invitation` | `crates/db/src/tests/calendar_event_test/cutover_event_test.rs:130:5:` | `Summary [   0.173s] 1 test run: 0 passed, 1 failed, 5053 skipped` |
 | bot_invites | `cutover_event_invitations_exclude_bots` | `crates/db/src/tests/calendar_event_test/cutover_event_test.rs:180:5:` | `Summary [   0.126s] 1 test run: 0 passed, 1 failed, 5053 skipped` |
@@ -25,3 +25,5 @@ Nineteen distinct new native tests: 19 behavior mutations killed at mapped asser
 | preload_n1 | `cutover_events_index_query_count_is_independent_of_occurrence_count` | `crates/campfire/src/controllers/rooms/events/tests/cutover/controllers.rs:329:5:` | `Summary [   1.374s] 1 test run: 0 passed, 1 failed, 5053 skipped` |
 
 Raw summaries are copied from the selected test runs. The sample receipt is `ledger-ws14-ws15-b-mutations.json`. The equality-end validation mutation was also observed to fail; its exploratory run is not included in this retained 19-test sample.
+
+The organizer-bot sample was rerun after the complete parent audit merge and redirect assertion strengthening. The other eighteen original raw logs still verify at their mapped assertion lines. The CLI now accepts `--recheck` before or after positional arguments and rejects an invalid executable before installing any mutation. Three parser checks pass without changing production hashes.

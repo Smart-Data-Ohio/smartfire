@@ -1,0 +1,2878 @@
+{
+  "reference": "d7c7de92",
+  "records": [
+    {
+      "id": "WS14e-051",
+      "test": "campfire::bin/campfire integrations::web_push::tests::ws17_delivery::cutover_c_reminder_real_job_delivers_venue_suffix_in_encrypted_push",
+      "note": "The original Mocha queue expectation includes an exact body predicate. Rust executes the registered durable job, receives its encrypted Web Push on a local fake service, decrypts it and compares the exact body. No real Google or push service is contacted.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/event/reminder_pusher_test.rb",
+            "line": 38,
+            "text": "pool.expects(:queue).with do |payload, _subscriptions|"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
+              "line": 357,
+              "end_line": 357,
+              "function": "cutover_c_reminder_real_job_delivers_venue_suffix_in_encrypted_push",
+              "text": "assert_eq!(requests.len(), 1)"
+            },
+            {
+              "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
+              "line": 359,
+              "end_line": 362,
+              "function": "cutover_c_reminder_real_job_delivers_venue_suffix_in_encrypted_push",
+              "text": "assert_eq!(\n        payload[\"options\"][\"body\"],\n        \"Starts in 15 minutes: Launch party planning in Lounge\"\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14e-057",
+      "test": "campfire::bin/campfire integrations::web_push::tests::ws17_delivery::cutover_c_reminder_real_job_suppresses_ended_events_with_recent_running_control",
+      "note": "The original already-ended event is tested, plus a recently ended event (start -3m/end -1m) and a still-running control. All execute the real ReminderPushJob. reminder-ended-control.rb runs the added control on pinned Rails.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/event/reminder_pusher_test.rb",
+            "line": 121,
+            "text": "Rails.configuration.x.web_push_pool.expects(:queue).never"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/integrations/web_push/ws17_delivery_tests.rs",
+              "line": 388,
+              "end_line": 388,
+              "function": "cutover_c_reminder_real_job_suppresses_ended_events_with_recent_running_control",
+              "text": "assert!(service.server.received().is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-004",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_drive_chip_markup_is_identical_with_and_without_viewer_consent",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 226,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 100,
+              "end_line": 100,
+              "function": "cutover_c_drive_chip_markup_is_identical_with_and_without_viewer_consent",
+              "text": "assert_eq!(without.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 232,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 107,
+              "end_line": 107,
+              "function": "cutover_c_drive_chip_markup_is_identical_with_and_without_viewer_consent",
+              "text": "assert_eq!(with.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 235,
+            "text": "assert_equal without_consent, with_consent"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 112,
+              "end_line": 112,
+              "function": "cutover_c_drive_chip_markup_is_identical_with_and_without_viewer_consent",
+              "text": "assert_eq!(first, second)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 236,
+            "text": "assert_includes with_consent, \"Google Drive file\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 113,
+              "end_line": 113,
+              "function": "cutover_c_drive_chip_markup_is_identical_with_and_without_viewer_consent",
+              "text": "assert!(second.contains(\"Google Drive file\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-005",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+      "note": "The hidden-input assertion executes independently for FILE_A, FILE_B and the blank sentinel. All selectors are applied to the real edit HTTP DOM.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 245,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 124,
+              "end_line": 124,
+              "function": "cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+              "text": "assert_eq!(response.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 246,
+            "text": "assert_select \".drive-attachment-chip\", count: 2"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 126,
+              "end_line": 129,
+              "function": "cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+              "text": "assert_eq!(\n        nodes(&d, root, |d, n| class(d, n, \"drive-attachment-chip\")).len(),\n        2\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 247,
+            "text": "assert_select \"input[type='hidden'][name='message[drive_file_ids][]'][value='#{FILE_A}']\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 131,
+              "end_line": 138,
+              "function": "cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+              "text": "assert_eq!(\n            nodes(&d, root, |d, n| d.local_name(n) == Some(\"input\")\n                && d.attr(n, \"type\") == Some(\"hidden\")\n                && d.attr(n, \"name\") == Some(\"message[drive_file_ids][]\")\n                && d.attr(n, \"value\") == Some(expected))\n            .len(),\n            1\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 248,
+            "text": "assert_select \"input[type='hidden'][name='message[drive_file_ids][]'][value='#{FILE_B}']\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 131,
+              "end_line": 138,
+              "function": "cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+              "text": "assert_eq!(\n            nodes(&d, root, |d, n| d.local_name(n) == Some(\"input\")\n                && d.attr(n, \"type\") == Some(\"hidden\")\n                && d.attr(n, \"name\") == Some(\"message[drive_file_ids][]\")\n                && d.attr(n, \"value\") == Some(expected))\n            .len(),\n            1\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 249,
+            "text": "assert_select \"input[type='hidden'][name='message[drive_file_ids][]'][value='']\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 131,
+              "end_line": 138,
+              "function": "cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+              "text": "assert_eq!(\n            nodes(&d, root, |d, n| d.local_name(n) == Some(\"input\")\n                && d.attr(n, \"type\") == Some(\"hidden\")\n                && d.attr(n, \"name\") == Some(\"message[drive_file_ids][]\")\n                && d.attr(n, \"value\") == Some(expected))\n            .len(),\n            1\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/messages_drive_attachments_test.rb",
+            "line": 250,
+            "text": "assert_select \".drive-attachment-chip__remove\", count: 2"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 140,
+              "end_line": 148,
+              "function": "cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels",
+              "text": "assert_eq!(\n        nodes(&d, root, |d, n| class(\n            d,\n            n,\n            \"drive-attachment-chip__remove\"\n        ))\n        .len(),\n        2\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-007",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_password_confirmation_adds_one_success_audit_and_verifies",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 32,
+            "text": "assert_difference -> { AuditLog.where(action: \"sudo.confirm.success\").count }, +1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 170,
+              "end_line": 170,
+              "function": "cutover_c_sudo_password_confirmation_adds_one_success_audit_and_verifies",
+              "text": "assert_eq!(audit_success(&a).await - before, 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 36,
+            "text": "assert_redirected_to root_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 171,
+              "end_line": 174,
+              "function": "cutover_c_sudo_password_confirmation_adds_one_success_audit_and_verifies",
+              "text": "assert_eq!(\n        (response.status.as_u16(), response.location()),\n        (302, Some(\"http://campfire.test/\"))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-011",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_registered_extra_verifier_is_retained_once_and_unsupported_without_an_implementation",
+      "note": "The app-owned verifier registry is read by the real sudo prompt. Registration retains passkey once; it supplies no implementation, so a real POST remains unsupported as Rails verify_with does.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 70,
+            "text": "assert_includes SudoMode.extra_verifiers, :passkey"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 187,
+              "end_line": 193,
+              "function": "cutover_c_sudo_registered_extra_verifier_is_retained_once_and_unsupported_without_an_implementation",
+              "text": "assert!(\n        a.booted\n            .app\n            .sudo\n            .extra_verifiers()\n            .contains(&\"passkey\".into())\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-015",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_enrolled_user_can_still_confirm_with_password",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 115,
+            "text": "assert_redirected_to root_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 234,
+              "end_line": 237,
+              "function": "cutover_c_sudo_enrolled_user_can_still_confirm_with_password",
+              "text": "assert_eq!(\n        (response.status.as_u16(), response.location()),\n        (302, Some(\"http://campfire.test/\"))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-022",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_audit_log_read_requires_no_confirmation",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 215,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 242,
+              "end_line": 249,
+              "function": "cutover_c_sudo_audit_log_read_requires_no_confirmation",
+              "text": "assert_eq!(\n        a.sign_in(DAVID)\n            .await\n            .get(\"/account/audit_log\")\n            .await\n            .status,\n        200\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-025",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_signing_in_again_drops_previous_confirmation",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 249,
+            "text": "assert_redirected_to new_sudo_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 278,
+              "end_line": 281,
+              "function": "cutover_c_sudo_signing_in_again_drops_previous_confirmation",
+              "text": "assert_eq!(\n        (gated.status.as_u16(), gated.location()),\n        (302, Some(\"http://campfire.test/sudo/new\"))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-027",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_replay_form_rebuilds_nested_user_role",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 268,
+            "text": "assert_redirected_to new_sudo_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 291,
+              "end_line": 294,
+              "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
+              "text": "assert_eq!(\n        (gated.status.as_u16(), gated.location()),\n        (302, Some(\"http://campfire.test/sudo/new\"))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 271,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 298,
+              "end_line": 298,
+              "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 272,
+            "text": "assert_select \"form[action=?]\", account_user_path(users(:kevin)) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 303,
+              "end_line": 303,
+              "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
+              "text": "assert_eq!(forms.len(), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 273,
+            "text": "assert_select \"input[name=?][value=administrator]\", \"user[role]\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 304,
+              "end_line": 310,
+              "function": "cutover_c_sudo_replay_form_rebuilds_nested_user_role",
+              "text": "assert_eq!(\n        nodes(&d, forms[0], |d, n| d.local_name(n) == Some(\"input\")\n            && d.attr(n, \"name\") == Some(\"user[role]\")\n            && d.attr(n, \"value\") == Some(\"administrator\"))\n        .len(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-034",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_sudo_confirmation_limit_is_reset_by_clearing_the_shared_store",
+      "note": "Ten real production sudo requests, an eleventh rate-limit control, shared Kit store clear and another real request. Only the store-clear route is a test seam; verification and audit writes use the production controller.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/controllers/sudos_controller_test.rb",
+            "line": 458,
+            "text": "assert_response :unauthorized"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 387,
+              "end_line": 387,
+              "function": "cutover_c_sudo_confirmation_limit_is_reset_by_clearing_the_shared_store",
+              "text": "assert_eq!(router.oneshot(send(\"/sudo\")).await.unwrap().status(), 401)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-035",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+      "note": "The same assertions run before any Google grant and after a calendar-only grant.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 14,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 411,
+              "end_line": 411,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 15,
+            "text": "assert_not_includes response.body, \"google-drive-previews\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 412,
+              "end_line": 412,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert!(!r.text().contains(\"google-drive-previews\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 16,
+            "text": "assert_select '[data-controller=\"drive-picker\"]', count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 414,
+              "end_line": 414,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 17,
+            "text": "assert_select \".attach-menu\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 415,
+              "end_line": 415,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert_eq!(nodes(&d, root, |d, n| class(d, n, \"attach-menu\")).len(), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 18,
+            "text": "assert_select \"button.composer__attachment-btn[aria-haspopup]\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 416,
+              "end_line": 422,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert_eq!(\n            nodes(&d, root, |d, n| d.local_name(n) == Some(\"button\")\n                && class(d, n, \"composer__attachment-btn\")\n                && d.has_attr(n, \"aria-haspopup\"))\n            .len(),\n            0\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 24,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 411,
+              "end_line": 411,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 25,
+            "text": "assert_not_includes response.body, \"google-drive-previews\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 412,
+              "end_line": 412,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert!(!r.text().contains(\"google-drive-previews\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 26,
+            "text": "assert_select '[data-controller=\"drive-picker\"]', count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 414,
+              "end_line": 414,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 27,
+            "text": "assert_select \".attach-menu\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 415,
+              "end_line": 415,
+              "function": "cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_calendar_grant",
+              "text": "assert_eq!(nodes(&d, root, |d, n| class(d, n, \"attach-menu\")).len(), 0)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-036",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 35,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 430,
+              "end_line": 430,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 36,
+            "text": "assert_includes response.body, '<meta name=\"google-drive-previews\" content=\"enabled\">'"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 431,
+              "end_line": 434,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert!(\n        r.text()\n            .contains(\"<meta name=\\\"google-drive-previews\\\" content=\\\"enabled\\\">\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 37,
+            "text": "assert_select '[data-controller=\"drive-picker\"]', count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 436,
+              "end_line": 436,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 38,
+            "text": "assert_select \"button.composer__attachment-btn[aria-haspopup='menu']\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 437,
+              "end_line": 443,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert_eq!(\n        nodes(&d, root, |d, n| d.local_name(n) == Some(\"button\")\n            && class(d, n, \"composer__attachment-btn\")\n            && d.attr(n, \"aria-haspopup\") == Some(\"menu\"))\n        .len(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 39,
+            "text": "assert_select \".attach-menu [role='menuitem']\", count: 2"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 447,
+              "end_line": 447,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert_eq!(items.len(), 2)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 40,
+            "text": "assert_select \".attach-menu [role='menuitem']\", text: \"From this device\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 448,
+              "end_line": 452,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert!(\n        items\n            .iter()\n            .any(|&n| d.text_content(n).trim() == \"From this device\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 41,
+            "text": "assert_select \".attach-menu [role='menuitem']\", text: \"From Google Drive\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 453,
+              "end_line": 457,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert!(\n        items\n            .iter()\n            .any(|&n| d.text_content(n).trim() == \"From Google Drive\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_picker_test.rb",
+            "line": 42,
+            "text": "assert_select '.drive-picker__panel[role=\"dialog\"][aria-label=\"Find a Drive file\"]', count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 458,
+              "end_line": 464,
+              "function": "cutover_c_picker_drive_scope_renders_legacy_menu_buttons_and_dialog",
+              "text": "assert_eq!(\n        nodes(&d, root, |d, n| class(d, n, \"drive-picker__panel\")\n            && d.attr(n, \"role\") == Some(\"dialog\")\n            && d.attr(n, \"aria-label\") == Some(\"Find a Drive file\"))\n        .len(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-037",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+      "note": "The public-meta assertion runs for all four exact Rails meta elements separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 21,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 470,
+              "end_line": 470,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 22,
+            "text": "assert_includes response.body, '<meta name=\"google-drive-share\" content=\"enabled\">'"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 477,
+              "end_line": 477,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert!(r.text().contains(meta))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 23,
+            "text": "assert_includes response.body, '<meta name=\"google-picker-client-id\" content=\"test-client-id\">'"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 477,
+              "end_line": 477,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert!(r.text().contains(meta))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 24,
+            "text": "assert_includes response.body, '<meta name=\"google-picker-api-key\" content=\"test-picker-key\">'"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 477,
+              "end_line": 477,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert!(r.text().contains(meta))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 25,
+            "text": "assert_includes response.body, '<meta name=\"google-cloud-project-number\" content=\"123456789012\">'"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 477,
+              "end_line": 477,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert!(r.text().contains(meta))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 26,
+            "text": "assert_select '[data-controller=\"drive-share\"]', count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 480,
+              "end_line": 480,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 27,
+            "text": "assert_select \"button.composer__attachment-btn[aria-haspopup='menu']\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 481,
+              "end_line": 487,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert_eq!(\n        nodes(&d, root, |d, n| d.local_name(n) == Some(\"button\")\n            && class(d, n, \"composer__attachment-btn\")\n            && d.attr(n, \"aria-haspopup\") == Some(\"menu\"))\n        .len(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 28,
+            "text": "assert_select \".attach-menu [role='menuitem']\", text: \"From Google Drive\", count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 490,
+              "end_line": 495,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert_eq!(\n        nodes(&d, menus[0], |d, n| d.attr(n, \"role\") == Some(\"menuitem\")\n            && d.text_content(n).trim() == \"From Google Drive\")\n        .len(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 29,
+            "text": "assert_select '[data-controller=\"drive-picker\"]', count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 496,
+              "end_line": 496,
+              "function": "cutover_c_picker_configured_sharing_renders_single_enhanced_menu_and_public_metas",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-038",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 38,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 503,
+              "end_line": 503,
+              "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 39,
+            "text": "assert_select '[data-controller=\"drive-share\"]', count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 505,
+              "end_line": 505,
+              "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 40,
+            "text": "assert_select '[data-controller=\"drive-picker\"]', count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 506,
+              "end_line": 506,
+              "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 41,
+            "text": "assert_includes response.body, '<meta name=\"google-drive-previews\" content=\"enabled\">'"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 507,
+              "end_line": 510,
+              "function": "cutover_c_picker_enhanced_menu_precedes_legacy_picker_with_existing_consent",
+              "text": "assert!(\n        r.text()\n            .contains(\"<meta name=\\\"google-drive-previews\\\" content=\\\"enabled\\\">\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-039",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 49,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 517,
+              "end_line": 517,
+              "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 50,
+            "text": "assert_not_includes response.body, \"google-drive-share\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 518,
+              "end_line": 518,
+              "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
+              "text": "assert!(!r.text().contains(\"google-drive-share\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 51,
+            "text": "assert_select '[data-controller=\"drive-share\"]', count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 520,
+              "end_line": 520,
+              "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 52,
+            "text": "assert_select '[data-controller=\"drive-picker\"]', count: 1"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 521,
+              "end_line": 521,
+              "function": "cutover_c_picker_missing_sharing_configuration_falls_back_to_legacy",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 1)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-040",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 58,
+            "text": "assert_response :success"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 527,
+              "end_line": 527,
+              "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
+              "text": "assert_eq!(r.status, 200)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 59,
+            "text": "assert_not_includes response.body, \"google-drive-share\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 528,
+              "end_line": 528,
+              "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
+              "text": "assert!(!r.text().contains(\"google-drive-share\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 60,
+            "text": "assert_select '[data-controller=\"drive-share\"]', count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 530,
+              "end_line": 530,
+              "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-share\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 61,
+            "text": "assert_select '[data-controller=\"drive-picker\"]', count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 531,
+              "end_line": 531,
+              "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
+              "text": "assert_eq!(controller_count(&d, root, \"drive-picker\"), 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 62,
+            "text": "assert_select \".attach-menu\", count: 0"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 532,
+              "end_line": 532,
+              "function": "cutover_c_picker_unconfigured_without_drive_grant_has_no_menu",
+              "text": "assert_eq!(nodes(&d, root, |d, n| class(d, n, \"attach-menu\")).len(), 0)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-041",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_markup",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/integration/drive_share_picker_test.rb",
+            "line": 71,
+            "text": "assert_redirected_to new_session_url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 540,
+              "end_line": 543,
+              "function": "cutover_c_picker_signed_out_visitors_are_redirected_before_sharing_markup",
+              "text": "assert_eq!(\n        (r.status.as_u16(), r.location()),\n        (302, Some(\"http://campfire.test/session/new\"))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-053",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 39,
+            "text": "assert_requested :post, GOOGLE_TOKEN_URL, body: hash_including({ \"grant_type\" => \"refresh_token\" })"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 145,
+              "end_line": 150,
+              "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+              "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"DELETE\", ORPHAN), (\"POST\", \"/revoke\")]\n    )"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 151,
+              "end_line": 154,
+              "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+              "text": "assert!(\n        url::form_urlencoded::parse(c[0][\"body\"].as_str().unwrap().as_bytes())\n            .any(|(key, value)| key == \"grant_type\" && value == \"refresh_token\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 40,
+            "text": "assert_requested delete_stub, headers: { \"Authorization\" => \"Bearer #{refreshed_token}\" }"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 145,
+              "end_line": 150,
+              "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+              "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"DELETE\", ORPHAN), (\"POST\", \"/revoke\")]\n    )"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 155,
+              "end_line": 155,
+              "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+              "text": "assert_eq!(c[1][\"access_token\"], \"second-access-token\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 41,
+            "text": "assert_requested revoke"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 145,
+              "end_line": 150,
+              "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+              "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"DELETE\", ORPHAN), (\"POST\", \"/revoke\")]\n    )"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 156,
+              "end_line": 156,
+              "function": "cutover_c_cleanup_expired_snapshot_refreshes_before_delete_with_new_access_token",
+              "text": "assert_eq!(c[2][\"method\"], \"POST\")"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-054",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_invalid_grant_skips_deletes_but_revokes_snapshot_refresh_token",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 54,
+            "text": "assert_not_requested :delete, \"#{GOOGLE_EVENTS_URL}/orphan-id\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 173,
+              "end_line": 173,
+              "function": "cutover_c_cleanup_invalid_grant_skips_deletes_but_revokes_snapshot_refresh_token",
+              "text": "assert!(!c.iter().any(|v| v[\"method\"] == \"DELETE\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 55,
+            "text": "assert_requested revoke"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 174,
+              "end_line": 179,
+              "function": "cutover_c_cleanup_invalid_grant_skips_deletes_but_revokes_snapshot_refresh_token",
+              "text": "assert_eq!(\n        c.iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\"), (\"POST\", \"/revoke\")]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-056",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 83,
+            "text": "assert_enqueued_with(job: Calendar::DisconnectCleanupJob, args: [ [ \"orphan-id\" ], snapshot ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 191,
+              "end_line": 191,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert!(attempt(&a, CLEANUP, 1).await.is_some())"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 193,
+              "end_line": 193,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert_eq!(retry.len(), 1)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 194,
+              "end_line": 194,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert_eq!(retry[0].arguments, args)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 87,
+            "text": "assert_not_requested delete_stub"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 195,
+              "end_line": 201,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert_eq!(\n        calls(&r)\n            .iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\")]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 88,
+            "text": "assert_not_requested revoke"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 195,
+              "end_line": 201,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert_eq!(\n        calls(&r)\n            .iter()\n            .map(|v| (v[\"method\"].as_str().unwrap(), v[\"path\"].as_str().unwrap()))\n            .collect::<Vec<_>>(),\n        vec![(\"POST\", \"/token\")]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 94,
+            "text": "assert_requested delete_stub, headers: { \"Authorization\" => \"Bearer #{recovered_token}\" }"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 221,
+              "end_line": 224,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert_eq!(\n        (c[1][\"method\"].as_str(), c[1][\"path\"].as_str()),\n        (Some(\"DELETE\"), Some(ORPHAN))\n    )"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 225,
+              "end_line": 225,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert_eq!(c[1][\"access_token\"], \"recovered-access-token\")"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 95,
+            "text": "assert_requested revoke"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 226,
+              "end_line": 229,
+              "function": "cutover_c_cleanup_refresh_503_retries_without_deletes_or_revoke_then_recovers",
+              "text": "assert_eq!(\n        (c[2][\"method\"].as_str(), c[2][\"path\"].as_str()),\n        (Some(\"POST\"), Some(\"/revoke\"))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-058",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 120,
+            "text": "assert_enqueued_with(job: Calendar::DisconnectCleanupJob, args: [ [ \"orphan-id\" ], snapshot ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 242,
+              "end_line": 242,
+              "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
+              "text": "assert!(attempt(&a, CLEANUP, 1).await.is_some())"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 244,
+              "end_line": 244,
+              "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
+              "text": "assert_eq!(rows.len(), 1)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 245,
+              "end_line": 245,
+              "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
+              "text": "assert_eq!(rows[0].arguments, args)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 124,
+            "text": "assert_requested delete_stub"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 247,
+              "end_line": 250,
+              "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
+              "text": "assert_eq!(\n        (c[0][\"method\"].as_str(), c[0][\"path\"].as_str()),\n        (Some(\"DELETE\"), Some(ORPHAN))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 125,
+            "text": "assert_requested revoke"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 251,
+              "end_line": 254,
+              "function": "cutover_c_cleanup_revoke_500_keeps_same_durable_retry_payload",
+              "text": "assert_eq!(\n        (c[1][\"method\"].as_str(), c[1][\"path\"].as_str()),\n        (Some(\"POST\"), Some(\"/revoke\"))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-059",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
+      "note": "Initial serialized exception group count is 8, matching the original Rails setup. The registered handler commits terminal deletion and logs ERROR; no revoke occurs.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 139,
+            "text": "assert_no_enqueued_jobs(only: Calendar::DisconnectCleanupJob) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 321,
+              "end_line": 321,
+              "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
+              "text": "assert_eq!(attempt(&a, CLEANUP, 9).await, None)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 322,
+              "end_line": 322,
+              "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
+              "text": "assert!(pending(&a, CLEANUP).await.is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 144,
+            "text": "assert_includes log, \"Calendar::DisconnectCleanupJob failed after retries\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 323,
+              "end_line": 324,
+              "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
+              "text": "assert!(logs.text().lines().any(|line| line.contains(\"ERROR\")\n        && line.contains(\"Calendar::DisconnectCleanupJob failed after retries\")))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 145,
+            "text": "assert_not_requested revoke"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 325,
+              "end_line": 325,
+              "function": "cutover_c_cleanup_exhausted_retry_logs_error_and_never_revokes",
+              "text": "assert!(!calls(&r).iter().any(|c| c[\"path\"] == \"/revoke\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-062",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 211,
+            "text": "assert_includes log, \"account #{account_id}\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 348,
+              "end_line": 351,
+              "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
+              "text": "assert!(\n        log.lines()\n            .any(|line| line.contains(\"WARN\") && line.contains(&format!(\"account {account_id}\")))\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 212,
+            "text": "assert_not_includes log, access_token"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 352,
+              "end_line": 352,
+              "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
+              "text": "assert!(!log.contains(\"access-token\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 213,
+            "text": "assert_not_includes log, refresh_token"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 353,
+              "end_line": 353,
+              "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
+              "text": "assert!(!log.contains(\"refresh-token\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 214,
+            "text": "assert_not_requested :delete, %r{\\A#{Regexp.escape(GOOGLE_EVENTS_URL)}/}"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 354,
+              "end_line": 354,
+              "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
+              "text": "assert!(calls(&r).is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 215,
+            "text": "assert_not_requested :post, GOOGLE_REVOKE_URL"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 354,
+              "end_line": 354,
+              "function": "cutover_c_cleanup_unreadable_blob_warns_with_account_and_without_tokens_or_google_http",
+              "text": "assert!(calls(&r).is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-063",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
+      "note": "Rust has no Ruby log_arguments class predicate. The original property is tested at enqueue/execution: even the encrypted argument blob is absent from actual job logs, as are both plaintext tokens.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 225,
+            "text": "assert_not_includes blob.inspect, access_token"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 362,
+              "end_line": 362,
+              "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
+              "text": "assert!(!blob.contains(\"access-token\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 226,
+            "text": "assert_not_includes blob.inspect, refresh_token"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 363,
+              "end_line": 363,
+              "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
+              "text": "assert!(!blob.contains(\"refresh-token\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 227,
+            "text": "assert_not_predicate Calendar::DisconnectCleanupJob, :log_arguments?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 374,
+              "end_line": 374,
+              "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
+              "text": "assert!(!logs.text().contains(&blob))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 237,
+            "text": "assert_not_includes log, access_token"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 375,
+              "end_line": 375,
+              "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
+              "text": "assert!(!logs.text().contains(\"access-token\"))"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/disconnect_cleanup_job_test.rb",
+            "line": 238,
+            "text": "assert_not_includes log, refresh_token"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 376,
+              "end_line": 376,
+              "function": "cutover_c_cleanup_encrypted_credentials_and_job_logs_never_contain_plaintext_tokens",
+              "text": "assert!(!logs.text().contains(\"refresh-token\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-066",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_uses_current_account_access_credentials",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 16,
+            "text": "assert_requested delete_stub, headers: { \"Authorization\" => \"Bearer #{account.access_token}\" }"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 388,
+              "end_line": 388,
+              "function": "cutover_c_remote_delete_uses_current_account_access_credentials",
+              "text": "assert_eq!(calls(&r).len(), 1)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 389,
+              "end_line": 395,
+              "function": "cutover_c_remote_delete_uses_current_account_access_credentials",
+              "text": "assert_eq!(\n        (\n            calls(&r)[0][\"method\"].as_str(),\n            calls(&r)[0][\"path\"].as_str()\n        ),\n        (Some(\"DELETE\"), Some(ORPHAN))\n    )"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 396,
+              "end_line": 396,
+              "function": "cutover_c_remote_delete_uses_current_account_access_credentials",
+              "text": "assert_eq!(calls(&r)[0][\"access_token\"], \"access-token\")"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-067",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_without_account_makes_no_request",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 22,
+            "text": "assert_not_requested :delete, \"#{GOOGLE_EVENTS_URL}/orphan-id\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 402,
+              "end_line": 402,
+              "function": "cutover_c_remote_delete_without_account_makes_no_request",
+              "text": "assert!(calls(&r).is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-068",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_disconnected_account_makes_no_request",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 30,
+            "text": "assert_not_requested :delete, \"#{GOOGLE_EVENTS_URL}/orphan-id\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 417,
+              "end_line": 417,
+              "function": "cutover_c_remote_delete_disconnected_account_makes_no_request",
+              "text": "assert!(calls(&r).is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-069",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_without_calendar_scope_makes_no_request",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 38,
+            "text": "assert_not_requested :delete, \"#{GOOGLE_EVENTS_URL}/orphan-id\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 434,
+              "end_line": 434,
+              "function": "cutover_c_remote_delete_without_calendar_scope_makes_no_request",
+              "text": "assert!(calls(&r).is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-070",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_not_found_and_gone_complete_without_retry",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 49,
+            "text": "assert_requested missing_delete"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 447,
+              "end_line": 453,
+              "function": "cutover_c_remote_delete_not_found_and_gone_complete_without_retry",
+              "text": "assert_eq!(\n        (c[0][\"method\"].as_str(), c[0][\"path\"].as_str()),\n        (\n            Some(\"DELETE\"),\n            Some(\"/calendar/v3/calendars/primary/events/missing-id\")\n        )\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 50,
+            "text": "assert_requested gone_delete"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 454,
+              "end_line": 460,
+              "function": "cutover_c_remote_delete_not_found_and_gone_complete_without_retry",
+              "text": "assert_eq!(\n        (c[1][\"method\"].as_str(), c[1][\"path\"].as_str()),\n        (\n            Some(\"DELETE\"),\n            Some(\"/calendar/v3/calendars/primary/events/gone-id\")\n        )\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-071",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_invalid_grant_disconnects_without_delete_or_retry",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 60,
+            "text": "assert_equal \"Google rejected the connection\", account.reload.disconnected_reason"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 468,
+              "end_line": 477,
+              "function": "cutover_c_remote_delete_invalid_grant_disconnects_without_delete_or_retry",
+              "text": "assert_eq!(\n        a.db()\n            .read(|c| GoogleAccount::for_user(c, DAVID))\n            .await\n            .unwrap()\n            .unwrap()\n            .disconnected_reason\n            .as_deref(),\n        Some(\"Google rejected the connection\")\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 61,
+            "text": "assert_not_requested :delete, \"#{GOOGLE_EVENTS_URL}/orphan-id\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 478,
+              "end_line": 478,
+              "function": "cutover_c_remote_delete_invalid_grant_disconnects_without_delete_or_retry",
+              "text": "assert!(!calls(&r).iter().any(|c| c[\"method\"] == \"DELETE\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-072",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 68,
+            "text": "assert_enqueued_with(job: Calendar::RemoteDeleteJob, args: [ @david.id, \"orphan-id\" ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 485,
+              "end_line": 485,
+              "function": "cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
+              "text": "assert!(remote(&a).await.is_some())"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 487,
+              "end_line": 487,
+              "function": "cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
+              "text": "assert_eq!(rows.len(), 1)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 488,
+              "end_line": 488,
+              "function": "cutover_c_remote_delete_transport_failure_schedules_same_payload_retry",
+              "text": "assert_eq!(rows[0].arguments, json!([DAVID, \"orphan-id\"]))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-073",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/remote_delete_job_test.rb",
+            "line": 77,
+            "text": "assert_no_enqueued_jobs(only: Calendar::RemoteDeleteJob) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 497,
+              "end_line": 497,
+              "function": "cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
+              "text": "assert_eq!(remote(&a).await, None)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 498,
+              "end_line": 498,
+              "function": "cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
+              "text": "assert!(pending(&a, REMOTE).await.is_empty())"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 499,
+              "end_line": 499,
+              "function": "cutover_c_remote_delete_permanent_google_failure_logs_and_does_not_retry",
+              "text": "assert_eq!(emitted(&a, REMOTE).await.len(), 1)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-074",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately. PR #247 review correction: persisted readback uses only the original occurrence IDs and Jason; an additional exact event-ID set assertion rejects associations to any unrelated event. The old user-only count survived the wrong-event fault; the corrected count kills it.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 451,
+            "text": "assert_equal 3, occurrences.size"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 571,
+              "end_line": 571,
+              "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+              "text": "assert_eq!(occurrences.len(), 3)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 454,
+            "text": "assert_enqueued_jobs 3, only: Calendar::SyncEntryJob do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 599,
+              "end_line": 599,
+              "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+              "text": "assert_eq!(emitted(&a, SYNC).await.len(), 3)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 460,
+            "text": "assert_requested :post, GOOGLE_EVENTS_URL, times: 3"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 612,
+              "end_line": 620,
+              "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+              "text": "assert_eq!(\n        calls(&r)\n            .iter()\n            .filter(\n                |c| c[\"method\"] == \"POST\" && c[\"path\"] == \"/calendar/v3/calendars/primary/events\"\n            )\n            .count(),\n        3\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 462,
+            "text": "assert_equal 3, google_ids.size"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 623,
+              "end_line": 623,
+              "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+              "text": "assert_eq!(rows.len(), 3)"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 624,
+              "end_line": 631,
+              "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+              "text": "assert_eq!(\n        rows.iter()\n            .map(|e| e.event_id)\n            .collect::<std::collections::BTreeSet<_>>(),\n        occurrence_ids\n            .into_iter()\n            .collect::<std::collections::BTreeSet<_>>()\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 463,
+            "text": "assert_equal 3, google_ids.uniq.size"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 636,
+              "end_line": 636,
+              "function": "cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_google_entries",
+              "text": "assert_eq!(ids.len(), 3)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-077",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_time_update_enqueues_only_connected_notifying_attendees",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 489,
+            "text": "assert_enqueued_jobs 1, only: Calendar::SyncEntryJob do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 676,
+              "end_line": 676,
+              "function": "cutover_c_time_update_enqueues_only_connected_notifying_attendees",
+              "text": "assert_eq!(jobs.len(), 1)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 494,
+            "text": "assert_equal [ @event.id, @david.id ], job[:args]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 677,
+              "end_line": 677,
+              "function": "cutover_c_time_update_enqueues_only_connected_notifying_attendees",
+              "text": "assert_eq!(jobs[0], json!({\"event_id\":event_id(),\"user_id\":DAVID}))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-078",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_event_sync_is_invisible_to_queue_readers_until_source_transaction_commits",
+      "note": "WS17 persists jobs within the source write for atomicity. An independent queue reader sees no uncommitted job; after commit the observed durable payload is exact. This is the observable after-commit contract, not a claim that the writer cannot see its own inserted row.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 502,
+            "text": "assert_no_enqueued_jobs only: Calendar::SyncEntryJob"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 703,
+              "end_line": 703,
+              "function": "cutover_c_event_sync_is_invisible_to_queue_readers_until_source_transaction_commits",
+              "text": "assert_eq!(visible, 0)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 505,
+            "text": "assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ])"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 708,
+              "end_line": 711,
+              "function": "cutover_c_event_sync_is_invisible_to_queue_readers_until_source_transaction_commits",
+              "text": "assert_eq!(\n        emitted(&a, SYNC).await,\n        vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-079",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_setting_and_clearing_venue_each_enqueue_connected_attendee_sync",
+      "note": "The payload assertion executes once for setting the real voice venue and once for clearing it.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 512,
+            "text": "assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 740,
+              "end_line": 743,
+              "function": "cutover_c_setting_and_clearing_venue_each_enqueue_connected_attendee_sync",
+              "text": "assert_eq!(\n            emitted(&a, SYNC).await,\n            vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n        )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 516,
+            "text": "assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 740,
+              "end_line": 743,
+              "function": "cutover_c_setting_and_clearing_venue_each_enqueue_connected_attendee_sync",
+              "text": "assert_eq!(\n            emitted(&a, SYNC).await,\n            vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n        )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-080",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately. PR #247 review correction: the unchanged save asserts the complete post-clear enqueue set, without a job-class filter, matching Rails assert_no_enqueued_jobs. The old SyncEntry-only check survived an extra MeetLinkJob; the complete-set assertion kills it.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 524,
+            "text": "assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 766,
+              "end_line": 769,
+              "function": "cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
+              "text": "assert_eq!(\n        emitted(&a, SYNC).await,\n        vec![json!({\"event_id\":event_id(),\"user_id\":DAVID})]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 528,
+            "text": "assert_no_enqueued_jobs do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 788,
+              "end_line": 788,
+              "function": "cutover_c_title_change_enqueues_sync_and_unchanged_save_does_not",
+              "text": "assert_eq!(emitted_all(&a).await, vec![])"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-083",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 557,
+            "text": "assert_enqueued_with(job: Calendar::RemoteDeleteJob, args: [ @david.id, \"room-destroy-id\" ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 815,
+              "end_line": 818,
+              "function": "cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request",
+              "text": "assert_eq!(\n        emitted(&a, REMOTE).await,\n        vec![json!([DAVID, \"room-destroy-id\"])]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 563,
+            "text": "assert_requested delete_stub"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 820,
+              "end_line": 821,
+              "function": "cutover_c_room_destroy_commits_remote_delete_identity_and_real_google_request",
+              "text": "assert!(calls(&r).iter().any(|c| c[\"method\"] == \"DELETE\"\n        && c[\"path\"] == \"/calendar/v3/calendars/primary/events/room-destroy-id\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-084",
+      "test": "campfire::bin/campfire app::cutover_c_tests::calendar_jobs::cutover_c_series_shrink_commits_doomed_remote_identity_and_deletes_google_copy",
+      "note": "Nonselected jobs are parked for the frozen-clock runner, matching Rails perform_enqueued_jobs only: RemoteDeleteJob. Their payloads remain intact. The tested remote job uses the captured identity and the real recorded Google client.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 576,
+            "text": "assert_enqueued_with(job: Calendar::RemoteDeleteJob, args: [ @david.id, \"doomed-entry\" ]) do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 906,
+              "end_line": 909,
+              "function": "cutover_c_series_shrink_commits_doomed_remote_identity_and_deletes_google_copy",
+              "text": "assert_eq!(\n        emitted(&a, REMOTE).await,\n        vec![json!([DAVID, \"doomed-entry\"])]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/jobs/calendar/sync_entry_job_test.rb",
+            "line": 582,
+            "text": "assert_requested delete_stub"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests/calendar_jobs.rs",
+              "line": 921,
+              "end_line": 922,
+              "function": "cutover_c_series_shrink_commits_doomed_remote_identity_and_deletes_google_copy",
+              "text": "assert!(calls(&r).iter().any(|c| c[\"method\"] == \"DELETE\"\n        && c[\"path\"] == \"/calendar/v3/calendars/primary/events/doomed-entry\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-121",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_drive_only_message_is_valid_saved_and_reads_exact_file_ids",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 13,
+            "text": "assert message.valid?, message.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 22,
+              "end_line": 22,
+              "function": "cutover_c_drive_only_message_is_valid_saved_and_reads_exact_file_ids",
+              "text": "assert!(t.read(|c| Message::validate(c, &a)).is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 14,
+            "text": "assert message.save"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 24,
+              "end_line": 24,
+              "function": "cutover_c_drive_only_message_is_valid_saved_and_reads_exact_file_ids",
+              "text": "assert!(saved.is_ok())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 15,
+            "text": "assert_equal %w[ 1AbcDefGhIjKlMnOpQrSt ], message.reload.drive_attachments.map(&:file_id)"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 26,
+              "end_line": 26,
+              "function": "cutover_c_drive_only_message_is_valid_saved_and_reads_exact_file_ids",
+              "text": "assert_eq!(t.read(|c| m.drive_file_ids(c)), vec![FILE])"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-122",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_textless_message_without_attachments_has_blank_source_error",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 21,
+            "text": "assert_not message.valid?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 33,
+              "end_line": 33,
+              "function": "cutover_c_textless_message_without_attachments_has_blank_source_error",
+              "text": "assert!(!errors.is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 22,
+            "text": "assert_includes message.errors[:markdown_source], \"can't be blank\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 34,
+              "end_line": 34,
+              "function": "cutover_c_textless_message_without_attachments_has_blank_source_error",
+              "text": "assert!(errors.on(\"markdown_source\").contains(&\"can't be blank\"))"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-123",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_each_bad_drive_id_is_rejected_by_the_real_message_association_validation",
+      "note": "The same four invalid IDs run through Message.validate, the real production autosaved Drive association validation; the scoped nested file_id error is checked. The parent stays unsaved, as in Rails.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 31,
+            "text": "assert_not attachment.valid?, \"expected #{bad_id.inspect} to be invalid\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 47,
+              "end_line": 47,
+              "function": "cutover_c_each_bad_drive_id_is_rejected_by_the_real_message_association_validation",
+              "text": "assert!(!errors.is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 32,
+            "text": "assert_includes attachment.errors[:file_id], \"is invalid\""
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 48,
+              "end_line": 52,
+              "function": "cutover_c_each_bad_drive_id_is_rejected_by_the_real_message_association_validation",
+              "text": "assert!(\n            errors\n                .on(\"drive_attachments.file_id\")\n                .contains(&\"is invalid\")\n        )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-124",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_saved_drive_id_duplicate_is_invalid_with_scoped_file_error",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 43,
+            "text": "assert_not duplicate.valid?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 62,
+              "end_line": 62,
+              "function": "cutover_c_saved_drive_id_duplicate_is_invalid_with_scoped_file_error",
+              "text": "assert!(!errors.is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 44,
+            "text": "assert_not_empty duplicate.errors[:file_id]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 63,
+              "end_line": 63,
+              "function": "cutover_c_saved_drive_id_duplicate_is_invalid_with_scoped_file_error",
+              "text": "assert!(!errors.on(\"file_id\").is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-125",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_same_drive_id_attaches_once_to_each_distinct_message",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 54,
+            "text": "assert_equal 1, first.drive_attachments.count"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 74,
+              "end_line": 77,
+              "function": "cutover_c_same_drive_id_attaches_once_to_each_distinct_message",
+              "text": "assert_eq!(\n        t.read(|c| DriveAttachment::for_message(c, first.id)).len(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 55,
+            "text": "assert_equal 1, second.drive_attachments.count"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 78,
+              "end_line": 81,
+              "function": "cutover_c_same_drive_id_attaches_once_to_each_distinct_message",
+              "text": "assert_eq!(\n        t.read(|c| DriveAttachment::for_message(c, second.id)).len(),\n        1\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-126",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_eleventh_drive_attachment_makes_message_invalid_with_exact_limit_error",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 62,
+            "text": "assert message.valid?, message.errors.full_messages.to_sentence"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 91,
+              "end_line": 91,
+              "function": "cutover_c_eleventh_drive_attachment_makes_message_invalid_with_exact_limit_error",
+              "text": "assert!(t.read(|c| Message::validate(c, &a)).is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 66,
+            "text": "assert_not message.valid?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 94,
+              "end_line": 94,
+              "function": "cutover_c_eleventh_drive_attachment_makes_message_invalid_with_exact_limit_error",
+              "text": "assert!(!errors.is_empty())"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 67,
+            "text": "assert_equal [ \"are limited to 10 per message\" ], message.errors[:drive_attachments]"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 95,
+              "end_line": 98,
+              "function": "cutover_c_eleventh_drive_attachment_makes_message_invalid_with_exact_limit_error",
+              "text": "assert_eq!(\n        errors.on(\"drive_attachments\"),\n        vec![\"are limited to 10 per message\"]\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-127",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_message_destroy_removes_its_persisted_drive_attachment",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 74,
+            "text": "assert_difference -> { DriveAttachment.count }, -1 do"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 120,
+              "end_line": 120,
+              "function": "cutover_c_message_destroy_removes_its_persisted_drive_attachment",
+              "text": "assert_eq!(after - before, -1)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-128",
+      "test": "campfire_db tests::cutover_drive_attachment_test::cutover_c_drive_attachment_url_is_the_open_link_for_the_id",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/drive_attachment_test.rb",
+            "line": 82,
+            "text": "assert_equal \"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\", attachment.url"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/db/src/tests/cutover_drive_attachment_test.rs",
+              "line": 125,
+              "end_line": 128,
+              "function": "cutover_c_drive_attachment_url_is_the_open_link_for_the_id",
+              "text": "assert_eq!(\n        attachment.url(),\n        \"https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt\"\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-184",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+      "note": "Each cited assertion executes through this named real model/HTTP/registered-job test. Repeated loop cases are discriminated separately.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 47,
+            "text": "assert_predicate account, :connected?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 565,
+              "end_line": 565,
+              "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+              "text": "assert!(connected)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 48,
+            "text": "assert_predicate account, :usable?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 566,
+              "end_line": 566,
+              "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+              "text": "assert!(usable)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 49,
+            "text": "assert_not account.access_token_expired?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 567,
+              "end_line": 567,
+              "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+              "text": "assert!(!expired)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 53,
+            "text": "assert account.access_token_expired?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 580,
+              "end_line": 588,
+              "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+              "text": "assert!(\n        a.db()\n            .read(move |c| Ok(GoogleAccount::for_user(c, DAVID)?\n                .unwrap()\n                .access_token_expired(&crypto, now)\n                .unwrap()))\n            .await\n            .unwrap()\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 57,
+            "text": "assert_not_predicate account, :connected?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 606,
+              "end_line": 606,
+              "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+              "text": "assert!(!connected)"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 58,
+            "text": "assert_not_predicate account, :usable?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 607,
+              "end_line": 607,
+              "function": "cutover_c_google_account_connected_usable_and_expiry_follow_persisted_changes",
+              "text": "assert!(!usable)"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    },
+    {
+      "id": "WS14g-185",
+      "test": "campfire::bin/campfire app::cutover_c_tests::cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
+      "note": "Native setup additionally checks blank scopes. The first and last original calendar.events-grant predicates cite the positive nonblank-scope assertion; the intervening openid-only grant cites the false assertion.",
+      "assertions": [
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 64,
+            "text": "assert_predicate account, :calendar?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 615,
+              "end_line": 620,
+              "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
+              "text": "assert!(\n        a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
+            },
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 638,
+              "end_line": 643,
+              "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
+              "text": "assert!(\n        a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 68,
+            "text": "assert_not_predicate account, :calendar?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 631,
+              "end_line": 636,
+              "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
+              "text": "assert!(\n        !a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
+            }
+          ],
+          "disposition": "covered"
+        },
+        {
+          "rails": {
+            "file": "test/models/google_account_test.rb",
+            "line": 72,
+            "text": "assert_predicate account, :calendar?"
+          },
+          "rust": [
+            {
+              "file": "rust/crates/campfire/src/app/cutover_c_tests.rs",
+              "line": 638,
+              "end_line": 643,
+              "function": "cutover_c_google_account_calendar_grant_accepts_blank_scopes_and_requires_events_scope_otherwise",
+              "text": "assert!(\n        a.db()\n            .read(|c| Ok(GoogleAccount::for_user(c, DAVID)?.unwrap().calendar()))\n            .await\n            .unwrap()\n    )"
+            }
+          ],
+          "disposition": "covered"
+        }
+      ]
+    }
+  ]
+}
