@@ -1,8 +1,6 @@
-# Individual original assertion audit
+# PR #244 per-assertion audit
 
-Original declarations use Rails d7c7de92. Runtime fixtures follow the current reference pin.
-
-Every row names the original assertion and the actual Rust check. Whole-byte/DOM checks retain tags, attributes, text and cardinality; their fixture cases are named below. Reopened gaps are explicit and retain the previous insufficient claim in JSON history.
+Current declarations and coordinates use Rails `78b9b1546bdab4c6c1c9b8ddb94512f661289112`. B fixes are preserved after merging with C; historical mappings remain in JSON history/Git.
 
 ## P0089: about renders signed-out with stable title and navigation
 
@@ -12,14 +10,14 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:25` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:26` — `assert_select "title", "Smartfire &#124; About"` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:27` — `assert_select "h1", "About Smartfire"` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:28` — `assert_select 'nav[aria-label="Public pages"] a[href="/about"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:29` — `assert_select 'a[href="/privacy"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:30` — `assert_select 'a[href="/terms"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:31` — `assert_select 'a[href="/session/new"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:32` — `assert_match(/self-hosted/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:25` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:26` — `assert_select "title", "Smartfire &#124; About"` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:27` — `assert_select "h1", "About Smartfire"` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:28` — `assert_select 'nav[aria-label="Public pages"] a[href="/about"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:29` — `assert_select 'a[href="/privacy"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:30` — `assert_select 'a[href="/terms"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:31` — `assert_select 'a[href="/session/new"]', minimum: 1` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:32` — `assert_match(/self-hosted/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
 
 ## P0090: privacy renders signed-out with Google disclosures
 
@@ -29,14 +27,14 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:38` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:39` — `assert_select "title", "Smartfire &#124; Privacy Policy"` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:40` — `assert_select "h1", "Privacy Policy"` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:41` — `assert_match(/September 18, 2026/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:42` — `assert_match(/openid email profile/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:43` — `assert_match(/myaccount\.google\.com\/connections/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:44` — `assert_match(/developers\.google\.com\/terms\/api-services-user-data-policy/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:45` — `assert_match(/direct messages/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:38` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:39` — `assert_select "title", "Smartfire &#124; Privacy Policy"` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:40` — `assert_select "h1", "Privacy Policy"` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:41` — `assert_match(/September 18, 2026/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:42` — `assert_match(/openid email profile/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:43` — `assert_match(/myaccount\.google\.com\/connections/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:44` — `assert_match(/developers\.google\.com\/terms\/api-services-user-data-policy/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:45` — `assert_match(/direct messages/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
 
 ## P0091: privacy discloses picker-only Drive previews
 
@@ -46,11 +44,11 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:51` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:52` — `assert_match(/per-file consent/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:53` — `assert_match(/never your whole Drive/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:54` — `assert_match(/plain chip/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:55` — `assert_no_match(/metadata\.readonly/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:51` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:52` — `assert_match(/per-file consent/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:53` — `assert_match(/never your whole Drive/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:54` — `assert_match(/plain chip/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:55` — `assert_no_match(/metadata\.readonly/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
 
 ## P0092: terms renders signed-out with software-license framing
 
@@ -60,11 +58,11 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:61` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:62` — `assert_select "title", "Smartfire &#124; Terms of Service"` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:63` — `assert_select "h1", "Terms of Service"` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:64` — `assert_match(/MIT-LICENSE/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:65` — `assert_match(/September 18, 2026/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:61` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:62` — `assert_select "title", "Smartfire &#124; Terms of Service"` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:63` — `assert_select "h1", "Terms of Service"` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:64` — `assert_match(/MIT-LICENSE/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:65` — `assert_match(/September 18, 2026/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
 
 ## P0093: public pages never redirect to sign-in and set no session cookie
 
@@ -74,8 +72,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:72` — `assert_response :success, "expected success for #{url}"` | rust/crates/campfire/src/controllers/public_pages.rs:95 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:73` — `assert_no_match(/session_token/, response.headers["Set-Cookie"].to_s)` | rust/crates/campfire/src/controllers/public_pages.rs:96 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
+| `test/controllers/public_pages_controller_test.rb:72` — `assert_response :success, "expected success for #{url}"` | rust/crates/campfire/src/controllers/public_pages.rs:99 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:73` — `assert_no_match(/session_token/, response.headers["Set-Cookie"].to_s)` | rust/crates/campfire/src/controllers/public_pages.rs:100 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
 
 ## P0094: public pages ignore the modern-browser gate, even for crawlers
 
@@ -85,8 +83,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:82` — `assert_response :success, "expected success for #{url} with #{user_agent.inspect}"` | rust/crates/campfire/src/controllers/public_pages.rs:95 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:83` — `assert_select "h1", text: /Upgrade to a supported web browser/, count: 0` | rust/crates/campfire/src/controllers/public_pages.rs:116 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
+| `test/controllers/public_pages_controller_test.rb:82` — `assert_response :success, "expected success for #{url} with #{user_agent.inspect}"` | rust/crates/campfire/src/controllers/public_pages.rs:99 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:83` — `assert_select "h1", text: /Upgrade to a supported web browser/, count: 0` | rust/crates/campfire/src/controllers/public_pages.rs:120 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
 
 ## P0095: public pages render without OAuth configured
 
@@ -96,9 +94,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:89` — `assert_not Google::Client.configured?` | rust/crates/campfire/src/controllers/public_pages.rs:82 | Actual injected application Google client/sign-in configuration is explicitly asserted unconfigured before the real requests. |
-| `test/controllers/public_pages_controller_test.rb:90` — `assert_not Google::SignIn.configured?` | rust/crates/campfire/src/controllers/public_pages.rs:83 | Actual injected application Google client/sign-in configuration is explicitly asserted unconfigured before the real requests. |
-| `test/controllers/public_pages_controller_test.rb:94` — `assert_response :success, "expected success for #{url} without OAuth"` | rust/crates/campfire/src/controllers/public_pages.rs:95 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
+| `test/controllers/public_pages_controller_test.rb:89` — `assert_not Google::Client.configured?` | rust/crates/campfire/src/controllers/public_pages.rs:86 | Actual injected application Google client/sign-in configuration is explicitly asserted unconfigured before the real requests. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:90` — `assert_not Google::SignIn.configured?` | rust/crates/campfire/src/controllers/public_pages.rs:87 | Actual injected application Google client/sign-in configuration is explicitly asserted unconfigured before the real requests. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:94` — `assert_response :success, "expected success for #{url} without OAuth"` | rust/crates/campfire/src/controllers/public_pages.rs:99 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
 
 ## P0096: public pages disclose no private state, credentials, or scripts
 
@@ -108,18 +106,18 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:100` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:95; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:103` — `assert_no_match(/david@37signals\.com/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:104` — `assert_no_match(/current-user-id/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:105` — `assert_no_match(/vapid-public-key/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:106` — `assert_no_match(/google-picker-client-id/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:107` — `assert_no_match(/google-drive-previews/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:108` — `assert_no_match(/brand-icon-names/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:109` — `assert_no_match(/<script/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:110` — `assert_no_match(/importmap/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:111` — `assert_no_match(/action-cable&#124;turbo-prefetch/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:112` — `assert_no_match(/noindex/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:113` — `assert_no_match(/csrf-token&#124;csrf-param/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:116; rust/crates/campfire/src/controllers/public_pages.rs:127 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
+| `test/controllers/public_pages_controller_test.rb:100` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:99, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:103` — `assert_no_match(/david@37signals\.com/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:104` — `assert_no_match(/current-user-id/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:105` — `assert_no_match(/vapid-public-key/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:106` — `assert_no_match(/google-picker-client-id/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:107` — `assert_no_match(/google-drive-previews/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:108` — `assert_no_match(/brand-icon-names/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:109` — `assert_no_match(/<script/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:110` — `assert_no_match(/importmap/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:111` — `assert_no_match(/action-cable&#124;turbo-prefetch/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:112` — `assert_no_match(/noindex/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:113` — `assert_no_match(/csrf-token&#124;csrf-param/, body)` | rust/crates/campfire/src/controllers/public_pages.rs:120, rust/crates/campfire/src/controllers/public_pages.rs:131 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
 
 ## P0097: public pages allow zoom and honor color schemes
 
@@ -129,9 +127,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:118` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:120` — `assert_select 'meta[name="viewport"][content="width=device-width, initial-scale=1"]'` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:121` — `assert_select 'meta[name="color-scheme"][content="light dark"]'` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:118` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:120` — `assert_select 'meta[name="viewport"][content="width=device-width, initial-scale=1"]'` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:121` — `assert_select 'meta[name="color-scheme"][content="light dark"]'` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
 
 ## P0098: non-HTML formats expose nothing
 
@@ -141,10 +139,10 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:126` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:157 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. |
-| `test/controllers/public_pages_controller_test.rb:129` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:157 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. |
-| `test/controllers/public_pages_controller_test.rb:132` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:157 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. |
-| `test/controllers/public_pages_controller_test.rb:135` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:157 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. |
+| `test/controllers/public_pages_controller_test.rb:126` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:161 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:129` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:161 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:132` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:161 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:135` — `assert_response :not_found` | rust/crates/campfire/src/controllers/public_pages.rs:161 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. Cases: . |
 
 ## P0099: wildcard Accept header receives the HTML page
 
@@ -154,8 +152,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:142` — `assert_response :success, "expected success for #{url} with Accept: */*"` | rust/crates/campfire/src/controllers/public_pages.rs:145 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. |
-| `test/controllers/public_pages_controller_test.rb:143` — `assert_match(/<title>Smartfire/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:146 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. |
+| `test/controllers/public_pages_controller_test.rb:142` — `assert_response :success, "expected success for #{url} with Accept: */*"` | rust/crates/campfire/src/controllers/public_pages.rs:149 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:143` — `assert_match(/<title>Smartfire/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:150 | Actual suffix and Accept requests: HTML/wildcard successful, others empty 404. Cases: . |
 
 ## P0100: HEAD requests succeed
 
@@ -165,8 +163,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:150` — `assert_response :success, "expected HEAD success for #{url}"` | rust/crates/campfire/src/controllers/public_pages.rs:129 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
-| `test/controllers/public_pages_controller_test.rb:151` — `assert_empty response.body` | rust/crates/campfire/src/controllers/public_pages.rs:130 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. |
+| `test/controllers/public_pages_controller_test.rb:150` — `assert_response :success, "expected HEAD success for #{url}"` | rust/crates/campfire/src/controllers/public_pages.rs:133 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:151` — `assert_empty response.body` | rust/crates/campfire/src/controllers/public_pages.rs:134 | Real anonymous/crawler/old-browser requests and signed-in HEAD; exact success/empty body/no cookie and private-state absence. Cases: . |
 
 ## P0101: unconfigured installation uses generic wording without env names
 
@@ -176,12 +174,12 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:157` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:159` — `assert_match(/organization hosting/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:160` — `assert_match(/workspace administrator/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:161` — `assert_no_match(/LEGAL_OPERATOR_NAME/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:162` — `assert_no_match(/LEGAL_CONTACT_EMAIL/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:163` — `assert_no_match(/mailto:/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:157` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:159` — `assert_match(/organization hosting/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:160` — `assert_match(/workspace administrator/i, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:161` — `assert_no_match(/LEGAL_OPERATOR_NAME/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:162` — `assert_no_match(/LEGAL_CONTACT_EMAIL/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:163` — `assert_no_match(/mailto:/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
 
 ## P0102: configured installation names the operator and contact
 
@@ -191,11 +189,11 @@ Status: **reopened**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:171` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. |
-| `test/controllers/public_pages_controller_test.rb:173` — `assert_match(/Acme Widgets/, response.body)` | **OPEN** | Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus. |
-| `test/controllers/public_pages_controller_test.rb:174` — `assert_select 'a[href="mailto:privacy@example.com"]'` | **OPEN** | Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus. |
-| `test/controllers/public_pages_controller_test.rb:177` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. |
-| `test/controllers/public_pages_controller_test.rb:178` — `assert_match(/Acme Widgets/, response.body)` | **OPEN** | Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus. |
+| `test/controllers/public_pages_controller_test.rb:171` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:173` — `assert_match(/Acme Widgets/, response.body)` | **MISSING** | Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:174` — `assert_select 'a[href="mailto:privacy@example.com"]'` | **MISSING** | Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:177` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:178` — `assert_match(/Acme Widgets/, response.body)` | **MISSING** | Original Acme Widgets/privacy@example.com configured values are absent from the stronger escaping corpus. Cases: . |
 
 ## P0103: operator name is escaped and malicious contact email is dropped
 
@@ -205,11 +203,11 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:186` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
-| `test/controllers/public_pages_controller_test.rb:188` — `assert_no_match(/<script>alert\(1\)<\/script>/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
-| `test/controllers/public_pages_controller_test.rb:189` — `assert_match(/&lt;script&gt;alert\(1\)&lt;\/script&gt;/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
-| `test/controllers/public_pages_controller_test.rb:190` — `assert_no_match(/mailto:/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
-| `test/controllers/public_pages_controller_test.rb:191` — `assert_no_match(/LEGAL_CONTACT_EMAIL/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
+| `test/controllers/public_pages_controller_test.rb:186` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
+| `test/controllers/public_pages_controller_test.rb:188` — `assert_no_match(/<script>alert\(1\)<\/script>/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
+| `test/controllers/public_pages_controller_test.rb:189` — `assert_match(/&lt;script&gt;alert\(1\)&lt;\/script&gt;/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
+| `test/controllers/public_pages_controller_test.rb:190` — `assert_no_match(/mailto:/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
+| `test/controllers/public_pages_controller_test.rb:191` — `assert_no_match(/LEGAL_CONTACT_EMAIL/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: hostile. |
 
 ## P0104: public pages open in a new tab so following them never disturbs the current tab
 
@@ -219,12 +217,12 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:197` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:198` — `assert_select 'nav[aria-label="Public pages"] a[target="_blank"][rel="noopener"]', count: 3` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:199` — `assert_select 'nav[aria-label="Footer"] a[target="_blank"][rel="noopener"]', count: 3` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:200` — `assert_select 'a.public-nav__signin[target="_blank"]', count: 0` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:201` — `assert_select 'main a[href="/privacy"][target="_blank"]'` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
-| `test/controllers/public_pages_controller_test.rb:202` — `assert_select 'main a[href="/terms"][target="_blank"]'` | rust/crates/campfire/src/controllers/public_pages.rs:197 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:197` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:198` — `assert_select 'nav[aria-label="Public pages"] a[target="_blank"][rel="noopener"]', count: 3` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:199` — `assert_select 'nav[aria-label="Footer"] a[target="_blank"][rel="noopener"]', count: 3` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:200` — `assert_select 'a.public-nav__signin[target="_blank"]', count: 0` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:201` — `assert_select 'main a[href="/privacy"][target="_blank"]'` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
+| `test/controllers/public_pages_controller_test.rb:202` — `assert_select 'main a[href="/terms"][target="_blank"]'` | rust/crates/campfire/src/controllers/public_pages.rs:201 | Full actual public page bytes incl title/headings/navigation/text match pinned Rails. Cases: default. |
 
 ## P0105: sign-in page links the public pages without OAuth
 
@@ -234,10 +232,10 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:207` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:57 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. |
-| `test/controllers/public_pages_controller_test.rb:209` — `assert_select 'nav[aria-label="About this workspace"] a[href="/about"][target="_blank"][rel="noopener"]'` | rust/crates/campfire/src/controllers/public_pages.rs:69 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. |
-| `test/controllers/public_pages_controller_test.rb:210` — `assert_select 'nav[aria-label="About this workspace"] a[href="/privacy"][target="_blank"][rel="noopener"]'` | rust/crates/campfire/src/controllers/public_pages.rs:69 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. |
-| `test/controllers/public_pages_controller_test.rb:211` — `assert_select 'nav[aria-label="About this workspace"] a[href="/terms"][target="_blank"][rel="noopener"]'` | rust/crates/campfire/src/controllers/public_pages.rs:69 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. |
+| `test/controllers/public_pages_controller_test.rb:207` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:75 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:209` — `assert_select 'nav[aria-label="About this workspace"] a[href="/about"][target="_blank"][rel="noopener"]'` | rust/crates/campfire/src/controllers/public_pages.rs:66, rust/crates/campfire/src/controllers/public_pages.rs:59 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:210` — `assert_select 'nav[aria-label="About this workspace"] a[href="/privacy"][target="_blank"][rel="noopener"]'` | rust/crates/campfire/src/controllers/public_pages.rs:66, rust/crates/campfire/src/controllers/public_pages.rs:59 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:211` — `assert_select 'nav[aria-label="About this workspace"] a[href="/terms"][target="_blank"][rel="noopener"]'` | rust/crates/campfire/src/controllers/public_pages.rs:66, rust/crates/campfire/src/controllers/public_pages.rs:59 | Real anonymous sign-in GET with no OAuth; exact new-tab/rel public links. Cases: . |
 
 ## P0106: sign-in page keeps public links beside Google sign-in when configured
 
@@ -247,11 +245,11 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:219` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages/sign_in_google_tests.rs:61 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. |
-| `test/controllers/public_pages_controller_test.rb:221` — `assert_match(/Sign in with Google/, response.body)` | rust/crates/campfire/src/controllers/public_pages/sign_in_google_tests.rs:65 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. |
-| `test/controllers/public_pages_controller_test.rb:222` — `assert_select 'nav[aria-label="About this workspace"] a[href="/about"]'` | rust/crates/campfire/src/controllers/public_pages/sign_in_google_tests.rs:85 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. |
-| `test/controllers/public_pages_controller_test.rb:223` — `assert_select 'nav[aria-label="About this workspace"] a[href="/privacy"]'` | rust/crates/campfire/src/controllers/public_pages/sign_in_google_tests.rs:85 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. |
-| `test/controllers/public_pages_controller_test.rb:224` — `assert_select 'nav[aria-label="About this workspace"] a[href="/terms"]'` | rust/crates/campfire/src/controllers/public_pages/sign_in_google_tests.rs:85 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. |
+| `test/controllers/public_pages_controller_test.rb:219` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages/sign_in_google_tests.rs:61 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:221` — `assert_match(/Sign in with Google/, response.body)` | rust/crates/campfire/src/controllers/public_pages/sign_in_google_tests.rs:65 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:222` — `assert_select 'nav[aria-label="About this workspace"] a[href="/about"]'` | rust/crates/campfire/src/controllers/public_pages.rs:66, rust/crates/campfire/src/controllers/public_pages.rs:59 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:223` — `assert_select 'nav[aria-label="About this workspace"] a[href="/privacy"]'` | rust/crates/campfire/src/controllers/public_pages.rs:66, rust/crates/campfire/src/controllers/public_pages.rs:59 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. Cases: . |
+| `test/controllers/public_pages_controller_test.rb:224` — `assert_select 'nav[aria-label="About this workspace"] a[href="/terms"]'` | rust/crates/campfire/src/controllers/public_pages.rs:66, rust/crates/campfire/src/controllers/public_pages.rs:59 | Real configured sign-in GET with Google button and all public links plus complete pinned sign-in fragment bytes. Cases: . |
 
 ## P0113: show
 
@@ -261,7 +259,7 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users_controller_test.rb:11` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:384 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
+| `test/controllers/users_controller_test.rb:11` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:395 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
 
 ## P0114: profile message buttons carry the accessible name
 
@@ -271,13 +269,13 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users_controller_test.rb:18` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:384 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
-| `test/controllers/users_controller_test.rb:19` — `assert_select "button[aria-label='Message Kevin']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:396 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
-| `test/controllers/users_controller_test.rb:20` — `assert_select "button", text: "Ban Kevin"` | rust/crates/campfire/src/controllers/users/people_tests.rs:402 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
-| `test/controllers/users_controller_test.rb:21` — `assert_select "img[aria-label]", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:414 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
-| `test/controllers/users_controller_test.rb:24` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:384 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
-| `test/controllers/users_controller_test.rb:25` — `assert_select "button[aria-label='Message Bender Bot']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:396 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
-| `test/controllers/users_controller_test.rb:26` — `assert_select "img[aria-label]", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:414 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. |
+| `test/controllers/users_controller_test.rb:18` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:395 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
+| `test/controllers/users_controller_test.rb:19` — `assert_select "button[aria-label='Message Kevin']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:407 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
+| `test/controllers/users_controller_test.rb:20` — `assert_select "button", text: "Ban Kevin"` | rust/crates/campfire/src/controllers/users/people_tests.rs:413 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
+| `test/controllers/users_controller_test.rb:21` — `assert_select "img[aria-label]", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:427 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
+| `test/controllers/users_controller_test.rb:24` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:395 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
+| `test/controllers/users_controller_test.rb:25` — `assert_select "button[aria-label='Message Bender Bot']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:407 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
+| `test/controllers/users_controller_test.rb:26` — `assert_select "img[aria-label]", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:427 | Real human and bot GET; status, exact accessible Message button count, human ban button and no aria-label on images. Cases: . |
 
 ## P0115: bot profile links to capability grants for admins
 
@@ -466,15 +464,15 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users_controller_test.rb:191` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:346 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:192` — `assert_select ".people-directory__row", minimum: 2` | rust/crates/campfire/src/controllers/users/people_tests.rs:374 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:193` — `assert_select "input[data-multi-select-target='checkbox'][data-user-id='#{users(:jason).id}']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:361 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:194` — `assert_select "input[data-multi-select-target='checkbox'][data-user-id='#{users(:david).id}']", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:361 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:195` — `assert_select ".people-directory__presence", text: "Online", minimum: 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:371 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:196` — `assert_select ".profile-card__badge", text: "Agent", minimum: 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:372 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:197` — `assert_select "[data-multi-select-target='bar']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:368 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:200` — `assert_select "input[data-user-id='#{users(:jz).id}']", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:361 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:201` — `assert_select ".people-directory__row", text: /JZ/, count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:376 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:191` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:356 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:192` — `assert_select ".people-directory__row", minimum: 2` | rust/crates/campfire/src/controllers/users/people_tests.rs:385 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:193` — `assert_select "input[data-multi-select-target='checkbox'][data-user-id='#{users(:jason).id}']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:371 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:194` — `assert_select "input[data-multi-select-target='checkbox'][data-user-id='#{users(:david).id}']", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:371 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:195` — `assert_select ".people-directory__presence", text: "Online", minimum: 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:383 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:196` — `assert_select ".profile-card__badge", text: "Agent", minimum: 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:384 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:197` — `assert_select "[data-multi-select-target='bar']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:378 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:200` — `assert_select "input[data-user-id='#{users(:jz).id}']", 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:371 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:201` — `assert_select ".people-directory__row", text: /JZ/, count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:387 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
 
 ## P0131: index lists starred people first with a star marker
 
@@ -484,8 +482,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users_controller_test.rb:210` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:280 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
-| `test/controllers/users_controller_test.rb:214` — `assert_equal users(:kevin).id, rows.first` | rust/crates/campfire/src/controllers/users/people_tests.rs:267 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:210` — `assert_response :ok` | rust/crates/campfire/src/controllers/users/people_tests.rs:290 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:214` — `assert_equal users(:kevin).id, rows.first` | rust/crates/campfire/src/controllers/users/people_tests.rs:277 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
 | `test/controllers/users_controller_test.rb:218` — `assert_equal "★", kevin_row.at_css("[aria-label='Starred by you']").text` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
 
 ## P0132: index requires sign-in
@@ -496,7 +494,7 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users_controller_test.rb:224` — `assert_redirected_to new_session_url` | rust/crates/campfire/src/controllers/users/people_tests.rs:316 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
+| `test/controllers/users_controller_test.rb:224` — `assert_redirected_to new_session_url` | rust/crates/campfire/src/controllers/users/people_tests.rs:326 | Actual directory GET; exact active selection/user exclusion, presence/Agent/bar, inactive-row exclusion and minimum rows; ordered/starred complete routed directory DOM and full byte oracle. Anonymous redirect is separately checked. Cases: directories. |
 
 ## P0141: update stamps the tour as completed
 
@@ -506,8 +504,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/tours_controller_test.rb:10` — `assert_response :no_content` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:184 | Original tour PATCH/read and exact layout/help controls. |
-| `test/controllers/users/tours_controller_test.rb:11` — `assert_not_nil users(:david).reload.tour_completed_at` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:200 | Original tour PATCH/read and exact layout/help controls. |
+| `test/controllers/users/tours_controller_test.rb:10` — `assert_response :no_content` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:184 | Original tour PATCH/read and exact layout/help controls. Cases: . |
+| `test/controllers/users/tours_controller_test.rb:11` — `assert_not_nil users(:david).reload.tour_completed_at` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:200 | Original tour PATCH/read and exact layout/help controls. Cases: . |
 
 ## P0142: update is idempotent
 
@@ -517,8 +515,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/tours_controller_test.rb:22` — `assert_response :no_content` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:184 | Original tour PATCH/read and exact layout/help controls. |
-| `test/controllers/users/tours_controller_test.rb:23` — `assert_operator users(:david).reload.tour_completed_at, :>, stamped` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:200 | Original tour PATCH/read and exact layout/help controls. |
+| `test/controllers/users/tours_controller_test.rb:22` — `assert_response :no_content` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:184 | Original tour PATCH/read and exact layout/help controls. Cases: . |
+| `test/controllers/users/tours_controller_test.rb:23` — `assert_operator users(:david).reload.tour_completed_at, :>, stamped` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:200 | Original tour PATCH/read and exact layout/help controls. Cases: . |
 
 ## P0143: update requires sign-in
 
@@ -528,7 +526,7 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/tours_controller_test.rb:30` — `assert_response :redirect` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:89 | Original tour PATCH/read and exact layout/help controls. |
+| `test/controllers/users/tours_controller_test.rb:30` — `assert_response :redirect` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:89 | Original tour PATCH/read and exact layout/help controls. Cases: . |
 
 ## P0144: room pages carry the tour shell for members who never completed it
 
@@ -538,9 +536,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/tours_controller_test.rb:39` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:241 | Original tour PATCH/read and exact layout/help controls. |
-| `test/controllers/users/tours_controller_test.rb:40` — `assert_select '#tour[data-controller="tour"][data-tour-auto-start-value="true"]'` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:219 | Original tour PATCH/read and exact layout/help controls. |
-| `test/controllers/users/tours_controller_test.rb:41` — `assert_select "#help-menu-button", count: 1` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:224 | Original tour PATCH/read and exact layout/help controls. |
+| `test/controllers/users/tours_controller_test.rb:39` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:241 | Original tour PATCH/read and exact layout/help controls. Cases: . |
+| `test/controllers/users/tours_controller_test.rb:40` — `assert_select '#tour[data-controller="tour"][data-tour-auto-start-value="true"]'` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:219 | Original tour PATCH/read and exact layout/help controls. Cases: . |
+| `test/controllers/users/tours_controller_test.rb:41` — `assert_select "#help-menu-button", count: 1` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:224 | Original tour PATCH/read and exact layout/help controls. Cases: . |
 
 ## P0145: room pages skip auto-start once the tour completed
 
@@ -550,9 +548,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/tours_controller_test.rb:50` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:257 | Original tour PATCH/read and exact layout/help controls. |
-| `test/controllers/users/tours_controller_test.rb:51` — `assert_select '#tour[data-controller="tour"][data-tour-auto-start-value="false"]'` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:219 | Original tour PATCH/read and exact layout/help controls. |
-| `test/controllers/users/tours_controller_test.rb:52` — `assert_select "#help-menu-button", count: 1` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:224 | Original tour PATCH/read and exact layout/help controls. |
+| `test/controllers/users/tours_controller_test.rb:50` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:257 | Original tour PATCH/read and exact layout/help controls. Cases: . |
+| `test/controllers/users/tours_controller_test.rb:51` — `assert_select '#tour[data-controller="tour"][data-tour-auto-start-value="false"]'` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:219 | Original tour PATCH/read and exact layout/help controls. Cases: . |
+| `test/controllers/users/tours_controller_test.rb:52` — `assert_select "#help-menu-button", count: 1` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:224 | Original tour PATCH/read and exact layout/help controls. Cases: . |
 
 ## P0146: show
 
@@ -562,7 +560,7 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:13` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:215 | Real GET succeeds; every owned section and provider connection is mounted. |
+| `test/controllers/users/profiles_controller_test.rb:13` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:215 | Real GET succeeds; every owned section and provider connection is mounted. Cases: . |
 
 ## P0147: show gives the Edge install instructions to a browser identifying only as Edge
 
@@ -572,8 +570,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:21` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:270 | Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text. |
-| `test/controllers/users/profiles_controller_test.rb:22` — `assert_select "details.pwa__instructions img[src*='install-edge']"` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:289 | Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text. |
+| `test/controllers/users/profiles_controller_test.rb:21` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:270 | Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text. Cases: . |
+| `test/controllers/users/profiles_controller_test.rb:22` — `assert_select "details.pwa__instructions img[src*='install-edge']"` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:289 | Real GET with the original Edge-only User-Agent; successful response and Edge instructions image/rendered install text. Cases: . |
 
 ## P0148: update
 
@@ -583,10 +581,10 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:28` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
-| `test/controllers/users/profiles_controller_test.rb:29` — `assert_equal "John Doe", users(:david).reload.name` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
-| `test/controllers/users/profiles_controller_test.rb:30` — `assert_equal "Acrobat", users(:david).bio` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
-| `test/controllers/users/profiles_controller_test.rb:31` — `assert_equal "david@37signals.com", users(:david).email_address` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:245 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
+| `test/controllers/users/profiles_controller_test.rb:28` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
+| `test/controllers/users/profiles_controller_test.rb:29` — `assert_equal "John Doe", users(:david).reload.name` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
+| `test/controllers/users/profiles_controller_test.rb:30` — `assert_equal "Acrobat", users(:david).bio` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
+| `test/controllers/users/profiles_controller_test.rb:31` — `assert_equal "david@37signals.com", users(:david).email_address` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:254 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: core_profile. |
 
 ## P0149: updates are limited to the current user
 
@@ -596,7 +594,7 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:37` — `assert_equal "Jason", users(:jason).reload.name` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: foreign_name. |
+| `test/controllers/users/profiles_controller_test.rb:37` — `assert_equal "Jason", users(:jason).reload.name` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: foreign_name. |
 
 ## P0150: profile shows Google Calendar as not configured without credentials
 
@@ -631,7 +629,7 @@ Status: **closed**. Native identities:
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
 | `test/controllers/users/profiles_controller_test.rb:59` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:79 | Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity. Cases: missing. |
-| `test/controllers/users/profiles_controller_test.rb:60` — `assert_select "a[href='#google-calendar-title']", text: "Connect Google Calendar"` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:188 | Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity. Cases: missing. |
+| `test/controllers/users/profiles_controller_test.rb:60` — `assert_select "a[href='#google-calendar-title']", text: "Connect Google Calendar"` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:190 | Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity. Cases: missing. |
 | `test/controllers/users/profiles_controller_test.rb:61` — `assert_select "input[name='user[meeting_status_enabled]'][type=checkbox]", count: 0` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:182 | Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity. Cases: missing. |
 
 ## P0153: profile offers the meeting toggle for a connected account
@@ -655,8 +653,8 @@ Status: **reopened**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:82` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:256 | Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message. Cases: http cache error/reconnect. |
-| `test/controllers/users/profiles_controller_test.rb:83` — `assert_includes response.body, CGI.escapeHTML(Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)` | **OPEN** | The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE. Cases: http cache error/reconnect. |
+| `test/controllers/users/profiles_controller_test.rb:82` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:259 | Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message. Cases: http cache error/reconnect. |
+| `test/controllers/users/profiles_controller_test.rb:83` — `assert_includes response.body, CGI.escapeHTML(Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)` | **MISSING** | The real-path test checks an adversarial custom error, not Calendar::MeetingRefresh::UNREACHABLE_MESSAGE. Cases: http cache error/reconnect. |
 
 ## P0155: profile asks to reconnect for meeting status left on after disconnect
 
@@ -666,8 +664,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:91` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:256 | Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message. Cases: http cache error/reconnect. |
-| `test/controllers/users/profiles_controller_test.rb:92` — `assert_select "a[href='#google-calendar-title']", text: "Reconnect below"` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:283 | Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message. Cases: http cache error/reconnect. |
+| `test/controllers/users/profiles_controller_test.rb:91` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:259 | Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message. Cases: http cache error/reconnect. |
+| `test/controllers/users/profiles_controller_test.rb:92` — `assert_select "a[href='#google-calendar-title']", text: "Reconnect below"` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:290 | Real GET of connected-cache failure then disconnected account; escaped errors, effective checked status, reconnect link and hidden toggle. Escaping is tested with hostile error markup instead of the constant network message. Cases: http cache error/reconnect. |
 
 ## P0156: profile lists the quiet-during-meetings switch
 
@@ -780,7 +778,7 @@ Status: **reopened**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:195` — `assert_includes response.body, "Connected as david@gmail.test"` | **OPEN** | The real-path test checks escaped fixture email, not the original connected account email david@gmail.test. Cases: calendar_only. |
+| `test/controllers/users/profiles_controller_test.rb:195` — `assert_includes response.body, "Connected as david@gmail.test"` | **MISSING** | The real-path test checks escaped fixture email, not the original connected account email david@gmail.test. Cases: calendar_only. |
 | `test/controllers/users/profiles_controller_test.rb:196` — `assert_includes response.body, "Disconnect"` | rust/crates/campfire/src/controllers/users/profile_sections_tests.rs:102 | Real GET with workspace configuration and persisted Google account/scopes/rejection. Exact connect-form count/method/data-turbo, Drive hidden feature count/value, status, meeting toggle, explanation and connect/disconnect/Drive labels. Complete fragment oracle separately preserves byte parity. Cases: calendar_only. |
 
 ## P0166: profile offers a reconnect when Google rejected the connection
@@ -917,8 +915,8 @@ Status: **reopened**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:307` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: github. |
-| `test/controllers/users/profiles_controller_test.rb:308` — `assert_equal "david-gh", users(:david).reload.github_login` | **OPEN** | The corpus normalizes Fixture-Login, but does not assert the original david-gh value. Cases: github. |
+| `test/controllers/users/profiles_controller_test.rb:307` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: github. |
+| `test/controllers/users/profiles_controller_test.rb:308` — `assert_equal "david-gh", users(:david).reload.github_login` | **MISSING** | The corpus normalizes Fixture-Login, but does not assert the original david-gh value. Cases: github. |
 
 ## P0177: a github login cannot be claimed by a second user
 
@@ -979,8 +977,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:362` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. |
-| `test/controllers/users/profiles_controller_test.rb:363` — `assert_select "#user_dnd_enabled[checked]", count: 0` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. |
+| `test/controllers/users/profiles_controller_test.rb:362` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. Cases: . |
+| `test/controllers/users/profiles_controller_test.rb:363` — `assert_select "#user_dnd_enabled[checked]", count: 0` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. Cases: . |
 
 ## P0182: DND switch stays on while a timer runs
 
@@ -990,8 +988,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:371` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. |
-| `test/controllers/users/profiles_controller_test.rb:372` — `assert_select "#user_dnd_enabled[checked]", count: 1` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. |
+| `test/controllers/users/profiles_controller_test.rb:371` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:310 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. Cases: . |
+| `test/controllers/users/profiles_controller_test.rb:372` — `assert_select "#user_dnd_enabled[checked]", count: 1` | rust/crates/campfire/src/controllers/users/profile_page_tests.rs:330 | Real GET with expired/live dnd_until; checkbox checked attribute follows effective state. Cases: . |
 
 ## P0183: profile lists the call settings with their defaults
 
@@ -1003,7 +1001,7 @@ Status: **closed**. Native identities:
 | --- | --- | --- |
 | `test/controllers/users/profiles_controller_test.rb:378` — `assert_response :success` | rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80 | Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options. Cases: pages. |
 | `test/controllers/users/profiles_controller_test.rb:379` — `assert_select "select[name='user[voice_mode]'] option[selected]", text: "Voice activity"` | rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80 | Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options. Cases: pages. |
-| `test/controllers/users/profiles_controller_test.rb:380` — `assert_select "input[name='user[push_to_talk_key]'][value='&#96;']"` | rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80 | Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options. Cases: pages. |
+| `test/controllers/users/profiles_controller_test.rb:380` — `assert_select "input[name='user[push_to_talk_key]'][value='`']"` | rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80 | Real GET; exact checkbox/selected-option/password-field cardinality and values, notification/meeting explanations, configured/Drive absence. Original nil and Rails/IANA zone options. Cases: pages. |
 
 ## P0184: profile saves the call settings
 
@@ -1013,9 +1011,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:386` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: voice. |
-| `test/controllers/users/profiles_controller_test.rb:388` — `assert_equal "push_to_talk", user.voice_mode` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: voice. |
-| `test/controllers/users/profiles_controller_test.rb:389` — `assert_equal "CapsLock", user.push_to_talk_key` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: voice. |
+| `test/controllers/users/profiles_controller_test.rb:386` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: voice. |
+| `test/controllers/users/profiles_controller_test.rb:388` — `assert_equal "push_to_talk", user.voice_mode` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: voice. |
+| `test/controllers/users/profiles_controller_test.rb:389` — `assert_equal "CapsLock", user.push_to_talk_key` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: voice. |
 
 ## P0185: profile rejects an unknown microphone mode
 
@@ -1036,8 +1034,8 @@ Status: **reopened**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:404` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: github_clear. |
-| `test/controllers/users/profiles_controller_test.rb:405` — `assert_nil users(:david).reload.github_login` | **OPEN** | The clearing vector starts with no login, so it does not discriminate unlinking an existing login. Cases: github_clear. |
+| `test/controllers/users/profiles_controller_test.rb:404` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: github_clear. |
+| `test/controllers/users/profiles_controller_test.rb:405` — `assert_nil users(:david).reload.github_login` | **MISSING** | The clearing vector starts with no login, so it does not discriminate unlinking an existing login. Cases: github_clear. |
 
 ## P0187: changing email requires the current password
 
@@ -1085,7 +1083,7 @@ Status: **reopened**. Native identities:
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
 | `test/controllers/users/profiles_controller_test.rb:437` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/app/profile_security_tests.rs:265 | Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence. Cases: correct. |
-| `test/controllers/users/profiles_controller_test.rb:438` — `assert_equal "david@smartdata.net", users(:david).reload.email_address` | **OPEN** | The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value. Cases: correct. |
+| `test/controllers/users/profiles_controller_test.rb:438` — `assert_equal "david@smartdata.net", users(:david).reload.email_address` | **MISSING** | The security corpus checks ws9-reviewed@example.test rather than the original david@smartdata.net saved value. Cases: correct. |
 | `test/controllers/users/profiles_controller_test.rb:439` — `assert_equal Time.current, users(:david).email_self_changed_at` | rust/crates/campfire/src/app/profile_security_tests.rs:297 | Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence. Cases: correct. |
 
 ## P0191: other profile edits and case-only email edits need no password and record nothing
@@ -1097,7 +1095,7 @@ Status: **reopened**. Native identities:
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
 | `test/controllers/users/profiles_controller_test.rb:446` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/app/profile_security_tests.rs:265 | Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence. Cases: case_only. |
-| `test/controllers/users/profiles_controller_test.rb:447` — `assert_equal "Dave", users(:david).reload.name` | **OPEN** | The security corpus checks Submitted name rather than the original Dave name. Cases: case_only. |
+| `test/controllers/users/profiles_controller_test.rb:447` — `assert_equal "Dave", users(:david).reload.name` | **MISSING** | The security corpus checks Submitted name rather than the original Dave name. Cases: case_only. |
 | `test/controllers/users/profiles_controller_test.rb:448` — `assert_nil users(:david).email_self_changed_at` | rust/crates/campfire/src/app/profile_security_tests.rs:297 | Real GET/PATCH with existing password digest; exact status, saved name/bio/email, password preservation, self-change timestamp, audits and device revocation; original error/input fragment and passwordless field absence. Cases: case_only. |
 
 ## P0192: profile asks for the current password only when the account has one
@@ -1120,9 +1118,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:463` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, legacy_zone. |
-| `test/controllers/users/profiles_controller_test.rb:464` — `assert_equal "dark", users(:david).reload.theme` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, legacy_zone. |
-| `test/controllers/users/profiles_controller_test.rb:465` — `assert_equal "Pacific Time (US & Canada)", users(:david).time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, legacy_zone. |
+| `test/controllers/users/profiles_controller_test.rb:463` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, legacy_zone. |
+| `test/controllers/users/profiles_controller_test.rb:464` — `assert_equal "dark", users(:david).reload.theme` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, legacy_zone. |
+| `test/controllers/users/profiles_controller_test.rb:465` — `assert_equal "Pacific Time (US & Canada)", users(:david).time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, legacy_zone. |
 
 ## P0194: update saves the text size
 
@@ -1147,7 +1145,7 @@ Status: **closed**. Native identities:
 | --- | --- | --- |
 | `test/controllers/users/profiles_controller_test.rb:479` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:73 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
 | `test/controllers/users/profiles_controller_test.rb:480` — `assert_select "select#user_time_zone option[selected][value='America/New_York']"` | rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
-| `test/controllers/users/profiles_controller_test.rb:483` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
+| `test/controllers/users/profiles_controller_test.rb:483` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
 | `test/controllers/users/profiles_controller_test.rb:484` — `assert_equal "America/New_York", users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:92 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
 | `test/controllers/users/profiles_controller_test.rb:487` — `assert_select "select#user_time_zone option[selected][value='America/New_York']"` | rust/crates/campfire/src/controllers/users/cutover_receipts_tests.rs:80 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
 
@@ -1167,15 +1165,16 @@ Status: **closed**. Native identities:
 Status: **closed**. Native identities:
 
 - `controllers::users::profile_settings_tests::manual_profile_settings_match_pinned_rails_patch_vectors`
+- `controllers::users::profile_settings_tests::manual_timezone_choice_is_rendered_and_blocks_browser_detection`
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:500` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
-| `test/controllers/users/profiles_controller_test.rb:501` — `assert_equal "America/New_York", users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
-| `test/controllers/users/profiles_controller_test.rb:502` — `assert users(:david).time_zone_explicit?` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
-| `test/controllers/users/profiles_controller_test.rb:505` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:238 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
-| `test/controllers/users/profiles_controller_test.rb:506` — `assert_nil users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
-| `test/controllers/users/profiles_controller_test.rb:507` — `assert users(:david).time_zone_explicit?` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
+| `test/controllers/users/profiles_controller_test.rb:500` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
+| `test/controllers/users/profiles_controller_test.rb:501` — `assert_equal "America/New_York", users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
+| `test/controllers/users/profiles_controller_test.rb:502` — `assert users(:david).time_zone_explicit?` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
+| `test/controllers/users/profiles_controller_test.rb:505` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:247 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: appearance, not_set. |
+| `test/controllers/users/profiles_controller_test.rb:506` — `assert_nil users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265, rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:101 | Real PATCH vectors start not_set with America/New_York already saved; full persisted state must clear it and retain the explicit flag. Additional real select/detect/clear sequence checks (None, true) directly. Cases: appearance, not_set. |
+| `test/controllers/users/profiles_controller_test.rb:507` — `assert users(:david).time_zone_explicit?` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265, rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:101 | Real PATCH vectors start not_set with America/New_York already saved; full persisted state must clear it and retain the explicit flag. Additional real select/detect/clear sequence checks (None, true) directly. Cases: appearance, not_set. |
 
 ## P0198: the layout marks an explicit Not set so the browser skips detection
 
@@ -1186,7 +1185,7 @@ Status: **closed**. Native identities:
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
 | `test/controllers/users/profiles_controller_test.rb:514` — `assert_response :success` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:73 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
-| `test/controllers/users/profiles_controller_test.rb:515` — `assert_select "meta[name=current-user-time-zone][content='']", count: 1` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:115 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
+| `test/controllers/users/profiles_controller_test.rb:515` — `assert_select "meta[name=current-user-time-zone][content='']", count: 1` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:120 | Real PATCH then GET then automatic detection; selected IANA option, saved zone, explicit Not set meta and detection refusal. Original selected IANA pre-save GET is also observed in original_profile_defaults_and_zone_options_match_rails_through_http. Cases: pages[America/New_York]. |
 
 ## P0199: update rejects an unknown theme or time zone
 
@@ -1196,12 +1195,12 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:520` — `assert_response :unprocessable_entity` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:231 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
-| `test/controllers/users/profiles_controller_test.rb:523` — `assert_response :unprocessable_entity` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:231 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
-| `test/controllers/users/profiles_controller_test.rb:526` — `assert_response :unprocessable_entity` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:231 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
-| `test/controllers/users/profiles_controller_test.rb:528` — `assert_equal "system", users(:david).reload.theme` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
-| `test/controllers/users/profiles_controller_test.rb:529` — `assert_equal "default", users(:david).text_size` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
-| `test/controllers/users/profiles_controller_test.rb:530` — `assert_nil users(:david).time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
+| `test/controllers/users/profiles_controller_test.rb:520` — `assert_response :unprocessable_entity` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:240 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
+| `test/controllers/users/profiles_controller_test.rb:523` — `assert_response :unprocessable_entity` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:240 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
+| `test/controllers/users/profiles_controller_test.rb:526` — `assert_response :unprocessable_entity` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:240 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
+| `test/controllers/users/profiles_controller_test.rb:528` — `assert_equal "system", users(:david).reload.theme` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
+| `test/controllers/users/profiles_controller_test.rb:529` — `assert_equal "default", users(:david).text_size` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
+| `test/controllers/users/profiles_controller_test.rb:530` — `assert_nil users(:david).time_zone` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 | Real PATCH/CSRF; response status and redirect, complete saved settings/name/bio/other-user state, unchanged email. Invalid input renders a form and leaves the saved state unchanged. Cases: bad_theme, bad_zone, bad_text. |
 
 ## P0200: the layout carries the theme, time zone, and sound state
 
@@ -1214,7 +1213,7 @@ Status: **closed**. Native identities:
 | `test/controllers/users/profiles_controller_test.rb:538` — `assert_response :success` | rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:57 | Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario. Cases: manual_dnd. |
 | `test/controllers/users/profiles_controller_test.rb:539` — `assert_select "html[data-theme=light]"` | rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:73 | Attributes on the actual opening html tag are checked, with exact cardinality; a matching substring in another tag is insufficient. Cases: manual_dnd. |
 | `test/controllers/users/profiles_controller_test.rb:540` — `assert_select "html[data-text-size=large]"` | rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:73 | Attributes on the actual opening html tag are checked, with exact cardinality; a matching substring in another tag is insufficient. Cases: manual_dnd. |
-| `test/controllers/users/profiles_controller_test.rb:541` — `assert_select "meta[name=color-scheme][content=light]", count: 1` | rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:117 | Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario. Cases: manual_dnd. |
+| `test/controllers/users/profiles_controller_test.rb:541` — `assert_select "meta[name=color-scheme][content=light]", count: 1` | rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:119 | Real GET; entire sound, Drive and zone meta lines match pinned Rails bytes, plus exact html theme/text-size attributes. Cache/user inputs match each original active/future/off scenario. Cases: manual_dnd. |
 | `test/controllers/users/profiles_controller_test.rb:542` — `assert_select "meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']", count: 1` | rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:111 | All actual matching meta nodes, content values and cardinalities are compared with the exact Rails helper output. Duplicate or stray matching nodes fail. Cases: manual_dnd. |
 | `test/controllers/users/profiles_controller_test.rb:543` — `assert_select "meta[name=notification-dnd][content=muted]", count: 1` | rust/crates/campfire/src/controllers/users/layout_preferences_tests.rs:111 | All actual matching meta nodes, content values and cardinalities are compared with the exact Rails helper output. Duplicate or stray matching nodes fail. Cases: manual_dnd. |
 
@@ -1260,8 +1259,9 @@ Status: **closed**. Native identities:
 | `test/controllers/users/cards_controller_test.rb:19` — `assert_select "form[action='#{rooms_directs_path}']", 2` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_online. |
 | `test/controllers/users/cards_controller_test.rb:20` — `assert_select "button", text: "Message"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_online. |
 | `test/controllers/users/cards_controller_test.rb:21` — `assert_select "button", text: "Start call"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_online. |
-| `test/controllers/users/cards_controller_test.rb:22` — `assert_select "a[href='#{user_path(users(:jason))}']", text: "View profile"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_online. |
-| `test/controllers/users/cards_controller_test.rb:23` — `assert_select "button", text: "Copy mention"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_online. |
+| `test/controllers/users/cards_controller_test.rb:22` — `assert_select "a", text: "Set a status", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:205 | Actual routed card status-link cardinality, exact href and absence of data-turbo-frame, plus unchanged complete Rails DOM oracle. Cases: peer_online. |
+| `test/controllers/users/cards_controller_test.rb:23` — `assert_select "a[href='#{user_path(users(:jason))}']", text: "View profile"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_online. |
+| `test/controllers/users/cards_controller_test.rb:24` — `assert_select "button", text: "Copy mention"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_online. |
 
 ## P0208: offline peers read offline
 
@@ -1271,8 +1271,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/cards_controller_test.rb:29` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_offline. |
-| `test/controllers/users/cards_controller_test.rb:30` — `assert_select ".profile-card__presence", text: /Offline/` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_offline. |
+| `test/controllers/users/cards_controller_test.rb:30` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_offline. |
+| `test/controllers/users/cards_controller_test.rb:31` — `assert_select ".profile-card__presence", text: /Offline/` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: peer_offline. |
 
 ## P0209: card shows the presence dot and custom status badge
 
@@ -1282,10 +1282,10 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/cards_controller_test.rb:40` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
-| `test/controllers/users/cards_controller_test.rb:41` — `assert_select ".user-status-badge .avatar__presence[data-presence='online']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
-| `test/controllers/users/cards_controller_test.rb:42` — `assert_select ".user-status-badge__label", text: "Online"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
-| `test/controllers/users/cards_controller_test.rb:43` — `assert_select ".user-status-badge__custom", text: "🚂 On a train"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
+| `test/controllers/users/cards_controller_test.rb:41` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
+| `test/controllers/users/cards_controller_test.rb:42` — `assert_select ".user-status-badge .avatar__presence[data-presence='online']", 1` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
+| `test/controllers/users/cards_controller_test.rb:43` — `assert_select ".user-status-badge__label", text: "Online"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
+| `test/controllers/users/cards_controller_test.rb:44` — `assert_select ".user-status-badge__custom", text: "🚂 On a train"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: custom_status. |
 
 ## P0210: your own card offers editing your profile instead
 
@@ -1295,12 +1295,13 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/cards_controller_test.rb:49` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
-| `test/controllers/users/cards_controller_test.rb:50` — `assert_select ".profile-card__name", text: "David"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
-| `test/controllers/users/cards_controller_test.rb:51` — `assert_select "a[href='#{user_profile_path}']", text: "Edit profile"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
-| `test/controllers/users/cards_controller_test.rb:52` — `assert_select "button", text: "Message", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
-| `test/controllers/users/cards_controller_test.rb:53` — `assert_select "button", text: "Start call", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
-| `test/controllers/users/cards_controller_test.rb:54` — `assert_select "button", text: "Copy mention", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
+| `test/controllers/users/cards_controller_test.rb:50` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
+| `test/controllers/users/cards_controller_test.rb:51` — `assert_select ".profile-card__name", text: "David"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
+| `test/controllers/users/cards_controller_test.rb:52` — `assert_select "a[href='#{user_profile_path}']", text: "Edit profile"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
+| `test/controllers/users/cards_controller_test.rb:53` — `assert_select "a[href='#{edit_user_status_path}']:not([data-turbo-frame])", text: "Set a status"` | rust/crates/campfire/src/controllers/users/people_tests.rs:205, rust/crates/campfire/src/controllers/users/people_tests.rs:207, rust/crates/campfire/src/controllers/users/people_tests.rs:208 | Actual routed card status-link cardinality, exact href and absence of data-turbo-frame, plus unchanged complete Rails DOM oracle. Cases: own. |
+| `test/controllers/users/cards_controller_test.rb:54` — `assert_select "button", text: "Message", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
+| `test/controllers/users/cards_controller_test.rb:55` — `assert_select "button", text: "Start call", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
+| `test/controllers/users/cards_controller_test.rb:56` — `assert_select "button", text: "Copy mention", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: own. |
 
 ## P0211: agents can be messaged but not called
 
@@ -1310,11 +1311,11 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/cards_controller_test.rb:62` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
-| `test/controllers/users/cards_controller_test.rb:63` — `assert_select ".profile-card__badge", text: "Agent"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
-| `test/controllers/users/cards_controller_test.rb:64` — `assert_select ".profile-card__owner", text: "Agent owned by David"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
-| `test/controllers/users/cards_controller_test.rb:65` — `assert_select "button", text: "Message"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
-| `test/controllers/users/cards_controller_test.rb:66` — `assert_select "button", text: "Start call", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
+| `test/controllers/users/cards_controller_test.rb:64` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
+| `test/controllers/users/cards_controller_test.rb:65` — `assert_select ".profile-card__badge", text: "Agent"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
+| `test/controllers/users/cards_controller_test.rb:66` — `assert_select ".profile-card__owner", text: "Agent owned by David"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
+| `test/controllers/users/cards_controller_test.rb:67` — `assert_select "button", text: "Message"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
+| `test/controllers/users/cards_controller_test.rb:68` — `assert_select "button", text: "Start call", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: agent. |
 
 ## P0212: inactive users show status without message actions
 
@@ -1324,10 +1325,10 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/cards_controller_test.rb:74` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
-| `test/controllers/users/cards_controller_test.rb:75` — `assert_select ".profile-card__presence", text: /Deactivated/` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
-| `test/controllers/users/cards_controller_test.rb:76` — `assert_select "button", text: "Message", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
-| `test/controllers/users/cards_controller_test.rb:77` — `assert_select "a[href='#{user_path(users(:kevin))}']", text: "View profile"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
+| `test/controllers/users/cards_controller_test.rb:76` — `assert_response :success` | rust/crates/campfire/src/controllers/users/people_tests.rs:192 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
+| `test/controllers/users/cards_controller_test.rb:77` — `assert_select ".profile-card__presence", text: /Deactivated/` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
+| `test/controllers/users/cards_controller_test.rb:78` — `assert_select "button", text: "Message", count: 0` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
+| `test/controllers/users/cards_controller_test.rb:79` — `assert_select "a[href='#{user_path(users(:kevin))}']", text: "View profile"` | rust/crates/campfire/src/controllers/users/people_tests.rs:159 | Real card GET; complete user_card DOM equals the pinned full-byte oracle, including every identity/presence/status/role/owner/action/absence assertion and element cardinality. Random CSRF value is not an original asserted value; all other attributes and text are retained. Cases: deactivated. |
 
 ## P0213: card requires sign-in
 
@@ -1337,7 +1338,7 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/cards_controller_test.rb:85` — `assert_redirected_to new_session_url` | rust/crates/campfire/src/controllers/users/people_tests.rs:298 | Actual anonymous GET redirects to the sign-in URL; signed-in unknown card is 404. |
+| `test/controllers/users/cards_controller_test.rb:87` — `assert_redirected_to new_session_url` | rust/crates/campfire/src/controllers/users/people_tests.rs:308 | Actual anonymous GET redirects to the sign-in URL; signed-in unknown card is 404. Cases: . |
 
 ## P0222: detects the browser zone when none is saved
 
@@ -1347,9 +1348,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/time_zones_controller_test.rb:11` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
-| `test/controllers/users/time_zones_controller_test.rb:12` — `assert_equal "Pacific Time (US & Canada)", users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
-| `test/controllers/users/time_zones_controller_test.rb:13` — `assert_equal "Pacific Time (US & Canada)", response.parsed_body["time_zone"]` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:45 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
+| `test/controllers/users/time_zones_controller_test.rb:11` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
+| `test/controllers/users/time_zones_controller_test.rb:12` — `assert_equal "Pacific Time (US & Canada)", users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
+| `test/controllers/users/time_zones_controller_test.rb:13` — `assert_equal "Pacific Time (US & Canada)", response.parsed_body["time_zone"]` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:45 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
 
 ## P0223: a hand-picked zone wins over later detections
 
@@ -1359,8 +1360,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/time_zones_controller_test.rb:21` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
-| `test/controllers/users/time_zones_controller_test.rb:22` — `assert_equal "Eastern Time (US & Canada)", users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
+| `test/controllers/users/time_zones_controller_test.rb:21` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
+| `test/controllers/users/time_zones_controller_test.rb:22` — `assert_equal "Eastern Time (US & Canada)", users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
 
 ## P0224: detection never overwrites an explicit choice, not even Not set
 
@@ -1370,8 +1371,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/time_zones_controller_test.rb:30` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
-| `test/controllers/users/time_zones_controller_test.rb:31` — `assert_nil users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
+| `test/controllers/users/time_zones_controller_test.rb:30` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
+| `test/controllers/users/time_zones_controller_test.rb:31` — `assert_nil users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
 
 ## P0225: an unknown zone is ignored
 
@@ -1381,8 +1382,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/users/time_zones_controller_test.rb:37` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
-| `test/controllers/users/time_zones_controller_test.rb:38` — `assert_nil users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. |
+| `test/controllers/users/time_zones_controller_test.rb:37` — `assert_response :success` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:40 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
+| `test/controllers/users/time_zones_controller_test.rb:38` — `assert_nil users(:david).reload.time_zone` | rust/crates/campfire/src/controllers/users/preferences_tests.rs:64 | Actual PATCH; response JSON, saved zone/explicit flag/timestamp match Rails for original detect/saved/Not set/unknown inputs. Cases: . |
 
 ## P0226: edit
 
@@ -1392,7 +1393,7 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/accounts_controller_test.rb:10` — `assert_response :ok` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:94 | Real GET succeeds; complete page fragment byte oracle. |
+| `test/controllers/accounts_controller_test.rb:10` — `assert_response :ok` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:94 | Real GET succeeds; complete page fragment byte oracle. Cases: . |
 
 ## P0227: edit groups administrators separately from members with a divider
 
@@ -1402,13 +1403,13 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/accounts_controller_test.rb:16` — `assert_response :ok` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:94 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. |
-| `test/controllers/accounts_controller_test.rb:19` — `assert_select "turbo-frame#account_users hr.separator.full-width"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:95 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. |
-| `test/controllers/accounts_controller_test.rb:30` — `assert divider_position, "Divider should exist in the response"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:95 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. |
-| `test/controllers/accounts_controller_test.rb:34` — `assert name_position, "Administrator #{name} should appear in the response"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:100 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. |
-| `test/controllers/accounts_controller_test.rb:35` — `assert name_position < divider_position, "Administrator #{name} should appear before the divider"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:100 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. |
-| `test/controllers/accounts_controller_test.rb:40` — `assert name_position, "Member #{name} should appear in the response"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:101 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. |
-| `test/controllers/accounts_controller_test.rb:41` — `assert name_position > divider_position, "Member #{name} should appear after the divider"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:101 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. |
+| `test/controllers/accounts_controller_test.rb:16` — `assert_response :ok` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:94 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. Cases: . |
+| `test/controllers/accounts_controller_test.rb:19` — `assert_select "turbo-frame#account_users hr.separator.full-width"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:95 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. Cases: . |
+| `test/controllers/accounts_controller_test.rb:30` — `assert divider_position, "Divider should exist in the response"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:95 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. Cases: . |
+| `test/controllers/accounts_controller_test.rb:34` — `assert name_position, "Administrator #{name} should appear in the response"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:100 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. Cases: . |
+| `test/controllers/accounts_controller_test.rb:35` — `assert name_position < divider_position, "Administrator #{name} should appear before the divider"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:100 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. Cases: . |
+| `test/controllers/accounts_controller_test.rb:40` — `assert name_position, "Member #{name} should appear in the response"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:101 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. Cases: . |
+| `test/controllers/accounts_controller_test.rb:41` — `assert name_position > divider_position, "Member #{name} should appear after the divider"` | rust/crates/campfire/src/controllers/accounts/view_tests.rs:101 | Actual account_users frame: original divider exists, every original administrator row precedes it and every original member follows it. Complete page fragment byte oracle. Cases: . |
 
 ## P0228: update
 
@@ -1418,9 +1419,9 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/accounts_controller_test.rb:46` — `assert users(:david).administrator?` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:96 | The executing fixture boot omits OAuth credentials / signs in the administrator or member row; this is the original test precondition, not an extra product behavior. |
-| `test/controllers/accounts_controller_test.rb:50` — `assert_redirected_to edit_account_url` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:149 | Administrator role is the request fixture; actual PUT redirect and saved account name/audit state match Rails. |
-| `test/controllers/accounts_controller_test.rb:51` — `assert_equal accounts(:signal).name, "Different"` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:178 | Administrator role is the request fixture; actual PUT redirect and saved account name/audit state match Rails. |
+| `test/controllers/accounts_controller_test.rb:46` — `assert users(:david).administrator?` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:96 | The executing fixture boot omits OAuth credentials / signs in the administrator or member row; this is the original test precondition, not an extra product behavior. Cases: . |
+| `test/controllers/accounts_controller_test.rb:50` — `assert_redirected_to edit_account_url` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:149 | Administrator role is the request fixture; actual PUT redirect and saved account name/audit state match Rails. Cases: . |
+| `test/controllers/accounts_controller_test.rb:51` — `assert_equal accounts(:signal).name, "Different"` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:178 | Administrator role is the request fixture; actual PUT redirect and saved account name/audit state match Rails. Cases: . |
 
 ## P0229: non-admins cannot update
 
@@ -1430,8 +1431,8 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/accounts_controller_test.rb:56` — `assert users(:kevin).member?` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:11 | The executing fixture boot omits OAuth credentials / signs in the administrator or member row; this is the original test precondition, not an extra product behavior. |
-| `test/controllers/accounts_controller_test.rb:59` — `assert_response :forbidden` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:46 | Member role is the request fixture; actual PUT is forbidden with no state/audit writes. |
+| `test/controllers/accounts_controller_test.rb:56` — `assert users(:kevin).member?` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:11 | The executing fixture boot omits OAuth credentials / signs in the administrator or member row; this is the original test precondition, not an extra product behavior. Cases: . |
+| `test/controllers/accounts_controller_test.rb:59` — `assert_response :forbidden` | rust/crates/campfire/src/controllers/accounts/mutation_tests.rs:46 | Member role is the request fixture; actual PUT is forbidden with no state/audit writes. Cases: . |
 
 ## P0272: service worker serves as JavaScript with the fetch and notification handlers
 
@@ -1441,11 +1442,11 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/pwa_controller_test.rb:7` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:8` — `assert_equal "text/javascript", response.media_type` | rust/crates/campfire/src/controllers/pwa.rs:57 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:11` — `assert_includes body, 'addEventListener("fetch"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:12` — `assert_includes body, 'addEventListener("push"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:13` — `assert_includes body, 'addEventListener("notificationclick"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
+| `test/controllers/pwa_controller_test.rb:7` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:8` — `assert_equal "text/javascript", response.media_type` | rust/crates/campfire/src/controllers/pwa.rs:57 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:11` — `assert_includes body, 'addEventListener("fetch"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:12` — `assert_includes body, 'addEventListener("push"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:13` — `assert_includes body, 'addEventListener("notificationclick"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
 
 ## P0273: service worker caches static assets only
 
@@ -1455,10 +1456,10 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/pwa_controller_test.rb:19` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:25` — `assert_includes body, 'url.pathname === OFFLINE_URL &#124;&#124; url.pathname.startsWith("/assets/")'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:26` — `assert_includes body, "networkThenOffline"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:27` — `assert_equal 1, body.scan("cache.put").size` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
+| `test/controllers/pwa_controller_test.rb:19` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:25` — `assert_includes body, 'url.pathname === OFFLINE_URL &#124;&#124; url.pathname.startsWith("/assets/")'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:26` — `assert_includes body, "networkThenOffline"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:27` — `assert_equal 1, body.scan("cache.put").size` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
 
 ## P0274: notification clicks focus an existing window before opening a new one
 
@@ -1468,10 +1469,10 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/pwa_controller_test.rb:33` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:36` — `assert_includes body, "clients.matchAll"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:37` — `assert_includes body, "existing.focus()"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:38` — `assert_includes body, "clients.openWindow(url)"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
+| `test/controllers/pwa_controller_test.rb:33` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:36` — `assert_includes body, "clients.matchAll"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:37` — `assert_includes body, "existing.focus()"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:38` — `assert_includes body, "clients.openWindow(url)"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
 
 ## P0275: offline shell renders signed-out with reconnect behavior
 
@@ -1481,11 +1482,11 @@ Status: **closed**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/pwa_controller_test.rb:44` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:45` — `assert_includes response.body, "You&rsquo;re offline &mdash; reconnecting&hellip;"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:46` — `assert_includes response.body, "offline-retry"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:47` — `assert_includes response.body, 'addEventListener("online"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
-| `test/controllers/pwa_controller_test.rb:48` — `assert_no_match(/session_token/, response.headers["Set-Cookie"].to_s)` | rust/crates/campfire/src/controllers/pwa.rs:59 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. |
+| `test/controllers/pwa_controller_test.rb:44` — `assert_response :success` | rust/crates/campfire/src/controllers/pwa.rs:56 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:45` — `assert_includes response.body, "You&rsquo;re offline &mdash; reconnecting&hellip;"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:46` — `assert_includes response.body, "offline-retry"` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:47` — `assert_includes response.body, 'addEventListener("online"'` | rust/crates/campfire/src/controllers/pwa.rs:58 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
+| `test/controllers/pwa_controller_test.rb:48` — `assert_no_match(/session_token/, response.headers["Set-Cookie"].to_s)` | rust/crates/campfire/src/controllers/pwa.rs:59 | Real unsigned HTTP service-worker/offline requests; full response status/content-type/body byte oracle establishes every original source clause. Offline cookie absence additionally checked. Cases: . |
 
 ## P0276: service worker fetch and notification logic
 
@@ -1495,5 +1496,5 @@ Status: **reopened**. Native identities:
 
 | Rails assertion | Discriminating Rust assertion | Observation and oracle cases |
 | --- | --- | --- |
-| `test/controllers/pwa_controller_test.rb:58` — `assert $?.success?, output` | **OPEN** | The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output. Cases: service_worker_harness.mjs. |
-| `test/controllers/pwa_controller_test.rb:59` — `assert_includes output, "all checks passed"` | **OPEN** | The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output. Cases: service_worker_harness.mjs. |
+| `test/controllers/pwa_controller_test.rb:58` — `assert $?.success?, output` | **MISSING** | The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output. Cases: service_worker_harness.mjs. |
+| `test/controllers/pwa_controller_test.rb:59` — `assert_includes output, "all checks passed"` | **MISSING** | The external Node receipt passed historically, but the ordinary Rust CI test checks served bytes only, not the subprocess exit and all-checks output. Cases: service_worker_harness.mjs. |

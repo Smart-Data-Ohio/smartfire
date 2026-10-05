@@ -49,6 +49,24 @@ mod tests {
     use crate::controllers::presenters::test_support::{Req, TestApp};
     use axum::http::{Method, StatusCode};
 
+    /// PublicPagesControllerTest uses nav ancestry and real links, which comments cannot satisfy.
+    pub(super) fn assert_public_links(body: &str) {
+        let mut dom = campfire_richtext::dom::Dom::new();
+        let root = dom.parse_fragment(body).unwrap();
+        let navs = dom.descendants(root).into_iter().filter(|id| {
+            dom.name(*id) == "nav" && dom.attr(*id, "aria-label") == Some("About this workspace")
+        }).collect::<Vec<_>>();
+        assert_eq!(navs.len(), 1, "exact About this workspace nav selector");
+        for path in ["/about", "/privacy", "/terms"] {
+            let links = dom.descendants(navs[0]).into_iter().filter(|id| {
+                dom.name(*id) == "a" && dom.attr(*id, "href") == Some(path)
+                    && dom.attr(*id, "target") == Some("_blank")
+                    && dom.attr(*id, "rel") == Some("noopener")
+            }).count();
+            assert_eq!(links, 1, "exact nav public link selector for {path}");
+        }
+    }
+
     #[tokio::test]
     async fn unconfigured_sign_in_links_all_public_pages_in_new_tabs() {
         // PublicPagesControllerTest at d7c7de92; render WS9's sign-in page directly.
@@ -57,21 +75,7 @@ mod tests {
         assert_eq!(response.status, StatusCode::OK);
         assert!(!response.text().contains("Sign in with Google"));
         let body = response.text();
-        let links = body
-            .split_once("aria-label=\"About this workspace\"")
-            .unwrap()
-            .1
-            .split_once("</nav>")
-            .unwrap()
-            .0;
-        for path in ["/about", "/privacy", "/terms"] {
-            assert!(
-                links.contains(&format!(
-                    "<a target=\"_blank\" rel=\"noopener\" href=\"{path}\">"
-                )),
-                "missing protected public link {path}"
-            );
-        }
+        assert_public_links(&body);
     }
 
     #[tokio::test]

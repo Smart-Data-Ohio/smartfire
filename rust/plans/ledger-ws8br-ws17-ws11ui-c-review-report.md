@@ -217,3 +217,52 @@ Cutover ledger remains partial: 104 broad receipts; 0 sidebar receipts; 6 overla
 All requested non-upload review fixes are complete. The historical picker exit
 remains causally unconfirmed because its log was lost; no new startup failure
 remains. The broader ledger and owner-held scope are unchanged.
+
+## Merge of PR #244 review fixes
+
+Merged `rust/ledger-ws8br-ws17-ws11ui-b` at
+`471ab2c5214b57483ebd0c9660d7acff8fceb79f` with a merge commit.
+The populated zone-clear and exact DOM assertions are retained, including C's
+existing original GitHub profile cases and all later acceptance closures. B's
+401 current-pin assertions replace its historical map; source coordinates are
+refreshed for this merged tree. C's 93 native and 27 browser mappings keep their
+existing credit and historical evidence. Browser producer/harness inputs are unchanged.
+
+The first build reused a Kit artifact from the other worktree and incorrectly
+reported `Ctx::take_body_file` missing, though that method exists in C's source.
+The shared target was invalidated for every workspace package and both checks
+were rebuilt; no production source change was needed.
+
+Verification used `CI=1`, the same three CI seeds and pinned media runtime,
+`nextest -j 4` and the configured machine-wide rustc throttle. The affected
+page/receipt expression ran 158 tests; the 30 supplemental historical identities
+complete the combined ledger's 181 distinct credited identities.
+
+Commands (from this worktree; expressions are the exact named identity sets
+from the B/C manifests and the parent ledger plus every affected page test):
+
+```sh
+cargo nextest run --manifest-path rust/Cargo.toml --locked -p campfire -j 4 --no-fail-fast -E AFFECTED_EXPRESSION
+cargo nextest run --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever -j 4 --no-fail-fast -E SUPPLEMENTAL_EXPRESSION
+cargo clippy --manifest-path rust/Cargo.toml --locked --workspace --exclude html5ever --all-targets -- -D warnings
+python3 rust/reference-tools/check-controller-assertion-receipts.py --nextest-list LIST_JSON --native-log COMBINED_LOG
+python3 rust/reference-tools/check-controller-assertion-receipts.py --manifest rust/plans/ledger-ws8br-ws17-ws11ui-c-receipts.json --nextest-list LIST_JSON --native-log COMBINED_LOG
+python3 rust/reference-tools/check-cutover-ledgers.py --nextest-list LIST_JSON --native-log COMBINED_LOG
+```
+
+Raw successful summaries:
+
+```text
+     Summary [  41.282s] 158 tests run: 158 passed, 2809 skipped
+     Summary [  33.944s] 30 tests run: 30 passed, 5072 skipped
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 06s
+Controller per-assertion receipts: 120 audited declarations (112 closed, 8 reopened); 401 assertion sites; 70 enabled native test identities passed; 11 explicit reopened gaps; 0 unaccounted assertions
+Controller per-assertion receipts: 93 audited declarations (93 closed, 0 reopened); 279 assertion sites; 82 enabled native test identities passed; 0 explicit reopened gaps; 0 unaccounted assertions
+Cutover current branch: 181 credited test identities passed in the supplied current workspace run
+Cutover ledger receipts: 25 historical CI test identities still enabled; 14 WS17 closures; 3 ignored browser registrations for rust/ci-full-gate; 233 broad WS8 closures; 1 approved queue supersession; 0 inconsistent records
+Cutover ledger remains partial: 104 broad receipts; 0 sidebar receipts; 6 overlapping criteria; 1 muted browser; 1 Calendar browser; 3 geometry-only exclusions
+```
+
+The temporary B worktree, downloaded nextest executable and shared build target
+are removed after pushing. Small raw logs remain under `rust/.scratch/`. No stash
+was used and no source outside `rust/` was edited.

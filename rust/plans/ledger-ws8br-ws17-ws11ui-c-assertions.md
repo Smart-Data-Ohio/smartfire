@@ -918,11 +918,11 @@ Status: **closed**. Executed identities:
 
 | Rails assertion | Discriminating Rust assertion |
 | --- | --- |
-| `test/controllers/public_pages_controller_test.rb:171` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 |
-| `test/controllers/public_pages_controller_test.rb:173` — `assert_match(/Acme Widgets/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 |
-| `test/controllers/public_pages_controller_test.rb:174` — `assert_select 'a[href="mailto:privacy@example.com"]'` | rust/crates/campfire/src/controllers/public_pages.rs:197 |
-| `test/controllers/public_pages_controller_test.rb:177` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:194 |
-| `test/controllers/public_pages_controller_test.rb:178` — `assert_match(/Acme Widgets/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:197 |
+| `test/controllers/public_pages_controller_test.rb:171` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 |
+| `test/controllers/public_pages_controller_test.rb:173` — `assert_match(/Acme Widgets/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 |
+| `test/controllers/public_pages_controller_test.rb:174` — `assert_select 'a[href="mailto:privacy@example.com"]'` | rust/crates/campfire/src/controllers/public_pages.rs:201 |
+| `test/controllers/public_pages_controller_test.rb:177` — `assert_response :success` | rust/crates/campfire/src/controllers/public_pages.rs:198 |
+| `test/controllers/public_pages_controller_test.rb:178` — `assert_match(/Acme Widgets/, response.body)` | rust/crates/campfire/src/controllers/public_pages.rs:201 |
 
 ## P0176: linking a github login strips and downcases it
 
@@ -932,8 +932,8 @@ Status: **closed**. Executed identities:
 
 | Rails assertion | Discriminating Rust assertion |
 | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:307` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:237 |
-| `test/controllers/users/profiles_controller_test.rb:308` — `assert_equal "david-gh", users(:david).reload.github_login` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 |
+| `test/controllers/users/profiles_controller_test.rb:307` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246 |
+| `test/controllers/users/profiles_controller_test.rb:308` — `assert_equal "david-gh", users(:david).reload.github_login` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 |
 
 ## P0186: clearing a github login unlinks it
 
@@ -943,8 +943,8 @@ Status: **closed**. Executed identities:
 
 | Rails assertion | Discriminating Rust assertion |
 | --- | --- |
-| `test/controllers/users/profiles_controller_test.rb:404` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:237 |
-| `test/controllers/users/profiles_controller_test.rb:405` — `assert_nil users(:david).reload.github_login` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256 |
+| `test/controllers/users/profiles_controller_test.rb:404` — `assert_redirected_to user_profile_url` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246 |
+| `test/controllers/users/profiles_controller_test.rb:405` — `assert_nil users(:david).reload.github_login` | rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265 |
 
 ## P0154: profile shows the meeting fetch notice when a refresh failed
 

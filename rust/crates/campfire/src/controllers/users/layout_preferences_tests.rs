@@ -114,9 +114,11 @@ async fn check_cases(names: &[&str]) {
         // ProfilesControllerTest's light theme also pins the exact color-scheme cardinality.
         if *name == "manual_dnd" {
             assert_eq!(
-                body.matches("<meta name=\"color-scheme\" content=\"light\">")
-                    .count(),
-                1
+                nodes.iter().filter(|id| dom.name(**id) == "meta"
+                    && dom.attr(**id, "name") == Some("color-scheme")
+                    && dom.attr(**id, "content") == Some("light")).count(),
+                1,
+                "original light color-scheme meta selector"
             );
         }
         // Read the whole helper's rendered line verbatim; tokens/nonces elsewhere stay real.

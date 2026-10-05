@@ -4708,8 +4708,8 @@
             "original_configured"
           ],
           "observation": "assert_response :success",
-          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:194",
-          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:194",
+          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:198",
+          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:198",
           "assertion_anchor": "assert_eq!(response.status, StatusCode::OK);",
           "assertion_scope": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
           "additional_assertion_sources": []
@@ -4724,8 +4724,8 @@
             "original_configured"
           ],
           "observation": "assert_match(/Acme Widgets/, response.body)",
-          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:197",
-          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:197",
+          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:201",
+          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:201",
           "assertion_anchor": "if actual != expected {",
           "assertion_scope": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
           "additional_assertion_sources": []
@@ -4740,8 +4740,8 @@
             "original_configured"
           ],
           "observation": "assert_select 'a[href=\"mailto:privacy@example.com\"]'",
-          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:197",
-          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:197",
+          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:201",
+          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:201",
           "assertion_anchor": "if actual != expected {",
           "assertion_scope": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
           "additional_assertion_sources": []
@@ -4756,8 +4756,8 @@
             "original_configured"
           ],
           "observation": "assert_response :success",
-          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:194",
-          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:194",
+          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:198",
+          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:198",
           "assertion_anchor": "assert_eq!(response.status, StatusCode::OK);",
           "assertion_scope": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
           "additional_assertion_sources": []
@@ -4772,8 +4772,8 @@
             "original_configured"
           ],
           "observation": "assert_match(/Acme Widgets/, response.body)",
-          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:197",
-          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:197",
+          "assertion_source": "rust/crates/campfire/src/controllers/public_pages.rs:201",
+          "rust_source": "rust/crates/campfire/src/controllers/public_pages.rs:201",
           "assertion_anchor": "if actual != expected {",
           "assertion_scope": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
           "additional_assertion_sources": []
@@ -4803,8 +4803,8 @@
             "original_github_normalize"
           ],
           "observation": "assert_redirected_to user_profile_url",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:237",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:237",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []
@@ -4819,8 +4819,8 @@
             "original_github_normalize"
           ],
           "observation": "assert_equal \"david-gh\", users(:david).reload.github_login",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []
@@ -4850,8 +4850,8 @@
             "original_github_unlink"
           ],
           "observation": "assert_redirected_to user_profile_url",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:237",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:237",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:246",
           "assertion_anchor": "assert_eq!(",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []
@@ -4866,8 +4866,8 @@
             "original_github_unlink"
           ],
           "observation": "assert_nil users(:david).reload.github_login",
-          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
-          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:256",
+          "assertion_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
+          "rust_source": "rust/crates/campfire/src/controllers/users/profile_settings_tests.rs:265",
           "assertion_anchor": "assert_eq!(state, case[\"state\"], \"{}\", case[\"name\"]);",
           "assertion_scope": "run_profile_vectors",
           "additional_assertion_sources": []

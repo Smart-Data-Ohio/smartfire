@@ -94,6 +94,11 @@ async fn manual_timezone_choice_is_rendered_and_blocks_browser_detection() {
         .write(Req::new(Method::PATCH, "/users/me/profile").form(&[("user[time_zone]", "")]))
         .await;
     assert_eq!(clear.status, StatusCode::FOUND);
+    let cleared: (Option<String>, bool) = app.db().read(|conn| {
+        Ok(conn.query_row("SELECT time_zone,time_zone_explicit FROM users WHERE id=?", [DAVID],
+            |r| Ok((r.get(0)?, r.get(1)?)))?)
+    }).await.unwrap();
+    assert_eq!(cleared, (None, true), "clear the previously selected zone and retain the explicit choice");
     let profile = browser.get("/users/me/profile").await;
     assert_eq!(profile.status, StatusCode::OK);
     assert!(
@@ -208,8 +213,12 @@ async fn run_profile_vectors(selected: Option<&str>) {
             tx.conn().execute("DELETE FROM github_connected_accounts WHERE user_id=?",[DAVID])?;
             if let Some(before)=case["before"].as_object() {
                 for (key,value) in before {
-                    assert!(["theme","inbox_preferences","github_login"].contains(&key.as_str()));
-                    let value=value.as_str().map(str::to_owned).unwrap_or_else(||value.to_string());
+                    assert!(["theme","inbox_preferences","github_login","time_zone","time_zone_explicit"].contains(&key.as_str()));
+                    let value = match value {
+                        serde_json::Value::Bool(value) => rusqlite::types::Value::Integer(i64::from(*value)),
+                        serde_json::Value::String(value) => rusqlite::types::Value::Text(value.clone()),
+                        value => rusqlite::types::Value::Text(value.to_string()),
+                    };
                     tx.conn().execute(&format!("UPDATE users SET {key}=? WHERE id=?"),rusqlite::params![value,DAVID])?;
                 }
             }

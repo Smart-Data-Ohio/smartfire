@@ -19,7 +19,7 @@ initial={name:"David",bio:nil,theme:"system",text_size:"default",time_zone:nil,t
 cases=[
  ["appearance",{theme:"dark",time_zone:"America/New_York"}],
  ["text_size",{text_size:"larger"}], ["legacy_zone",{time_zone:"Pacific Time (US & Canada)"}],
- ["not_set",{time_zone:""}], ["nil_zone",{time_zone:nil}], ["zone_array",{time_zone:["America/New_York"]}],
+ ["not_set",{time_zone:""},{time_zone:"America/New_York",time_zone_explicit:true}], ["nil_zone",{time_zone:nil}], ["zone_array",{time_zone:["America/New_York"]}],
  ["bad_theme",{theme:"neon"}], ["bad_zone",{time_zone:"Narnia"}], ["bad_text",{text_size:"huge"}],
  ["voice",{voice_mode:"push_to_talk",push_to_talk_key:"  CapsLock  "}],
  ["bad_voice",{voice_mode:"unknown"}], ["long_key",{push_to_talk_key:"x"*21}],
