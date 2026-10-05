@@ -39,6 +39,14 @@ on:
         type: string
         required: false
         default: ''
+      scope:
+        description: Jobs to run for this manual check
+        type: choice
+        required: false
+        default: full
+        options:
+          - full
+          - messaging-and-browsers
 
 permissions: {}
 
@@ -52,6 +60,7 @@ jobs:
   rust:
     # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.
     name: Rust port
+    if: inputs.scope != 'messaging-and-browsers'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -176,6 +185,7 @@ jobs:
       fail-fast: false
       matrix:
         suite: [database, acme, browsers, livekit, messaging, agents-ui]
+        exclude: ${{ inputs.scope == 'messaging-and-browsers' && fromJSON('[{"suite":"database"},{"suite":"acme"},{"suite":"livekit"},{"suite":"agents-ui"}]') || fromJSON('[]') }}
     env:
       CI: "true"
       RUST_CI_IMAGE: campfire-toolchain
