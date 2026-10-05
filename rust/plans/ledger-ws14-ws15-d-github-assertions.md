@@ -153,7 +153,7 @@ Rails declaration: `test/controllers/github/connections_controller_test.rb:71` â
 
 Executed test: `campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected`.
 
-Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
+Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -172,7 +172,7 @@ Rails declaration: `test/controllers/github/connections_controller_test.rb:86` â
 
 Executed test: `campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_profile_verified_login_rejects_edit_until_disconnected`.
 
-Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
+Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -187,7 +187,7 @@ Rails declaration: `test/controllers/github/connections_controller_test.rb:144` 
 
 Executed test: `campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_request_logs_filter_link_comment_and_review_credentials`.
 
-Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
+Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -202,7 +202,7 @@ Rails declaration: `test/controllers/github/connections_controller_test.rb:156` 
 
 Executed test: `campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_request_logs_filter_link_comment_and_review_credentials`.
 
-Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
+Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -326,7 +326,7 @@ Rails declaration: `test/controllers/rooms/github/pull_request_cards_controller_
 
 Executed test: `campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached`.
 
-Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
+Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|
@@ -346,7 +346,7 @@ Rails declaration: `test/controllers/rooms/github/pull_request_cards_controller_
 
 Executed test: `campfire::bin/campfire controllers::github::cutover_d_tests::cutover_d_private_card_relink_retires_denial_and_transport_error_is_not_cached`.
 
-Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
+Original Rails fixtures, explicit variants and mutation starting state; real signed HTTP, original model API, registered durable jobs, rendered markup or subscribed Action Cable. Counts retain Rails room/agent/source scope. External GitHub responses are the only fake boundary. The sign-in helper executes GET /test_session with real fixture credentials, production verified-session/cookie writers and an issued-cookie assertion. The sudo helper executes form-encoded POST /sudo with the fixture password, requires the real redirect and carries the returned confirmation state into the action.
 
 | Rails assertion | Discriminating Rust assertion |
 |---|---|

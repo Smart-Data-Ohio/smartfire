@@ -87,3 +87,21 @@ python3 -m unittest discover -s rust/reference-tools/messaging -p browser_host_t
 ```
 
 **4 passed, 0 failed.** A separate cold copy of the actual tracked source verified **648 literal campfire compile-time inputs** byte-for-byte; its 260 MB generated scratch tree was deleted. This Python-only repair changes no Rust source or assertion coordinates; the restored 104-test/clippy receipts above remain applicable. Ledger, per-assertion and ignore-registry checks were rerun before the user's pre-approved CI-fix push and dispatch of a new full matrix.
+
+## Final Rails form fidelity correction
+
+The full matrix for CI-repair head `89b05e16555630f25bc53df3cefbb3ad19a5c723` finished green: [37319620470](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37319620470), **7/7 jobs**, including Rust port and all 53 original browser wrappers. Checkout logs verified the candidate head.
+
+A final exact-setup check found that GitHub's sudo helper used JSON while Rails submits form parameters. The correction sends real form-encoded POST `/sudo` with the same fixture password, cookies, CSRF, redirect assertion and returned session. It affects **WS15g-011/012/013/014/023/024**. Root sudo setup already used form parameters. Existing assertion coordinates are unchanged; Astra approved the correction. No producer behavior fix was needed.
+
+```bash
+CI=true CARGO_BUILD_JOBS=2 PATH="$PWD/target/ledger-d-tools:$PATH" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(controllers::github::cutover_d_tests::)' --no-fail-fast --success-output immediate --failure-output immediate
+```
+
+**23 passed, 0 failed, 3124 skipped (19.316s)**, after restoring the producer. SHA256: `0853318f79bc4b530a2ca6d66874c3549195dc47196e315777b289e152306f93`. Strict four-crate clippy was rerun with the earlier exact command: **passed, zero warnings**; SHA256: `c4646c5fae404e6d7023b89107c40175fad89d17367d91d3f7fc66f03734e050`. Helper inventory 10/10 and generated-host regressions 4/4 were rerun; ledger, assertion, original-browser and ignored-test checkers passed.
+
+```bash
+python3 rust/reference-tools/cutover/mutation-check.py rust/reference-tools/cutover/d-review252-form-mutations.json rust/target/ledger-d-tools/review252-form-mutations -- rust/target/ledger-d-tools/cargo-env
+```
+
+The additional form-only sudo-password producer mutation was **killed at `github/cutover_d_tests.rs:72`**; JSON requests remain accepted by that fault. Restored source hashes match exactly. Its separate [receipt](ledger-ws14-ws15-d-review252-form-mutations.json) preserves the earlier nine review receipts. Review follow-up total: **10/10 executions killed across 9 distinct declarations, including 8 of the 27 helper-gap declarations**. All 127 closures remain closed with 547 direct and 142 helper assertions, zero unmapped.

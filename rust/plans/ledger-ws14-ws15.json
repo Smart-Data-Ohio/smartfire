@@ -23760,14 +23760,24 @@
           "failed": 0,
           "skipped": 4500,
           "elapsed": "125.341s"
+        },
+        {
+          "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(controllers::github::cutover_d_tests::)' --no-fail-fast --success-output immediate --failure-output immediate",
+          "cwd": "rust",
+          "raw_log": "rust/target/ledger-d-tools/review252-form-restored.log",
+          "raw_log_sha256": "0853318f79bc4b530a2ca6d66874c3549195dc47196e315777b289e152306f93",
+          "passed": 23,
+          "failed": 0,
+          "skipped": 3124,
+          "elapsed": "19.316s"
         }
       ],
       "clippy": {
         "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo clippy --locked -p campfire -p campfire_db -p campfire_views -p rails_compat --all-targets -- -D warnings",
         "cwd": "rust",
         "exit_code": 0,
-        "raw_log": "rust/target/ledger-d-tools/review252-clippy.log",
-        "raw_log_sha256": "cddbe165918925805914ae59e63b4da65a0907697cab9c7a43153d536056e0cb"
+        "raw_log": "rust/target/ledger-d-tools/review252-form-clippy.log",
+        "raw_log_sha256": "c4646c5fae404e6d7023b89107c40175fad89d17367d91d3f7fc66f03734e050"
       },
       "mutation_receipt": "rust/plans/ledger-ws14-ws15-d-mutations.json",
       "mutation_attempts": 34,
@@ -23845,7 +23855,43 @@
           "raw_log_sha256": "f548043f767bd77162b3d6f752df4054872c51ed2b59acffc393a2227f7c813a",
           "real_generated_host_literal_inputs_verified": 648,
           "rust_sources_unchanged": true,
-          "push_exception": "User explicitly pre-approved a second push to fix CI."
+          "push_exception": "User explicitly pre-approved a second push to fix CI.",
+          "verified_matrix": {
+            "head": "89b05e16555630f25bc53df3cefbb3ad19a5c723",
+            "run_url": "https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37319620470",
+            "conclusion": "success",
+            "jobs_passed": 7,
+            "jobs_failed": 0,
+            "checkout_verified": true,
+            "original_browser_wrappers_passed": 53
+          }
+        },
+        "form_fidelity_fix": {
+          "affected_closures": [
+            "WS15g-011",
+            "WS15g-012",
+            "WS15g-013",
+            "WS15g-014",
+            "WS15g-023",
+            "WS15g-024"
+          ],
+          "reason": "Rails sudo helper submits form parameters; former GitHub helper submitted JSON.",
+          "request": "POST /sudo; application/x-www-form-urlencoded; password=secret123456",
+          "restored_targeted_nextest": {
+            "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire -j 4 -E 'test(controllers::github::cutover_d_tests::)' --no-fail-fast --success-output immediate --failure-output immediate",
+            "cwd": "rust",
+            "raw_log": "rust/target/ledger-d-tools/review252-form-restored.log",
+            "raw_log_sha256": "0853318f79bc4b530a2ca6d66874c3549195dc47196e315777b289e152306f93",
+            "passed": 23,
+            "failed": 0,
+            "skipped": 3124,
+            "elapsed": "19.316s"
+          },
+          "mutation_receipt": "rust/plans/ledger-ws14-ws15-d-review252-form-mutations.json",
+          "mutation_attempts": 1,
+          "mutation_killed": 1,
+          "production_restored": true,
+          "independent_review": "Astra approved source correction and unchanged assertion coordinates."
         }
       },
       "pre_review252_clippy": {
@@ -23854,6 +23900,13 @@
         "exit_code": 0,
         "raw_log": "rust/target/ledger-d-tools/clippy-main-merged.log",
         "raw_log_sha256": "26d15a94b9306380f2f480374db444aab97a2044942d53b9f46430d4793604eb"
+      },
+      "pre_form_fidelity_clippy": {
+        "command": "CI=true CARGO_BUILD_JOBS=2 PATH=\"$PWD/target/ledger-d-tools:$PATH\" mise exec rust@1.98.1 -- cargo clippy --locked -p campfire -p campfire_db -p campfire_views -p rails_compat --all-targets -- -D warnings",
+        "cwd": "rust",
+        "exit_code": 0,
+        "raw_log": "rust/target/ledger-d-tools/review252-clippy.log",
+        "raw_log_sha256": "cddbe165918925805914ae59e63b4da65a0907697cab9c7a43153d536056e0cb"
       }
     }
   }

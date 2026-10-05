@@ -61,11 +61,11 @@ async fn as_user(f: &mut Fresh, user: i64) {
         .join("; ");
 }
 async fn grant_sudo_access(f: &Fresh) -> Value {
-    let (status, headers, _) = request(
+    let (status, headers, _) = super::test_support::request_form(
         f,
         "POST",
         "/sudo",
-        json!({"password":"secret123456"}),
+        &[("password", "secret123456")],
         json!({}),
     )
     .await;
