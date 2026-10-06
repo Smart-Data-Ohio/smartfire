@@ -2,10 +2,13 @@ import { describe, expect, it } from "@effect/vitest";
 import { DateTime, Effect, Exit, Schema } from "effect";
 import { ApiErrorResponse, NotFound, RateLimited, Validation } from "../errors.ts";
 import { Me } from "./me.ts";
-import { MessageDTO } from "./message.ts";
-import { Membership, Room } from "./room.ts";
+import { CreateMessage, MessageDTO, MessagePage } from "./message.ts";
+import { PresenceList } from "./presence.ts";
+import { ReadState } from "./read.ts";
+import { Membership, Room, RoomDetail } from "./room.ts";
+import { Sidebar } from "./sidebar.ts";
 import { ClientFrame, ServerFrame } from "./sync.ts";
-import { User } from "./user.ts";
+import { User, UserList } from "./user.ts";
 
 // The wire JSON below mirrors crates/api_types/src/tests.rs.
 const userJson = {
@@ -17,7 +20,7 @@ const userJson = {
   avatarUrl: "/users/7/avatar?v=1700000000",
   customStatus: { emoji: "🌴", text: "On a beach", expiresAt: null },
   createdAt: "2026-09-26T12:26:46.848Z",
-};
+} as const;
 
 const messageJson = {
   id: 9001,
@@ -36,7 +39,42 @@ const messageJson = {
   editedAt: null,
   createdAt: "2026-10-06T09:15:00.123Z",
   updatedAt: "2026-10-06T09:15:00.123Z",
-};
+} as const;
+
+const roomJson = {
+  id: 12,
+  kind: "open",
+  name: "general",
+  iconName: null,
+  creatorId: 7,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-10-06T09:15:00.123Z",
+} as const;
+
+const membershipJson = {
+  id: 40,
+  roomId: 12,
+  userId: 7,
+  involvement: "mentions",
+  unreadAt: "2026-10-06T09:15:00.123Z",
+  lastReadMessageId: 8999,
+  roomCategoryId: null,
+  favoritePosition: 0,
+  stageRole: "host",
+} as const;
+
+const sidebarRowJson = {
+  room: roomJson,
+  membership: membershipJson,
+  displayName: "general",
+  directMemberIds: [],
+  unreadCount: 4,
+  mentionCount: 1,
+} as const;
+
+/** Decoding then encoding gives back exactly the wire JSON. */
+const roundTrips = <S extends Schema.Codec<unknown, unknown>>(schema: S, wire: S["Encoded"]) =>
+  expect(Schema.encodeSync(schema)(Schema.decodeUnknownSync(schema)(wire))).toEqual(wire);
 
 describe("DTO schemas", () => {
   it("decodes a message to branded ids and DateTime values and encodes it back unchanged", () => {
@@ -64,28 +102,7 @@ describe("DTO schemas", () => {
       doNotDisturb: { enabled: true, until: "2026-10-06T17:00:00.000Z" },
       quietHours: { startMinute: 1320, endMinute: 420 },
       outOfOffice: null,
-    };
-
-    const roomJson = {
-      id: 12,
-      kind: "open",
-      name: "general",
-      iconName: null,
-      creatorId: 7,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      updatedAt: "2026-10-06T09:15:00.123Z",
-    };
-
-    const membershipJson = {
-      id: 40,
-      roomId: 12,
-      userId: 7,
-      involvement: "mentions",
-      unreadAt: "2026-10-06T09:15:00.123Z",
-      lastReadMessageId: 8999,
-      roomCategoryId: null,
-      favoritePosition: 0,
-      stageRole: "host",
+      lastRoomId: 12,
     };
 
     expect(Schema.encodeSync(Me)(Schema.decodeUnknownSync(Me)(meJson))).toEqual(meJson);
@@ -93,6 +110,44 @@ describe("DTO schemas", () => {
     expect(
       Schema.encodeSync(Membership)(Schema.decodeUnknownSync(Membership)(membershipJson)),
     ).toEqual(membershipJson);
+  });
+
+  it("round-trips the S1 shapes: room detail, message page, sidebar, reads and presence", () => {
+    roundTrips(RoomDetail, {
+      room: roomJson,
+      membership: membershipJson,
+      displayName: "general",
+      memberCount: 23,
+      pinsCount: 2,
+      directMemberIds: [],
+      memberPreviewIds: [7],
+      users: [userJson],
+      unread: { firstUnreadMessageId: 9000, count: 4 },
+    });
+    roundTrips(MessagePage, {
+      messages: [messageJson],
+      users: [userJson],
+      before: 9001,
+      after: null,
+    });
+    roundTrips(CreateMessage, {
+      clientMessageId: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11",
+      markdownSource: "Ship it",
+      replyToMessageId: null,
+      replyNotifyAuthor: null,
+    });
+    roundTrips(Sidebar, {
+      rows: [sidebarRowJson],
+      categories: [{ id: 3, name: "Projects", collapsed: false, position: 0 }],
+      users: [userJson],
+      directPlaceholderUserIds: [7],
+      canCreateRooms: true,
+    });
+    roundTrips(ReadState, { roomId: 12, unread: true, firstUnreadMessageId: 9000 });
+    roundTrips(UserList, { users: [userJson] });
+    roundTrips(PresenceList, {
+      presences: [{ userId: 7, presence: "dnd", statusText: "In a meeting" }],
+    });
   });
 
   it("rejects an omitted nullable key, a fractional id and an unknown literal", () => {
@@ -125,7 +180,10 @@ describe("sync frames", () => {
     };
 
     expect(Schema.decodeUnknownSync(ClientFrame)(hello)).toEqual(hello);
-    expect(Schema.decodeUnknownSync(ClientFrame)({ t: "hb" })).toEqual({ t: "hb" });
+    expect(Schema.decodeUnknownSync(ClientFrame)({ t: "hb", active: true })).toEqual({
+      t: "hb",
+      active: true,
+    });
     expect(() => Schema.decodeUnknownSync(ClientFrame)({ t: "present" })).toThrowError();
   });
 
@@ -135,6 +193,26 @@ describe("sync frames", () => {
       events: [
         { seq: 48212, topic: "room:12", type: "message.created", data: messageJson },
         { seq: 48213, topic: "room:12", type: "typing", data: { userId: 7, on: false } },
+        {
+          seq: 48214,
+          topic: "user",
+          type: "room.unread",
+          data: { roomId: 12, messageId: 9001, mentioned: true },
+        },
+        { seq: 48215, topic: "user", type: "room.read", data: { roomId: 12 } },
+        {
+          seq: 48216,
+          topic: "user",
+          type: "sidebar.row.upserted",
+          data: sidebarRowJson,
+        },
+        { seq: 48217, topic: "user", type: "sidebar.row.removed", data: { roomId: 12 } },
+        {
+          seq: 48218,
+          topic: "user",
+          type: "presence",
+          data: { userId: 7, presence: "idle", statusText: null },
+        },
       ],
     });
 
@@ -142,7 +220,13 @@ describe("sync frames", () => {
     expect(frame.t === "batch" && frame.events.map((event) => event.type)).toEqual([
       "message.created",
       "typing",
+      "room.unread",
+      "room.read",
+      "sidebar.row.upserted",
+      "sidebar.row.removed",
+      "presence",
     ]);
+    expect(Schema.decodeUnknownSync(ServerFrame)({ t: "ping" })).toEqual({ t: "ping" });
   });
 });
 

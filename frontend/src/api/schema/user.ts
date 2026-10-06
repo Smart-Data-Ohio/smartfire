@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { CustomStatus as GeneratedCustomStatus } from "../../gen/CustomStatus.ts";
 import type { User as GeneratedUser } from "../../gen/User.ts";
+import type { UserList as GeneratedUserList } from "../../gen/UserList.ts";
 import type { UserRole as GeneratedUserRole } from "../../gen/UserRole.ts";
 import type { UserStatus as GeneratedUserStatus } from "../../gen/UserStatus.ts";
 import { UserId } from "./ids.ts";
@@ -38,3 +39,10 @@ export const User = Schema.Struct({
 export type User = typeof User.Type;
 
 export type UserPin = Assert<Pinned<typeof User, GeneratedUser>>;
+
+/** `GET /api/v1/users?ids=`: directory entries for up to 100 ids, in id order. */
+export const UserList = Schema.Struct({ users: Schema.Array(User) });
+
+export type UserList = typeof UserList.Type;
+
+export type UserListPin = Assert<Pinned<typeof UserList, GeneratedUserList>>;

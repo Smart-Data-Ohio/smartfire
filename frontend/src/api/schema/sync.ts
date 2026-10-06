@@ -8,6 +8,9 @@ import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
 import type { Assert, Pinned } from "./pin.ts";
+import { UserPresence } from "./presence.ts";
+import { RoomRead, RoomUnread } from "./read.ts";
+import { SidebarRow, SidebarRowRemoved } from "./sidebar.ts";
 
 /** A sync topic: `user`, `room:<id>` or `thread:<id>`. */
 const Topic = Schema.String;
@@ -31,7 +34,7 @@ export const ClientFrame = Schema.Union([
   Schema.Struct({ t: Schema.Literal("typing"), conv: Topic, on: Schema.Boolean }),
   Schema.Struct({ t: Schema.Literal("present"), room: RoomId }),
   Schema.Struct({ t: Schema.Literal("absent"), room: RoomId }),
-  Schema.Struct({ t: Schema.Literal("hb") }),
+  Schema.Struct({ t: Schema.Literal("hb"), active: Schema.Boolean }),
 ]);
 
 export type ClientFrame = typeof ClientFrame.Type;
@@ -48,35 +51,45 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("message.updated"), data: MessageDTO }),
   Schema.Struct({ type: Schema.Literal("message.removed"), data: MessageRemoved }),
   Schema.Struct({ type: Schema.Literal("typing"), data: Typing }),
+  Schema.Struct({ type: Schema.Literal("room.unread"), data: RoomUnread }),
+  Schema.Struct({ type: Schema.Literal("room.read"), data: RoomRead }),
+  Schema.Struct({ type: Schema.Literal("sidebar.row.upserted"), data: SidebarRow }),
+  Schema.Struct({ type: Schema.Literal("sidebar.row.removed"), data: SidebarRowRemoved }),
+  Schema.Struct({ type: Schema.Literal("presence"), data: UserPresence }),
 ]);
+
+export type SyncPayload = typeof SyncPayload.Type;
 
 export type SyncPayloadPin = Assert<Pinned<typeof SyncPayload, GeneratedSyncPayload>>;
 
 const eventFields = { seq: Schema.Int, topic: Topic };
 
-/** One event in a batch: the hub's sequence, its topic, and the payload's `type` and `data`. */
+/**
+ * One event in a batch: the hub's sequence, its topic, and the payload's `type` and `data`.
+ * Kept in step with `SyncPayload` above (the pins fail otherwise).
+ */
 export const SyncEvent = Schema.Union([
-  Schema.Struct({
-    ...eventFields,
-    type: Schema.Literal("message.created"),
-    data: MessageDTO,
-  }),
-  Schema.Struct({
-    ...eventFields,
-    type: Schema.Literal("message.updated"),
-    data: MessageDTO,
-  }),
-  Schema.Struct({
-    ...eventFields,
-    type: Schema.Literal("message.removed"),
-    data: MessageRemoved,
-  }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("message.created"), data: MessageDTO }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("message.updated"), data: MessageDTO }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("message.removed"), data: MessageRemoved }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("typing"), data: Typing }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("room.unread"), data: RoomUnread }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("room.read"), data: RoomRead }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("sidebar.row.upserted"), data: SidebarRow }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("sidebar.row.removed"),
+    data: SidebarRowRemoved,
+  }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("presence"), data: UserPresence }),
 ]);
 
 export type SyncEvent = typeof SyncEvent.Type;
 
 export type SyncEventPin = Assert<Pinned<typeof SyncEvent, GeneratedSyncEvent>>;
+
+/** The `type` of every event this client understands. */
+export type SyncEventType = SyncEvent["type"];
 
 /** A frame the server sends on `/api/v1/sync`. */
 export const ServerFrame = Schema.Union([
@@ -89,6 +102,7 @@ export const ServerFrame = Schema.Union([
   Schema.Struct({ t: Schema.Literal("batch"), events: Schema.Array(SyncEvent) }),
   Schema.Struct({ t: Schema.Literal("resync"), topics: Topics, reason: Schema.String }),
   Schema.Struct({ t: Schema.Literal("bye"), reconnect: Schema.Boolean, reason: Schema.String }),
+  Schema.Struct({ t: Schema.Literal("ping") }),
 ]);
 
 export type ServerFrame = typeof ServerFrame.Type;

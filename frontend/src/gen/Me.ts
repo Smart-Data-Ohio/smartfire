@@ -17,4 +17,10 @@ quietHours: QuietHours | null,
 /**
  * `null` when not out of office.
  */
-outOfOffice: OutOfOffice | null, };
+outOfOffice: OutOfOffice | null, 
+/**
+ * Where `/app/` opens: the room in the `last_room` cookie if the person is still a member
+ * (`last_room_visited`), else their original room (`Room::original_for_user`); `null` when
+ * they belong to no room.
+ */
+lastRoomId: number | null, };

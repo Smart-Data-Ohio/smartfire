@@ -33,6 +33,12 @@ export class Conflict extends Schema.TaggedError<Conflict>()("Conflict", {
   message: Schema.String,
 }) {}
 
+/** 422: the CSRF token was missing or stale. The client refreshes it and retries once. */
+export class InvalidAuthenticityToken extends Schema.TaggedError<InvalidAuthenticityToken>()(
+  "InvalidAuthenticityToken",
+  { message: Schema.String },
+) {}
+
 /** 422: `fields` maps each attribute to its messages. */
 export class Validation extends Schema.TaggedError<Validation>()("Validation", {
   message: Schema.String,
@@ -53,6 +59,7 @@ export const ApiError = Schema.Union([
   TwoFactorRequired,
   NotFound,
   Conflict,
+  InvalidAuthenticityToken,
   Validation,
   RateLimited,
 ]);

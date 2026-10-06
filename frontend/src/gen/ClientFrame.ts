@@ -4,4 +4,4 @@ import type { ResumePoint } from "./ResumePoint";
 /**
  * A frame the client sends.
  */
-export type ClientFrame = { "t": "hello", v: number, resume: ResumePoint | null, topics: Array<string>, } | { "t": "sub", topics: Array<string>, } | { "t": "unsub", topics: Array<string>, } | { "t": "typing", conv: string, on: boolean, } | { "t": "present", room: number, } | { "t": "absent", room: number, } | { "t": "hb" };
+export type ClientFrame = { "t": "hello", v: number, resume: ResumePoint | null, topics: Array<string>, } | { "t": "sub", topics: Array<string>, } | { "t": "unsub", topics: Array<string>, } | { "t": "typing", conv: string, on: boolean, } | { "t": "present", room: number, } | { "t": "absent", room: number, } | { "t": "hb", active: boolean, };
