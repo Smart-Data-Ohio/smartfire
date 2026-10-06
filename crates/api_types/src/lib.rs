@@ -33,6 +33,7 @@ mod read;
 mod room;
 mod saved;
 mod search;
+mod settings;
 mod sidebar;
 mod switcher;
 mod sync;
@@ -90,6 +91,13 @@ pub use search::{
     RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
+pub use settings::{
+    AppearanceSettings, CallSettings, Connection, DndAllowedPerson, GoogleIntegration, InboxSwitch,
+    IntegrationSettings, NotificationSettings, OooPreset, ProfileSettings, PushSubscriptionInfo,
+    PushSubscriptionList, SessionInfo, SessionList, Settings, StatusExpiry, StatusSettings,
+    TimeZoneChoice, UpdateAppearance, UpdateAvatar, UpdateCalls, UpdateNotifications, UpdateProfile,
+    UpdateStatus,
+};
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
 pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
@@ -111,3 +119,4 @@ mod tests;
 mod tests_s2;
 #[cfg(test)]
 mod tests_s3;
+mod tests_s7;
