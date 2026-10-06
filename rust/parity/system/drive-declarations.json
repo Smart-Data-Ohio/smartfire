@@ -1,0 +1,276 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "about": "The pinned Rails system-test declarations parity/system/{drive-*,events}.test.mjs port, one per Rust test in crates/campfire/src/controllers/drive_browser_tests.rs.",
+  "records": [
+    {
+      "id": "WS14e-101",
+      "file": "test/system/events_test.rb",
+      "line": 102,
+      "title": "scheduling an event announces it in the room with a card members respond from"
+    },
+    {
+      "id": "WS14g-224",
+      "file": "test/system/drive_attachments_test.rb",
+      "line": 10,
+      "title": "attach Drive files from the picker, send textless, and remove through edit"
+    },
+    {
+      "id": "WS14g-225",
+      "file": "test/system/drive_attachments_test.rb",
+      "line": 79,
+      "title": "edit a room message in the composer and remove one of two attachments"
+    },
+    {
+      "id": "WS14g-226",
+      "file": "test/system/drive_attachments_test.rb",
+      "line": 116,
+      "title": "attach a Drive file from the thread composer"
+    },
+    {
+      "id": "WS14g-227",
+      "file": "test/system/drive_link_previews_test.rb",
+      "line": 10,
+      "title": "a viewer with the Drive scope sees a picked file upgraded to a preview chip"
+    },
+    {
+      "id": "WS14g-228",
+      "file": "test/system/drive_link_previews_test.rb",
+      "line": 24,
+      "title": "a viewer with the Drive scope keeps a plain chip for a file never picked"
+    },
+    {
+      "id": "WS14g-229",
+      "file": "test/system/drive_link_previews_test.rb",
+      "line": 36,
+      "title": "a viewer without the Drive scope sees a plain chip and fetches nothing"
+    },
+    {
+      "id": "WS14g-230",
+      "file": "test/system/drive_link_previews_test.rb",
+      "line": 51,
+      "title": "composer Drive picker inserts the chosen file link at the caret"
+    },
+    {
+      "id": "WS14g-232",
+      "file": "test/system/drive_share_test.rb",
+      "line": 115,
+      "title": "review dialog offers attach-only and an explicit grant with names and emails"
+    },
+    {
+      "id": "WS14g-233",
+      "file": "test/system/drive_share_test.rb",
+      "line": 150,
+      "title": "attach-only pins the chip and writes no Drive permissions"
+    },
+    {
+      "id": "WS14g-234",
+      "file": "test/system/drive_share_test.rb",
+      "line": 178,
+      "title": "grant validates, preserves writers, and creates only missing readers"
+    },
+    {
+      "id": "WS14g-235",
+      "file": "test/system/drive_share_test.rb",
+      "line": 220,
+      "title": "partial failure reports per recipient and retries only outstanding grants"
+    },
+    {
+      "id": "WS14g-236",
+      "file": "test/system/drive_share_test.rb",
+      "line": 256,
+      "title": "cancelled picker selection shares nothing and can be retried"
+    },
+    {
+      "id": "WS14g-237",
+      "file": "test/system/drive_share_test.rb",
+      "line": 273,
+      "title": "cancelled Google authorization shares nothing and can be retried"
+    },
+    {
+      "id": "WS14g-238",
+      "file": "test/system/drive_share_test.rb",
+      "line": 289,
+      "title": "picker cancel returns quietly and the drive button works again"
+    },
+    {
+      "id": "WS14g-239",
+      "file": "test/system/drive_share_test.rb",
+      "line": 307,
+      "title": "closed consent popup returns quietly to the composer"
+    },
+    {
+      "id": "WS14g-240",
+      "file": "test/system/drive_share_test.rb",
+      "line": 324,
+      "title": "consent popup closed via GIS error callback returns quietly"
+    },
+    {
+      "id": "WS14g-241",
+      "file": "test/system/drive_share_test.rb",
+      "line": 340,
+      "title": "real error dialog closes with the Close button and the drive button works again"
+    },
+    {
+      "id": "WS14g-242",
+      "file": "test/system/drive_share_test.rb",
+      "line": 362,
+      "title": "real error dialog closes with Esc"
+    },
+    {
+      "id": "WS14g-243",
+      "file": "test/system/drive_share_test.rb",
+      "line": 377,
+      "title": "try again re-opens the picker after a real error"
+    },
+    {
+      "id": "WS14g-244",
+      "file": "test/system/drive_share_test.rb",
+      "line": 396,
+      "title": "script load failure offers retry without hanging the composer"
+    },
+    {
+      "id": "WS14g-245",
+      "file": "test/system/drive_share_test.rb",
+      "line": 412,
+      "title": "first use loads scripts then continues on a fresh gesture"
+    },
+    {
+      "id": "WS14g-246",
+      "file": "test/system/drive_share_test.rb",
+      "line": 426,
+      "title": "unshareable file disables the grant but keeps attach-only"
+    },
+    {
+      "id": "WS14g-247",
+      "file": "test/system/drive_share_test.rb",
+      "line": 443,
+      "title": "folder selection disables the grant but keeps attach-only"
+    },
+    {
+      "id": "WS14g-248",
+      "file": "test/system/drive_share_test.rb",
+      "line": 461,
+      "title": "expired Google session reconnects on an explicit gesture and continues"
+    },
+    {
+      "id": "WS14g-249",
+      "file": "test/system/drive_share_test.rb",
+      "line": 484,
+      "title": "grant rejects a recipient who left mid-review and refreshes the list"
+    },
+    {
+      "id": "WS14g-250",
+      "file": "test/system/drive_share_test.rb",
+      "line": 508,
+      "title": "thread composer grants against the parent room membership"
+    },
+    {
+      "id": "WS14g-251",
+      "file": "test/system/drive_share_test.rb",
+      "line": 542,
+      "title": "navigation disposes the dialog, token, and picker state"
+    },
+    {
+      "id": "WS14g-252",
+      "file": "test/system/drive_share_test.rb",
+      "line": 563,
+      "title": "mobile viewport keeps the review dialog usable"
+    },
+    {
+      "id": "WS14g-253",
+      "file": "test/system/drive_share_test.rb",
+      "line": 594,
+      "title": "grant requires fresh review when a recipient email changes"
+    },
+    {
+      "id": "WS14g-254",
+      "file": "test/system/drive_share_test.rb",
+      "line": 617,
+      "title": "changed identity can be re-approved against the new email"
+    },
+    {
+      "id": "WS14g-255",
+      "file": "test/system/drive_share_test.rb",
+      "line": 634,
+      "title": "retry revalidates membership before writing"
+    },
+    {
+      "id": "WS14g-256",
+      "file": "test/system/drive_share_test.rb",
+      "line": 663,
+      "title": "reconnect revalidates before resuming grants"
+    },
+    {
+      "id": "WS14g-257",
+      "file": "test/system/drive_share_test.rb",
+      "line": 687,
+      "title": "cancelled authorization invalidates a delayed token callback"
+    },
+    {
+      "id": "WS14g-258",
+      "file": "test/system/drive_share_test.rb",
+      "line": 716,
+      "title": "cancelled picker invalidates a delayed selection callback"
+    },
+    {
+      "id": "WS14g-259",
+      "file": "test/system/drive_share_test.rb",
+      "line": 735,
+      "title": "grant is blocked when attachments are already full"
+    },
+    {
+      "id": "WS14g-260",
+      "file": "test/system/drive_share_test.rb",
+      "line": 770,
+      "title": "mid-flight capacity loss preserves grant outcomes"
+    },
+    {
+      "id": "WS14g-261",
+      "file": "test/system/drive_share_test.rb",
+      "line": 796,
+      "title": "rate-limited grants are classified and retry cleanly"
+    },
+    {
+      "id": "WS14g-262",
+      "file": "test/system/drive_share_test.rb",
+      "line": 822,
+      "title": "dialog checkboxes are visible and long names wrap"
+    },
+    {
+      "id": "WS14g-263",
+      "file": "test/system/drive_share_test.rb",
+      "line": 854,
+      "title": "retry does not write while attachment capacity is unavailable"
+    },
+    {
+      "id": "WS14g-264",
+      "file": "test/system/drive_share_test.rb",
+      "line": 895,
+      "title": "completed outcomes stay visible through reconnect and refreshed review"
+    },
+    {
+      "id": "WS14g-265",
+      "file": "test/system/drive_share_test.rb",
+      "line": 928,
+      "title": "reconciled access is confirmed, not claimed as newly granted"
+    },
+    {
+      "id": "WS14g-266",
+      "file": "test/system/drive_share_test.rb",
+      "line": 958,
+      "title": "existing and reconciled access are distinguished with no new grants"
+    },
+    {
+      "id": "WS14g-267",
+      "file": "test/system/drive_share_test.rb",
+      "line": 986,
+      "title": "server errors are classified as service failures, not policy denials"
+    },
+    {
+      "id": "WS14g-272",
+      "file": "test/system/sudo_mode_test.rb",
+      "line": 8,
+      "title": "one prompt, then the action continues automatically"
+    }
+  ]
+}

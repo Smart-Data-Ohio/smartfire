@@ -15,7 +15,7 @@ struct Brand {
     #[serde(default)]
     aliases: Vec<String>,
 }
-pub(crate) const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
+const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
 static BRANDS: LazyLock<Vec<Brand>> =
     LazyLock::new(|| serde_yaml::from_str(ICON_CONFIG).expect("vendored config/icons.yml"));
 /// Icons.client_icon_names: canonical brands and their aliases in YAML order, then custom

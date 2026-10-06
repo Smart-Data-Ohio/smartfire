@@ -32,3 +32,13 @@ export const actionMutations=[
   ['forwarding twice in a row submits only once',[actions,'this.forwardSubmitTarget.disabled = true','this.forwardSubmitTarget.disabled = false']],
   ['groups emoji reactions, updates the live count, and highlights the current user',['boost-create-response']],
 ];
+// On open, an idle sibling composer gains a hidden context while the active
+// composer's context is shown: only an unscoped hidden-context check passes.
+export const RELEASE_SCOPE_MUTATION=[list,
+  'this.#suppressClickUntil = Date.now() + SUPPRESS_CLICK_MS',
+  `this.#suppressClickUntil = Date.now() + SUPPRESS_CLICK_MS; {
+    const context=document.querySelector('#composer [data-composer-target="context"]');
+    const sibling=document.createElement('form');sibling.id='ws8bm-idle-composer';
+    const idle=context.cloneNode(true);idle.hidden=true;sibling.append(idle);document.body.append(sibling);
+    context.hidden=false;
+  }`];

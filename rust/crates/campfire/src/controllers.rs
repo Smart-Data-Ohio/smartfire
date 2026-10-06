@@ -1303,7 +1303,4 @@ pub(crate) mod ledger_browser_tests;
 mod template_coverage_tests;
 
 #[cfg(test)]
-mod ws14_original_browser_tests;
-
-#[cfg(test)]
-mod ws15_original_github_browser_tests;
+mod drive_browser_tests;

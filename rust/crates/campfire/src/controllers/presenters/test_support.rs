@@ -304,19 +304,6 @@ impl TestApp {
         Self::boot_with_clients("default", clock, network, extra, None).await
     }
 
-    /// All real GitHub clients use the caller's isolated external-service transport.
-    pub async fn boot_with_github_network_clock_and_env(
-        network: crate::net::Network,
-        clock: campfire_kit::SharedClock,
-        extra: &[(&str, &str)],
-    ) -> Option<TestApp> {
-        Self::boot_seed_with_huddle_services(
-            "default", clock, network.clone(), extra, crate::huddle::Config::default(),
-            Some(crate::integrations::github::client::AppClient::with_network(None, None, network.clone())),
-            Some(crate::integrations::github::client::ReadClient::with_network(None, network)),
-        ).await
-    }
-
     pub async fn boot_with_network(network: crate::net::Network) -> Option<TestApp> {
         Self::boot_with_clients("default", seed_clock(), network, &[], None).await
     }

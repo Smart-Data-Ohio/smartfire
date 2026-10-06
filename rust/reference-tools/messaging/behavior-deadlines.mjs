@@ -3,3 +3,5 @@
 export const CAPYBARA_DEFAULT=2000;
 export const DELIVERY_WAIT=10000;
 export const CABLE_WAIT=15000;
+// ApplicationSystemTestCase::BROADCAST_WAIT.
+export const BROADCAST_WAIT=15000;

@@ -32,12 +32,12 @@ class DriverCleanupTest(unittest.TestCase):
         nodes=[node for node in ast.walk(ast.parse((out/'driver-body.py').read_text()))
                if isinstance(node,ast.Try) and node.finalbody and
                any(marker in ast.unparse(ast.Module(body=node.finalbody,type_ignores=[]))
-                   for marker in ['process.terminate()', 'stop_behavior_servers('])]
+                   for marker in ['process.terminate()', 'stop_behavior_server('])]
         final=min(nodes,key=lambda node:node.lineno).finalbody
         self.cleanup=compile(ast.fix_missing_locations(ast.Module(body=final,type_ignores=[])),'generated-finally','exec')
         self.work=self.root/'work';self.fixture=self.root/'fixture'
         self.metadata={'thread_id':1,'history_message_id':2,'eligible_id':9,'eligible_agent_id':8}
-        for directory in [self.fixture/'db',self.work/'db',self.work/'.instances/52020/db']:
+        for directory in [self.fixture/'db',self.work/'db']:
             directory.mkdir(parents=True)
             with contextlib.closing(sqlite3.connect(directory/'production.sqlite3')) as db, db:
                 db.executescript('''CREATE TABLE channel_threads(id,work_status,work_owner_id);
@@ -54,54 +54,49 @@ class DriverCleanupTest(unittest.TestCase):
     def execute(self):
         from unittest.mock import patch
         namespace=dict(file='channel_threads_controller',metadata=self.metadata,
-            work=self.work,fixture=self.fixture,ports=[52020,52021,52022],
+            work=self.work,fixture=self.fixture,
             case='converts a thread to work, assigns an eligible owner, and keeps an audit trail',
             env={'WS8BM_WORK_PRODUCER':'deleted-history'},process=self.process,
-            ROOT=self.root,reference='reference',run_env={},log=io.StringIO(),
+            ROOT=self.root,run_env={},log=io.StringIO(),
             sqlite3=sqlite3,subprocess=subprocess,json=__import__('json'))
-        # Use the actual shared helper when the fixed driver imports it.
-        try:
-            from behavior_server_cleanup import stop_behavior_servers
-            namespace['stop_behavior_servers']=stop_behavior_servers
-        except ModuleNotFoundError:pass
+        from behavior_server_cleanup import stop_behavior_server
+        namespace['stop_behavior_server']=stop_behavior_server
         output=io.StringIO()
-        with contextlib.redirect_stdout(output),patch.object(subprocess,'run',side_effect=lambda *a,**k:self.calls.append('Rails down')):
+        with contextlib.redirect_stdout(output):
             try:exec(self.cleanup,namespace)
             except Exception as error:self.error=error
         return output.getvalue()
 
-    def test_deleted_history_is_failure_evidence_and_cleans_both_apps(self):
-        for db in [self.work/'db/production.sqlite3',self.work/'.instances/52020/db/production.sqlite3']:
-            with contextlib.closing(sqlite3.connect(db)) as conn, conn:conn.execute('DELETE FROM messages')
+    def test_deleted_history_is_failure_evidence_and_cleans_up(self):
+        with contextlib.closing(sqlite3.connect(self.work/'db/production.sqlite3')) as conn, conn:conn.execute('DELETE FROM messages')
         output=self.execute()
-        self.assertEqual(self.calls,['Rust terminate','Rust wait','Rails down'])
+        self.assertEqual(self.calls,['Rust terminate','Rust wait'])
         self.assertFalse(hasattr(self,'error'),getattr(self,'error',None))
         records=[__import__('json').loads(line.split(': ',1)[1]) for line in output.splitlines() if line.startswith('WS8bm real producer rows:')]
-        self.assertEqual(len(records),2)
+        self.assertEqual(len(records),1)
         for row in records:
             self.assertIsNone(row['history_client_id'])
             self.assertEqual(row['row_assertion'],'FAIL')
             self.assertIn('work-history identity:',row['row_error'])
 
-    def test_broken_readback_is_invalid_and_still_cleans_both_apps(self):
-        with contextlib.closing(sqlite3.connect(self.work/'.instances/52020/db/production.sqlite3')) as conn, conn:conn.execute('DROP TABLE messages')
+    def test_broken_readback_is_invalid_and_still_cleans_up(self):
+        with contextlib.closing(sqlite3.connect(self.work/'db/production.sqlite3')) as conn, conn:conn.execute('DROP TABLE messages')
         output=self.execute()
-        self.assertEqual(self.calls,['Rust terminate','Rust wait','Rails down'])
+        self.assertEqual(self.calls,['Rust terminate','Rust wait'])
         self.assertIn('"row_assertion": "INVALID"',output)
         self.assertIn('OperationalError',output)
-        self.assertIn('"app": "Rust"',output,'a broken peer diagnostic must not skip the other readback')
 
-    def test_uncaught_diagnostic_error_cannot_skip_either_shutdown(self):
+    def test_uncaught_diagnostic_error_cannot_skip_shutdown(self):
         from unittest.mock import patch
         with patch('behavior_work_diagnostics.work_readback',side_effect=RuntimeError('diagnostic failed')):
             self.execute()
-        self.assertEqual(self.calls,['Rust terminate','Rust wait','Rails down'])
+        self.assertEqual(self.calls,['Rust terminate','Rust wait'])
         self.assertIsInstance(self.error,RuntimeError)
 
-    def test_terminate_error_cannot_skip_rails_shutdown(self):
+    def test_terminate_error_still_kills_the_app(self):
         def terminate():self.calls.append('Rust terminate');raise OSError('shutdown failure')
         self.process.terminate=terminate
         self.execute()
-        self.assertEqual(self.calls,['Rust terminate','Rust kill','Rust wait','Rails down'])
+        self.assertEqual(self.calls,['Rust terminate','Rust kill','Rust wait'])
 
 if __name__=='__main__':unittest.main()

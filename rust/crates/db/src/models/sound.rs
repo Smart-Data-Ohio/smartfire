@@ -124,32 +124,29 @@ pub const BUILTIN: &[Sound] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sha2::Digest;
 
+    /// `BUILTIN` is the list from the reference's `app/models/sound.rb`, checked against it
+    /// until Rails was removed; it is the source of truth now. The hash pins every name, text
+    /// and image (one `name\ttext:TEXT` or `name\timage:FILE:WIDTH:HEIGHT` line per sound, in
+    /// order), computed from `sound.rb` at removal, so a rename or changed text fails here.
     #[test]
-    fn builtin_sounds_match_reference() {
-        let ruby = std::fs::read_to_string(
-            crate::fixtures::rails_root().join("app/models/sound.rb"),
-        )
-        .unwrap();
-        let count = ruby
-            .lines()
-            .filter(|l| l.trim_start().starts_with("new(name:"))
-            .count();
-        assert_eq!(count, BUILTIN.len());
-        for sound in BUILTIN {
-            assert!(
-                ruby.contains(&format!("new(name: \"{}\"", sound.name)),
-                "{}",
-                sound.name
-            );
-            if let Some(text) = sound.text {
-                assert!(
-                    ruby.contains(&format!("text: \"{text}\"")),
-                    "{}",
-                    sound.name
-                );
-            }
-        }
+    fn builtin_sounds_are_the_reference_list() {
+        let names: std::collections::BTreeSet<_> = BUILTIN.iter().map(|s| s.name).collect();
+        assert_eq!((BUILTIN.len(), names.len()), (56, 56));
+        let listing: String = BUILTIN
+            .iter()
+            .map(|sound| match (sound.text, sound.image) {
+                (Some(text), None) => format!("{}\ttext:{text}\n", sound.name),
+                (None, Some(image)) => format!("{}\timage:{}:{}:{}\n", sound.name, image.name, image.width, image.height),
+                other => panic!("{}: a sound has text or an image: {other:?}", sound.name),
+            })
+            .collect();
+        assert_eq!(
+            hex::encode(sha2::Sha256::digest(listing)),
+            "afa51b9412ac810146054e2ab501e4b7fac5087495fccbc7070d49cd7b3b8db5",
+            "the builtin sounds changed"
+        );
         assert_eq!(
             Sound::find_by_name("deeper")
                 .unwrap()
@@ -158,5 +155,19 @@ mod tests {
                 .asset_path(),
             "sounds/top.webp"
         );
+    }
+
+    /// Every builtin sound plays `NAME.mp3` and shows its image from the port's assets.
+    #[test]
+    fn builtin_sound_assets_exist() {
+        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/app/assets");
+        for sound in BUILTIN {
+            let mp3 = assets.join(format!("sounds/{}.mp3", sound.name));
+            assert!(mp3.is_file(), "{} is missing", mp3.display());
+            if let Some(image) = sound.image {
+                let file = assets.join("images").join(image.asset_path());
+                assert!(file.is_file(), "{} is missing", file.display());
+            }
+        }
     }
 }

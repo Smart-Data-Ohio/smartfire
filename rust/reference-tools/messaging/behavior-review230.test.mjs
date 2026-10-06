@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 const workspace=readFileSync(new URL('./behavior-workspace.mjs',import.meta.url),'utf8');
 test('workspace mobile send keeps the pinned persisted-row selector and one two-second budget',()=>{
@@ -10,7 +9,4 @@ test('workspace mobile send keeps the pinned persisted-row selector and one two-
   assert.ok(workspace.includes('.message[data-message-id="${messageId}"] .message__body'));
   assert.ok(workspace.includes('timeout:Math.max(0,deadline-performance.now())'));
   assert.ok(!workspace.includes("page.locator('.message__body'),'Mobile draft'"));
-});
-test('browser reference client is the exact approved Rails #231 source',()=>{
-  assert.deepEqual(readFileSync(new URL('./browser-client-message.js',import.meta.url)),execFileSync('git',['show','0373dfbd9:app/javascript/models/client_message.js']));
 });

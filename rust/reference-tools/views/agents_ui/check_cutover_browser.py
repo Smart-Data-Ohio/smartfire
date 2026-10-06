@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Require the three full original sequences to reject actual writer defects."""
+"""Require the three full original sequences to pass on Rust and reject actual writer defects."""
 import argparse
 from pathlib import Path
 import subprocess
@@ -28,18 +28,16 @@ for scenario, injection, name, assertion in cases:
         output = result.stdout + result.stderr
         if 'Rust system behavior:' not in output:
             raise RuntimeError(f'Invalid {scenario} control: setup/transport failed\n{output}')
-        rails, rust = output.split('Rust system behavior:', 1)
+        rust = output.split('Rust system behavior:', 1)[1]
         failures = [line for line in output.splitlines() if line.startswith('FAIL ')]
-        if 'Agent system behavior: 1 passed; 0 failed; 0 deferred' not in rails:
-            raise RuntimeError(f'Invalid {scenario} control: Rails did not pass\n{output}')
         if not mutated:
             if result.returncode or failures or 'Agent system behavior: 1 passed; 0 failed; 0 deferred' not in rust:
                 raise RuntimeError(f'Invalid {scenario} control: baseline did not pass\n{output}')
-            print(f'Cutover {scenario}: Rails 1 passed; Rust 1 passed; 0 failures', flush=True)
+            print(f'Cutover {scenario}: Rust 1 passed; 0 failures', flush=True)
         else:
             if (result.returncode != 1 or len(failures) != 1 or name not in failures[0]
                     or assertion not in failures[0]
                     or 'Agent system behavior: 0 passed; 1 failed; 0 deferred' not in rust):
                 raise RuntimeError(f'Invalid {scenario} control: intended writer assertion did not fail\n{output}')
-            print(f'Cutover {scenario}: intended writer defect rejected; Rails 1 passed; Rust 1 deliberate failure; waits unchanged', flush=True)
-print(f'Cutover browser discrimination: {len(cases)} paired sequences passed; {len(cases)} writer defects rejected; 0 invalid controls')
+            print(f'Cutover {scenario}: intended writer defect rejected; Rust 1 deliberate failure; waits unchanged', flush=True)
+print(f'Cutover browser discrimination: {len(cases)} Rust sequences passed; {len(cases)} writer defects rejected; 0 invalid controls')

@@ -15,15 +15,10 @@ fn oracle() -> Value {
 fn fixture_credentials_are_composed_at_runtime() {
     let token = "fixture-workspace-token";
     let header = format!("Bearer {token}");
-    for source in [
-        include_str!("older_provider_tests.rs"),
-        include_str!("../../../../../reference-tools/messaging/older_provider_callbacks.rb"),
-    ] {
-        assert!(
-            !source.contains(&header),
-            "literal fixture authorization header remains"
-        );
-    }
+    assert!(
+        !include_str!("older_provider_tests.rs").contains(&header),
+        "literal fixture authorization header remains"
+    );
 }
 async fn large_callback(index: usize) {
     let case = oracle()["cases"][index].clone();

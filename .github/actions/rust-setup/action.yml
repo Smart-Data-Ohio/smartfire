@@ -1,14 +1,12 @@
 name: Rust CI setup
-description: Restore or build the pinned Rails inputs, toolchain, and Cargo cache used by every Rust gate.
+description: Restore the committed test seeds, and prepare the toolchain image and Cargo cache used by every Rust gate.
 inputs:
   parity:
     description: >-
-      full: prepare, restore or build, and validate the reference image and seeds (the Rust seeds job).
-      reference: restore the validated seeds and load the reference image.
-      seeds: restore the validated seeds only.
-      none: no parity inputs.
-      A job whose exact seed or image cache misses falls back to the full path, including validation.
-    default: full
+      seeds: check the committed seeds (parity/seeds/frozen) against their manifest and this
+      checkout's schema, then restore them to parity/.seed.
+      none: no seeds.
+    default: seeds
   toolchain:
     description: Build the toolchain image from the main-written Buildx cache
     default: 'true'
@@ -19,7 +17,7 @@ inputs:
     description: Delete unused preinstalled SDKs in the background
     default: 'true'
   save-caches:
-    description: Only the Rust seeds job saves the trusted main reference image and seed caches
+    description: Write the toolchain image's Buildx cache (pushes to main only)
     default: 'false'
 outputs:
   cargo-cache-hit:
@@ -39,111 +37,12 @@ runs:
       shell: bash
       run: nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc >/dev/null 2>&1 &
 
-    - name: Compute parity cache identities
-      id: parity
-      if: ${{ inputs.parity != 'none' }}
+    # The seeds were built once by the Rails app and are committed; the manifest pins every
+    # file, the keys their cookies and encrypted columns need, and the schema version.
+    - name: Restore the committed test seeds
+      if: ${{ inputs.parity == 'seeds' }}
       shell: bash
-      run: |
-        echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
-        python3 rust/parity/ci_seed.py >> "$GITHUB_OUTPUT"
-
-    # Exact keys only: a seed from a different Rails pin, image input or seed script
-    # is never reused. PRs can read trusted caches but cannot save either cache.
-    - name: Restore parity seeds
-      id: seed-cache
-      if: ${{ inputs.parity != 'none' }}
-      # zizmor: ignore[cache-poisoning] -- PRs cannot save it; the Rust seeds job validates this exact entry with Rails
-      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: |
-          rust/parity/.seed/default
-          rust/parity/.seed/first_run
-          rust/parity/.seed/agents_ui
-        key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
-
-    # Jobs other than the seeds job skip the reference image and validation when the exact
-    # seed cache entry exists: cache entries are immutable, and the Rust seeds job validates
-    # that same entry with Rails in every run. Any miss takes the full path below.
-    - name: Select parity path
-      id: path
-      if: ${{ inputs.parity != 'none' }}
-      shell: bash
-      env:
-        MODE: ${{ inputs.parity }}
-        SEED_HIT: ${{ steps.seed-cache.outputs.cache-hit }}
-      run: |
-        if [[ "$MODE" == full || "$SEED_HIT" != true ]]; then full=true; else full=false; fi
-        if [[ "$full" == true || "$MODE" == reference ]]; then image=true; else image=false; fi
-        echo "full=$full" >> "$GITHUB_OUTPUT"
-        echo "image=$image" >> "$GITHUB_OUTPUT"
-
-    - name: Restore reference image
-      id: reference-cache
-      if: ${{ steps.path.outputs.image == 'true' }}
-      # zizmor: ignore[cache-poisoning] -- loaded only for tests; PRs cannot save it or publish anything
-      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: rust/parity/.ci/image
-        key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
-
-    - name: Test parity cache identities
-      if: ${{ steps.path.outputs.full == 'true' }}
-      shell: bash
-      run: python3 -m unittest discover -s rust/parity -p test_ci_seed.py
-
-    - name: Prepare pinned Rails reference
-      if: ${{ steps.path.outputs.full == 'true' || (steps.path.outputs.image == 'true' && steps.reference-cache.outputs.cache-hit != 'true') }}
-      shell: bash
-      run: rust/parity/bin/ci-seed prepare >/dev/null
-
-    - name: Build or load pinned reference image
-      if: ${{ steps.path.outputs.image == 'true' }}
-      shell: bash
-      run: rust/parity/bin/ci-seed image
-
-    - name: Build parity seeds
-      if: ${{ inputs.parity != 'none' && steps.seed-cache.outputs.cache-hit != 'true' }}
-      shell: bash
-      run: rust/parity/bin/ci-seed build
-
-    - name: Validate parity seeds with Rails
-      if: ${{ steps.path.outputs.full == 'true' }}
-      shell: bash
-      run: rust/parity/bin/ci-seed validate
-
-    - name: Prove parity gates reject missing or corrupt inputs
-      if: ${{ steps.path.outputs.full == 'true' }}
-      shell: bash
-      run: python3 -m unittest discover -s rust/parity -p test_ci_seed_docker.py
-
-    # Only pushes to main save these caches; PRs and other branches only restore.
-    - name: Save reference image
-      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.path.outputs.image == 'true' && steps.reference-cache.outputs.cache-hit != 'true' }}
-      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: rust/parity/.ci/image
-        key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
-
-    - name: Save parity seeds
-      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && inputs.parity != 'none' && steps.seed-cache.outputs.cache-hit != 'true' }}
-      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: |
-          rust/parity/.seed/default
-          rust/parity/.seed/first_run
-          rust/parity/.seed/agents_ui
-        key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
-
-    - name: Summarize parity setup time
-      if: ${{ inputs.parity != 'none' }}
-      env:
-        STARTED: ${{ steps.parity.outputs.started }}
-        IMAGE_HIT: ${{ steps.reference-cache.outputs.cache-hit }}
-        SEED_HIT: ${{ steps.seed-cache.outputs.cache-hit }}
-        FULL: ${{ steps.path.outputs.full }}
-      shell: bash
-      run: |
-        echo "Parity setup: $(($(date +%s) - STARTED))s (image cache: ${IMAGE_HIT:-not needed}; seed cache: ${SEED_HIT:-false}; validated here: $FULL)" | tee -a "$GITHUB_STEP_SUMMARY"
+      run: python3 rust/parity/bin/frozen-seeds restore
 
     - name: Set up Docker Buildx
       if: ${{ inputs.toolchain == 'true' }}
@@ -180,7 +79,7 @@ runs:
       shell: bash
       env:
         TOOLCHAIN: rust-cargo-v4-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/rust-toolchain.toml', 'rust/Dockerfile') }}-
-        INPUTS: ${{ hashFiles('rust/Cargo.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
+        INPUTS: ${{ hashFiles('rust/Cargo.toml', 'rust/crates/*/Cargo.toml', 'rust/bench/*/Cargo.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
         LOCK: ${{ hashFiles('rust/Cargo.lock') }}-
       run: |
         {

@@ -1,8 +1,0 @@
-{
-  "app/controllers/accounts_controller.rb": "751ab0ccedd83573a097c81b27c39ed6b98256fcb00f556517fce433b65475f6",
-  "app/controllers/accounts/users_controller.rb": "babb382880f925320666116012e100fadd81df221add69b7b78b0194353930d4",
-  "app/controllers/accounts/logos_controller.rb": "1fb97dc26d9ab8f72a5b667747f9350d73e72813d657328423804995a03e6c38",
-  "app/controllers/accounts/custom_styles_controller.rb": "5bc8f0ae9d8b63e8d03b1b8a322c3c7d71f0f0620fe05ba5a8ad47ee461baa7b",
-  "app/controllers/accounts/join_codes_controller.rb": "78c9024dc0bfaeb3a241ced3a8e79fa388990605f3ab0493863f30f8f34a339f",
-  "app/controllers/users/bans_controller.rb": "8dc5f8265daf170ffd2314cabbc15dea4bdbde175eb57433c52e4dd74b7d0882"
-}

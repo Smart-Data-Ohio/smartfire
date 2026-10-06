@@ -143,7 +143,7 @@ slot above.
 ## Visibility
 
 Phase 1 widened only what the moves needed, all to `pub(crate)`: `queue::AdHocWork`,
-`Jobs::{set_app, set_cable}`, `state::mail::Fanout`, `icons::ICON_CONFIG`,
+`Jobs::{set_app, set_cable}`, `state::mail::Fanout`,
 `presenters::room_shell::{NoticeFields, notice_from_fields}`, the `agent_jobs`,
 `agent_streaming` and `next6_named` (test-only) modules, `agent_streaming::register`,
 `webhook::reply`, `agent_jobs::post_with_network`, `bot_input_casts::json_token_string`, and the

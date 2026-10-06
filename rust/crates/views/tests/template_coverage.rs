@@ -4,16 +4,14 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+/// The 284 view files of the Rails app, which is gone: `rails_templates`' keys are their frozen list.
+const RAILS_TEMPLATES: usize = 284;
+
 fn resolve(path: &str) -> PathBuf {
-    let rust = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    if let Some(relative) = path.strip_prefix("rust/") {
-        rust.join(relative)
-    } else {
-        let reference = option_env!("CAMPFIRE_REFERENCE")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| rust.join(".."));
-        reference.join(path)
-    }
+    let relative = path
+        .strip_prefix("rust/")
+        .unwrap_or_else(|| panic!("{path} is outside rust/"));
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(relative)
 }
 
 fn files(directory: &Path) -> BTreeSet<String> {
@@ -53,14 +51,18 @@ fn validate(map: &Value) -> Result<(), String> {
         return Err("template map and fresh controller oracle must identify the parity pin".into());
     }
     for (key, directory) in [
-        ("templates", "rust/crates/views/templates"),
-        ("rails_templates", "app/views"),
+        ("templates", Some("rust/crates/views/templates")),
+        ("rails_templates", None),
     ] {
-        let expected = files(&resolve(directory));
         let entries = map[key]
             .as_object()
             .ok_or_else(|| format!("missing {key} map"))?;
         let actual: BTreeSet<_> = entries.keys().cloned().collect();
+        let expected = match directory {
+            Some(directory) => files(&resolve(directory)),
+            None if actual.len() == RAILS_TEMPLATES => actual.clone(),
+            None => return Err(format!("{key}: {} entries, not the frozen {RAILS_TEMPLATES}", actual.len())),
+        };
         let missing: Vec<_> = expected.difference(&actual).cloned().collect();
         let stale: Vec<_> = actual.difference(&expected).cloned().collect();
         if !missing.is_empty() || !stale.is_empty() {
@@ -94,8 +96,10 @@ fn validate(map: &Value) -> Result<(), String> {
                         .as_array()
                         .filter(|paths| !paths.is_empty())
                         .ok_or_else(|| format!("{name}: missing unreachable-source evidence"))?;
+                    // Sources outside rust/ were the Rails app's, removed with it.
                     for source in sources {
-                        if !resolve(source.as_str().unwrap_or_default()).is_file() {
+                        let source_path = source.as_str().unwrap_or_default();
+                        if source_path.starts_with("rust/") && !resolve(source_path).is_file() {
                             return Err(format!("{name}: missing source {source}"));
                         }
                     }

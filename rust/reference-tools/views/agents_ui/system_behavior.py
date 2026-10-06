@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-"""Run named Rails system behavior on a pinned private Rails instance and Rust.
-Build the binary and agents_ui seed first; the pinned Playwright Docker image
-supplies its committed browser dependencies. No images are captured or compared.
+"""Run named Rails system behavior against Rust, on fixtures recorded from Rails.
+Build the binary and restore the frozen agents_ui seed first; each scenario applies
+test-support/agents-ui-fixtures/SCENARIO (the recorded Rails fixture step) to a copy.
+The pinned Playwright Docker image supplies its committed browser dependencies.
+No images are captured or compared.
 """
-import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, sys, tempfile, threading, time, urllib.request
+import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, sys, tempfile, time, urllib.request
 root = pathlib.Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(root/'rust/reference-tools/users'))
 from browser_port_leases import reserve_system_ports
-from reference_runtime import ReferenceNetwork
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
 p.add_argument('--scenario', choices=['all','pages','budget','work','inbox','inbox-filter'], default='all')
@@ -26,18 +27,15 @@ if args.scenario == 'all':
     raise SystemExit(1 if any(codes) else 0)
 frozen_time = '2026-03-03T16:00:00Z' if args.scenario == 'budget' else '2026-03-02T16:00:00Z'
 seed = root / 'rust/parity/.seed/agents_ui'
+fixtures = root / 'rust/test-support/agents-ui-fixtures' / args.scenario
 labels = json.loads((seed / 'labels.json').read_text())
 store = root / '.scratch/system-behavior'
 store.mkdir(parents=True, exist_ok=True)
 work = pathlib.Path(tempfile.mkdtemp(dir=store))
-env = {**os.environ, 'PARITY_NAMESPACE':os.environ.get('PARITY_NAMESPACE','ws11ui-system'), 'PARITY_OWNER':os.environ.get('PARITY_OWNER','ws11ui'), 'PARITY_SEED_DIR':str(work/'seeds'), 'WS11UI_INBOX_CASE':args.scenario, 'PARITY_IMAGE':os.environ.get('PARITY_IMAGE','campfire-reference')}
-network = ReferenceNetwork(env['PARITY_NAMESPACE'], work.name, env['PARITY_OWNER'])
-env['PARITY_NETWORK'] = network.name
-reference = root / 'rust/parity/bin/reference'
 child = None
 # Keep simultaneous worktrees' servers and teardown isolated.
 lease = reserve_system_ports(args.scenario)
-reference_port, candidate_port, target_port = lease.ports
+_, candidate_port, target_port = lease.ports
 print(f'AGENT_SYSTEM_PORT_LEASE {args.scenario}: {lease.ports}', flush=True)
 
 def wait_up(port):
@@ -49,15 +47,14 @@ def wait_up(port):
         time.sleep(.25)
     raise RuntimeError(f'owned server {port} did not boot within 60s')
 try:
-    private = work/'seeds/agents_ui'
-    shutil.copytree(seed,private)
     labels_file = work/'labels.json'
-    candidate = work/'candidate'; (candidate/'db').mkdir(parents=True);shutil.copytree(private/'storage',candidate/'files')
-    subprocess.run([str(reference),'up','--seed','agents_ui','--port',str(reference_port),'--time',frozen_time,'--freeze'],cwd=root,env=env,check=True)
-    fixture = subprocess.check_output([str(reference),'runner','--port',str(reference_port),'--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui'/({'budget':'budget_fixture.rb','work':'work_fixture.rb','inbox':'inbox_browser_fixture.rb','inbox-filter':'inbox_browser_fixture.rb'}.get(args.scenario,'system_fixture.rb'))),args.scenario],cwd=root,env=env,text=True)
-    labels.update(json.loads(fixture)); labels_file.write_text(json.dumps(labels))
-    source_db = work/f'seeds/.instances/{reference_port}/db/production.sqlite3'
-    with sqlite3.connect(source_db) as source, sqlite3.connect(candidate/'db/production.sqlite3') as target: source.backup(target)
+    # The browser asks the Rust test host for ActivityInboxTest's interleaved item here.
+    control = work/'Rust-control'
+    candidate = work/'candidate'; (candidate/'db').mkdir(parents=True); shutil.copytree(seed/'storage',candidate/'files')
+    # The Rails fixture script's effect on the seed and the labels it printed.
+    labels.update(json.loads((fixtures/'labels.json').read_text())); labels_file.write_text(json.dumps(labels))
+    shutil.copyfile(seed/'db/production.sqlite3', candidate/'db/production.sqlite3')
+    with sqlite3.connect(candidate/'db/production.sqlite3') as target: target.executescript((fixtures/'patch.sql').read_text())
     if args.inject_work_status:
         # Exercise the real UI, endpoint and writer. A deliberately broken SQLite
         # writer loses the status update, while still returning its real response.
@@ -81,31 +78,13 @@ try:
         host_command = [str(args.binary.resolve())]
         if args.scenario.startswith('inbox'):
             host_command = [str(args.test_host.resolve()), 'controllers::presenters::test_support::ws8bm_browser_host_without_jobs', '--exact', '--ignored', '--nocapture']
-            candidate_env.update(WS8BM_BROWSER_HOST='1', WS11UI_ACTIVITY_CONTROL=str(work/'Rust-control'), WS11UI_ACTIVITY_USER=str(labels['users.david']), WS11UI_ACTIVITY_SOURCE=str(labels['messages.second']))
+            candidate_env.update(WS8BM_BROWSER_HOST='1', WS11UI_ACTIVITY_CONTROL=str(control), WS11UI_ACTIVITY_USER=str(labels['users.david']), WS11UI_ACTIVITY_SOURCE=str(labels['messages.second']))
         child=subprocess.Popen(host_command,cwd=root,env=candidate_env,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
         wait_up(candidate_port)
-        result_codes=[]
-        for name,port,db in [('Rails',reference_port,work/f'seeds/.instances/{reference_port}/db/production.sqlite3'),('Rust',candidate_port,candidate/'db/production.sqlite3')]:
-            print(f'{name} system behavior:',flush=True)
-            control = work/f'{name}-control'
-            stopped = threading.Event()
-            def followup():
-                while not stopped.wait(.02):
-                    if not control.with_suffix('.request').exists(): continue
-                    try:
-                        result = subprocess.check_output([str(reference),'runner','--port',str(reference_port),'--time',frozen_time,'--freeze',str(root/'rust/reference-tools/views/agents_ui/inbox_browser_followup.rb')],cwd=root,env=env,text=True)
-                        control.with_suffix('.response').write_text(result)
-                    except Exception as error:
-                        control.with_suffix('.response').write_text(json.dumps({'error':str(error)}))
-                    return
-            producer = threading.Thread(target=followup) if name == 'Rails' and args.scenario=='inbox' else None
-            if producer: producer.start()
-            browser_env = dict(os.environ, WS11UI_ACTIVITY_CONTROL=str(control))
-            result=subprocess.run(['bash',str(root/'rust/reference-tools/views/agents_ui/system_browser.sh'),f'http://127.0.0.1:{port}',str(labels_file),str(db),args.scenario],cwd=root,env=browser_env)
-            stopped.set()
-            if producer: producer.join()
-            result_codes.append(result.returncode)
-        raise SystemExit(1 if any(result_codes) else 0)
+        print('Rust system behavior:',flush=True)
+        browser_env = dict(os.environ, WS11UI_ACTIVITY_CONTROL=str(control))
+        result=subprocess.run(['bash',str(root/'rust/reference-tools/views/agents_ui/system_browser.sh'),f'http://127.0.0.1:{candidate_port}',str(labels_file),str(candidate/'db/production.sqlite3'),args.scenario],cwd=root,env=browser_env)
+        raise SystemExit(result.returncode and 1)
 finally:
     failure = sys.exc_info()[1]
     if failure is not None and not (isinstance(failure, SystemExit) and failure.code in (None, 0)):
@@ -116,9 +95,5 @@ finally:
             os.killpg(child.pid,signal.SIGTERM)
             try: child.wait(timeout=5)
             except subprocess.TimeoutExpired: os.killpg(child.pid,signal.SIGKILL);child.wait()
-    subprocess.run([str(reference),'down','--port',str(reference_port)],cwd=root,env=env,stdout=subprocess.DEVNULL,check=False)
-    try:
-        network.close()
-    finally:
-        lease.close()
-        shutil.rmtree(work)
+    lease.close()
+    shutil.rmtree(work)

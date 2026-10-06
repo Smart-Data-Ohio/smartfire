@@ -1,11 +1,5 @@
 [
   {
-    "path": "crates/db/src/tests/fixtures_test.rs",
-    "package": "campfire_db",
-    "binary": "campfire_db",
-    "test": "tests::fixtures_test::export_database_for_rails"
-  },
-  {
     "path": "crates/mail/tests/inbound.rs",
     "package": "campfire_mail",
     "binary": "inbound",
