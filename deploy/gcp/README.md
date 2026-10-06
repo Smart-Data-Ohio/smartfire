@@ -9,16 +9,24 @@ Two GitHub workflows drive it:
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| [`publish-gcp-image.yml`](../../.github/workflows/publish-gcp-image.yml) | push to `main`, push `v*` tags, manual | Builds `linux/amd64` and pushes `git-<full sha>` (plus `v<version>` on tag pushes) to Artifact Registry, then attests provenance. |
-| [`deploy-gcp.yml`](../../.github/workflows/deploy-gcp.yml) | manual only | Resolves that tag to a digest and runs `campfire-release.sh` on the app VM through an IAP SSH tunnel. |
+| [`publish-rust-image.yml`](../../.github/workflows/publish-rust-image.yml) | push to `main` touching the image's inputs | Builds the Rust image for `linux/amd64` and pushes `rust-git-<full sha>` to Artifact Registry, then attests provenance. |
+| [`deploy-gcp.yml`](../../.github/workflows/deploy-gcp.yml) | manual only | Requires a successful `rust.yml` push or scheduled run for the revision, resolves `rust-git-<sha>` to a digest and runs `campfire-release.sh` on the app VM through an IAP SSH tunnel. |
+
+Production runs the Rust port. The release script only moves one Rust image (label
+`net.smartdata.campfire.runtime=rust`) to another; the Rails images and their
+`git-<sha>` tags are history.
 
 ## The ordering rule
 
 **Everything that could discover a migration problem happens before the live
 application is touched.** While writes are frozen, the candidate image migrates a
-*copy* of the frozen database inside a throwaway container with `--network none`, and
-`script/admin/verify-additive-sqlite-migration` must exit `0`. Only then does the
-cutover run.
+*copy* of the frozen database (`campfire db-migrate`) inside a throwaway container with
+`--network none`, `campfire db-check` must accept the result, and
+`verify-additive-sqlite-migration` must exit `0`. Only then does the cutover run, and
+its first step is the same `campfire db-migrate` on the stopped live database, which
+must apply exactly what the rehearsal applied before the new container starts. The Rust
+server never migrates on boot; it refuses a database whose migration versions differ
+from its own.
 
 Once the new image is serving traffic it may have accepted writes, so the checks that
 run after the cutover are **read-only**. They can fail the release loudly, but nothing
@@ -28,10 +36,18 @@ That rule is the reason the recovery phase behaves the way it does:
 
 - If the live database is **byte-for-byte what it was at the freeze**, nothing was
   accepted. The previous image is restored automatically and nothing is lost.
-- If the live database has **changed at all** — a migration, a message, anything — the
-  recovery phase stops the application, **refuses to restore the database**, changes
-  nothing else, and exits with an operator-action message and exit code `30`. Restoring
-  the frozen copy there would silently discard whatever came after it.
+- If it is **byte-for-byte what the cutover's migration produced**, the migration ran
+  but nothing else wrote. The frozen copy kept at the freeze is put back, the previous
+  image is restored (`migration-reverted`), and nothing is lost. This is the one case
+  where recovery writes the database, and it is needed: the previous image refuses a
+  migrated database.
+- If the live database has **changed in any other way** (a message, anything), the
+  recovery phase **refuses to restore the database** and exits with an
+  operator-action message and exit code `30`. Restoring the frozen copy there would
+  silently discard whatever came after it. It runs the previous image's
+  `campfire db-check` on a copy: if that accepts the database the previous image is
+  restored (`refused-database-changed`); if not, the candidate is started again so
+  chat stays up (`refused-database-incompatible`).
 
 The comparison uses `frozen_live_database_sha256` in `freeze-result.json`: a digest of
 the live `db/production.sqlite3` *and its write-ahead log* as they sat in the volume
@@ -97,8 +113,8 @@ Run its local checks with
 
 ## Repository tags are immutable
 
-Artifact Registry rejects moving an existing tag. `publish-gcp-image.yml` therefore
-looks the tag up first: if `git-<sha>` already exists it skips the build and resolves
+Artifact Registry rejects moving an existing tag. `publish-rust-image.yml` therefore
+looks the tag up first: if `rust-git-<sha>` already exists it skips the build and resolves
 the published digest, so re-running the workflow for an already-released revision is a
 no-op rather than a failure. A lookup that fails for any reason *other* than "not
 found" — auth, network, permissions — fails the run instead of rebuilding blindly into
@@ -115,9 +131,9 @@ moment writes are frozen. Every invocation takes `flock` on
 | --- | --- |
 | `prepare-host` | Makes sure the host itself can survive the release: an idempotent `/swapfile` of `SWAP_SIZE_MB` (default 1024), built beside the live file and moved into place whole, with a `findmnt`-verified `/etc/fstab` entry and `vm.swappiness=10` persisted in `/etc/sysctl.d/90-campfire.conf`. **Never resizes an existing swap file and only ever runs `mkswap` on a file it built itself**; under `HOST_PREP_STRICT=false` that drift is a warning recorded as `skipped_reason` rather than a failure. Needs no other phase's state, touches neither the application nor the registry, and honours `DRY_RUN=true`. |
 | `preflight` | Discovers the ONCE app, container, storage volume and current digest; **records the feed timer state once** (a retry never overwrites it); checks free disk against the real volume and image sizes; refuses to run on top of an in-flight ONCE backup or inside the nightly backup window; authenticates to the registry from stdin; pulls the exact digest and asserts it is `linux/amd64`. A dry run stops here. |
-| `freeze` | **Refuses a release directory that already has `freeze-result.json` unless `RESUME=1`.** Pauses the feed timer and waits for the current feed run to finish; snapshots the database through the SQLite backup API; stops the app and **asserts no application container is still running**; fingerprints the live database; hashes every uploaded file; tags `campfire-rollback:before-<label>`; archives the ONCE application and the host feed state; then **rehearses the migration** on a copy. Any failure here restores the feed timer through a trap and, when the app had already been stopped, starts the previous container again and waits for `/up` (the rehearsal only ever touches copies, so a refused release must not become an outage). |
-| `cutover` | `once update <host> --image IMAGE@DIGEST --auto-update=false` (no `--env`, so ONCE keeps the whole existing environment map), waits for `/up` to return 200, then runs read-only checks: running digest, environment key names, volume identity, pre-existing uploaded file hashes, and required processes. Exits `10` if it never became healthy and `20` if it became healthy but a check failed. |
-| `rollback` | Refuses outright when the cutover already reported healthy and `/up` still returns 200: an interruption after a successful cutover must not downgrade a working deployment, so it records `refused-application-healthy` and exits `30` with the outstanding bookkeeping. Otherwise it stops the app, asserts it is stopped, then compares the live database fingerprint to the freeze. **It never writes to the database.** In both cases it returns ONCE to the previous image and gets it serving again — trying a plain `once start` first when the container left on the host still carries the previous image, then **checking what actually came up** and falling through to `once update --image <previous registry reference>` unless the previous image is really what is running. The label is a hint, not proof: ONCE keeps no state on disk, so an `once update` that failed after rewriting it can make a local start boot the candidate instead. What differs is the verdict: an unchanged database means nothing was lost and the phase exits `0`; a changed database means the candidate already migrated or accepted writes, so the frozen copy is **not** restored over it, the run is recorded as `refused-database-changed`, and it exits `30` to page an operator. Leaves the feed timer paused either way. |
+| `freeze` | **Refuses a release directory that already has `freeze-result.json` unless `RESUME=1`.** Pauses the feed timer and waits for the current feed run to finish; snapshots the database through the SQLite backup API; stops the app and **asserts no application container is still running**; fingerprints the live database; hashes every uploaded file; tags `campfire-rollback:before-<label>`; archives the ONCE application and the host feed state; keeps a byte-for-byte copy of the stopped live database (`frozen-live/`); then **rehearses the migration** on another copy. Any failure here restores the feed timer through a trap and, when the app had already been stopped, starts the previous container again and waits for `/up` (the rehearsal only ever touches copies, so a refused release must not become an outage). |
+| `cutover` | Requires a passed rehearsal for this exact image and frozen database, runs `campfire db-migrate` with the candidate on the stopped live database (`live-migration-result.json`; a failure, or a result that differs from the rehearsal, exits `10` before anything serves), then `once update <host> --image IMAGE@DIGEST --auto-update=false` (no `--env`, so ONCE keeps the whole existing environment map), waits for `/up` to return 200, then runs read-only checks: running digest, environment key names, volume identity, pre-existing uploaded file hashes, and required processes. Exits `10` if it never became healthy and `20` if it became healthy but a check failed. |
+| `rollback` | Refuses outright when the cutover already reported healthy and `/up` still returns 200: an interruption after a successful cutover must not downgrade a working deployment, so it records `refused-application-healthy` and exits `30` with the outstanding bookkeeping. Otherwise it stops the app, asserts it is stopped, removes any leftover migration container, then compares the live database fingerprint to the freeze and to the post-migration fingerprint. **The only database write it ever makes is putting the frozen copy back over bytes that are exactly the migration's output** (`migration-reverted`). Otherwise it returns ONCE to the previous image and gets it serving again — trying a plain `once start` first when the container left on the host still carries the previous image, then **checking what actually came up** and falling through to `once update --image <previous registry reference>` unless the previous image is really what is running. The label is a hint, not proof: ONCE keeps no state on disk, so an `once update` that failed after rewriting it can make a local start boot the candidate instead. What differs is the verdict: an unchanged or reverted database means nothing was lost and the phase exits `0`; a database that accepted writes is **not** restored over, and the run is recorded as `refused-database-changed` (previous image accepts it and is serving) or `refused-database-incompatible` (it doesn't, so the candidate is serving), exiting `30` to page an operator. Leaves the feed timer paused either way. |
 | `finish` | Restores the feed timer to its recorded state, drops registry credentials, writes `finish-result.json` and `writes-reopened-at`, then prunes old release directories. |
 | `logout` | Drops registry credentials only. Used to end a dry run. |
 | `timer-state` | Prints the recorded and current feed timer state as JSON. Read-only. |
@@ -127,9 +143,9 @@ moment writes are frozen. Every invocation takes `flock` on
 | Code | Meaning |
 | --- | --- |
 | `1` | A precondition or a phase failed. Nothing was cut over. |
-| `10` | The cutover never reached a healthy `/up`. If it aborted before `once update` the database is untouched and the rollback completes cleanly; otherwise the candidate has usually already migrated it on boot, so the run exits `30` and restores the previous image without touching the database. |
+| `10` | The cutover never reached a healthy `/up`. If it aborted before the live migration the database is untouched; if the migration ran but the candidate never served, the rollback reverts it to the frozen bytes. Either way the rollback completes cleanly. If the candidate accepted writes first, the run exits `30`. |
 | `20` | The application became healthy but a read-only check failed. It may have accepted writes, so it is **left running** and the workflow does not attempt recovery. The job fails; an operator decides. |
-| `30` | The rollback refused to change something. Either the database changed after the freeze — the previous image was still restored and the app is serving, the database was left as it was — or the application is healthy on the new image and was left running untouched. **An operator must act** in both cases. |
+| `30` | The rollback refused to change something. Either the database accepted writes after the freeze and was left as it was (the previous image is serving if it accepts the database, otherwise the candidate is), or the application is healthy on the new image and was left running untouched. **An operator must act** in both cases. |
 
 ### Configuration
 
@@ -163,8 +179,10 @@ moment writes are frozen. Every invocation takes `flock` on
 
 `preflight` checks the filesystem that actually holds `STATE_ROOT`, not
 `/var/lib/docker`, and sizes the requirement from measurements rather than a guess:
-`du -sm` of the storage volume × 2 (one archive plus one rehearsal copy) + 512 MB on
-the `STATE_ROOT` filesystem, and the image size + 512 MB on `/var/lib/docker`. When
+`du -sm` of the storage volume × 2 (archives) plus the database × 5 (frozen copy,
+rehearsal copy, its two snapshots, `after.sqlite3`) + 512 MB on the `STATE_ROOT`
+filesystem, and the image size + the database (the live migration's write-ahead log)
++ 512 MB on `/var/lib/docker`. When
 both paths are on the same filesystem the two are summed and checked once.
 
 ### Host preparation
@@ -285,8 +303,14 @@ before-timer-state.txt      the feed timer's prior enabled/active state (write-o
 prepare-host-result.json    swap file, fstab and vm.swappiness state after prepare-host
 attachment-hashes.json      per-file SHA-256 of storage/files before and after
 attachment-hashes-before.json / attachment-hashes-after.json
+frozen-live/db/             the stopped live database and -wal, byte for byte
 migration-verification.txt  full output of the isolated rehearsal
-rehearsal-result.json       rehearsal pass/fail and its preserved/additive counts
+rehearsal-result.json       rehearsal pass/fail, image, frozen database SHA-256,
+                            versions applied, preserved/additive counts
+live-migration.txt          output of db-migrate on the live database
+live-migration-result.json  versions applied live, whether they match the
+                            rehearsal, database fingerprints before and after
+rollback-check.txt          previous image's db-check, when rollback needed it
 preflight-result.json       app, volume, current and target image and revision
 freeze-result.json          previous image and revision, rollback tag, archive
                             SHA-256s, and the live database fingerprint
@@ -299,7 +323,7 @@ finish-result.json          feed timer state, registry logout proof, health
 writes-reopened-at          the moment chat reopened
 ```
 
-Treat `before.sqlite3`, `after.sqlite3` and both archives as secret: they contain user
+Treat `before.sqlite3`, `after.sqlite3`, `frozen-live/` and both archives as secret: they contain user
 data and application keys. The directory is `0700` and its files are `0600`. Nothing
 this script creates is left inside the live storage volume; a trap clears any stray
 copies on every path.
@@ -318,17 +342,20 @@ it never needs the values to do that.
 
 The app VM has no `sqlite3` binary. The frozen database is snapshotted by running
 `script/admin/prepare-backup` inside the container (SQLite's backup API). The rehearsal
-then runs entirely inside a throwaway container built from the candidate image:
+then runs entirely inside a throwaway container built from the candidate image, on a
+copy of `frozen-live/`:
 
 ```text
-docker run --rm --network none -v <scratch>:/rails/storage -e SECRET_KEY_BASE_DUMMY=1 <image>
-  /hooks/post-restore                       # deploy/README.md step 4
-  cp backups/production.sqlite3 rehearsal-before.sqlite3
-  bin/rails db:migrate
-  script/admin/prepare-backup               # consistent post-migration snapshot
-  cp backups/production.sqlite3 rehearsal-after.sqlite3
-  verify-additive-sqlite-migration before after   # deploy/README.md step 5
+docker run --rm --network none --memory 768m -v <scratch>:/rails/storage -e SECRET_KEY_BASE_DUMMY=1 <image>
+  script/admin/prepare-backup; cp backups/production.sqlite3 rehearsal-before.sqlite3
+  campfire db-migrate db/production.sqlite3         # one transaction, prints MIGRATED: lines
+  campfire db-check db/production.sqlite3           # the server's strict boot schema check
+  script/admin/prepare-backup; cp backups/production.sqlite3 rehearsal-after.sqlite3
+  campfire verify-additive-sqlite-migration rehearsal-before rehearsal-after
 ```
+
+The rehearsal doesn't start the server on the copy: background jobs must never run
+against a copy of production. `db-check` is the same schema check boot performs.
 
 `--network none` keeps it isolated, `SECRET_KEY_BASE_DUMMY=1` means no production key
 is needed, and the scratch directory is a copy, so the live volume is never mounted.
@@ -344,14 +371,16 @@ snapshot stops being a complete checkpoint.
 
 ## Running a release
 
-1. Merge to `main`. `publish-gcp-image.yml` publishes `git-<sha>`.
-2. Run **Deploy to GCP** with `environment=validation`, the sha, and `dry_run=true`.
-   Read the plan in the job summary.
-3. Repeat against `validation` with `dry_run=false` and confirm the app.
-4. Run it against `production` with `dry_run=true`, then `dry_run=false`. A production
-   deployment additionally requires the revision to be an ancestor of `origin/main` and
-   a successful `CI` run for that exact sha, and waits for an environment reviewer.
-5. Copy the paste-ready release record from the job summary into `docs/releases/`.
+1. Merge to `main`. `publish-rust-image.yml` publishes `rust-git-<sha>` when the
+   push touches the image's inputs; deploy a sha that has that tag.
+2. There is no staging host: the `validation` environment currently falls back to the
+   production VM, so don't use it. Rehearse locally instead: `rust/ops/tests` and, for
+   a release that ships migrations, the migration from the deployed schema.
+3. Run **Deploy to GCP** against `production` with `dry_run=true`, then
+   `dry_run=false`. A production deployment requires the revision to be an ancestor of
+   `origin/main` and a successful `rust.yml` push or scheduled run for that exact sha,
+   and waits for an environment reviewer.
+4. Copy the paste-ready release record from the job summary into `docs/releases/`.
 
 The default release label includes the workflow run id, so a retry always gets a fresh
 directory and a fresh backup. Reusing an earlier label requires passing both
