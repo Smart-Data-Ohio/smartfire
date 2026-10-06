@@ -3,18 +3,34 @@ set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$repo"
 suite=${1:?Expected database, acme, browsers, livekit, messaging, or agents-ui}
+# CI splits the longest suites across parallel jobs. CORRECTNESS_SHARD=K/N runs one
+# deterministic slice; CORRECTNESS_PART selects messaging's behaviour cases or its
+# original WS14/WS15 declarations (default: both). rust/ci/correctness_gate.py then
+# requires the slices' receipts to cover every selected test exactly once.
+shard=${CORRECTNESS_SHARD:-}
+part=${CORRECTNESS_PART:-all}
+case "$part" in all | behavior | originals) ;; *) echo "Unknown correctness part: $part" >&2; exit 1 ;; esac
+if [[ -n "$shard" && ! "$shard" =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]]; then
+  echo "CORRECTNESS_SHARD must be K/N, got $shard" >&2
+  exit 1
+fi
+tag=$suite
+[[ "$part" == all ]] || tag+="-$part"
+[[ -z "$shard" ]] || tag+="-${shard/\//of}"
+first_shard() { [[ -z "$shard" || "$shard" == 1/* ]]; }
 receipts="$repo/rust/target/ci-receipts"
 mkdir -p "$receipts"
 started=$(date +%s)
 
 ignored() {
-  local filter package
-  filter=$(python3 rust/ci/ignored_tests.py --filter "$suite")
+  local filter package selection=()
+  [[ -z "$shard" ]] || selection=(--shard "$shard")
+  filter=$(python3 rust/ci/ignored_tests.py --filter "$suite" "${selection[@]}")
   package=$(python3 rust/ci/ignored_tests.py --filter "$suite" --package)
   cargo nextest run --manifest-path rust/Cargo.toml --locked -p "$package" \
     --profile ci --build-jobs 4 -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
-  cp rust/target/nextest/ci/junit.xml "$receipts/$suite-junit.xml"
-  python3 rust/ci/ignored_tests.py --filter "$suite" --junit "$receipts/$suite-junit.xml"
+  cp rust/target/nextest/ci/junit.xml "$receipts/$tag-junit.xml"
+  python3 rust/ci/ignored_tests.py --filter "$suite" "${selection[@]}" --junit "$receipts/$tag-junit.xml"
 }
 
 browser_images() {
@@ -59,9 +75,11 @@ run_suite() {
       ;;
     browsers)
       browser_images
-      docker run --rm --init --network none --ipc host --cpus 2 \
-        --volume "$repo:/work:ro" "ws12-playwright:$(cat rust/parity/Dockerfile.playwright rust/parity/package.json rust/parity/package-lock.json | sha256sum | cut -c1-12)" \
-        node --test /work/rust/reference-tools/users/browser_navigation.test.mjs
+      if first_shard; then
+        docker run --rm --init --network none --ipc host --cpus 2 \
+          --volume "$repo:/work:ro" "ws12-playwright:$(cat rust/parity/Dockerfile.playwright rust/parity/package.json rust/parity/package-lock.json | sha256sum | cut -c1-12)" \
+          node --test /work/rust/reference-tools/users/browser_navigation.test.mjs
+      fi
       # The paired original-assertion wrappers launch the normal server, which
       # nextest's cfg(test) harness does not build.
       cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire
@@ -98,13 +116,27 @@ run_suite() {
       # These listeners stay outside Linux's ephemeral outbound-client range.
       export WS8BM_BROWSER_PORT_BASE=22020 WS8BM_CHROMEDRIVER_PORT=22023
       node rust/ci/native-network-smoke.mjs
-      python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
-      npm ci --prefix rust/parity
-      node --test --test-concurrency=4 rust/reference-tools/messaging/*.test.mjs
-      python3 rust/reference-tools/messaging/behavior-check.py --keep-going
-      # Pinned original WS14/WS15 declarations share the isolated native browser.
-      export WS14_BROWSER_RUBY_IMAGE="ws8bm-browser-reference-$(cut -c1-9 rust/parity/reference.sha)"
-      ignored
+      if [[ "$part" != originals ]] && first_shard; then
+        python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
+        npm ci --prefix rust/parity
+        node --test --test-concurrency=4 rust/reference-tools/messaging/*.test.mjs
+      fi
+      case "$part" in
+        all) python3 rust/reference-tools/messaging/behavior-check.py --keep-going ;;
+        behavior)
+          local selection=()
+          [[ -z "$shard" ]] || selection=(--shard "$shard")
+          python3 rust/reference-tools/messaging/behavior-check.py --keep-going "${selection[@]}" \
+            --receipt "$receipts/$tag-cases.json"
+          ;;
+        # The behaviour run's preparation (browser image, seeds, npm, pinned Selenium atom).
+        originals) python3 rust/reference-tools/messaging/behavior-check.py --prepare-only ;;
+      esac
+      if [[ "$part" != behavior ]]; then
+        # Pinned original WS14/WS15 declarations share the isolated native browser.
+        export WS14_BROWSER_RUBY_IMAGE="ws8bm-browser-reference-$(cut -c1-9 rust/parity/reference.sha)"
+        ignored
+      fi
       ;;
     agents-ui)
       browser_images
@@ -123,12 +155,12 @@ if [[ "${2:-}" == --execute ]]; then
   exit 0
 fi
 status=0
-bash "$0" "$suite" --execute 2>&1 | tee "$receipts/$suite.log" || status=$?
-python3 - "$suite" "$started" "$status" "$receipts/$suite.json" <<'PY'
+bash "$0" "$suite" --execute 2>&1 | tee "$receipts/$tag.log" || status=$?
+python3 - "$suite" "$started" "$status" "$receipts/$tag.json" "$part" "$shard" <<'PY'
 import json, subprocess, sys, time
 from pathlib import Path
-suite, started, status, output = sys.argv[1:]
-Path(output).write_text(json.dumps(dict(suite=suite, head=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+suite, started, status, output, part, shard = sys.argv[1:]
+Path(output).write_text(json.dumps(dict(suite=suite, part=part, shard=shard or None, head=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                                       duration_seconds=int(time.time())-int(started), exit_code=int(status)), indent=2)+'\n')
 PY
 exit "$status"
