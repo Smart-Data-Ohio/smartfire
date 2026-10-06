@@ -25,9 +25,8 @@ compared in constant time after an id lookup, and the UI shows the key
 once, on the page that follows creating the bot or generating a new key
 (the bots page's curl examples use a `BOT_KEY` placeholder). Existing keys
 kept their value. The retired plaintext `users.bot_token` column is never
-written and never read for authentication; `bin/rails
-bots:clear_plaintext_tokens` (also run once by the periodic runner)
-recomputes each leftover row's digest from its plaintext — the key its
+written and never read for authentication; the periodic runner (once
+after each server start) recomputes each leftover row's digest from its plaintext — the key its
 holder was shown — then nulls the plaintext, so rows with a stale or
 missing digest keep working. The column itself stays because
 migrations must remain strictly additive.
@@ -215,7 +214,7 @@ a pull-request discussion thread, null otherwise. The agent webhook's
 polling (`[{ file_id, url }]`, never names); the legacy path omits it.
 
 Every webhook POST, agent or legacy, resolves through
-`RestrictedHTTP::PrivateNetworkGuard` and pins the connection to the
+the private-network guard and pins the connection to the
 resolved public address: loopback and private destinations are
 refused instead of posted to, and a hostname that resolves to
 nothing fails the delivery.

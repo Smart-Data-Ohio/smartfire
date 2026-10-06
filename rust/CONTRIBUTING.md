@@ -19,11 +19,10 @@ tracker where it can be worked on.
    "in progress" and/or it should be clear from the comments. When in doubt, comment on the issue
    to ask.
 3. Read [`AGENTS.md`](AGENTS.md) for the layout and working rules: how to build and test, what has
-   to stay compatible with existing installs, and where deliberate differences from the Rails app
-   are recorded.
-4. When you have something ready for review or collaboration, open a PR. CI runs clippy and the
-   tests; changes to what pages render should also pass the parity gate
-   (`parity/bin/candidate compare`, see the README).
+   to stay compatible with existing installs, and where deliberate differences from the original
+   Rails app are recorded.
+4. When you have something ready for review or collaboration, open a PR. CI runs clippy, the
+   tests and the browser correctness suites (see [`ci/README.md`](ci/README.md)).
 
 ### If you've found a bug...
 

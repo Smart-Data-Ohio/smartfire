@@ -34,20 +34,12 @@ response bytes for streams and whole
 receipts; the main-content boundary keeps this corpus focused on its controller branches.
 Comparisons preserve whitespace, fields, URLs and asset references within the captured region.
 
-Regenerate the new fixture with the pinned reference image:
+The producer and the reference image it ran in were removed with the Rails app; the recorded
+fixture (`vectors/template_coverage_http.json`) and this map are frozen.
 
-```sh
-PARITY_IMAGE=review236-reference:78b9b1546 PARITY_NAMESPACE=template-coverage \
-  PARITY_OWNER=template-coverage parity/bin/reference runner --seed default \
-  --time 2026-03-02T16:00:00Z --freeze reference-tools/template_coverage/http.rb \
-  vectors/template_coverage_http.json
-```
-
-`coverage/check-templates --write` merges screenshot state IDs with behavioral receipt IDs
-without pretending byte tests are screenshots. `coverage/test-templates.py` runs every mapped
-receipt plus the whole views suite using four nextest workers. Set `CI=1` so absent seeds fail.
-Rust paths resolve from the workspace, and Rails paths follow `CAMPFIRE_REFERENCE` when set.
-The views guard rejects missing/stale Rust or Rails entries, missing tests/oracles, unrecorded
+`coverage/test-templates.py` runs every mapped receipt plus the whole views suite using four
+nextest workers. Set `CI=1` so absent seeds fail. The Rails declarations are a frozen list (the
+Rails views are gone). The views guard rejects missing/stale Rust or Rails entries, missing tests/oracles, unrecorded
 or absent branch witnesses, and missing original cutover declarations. Fresh controller receipts
 also require the named Rails declaration in that response's ActionView trace. Its negative controls
 remove an entry, empty a receipt, invent a test name, remove a branch witness and substitute
@@ -101,7 +93,9 @@ now preserve Rails' exact bytes; the reference outputs are generated, not edited
 receipts used different rooms, more than 40 messages, or an explicitly false invitation input.
 The new requests cover the original room both empty and after posting a real message.
 
-Validation commands (from `rust/`, with `CI=1`, all three seeds present and nextest on `PATH`):
+Validation commands as run then (from `rust/`, with `CI=1`, all three seeds present and nextest on
+`PATH`). The reference image, the pinned-media runner and `check-templates` have since been
+removed with the Rails app:
 
 The full workspace run uses `reference-tools/agents/pinned-media-runner.py` for its seven
 application media byte cases and eleven storage vector tests, with the `78b9b1546`
@@ -132,9 +126,9 @@ Pure pixel/geometry-only work is excluded.
 | Successful 2FA/session lifecycle | `src/app/two_factor_tests.rs`, `src/app/admin_two_factor_tests.rs`; auth full-page receipts | Browser enrollment and one-time reveals stay in the security acceptance ledger. |
 | Permission boundaries | Bot/access/member-panel HTTP and golden matrices in the map | No grant from an empty or denied page to its populated branch. |
 | CRUD transitions | Human-work, board, message, Slack, GitHub and fresh replacement/create/delete response receipts | Browser mutation declarations remain with their named behavior scripts. |
-| Cross-user realtime | Huddle grant/stream socket receipts; message/provider broadcast tests; `parity/behavior/messages.mjs` | Sender/recipient browser timing remains a browser assertion. |
+| Cross-user realtime | Huddle grant/stream socket receipts; message/provider broadcast tests | Sender/recipient browser timing remains a browser assertion. |
 | Agent execution | `src/controllers/agent_http_tests.rs`, bot contracts and agent runtime/event/job tests | Provider execution lifecycle remains with the API/runtime ledger. |
 | RTC | `src/controllers/rooms/remaining_call_tests.rs`, `src/channels/huddle_effects_tests.rs`, stage/participant render matrices | Microphone/camera permission and real media transport are not template bytes. |
-| OAuth and Picker | `src/app/google_api_tests.rs`, Google profile/login receipts; `parity/behavior/picker-readiness.mjs` | External consent and the real Picker SDK require provider/browser acceptance. |
+| OAuth and Picker | `src/app/google_api_tests.rs`, Google profile/login receipts | External consent and the real Picker SDK require provider/browser acceptance. |
 | Periodic jobs | `src/controllers/message_features/periodic_delivery_tests.rs`, `src/jobs/periodic.rs`; scheduled behavior script | Scheduler lifecycle remains with its durable queue/job acceptance. |
 | Installed/offline PWA | `src/controllers/pwa.rs`, exact manifest/worker receipts | Installed service-worker lifecycle needs a real browser, beyond static endpoint bytes. |

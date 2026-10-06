@@ -1,13 +1,11 @@
 target/
 /parity/node_modules
-/parity/out
 /parity/.seed
-/parity/.native
 /parity/.ci
 /.claude
 /.cargo-home
 __pycache__/
-# The Rails app's precompile and LiveKit tooling write through its symlinks into web/.
+# Local LiveKit and the bundle builders write into web/.
 /web/public/assets
 /web/script/*/node_modules/
 /web/.bundle

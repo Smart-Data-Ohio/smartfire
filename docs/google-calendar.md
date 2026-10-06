@@ -103,10 +103,9 @@ remove.
 
 ## Token storage
 
-Refresh and access tokens are stored encrypted (`encrypts` on
-`GoogleAccount`) with keys derived from `SECRET_KEY_BASE` (see
-`config/initializers/active_record_encryption.rb`), so no separate secret
-is needed. Rotating `SECRET_KEY_BASE` invalidates every stored Google
+Refresh and access tokens are stored encrypted (Rails Active Record
+Encryption format, kept compatible by the Rust app) with keys derived from
+`SECRET_KEY_BASE`, so no separate secret is needed. Rotating `SECRET_KEY_BASE` invalidates every stored Google
 token: affected members must reconnect. Tokens are never logged or
 rendered. Disconnect cleanup passes its token snapshot to the background
 job as a short-lived encrypted blob rather than raw tokens.

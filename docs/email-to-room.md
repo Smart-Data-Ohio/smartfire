@@ -43,8 +43,8 @@ everything that arrives posts as the **Email** bot.
   the message.
 - Bodies are capped at the normal message length. Empty mail with no
   attachment posts nothing.
-- Each room accepts at most 30 emailed messages per hour (hour bucket
-  in `Rails.cache`, like the agent API throttle); over-limit mail is
+- Each room accepts at most 30 emailed messages per hour (an in-process
+  hour bucket, like the agent API throttle); over-limit mail is
   dropped silently.
 - Unknown tokens post nothing and bounce nothing, so the address reveals
   nothing to probers. Mail to a non-room address (no `room-` token at
@@ -54,15 +54,14 @@ everything that arrives posts as the **Email** bot.
 
 ## Ingress setup (relay provider)
 
-Production accepts inbound mail through the Action Mailbox relay ingress
-(`config.action_mailbox.ingress = :relay` in
-`config/environments/production.rb`). The relay endpoint is
+Production accepts inbound mail through a relay ingress compatible with
+Rails Action Mailbox's. The relay endpoint is
 `<app root URL>/rails/action_mailbox/relay/inbound_emails`, authenticated
-with HTTP basic auth as user `actionmailbox`.
+with HTTP basic auth as user `actionmailbox`, and takes the raw message as
+the request body with `Content-Type: message/rfc822`.
 
 1. Generate a strong password and give it to the app as the
-   `RAILS_INBOUND_EMAIL_PASSWORD` environment variable (or
-   `action_mailbox.ingress_password` in encrypted credentials). Serve the
+   `RAILS_INBOUND_EMAIL_PASSWORD` environment variable. Serve the
    app over HTTPS: basic auth over plain HTTP leaks the password.
 2. Point the inbound domain's MX records at the relay provider (for
    example Postmark's inbound stream, Mailgun Routes, or SendGrid's
@@ -89,10 +88,10 @@ with HTTP basic auth as user `actionmailbox`.
      results as separate `SPF` and `dkim` Inbound Parse POST fields,
      not as an `Authentication-Results` header on the raw message
      ([Inbound Parse docs](https://www.twilio.com/docs/sendgrid/for-developers/parsing-email/setting-up-the-inbound-parse-webhook)).
-   - **Self-hosted Postfix/Exim/Qmail:** pipe inbound mail with the
-     matching `bin/rails action_mailbox:ingress:<server>` command, as the
-     [relay ingress docs](https://guides.rubyonrails.org/action_mailbox_basics.html#relay-ingress)
-     describe. A DKIM/DMARC milter (OpenDKIM, OpenDMARC, Rspamd) on
+   - **Self-hosted Postfix/Exim/Qmail:** pipe each inbound message to an
+     HTTP POST of its raw bytes, for example
+     `curl --fail --data-binary @- -H 'Content-Type: message/rfc822' -u actionmailbox:<password> https://<app host>/rails/action_mailbox/relay/inbound_emails`.
+     A DKIM/DMARC milter (OpenDKIM, OpenDMARC, Rspamd) on
      your MTA stamps `Authentication-Results` with your hostname as
      the authserv-id.
 

@@ -45,7 +45,7 @@ uploaded to `gs://<backup-bucket>/daily/`. Inside the tarball:
 ```
 smartfire-backup-20260201-090000/
   production.sqlite3   a consistent snapshot via SQLite's online backup API
-  files/               a copy of the Active Storage uploads tree
+  files/               a copy of the uploaded files tree
   manifest.json        non-secret facts: stamp, hosts, image ref,
                        SHA-256 of the database, file counts (never secrets,
                        never anything from the app environment)
@@ -56,7 +56,8 @@ The tarball is compressed with gzip and encrypted client-side with `age`
 (default) or `gpg` to a public recipient. The private key is never on the VM.
 
 The database snapshot never stops the app or freezes writes. In container
-mode (production) the script runs `script/admin/prepare-backup` inside the
+mode (production) the script runs the image's
+`/rails/script/admin/prepare-backup` hook (`campfire backup`) inside the
 running app container, which uses SQLite's backup API and holds only brief
 page locks. The uploads copy follows the database snapshot, so a file
 uploaded in between may be absent from that night's backup; the next night

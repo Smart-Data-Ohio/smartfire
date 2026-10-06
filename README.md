@@ -2,7 +2,7 @@
 
 Smartfire is a free, open source workspace where people and AI agents work together: rooms, threads, huddles, work tracking, boards, and rich cards for GitHub and X.
 
-Smartfire began as a fork of Basecamp's Campfire, released under the MIT license at once.com/campfire. It no longer tracks upstream.
+Smartfire began as a fork of Basecamp's Campfire ([basecamp/once-campfire](https://github.com/basecamp/once-campfire)), released under the MIT license at once.com/campfire. It now runs as a Rust application, ported from 37signals' MIT-licensed Rust port of Campfire ([basecamp/once-campfire-rust](https://github.com/basecamp/once-campfire-rust)). It no longer tracks either upstream.
 
 ## Features
 
@@ -25,8 +25,26 @@ See [ROADMAP.md](ROADMAP.md) for direction and sequencing, and the [agent boards
 
 ## Running it
 
-- Local development: [docs/development.md](docs/development.md).
-- Self-hosting the Docker image: [docs/self-hosting.md](docs/self-hosting.md).
+Smartfire is a single Rust binary: the web app, background jobs, real-time updates, file
+previews and TLS all run in one process over one SQLite database, with no Redis or separate
+worker. The source is the Cargo workspace in [`rust/`](rust).
+
+To run it locally, from `rust/`, with [rustup](https://rustup.rs) (it installs the nightly pinned in
+`rust/rust-toolchain.toml`) and libvips and ffmpeg installed:
+
+```sh
+SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 \
+  CAMPFIRE_STORAGE_PATH="$HOME/.local/share/smartfire-dev" \
+  cargo run -p campfire -- server
+```
+
+and open http://localhost:3000.
+
+- Developing and testing: [docs/development.md](docs/development.md) covers prerequisites,
+  tests (`cargo nextest`), the correctness suites, lint, migrations and CI.
+  [rust/README.md](rust/README.md) describes the port's status and verification.
+- Self-hosting the Docker image (`ghcr.io/smart-data-ohio/smartfire`, or
+  `docker build -t smartfire rust`): [docs/self-hosting.md](docs/self-hosting.md).
 
 When you start Smartfire for the first time, you'll be guided through a wizard to create an admin account. The email address that you enter for the admin account will be visible on the sign-in page, it's there so that people have someone to contact if they need help with their account. If that bothers you, put in any email address you want and create yourself a new admin account.
 
@@ -34,13 +52,14 @@ When you start Smartfire for the first time, you'll be guided through a wizard t
 
 - Production deploy runbook: [deploy/README.md](deploy/README.md).
 - GCP image publish and deploy workflows: [deploy/gcp/README.md](deploy/gcp/README.md).
+- Image, migration and release contract: [rust/ops/README.md](rust/ops/README.md).
 
 ## Docs
 
 - [Activity inbox and work threads](docs/activity-workspace.md) — personal inbox, work thread lifecycle, and the work list.
 - [AI agents](docs/agents.md) — agent identities, credentials, capability grants, events, approvals, and work endpoints.
 - [Boards](docs/boards.md) — team boards, posts as work, tags, pinned results, and the agent endpoints.
-- [Development](docs/development.md) — local setup, server, push keys, and tests.
+- [Development](docs/development.md) — prerequisites, running the server, tests, lint, migrations, and CI.
 - [Native events](docs/events.md) — scheduling, RSVP, reminders, and recurrence.
 - [GitHub pull request cards](docs/github.md) — PR cards, threads, subscriptions, and write actions.
 - [Google Calendar publishing](docs/google-calendar.md) — one-way event publishing setup and reconciliation.
@@ -69,4 +88,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes, and [SECURITY
 
 ## License
 
-MIT. See [MIT-LICENSE](MIT-LICENSE).
+MIT. See [MIT-LICENSE](MIT-LICENSE), the license of the original Campfire
+([basecamp/once-campfire](https://github.com/basecamp/once-campfire)), and
+[rust/MIT-LICENSE](rust/MIT-LICENSE), the license of the Rust port it was built from
+([basecamp/once-campfire-rust](https://github.com/basecamp/once-campfire-rust)). Both are kept
+as published. Bundled third-party data and code are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

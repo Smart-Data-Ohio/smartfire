@@ -1,23 +1,5 @@
 [
   {
-    "path": "crates/mail/tests/inbound.rs",
-    "package": "campfire_mail",
-    "binary": "inbound",
-    "test": "export_for_rails"
-  },
-  {
-    "path": "crates/cable/tests/golden.rs",
-    "package": "campfire_cable",
-    "binary": "golden",
-    "test": "record_reference"
-  },
-  {
-    "path": "crates/campfire/src/channels/tests/golden.rs",
-    "package": "campfire",
-    "binary": "campfire",
-    "test": "channels::tests::golden::record_reference"
-  },
-  {
     "path": "crates/campfire/src/jobs/tests.rs",
     "package": "campfire",
     "binary": "campfire",

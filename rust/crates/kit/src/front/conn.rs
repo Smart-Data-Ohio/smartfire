@@ -228,7 +228,7 @@ where
 
 /// The `Date` Go's `http.Server` writes, on the real clock.
 ///
-/// The raw system call is only for the parity harness (`parity/docker/entrypoint`), which runs the
+/// The raw system call was for the Rails-era parity harness (since removed), which ran the
 /// app under libfaketime to freeze its clock. libfaketime intercepts libc's `clock_gettime`, which
 /// `std::time::SystemTime` uses; Thruster's Go reads the clock without libc, so its `Date` stayed
 /// real, and a frozen one would make every asset stale on arrival in the harness's browsers.

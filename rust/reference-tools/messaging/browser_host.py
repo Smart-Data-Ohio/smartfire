@@ -236,8 +236,7 @@ def build_host(root, env):
     # Sharing its test executable with nextest replaces a running suite's
     # binary, despite different source roots. Keep this cache under target/.
     host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
-    # The generated tree carries rust/web and rust/fixtures, the port's own reference inputs.
-    host_env = {key: value for key, value in env.items() if key != "CAMPFIRE_REFERENCE"}
+    host_env = dict(env)
     host_env["CARGO_TARGET_DIR"] = str(host_target)
     jobs = env.get("WS8BM_HOST_BUILD_JOBS", "2")  # parallelism only; the output is the same
     command = shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["test", "--locked", f"-j{jobs}",
@@ -263,4 +262,4 @@ if __name__ == "__main__":
     # CI builds and audits this host once, then hands the executable to every sharded
     # behaviour job (.github/workflows/rust.yml); behavior-check.py otherwise builds it.
     root = Path(__file__).resolve().parents[3]
-    print(build_host(root, dict(os.environ, CAMPFIRE_REFERENCE=str(root))))
+    print(build_host(root, dict(os.environ)))

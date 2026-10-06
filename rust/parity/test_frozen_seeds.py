@@ -19,7 +19,10 @@ loader.exec_module(frozen_seeds)
 class SeedCoverageTests(unittest.TestCase):
     def test_every_seed_the_tests_boot_is_frozen(self):
         # Include literal seed names in table-driven and conditional boot calls, too.
-        known = {p.stem for p in (ROOT / "parity/seeds").glob("*.rb") if p.stem != "build"}
+        # Every seed the Rails app could build (its seed scripts were removed with it).
+        known = {"agents_ui", "crowd", "custom_styles", "default", "first_run", "imports",
+                 "ledger_originals", "live_rooms", "restricted", "smartfire", "unread",
+                 "ws8br2_browser_audit"}
         required = set()
         for path in (ROOT / "crates").rglob("*.rs"):
             source = path.read_text()

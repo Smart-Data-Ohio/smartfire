@@ -1,2 +1,0 @@
-default: <%= (Concurrent.processor_count * 0.5).ceil %>
-slack_import: 1

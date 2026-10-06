@@ -1,118 +1,179 @@
 ## Development
 
-### Setting up
+Smartfire is a Rust workspace in [`rust/`](../rust). Work from that directory unless a command
+says otherwise. [`rust/README.md`](../rust/README.md) and [`rust/AGENTS.md`](../rust/AGENTS.md)
+describe the layout and working rules, [`rust/ci/README.md`](../rust/ci/README.md) the CI jobs, and
+[`rust/ops/README.md`](../rust/ops/README.md) the image, migrations and release contract.
 
-First, get everything installed and configured with:
+### Prerequisites
 
-```sh
-bin/setup
-```
+- **Rust via rustup.** [`rust/rust-toolchain.toml`](../rust/rust-toolchain.toml) pins a nightly
+  with the Cranelift, clippy and rustfmt components; rustup installs it the first time you run
+  `cargo` in `rust/`. Use rustup's `cargo`: a stable toolchain (or anything that sets
+  `RUSTUP_TOOLCHAIN`) rejects the Cranelift settings in
+  [`rust/.cargo/config.toml`](../rust/.cargo/config.toml).
+- **[cargo-nextest](https://nexte.st)** for the test suite.
+- **libvips** (the app links it) and **ffmpeg/ffprobe** (file analysis and video previews).
+  Storage tests compare media bytes only when your local libvips and ffmpeg match the image's
+  builds; otherwise those checks skip.
+- **Python 3** for the seed and CI helper scripts.
+- **Docker** to build the image and to run the correctness suites the way CI does.
+- **Node.js** for the huddle authorization gateway, the vendored JavaScript builders in
+  `rust/web/script/`, and the browser and messaging harnesses.
 
-This installs the system packages Smartfire needs (SQLite, ffmpeg), the right Ruby version (via [mise](https://mise.jdx.dev)), and the app's gems; prepares the database; and starts Redis (in a Docker container called `campfire-redis`, if it isn't already running locally).
-
-If you want to start over at any point, run:
-
-```sh
-bin/setup --reset
-```
+Dev, test and CI builds compile the `campfire` crate with Cranelift for speed; every other crate,
+and every release build, uses LLVM. Cranelift can't unwind, so the few panic-recovery tests need
+campfire rebuilt with LLVM (see [Running tests](#running-tests)).
 
 ### Running the server
 
-Start the development server with:
+From `rust/`:
 
 ```sh
-bin/dev
+SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 \
+  CAMPFIRE_STORAGE_PATH="$HOME/.local/share/smartfire-dev" \
+  cargo run -p campfire -- server
 ```
 
-You'll be able to access the app at http://localhost:3000.
+Then open http://localhost:3000. On first run you'll be guided through creating your admin
+account, and you can sign in with that account from then on.
 
-On first run you'll be guided through creating your admin account, and you can sign in with that account from then on.
+- `SECRET_KEY_BASE_DUMMY=1` uses a throwaway key; set `SECRET_KEY_BASE` instead to keep sessions
+  across restarts.
+- `DISABLE_SSL` turns off the HTTPS redirect. `HTTP_PORT` is the front server's port (default 80);
+  `TARGET_PORT` is the app's own loopback listener (default 3000).
+- `CAMPFIRE_STORAGE_PATH` holds the database (`db/production.sqlite3`), uploads (`files/`) and
+  backups (`backups/`). It defaults to `storage/` under the working directory. On an empty
+  database the server loads the compiled schema; on an existing one it refuses to start unless the
+  database's migrations match the build (see [Migrations](#migrations)).
+- There is no Redis or separate worker: background jobs, caching and Action Cable run in the one
+  process.
 
-Note that Smartfire needs Redis (for Action Cable, caching, and background jobs), so if you've restarted your machine or stopped the container, `docker start campfire-redis` will bring it back.
+Other settings (Google, GitHub, mail, LiveKit, public policy pages) are environment variables
+read by [`rust/crates/campfire/src/config.rs`](../rust/crates/campfire/src/config.rs); the
+[self-hosting guide](self-hosting.md) lists the ones operators set.
 
 ### Web Push notifications
 
-Smartfire uses VAPID (Voluntary Application Server Identification) keys to send browser push notifications. For notifications to work in development you'll need to generate a key pair and set these environment variables:
+Browser push notifications need a VAPID key pair in `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`.
+When either is missing or they don't form a matching P-256 pair, the server logs that Web Push is
+off and carries on. Generate a pair as described under "Secrets" in the
+[self-hosting guide](self-hosting.md).
 
-- `VAPID_PRIVATE_KEY`
-- `VAPID_PUBLIC_KEY`
+### Frontend assets
 
-You can generate a fresh pair (along with a secret key base, which you can ignore in development) by running:
-
-```sh
-script/admin/generate-secrets
-```
+The stylesheets, JavaScript (Stimulus controllers, Turbo, the import map), vendored JavaScript and
+`public/` files live in [`rust/web/`](../rust/web). The `campfire_assets` crate digests them at
+build time, so a change shows up after the next `cargo run`. Templates are Askama files under
+`rust/crates/views/templates/`. The checked-in bundles in `rust/web/vendor/javascript/` are built by
+the Node projects in `rust/web/script/` (`livekit-client`, `code-highlighter`); rebuild them only
+when changing their pinned packages (see [`rust/web/script/livekit-client/README.md`](../rust/web/script/livekit-client/README.md)).
+For local huddles, see [huddles](huddles.md).
 
 ### Running tests
 
-Run the unit tests with:
+The app's integration tests read committed SQLite seeds. Restore them first (from `rust/`):
 
 ```sh
-bin/rails test
+python3 parity/bin/frozen-seeds restore
 ```
 
-And the browser-based system tests with:
+Without them, seed-dependent tests skip locally with a message (and fail when `CI` is set), so
+say whether the seeds were restored when you report results. Then:
 
 ```sh
-bin/rails test:system
+cargo nextest run --workspace --exclude html5ever \
+  -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))"
+cargo nextest run -p campfire \
+  --config 'profile.dev.package.campfire.codegen-backend="llvm"' \
+  -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)"
+cargo test --workspace --exclude html5ever --doc
 ```
 
-### Browser startup failures on a shared host
+`CAMPFIRE_LLVM_ONLY_TESTS` is the nextest filter for the four panic-recovery tests, defined in
+[`.github/workflows/rust.yml`](../.github/workflows/rust.yml); copy it from there. Plain
+`cargo test --workspace` stops at the first of those tests under Cranelift.
 
-A missing `Designers` link in `SystemTestHelper#sign_in` can be a browser
-startup failure even when authentication and the room response succeed.
-Check `page.driver.browser.logs.get(:browser)`: a reproduced Chromium
-failure logged `net::ERR_NETWORK_CHANGED` for `application.js`, Turbo,
-and stylesheets. Turbo never initialized, so the sidebar frame stayed
-empty. Waiting longer for the link cannot repair aborted module imports;
-keep the sign-in assertion and investigate the network environment.
+#### Correctness suites
 
-On Linux, loopback-only tests can run with the browser and Rails server
-in the same private network namespace. Install matching Chromium and
-ChromeDriver first, then run, adjusting `SE_BROWSER_PATH` to the installed
-browser (use the actual executable to avoid desktop launcher flags and
-extensions):
+Beyond the ordinary tests, the correctness suites drive Rust in real browsers and against recorded
+fixtures: ACME (Pebble), the UI browser suites, Google Drive browser declarations, project-local
+LiveKit, the 139 messaging behaviour cases and the agents UI. They are `#[ignore]` tests and
+Python/Node harnesses run by [`rust/ci/correctness.sh`](../rust/ci/correctness.sh) inside the CI
+container. They run on pushes to `main`, nightly and on manual dispatch, not on pull requests. To
+run one locally (from the repository root, with Docker):
 
 ```sh
-bwrap --bind / / --dev-bind /dev /dev --proc /proc --unshare-net -- \
-  env SE_OFFLINE=true SE_BROWSER_PATH=/usr/lib/chromium/chromium PARALLEL_WORKERS=1 \
-  bin/rails test test/system/composer_test.rb test/system/channel_members_test.rb \
-    test/system/huddle_presence_test.rb
+python3 rust/parity/bin/frozen-seeds restore
+docker build --target toolchain -f rust/Dockerfile -t campfire-toolchain rust
+docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/exec.sh bash rust/ci/correctness.sh acme
 ```
 
-This isolates the test network interfaces and uses installed browser binaries.
-Tests that need other services must start those services inside the same
-namespace. The sign-in helper keeps its visible navigation assertion.
+Replace `acme` with `browsers`, `drive`, `livekit`, `messaging` or `agents-ui`.
+[`rust/ci/README.md`](../rust/ci/README.md) has the sharding variables and the full job list.
 
-Capture authentication status as well: a later reproduction served the
-sidebar with 200 and then returned 401 for a member poll, leaving the frame
-empty. Its cause remains unconfirmed, so network isolation alone does not
-establish a sign-in fix. Preserve the browser console and session lookup
-state when investigating this separate failure.
+### Lint
 
-### Checking for date-dependent tests
-
-`TEST_CLOCK_OFFSET_DAYS` shifts the suite clock forward by that many days,
-so hard-coded dates and future-date validations get exercised as if the
-suite ran on that future date:
+CI runs clippy with warnings denied:
 
 ```sh
-TEST_CLOCK_OFFSET_DAYS=30 bin/rails test
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
 ```
 
-Fixture ERB (`1.hour.ago`, ...) evaluates under the shifted clock, and
-tests that pin their own clock with `travel_to` are unaffected. Two
-caveats: the clock is frozen within each test, so an assertion that needs
-time to pass must advance it explicitly with `travel`; and system tests
-only shift the server process — the browser keeps real time, so
-browser-computed dates (schedule-send and reminder presets) fail
-server-side future validations under an offset.
+`html5ever` is a vendored copy kept identical to upstream apart from one backported fix.
 
-Before pushing your changes, you can run the full CI suite locally - style checks, security audits, and all the tests - with a single command:
+### Migrations
+
+Schema changes are SQL files in `rust/crates/db/migrations/<VERSION>_<name>.sql`, with a 14-digit
+UTC timestamp version. They are compiled into the binary and applied only by
+`campfire db-migrate DATABASE`, which the release script runs while writes are frozen; the server
+never migrates on boot. After adding one (from `rust/`):
 
 ```sh
-bin/ci
+CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files
+cargo build -p campfire
+python3 parity/bin/frozen-seeds migrate target/debug/campfire
 ```
+
+The first command regenerates the schema files the server boots from; the last migrates the
+committed test seeds. To migrate a local development database, stop the server and run
+`cargo run -p campfire -- db-migrate PATH/TO/db/production.sqlite3`. Migrations must be additive
+for a normal release; see [`rust/ops/README.md`](../rust/ops/README.md#writing-a-migration).
+
+### Continuous integration
+
+- **Rust** ([`rust.yml`](../.github/workflows/rust.yml)): on every pull request, the required
+  `Rust port` check aggregates the frozen-seed check, twelve nextest shards, clippy with the binary
+  build and doctests, the LLVM panic-recovery tests, and a stable-toolchain check. A pull request
+  that touches nothing under `rust/` (or the workflow and its setup action) skips the build and
+  passes. Pushes to `main`, the nightly schedule and manual runs also run the correctness suites
+  behind `Rust correctness`.
+- **Repository checks** ([`repo.yml`](../.github/workflows/repo.yml)): `GitHub Actions audit`
+  (actionlint, zizmor and the Google deployment configuration tests),
+  `Huddle authorization gateway` (the Node gateway's tests) and `Dependency audit`
+  (cargo-audit over `rust/Cargo.lock` and npm audit of the gateway).
+- **CodeQL** ([`codeql.yml`](../.github/workflows/codeql.yml)): code scanning for Rust,
+  JavaScript, Python, C and the workflows.
+
+To run the full Rust matrix, correctness suites included, on a branch before merging:
+
+```sh
+gh workflow run rust.yml --ref YOUR-BRANCH -f scope=full
+```
+
+`-f ref=COMMIT` tests a specific branch, tag or commit instead of the workflow ref, and
+`-f scope=messaging-and-browsers` runs only those correctness suites.
+
+### Building the image
+
+```sh
+docker build -t smartfire rust
+```
+
+The image is built from [`rust/Dockerfile`](../rust/Dockerfile) with `rust/` as the context. See
+the [self-hosting guide](self-hosting.md) to run it and [deploy/README.md](../deploy/README.md) for
+production releases.
 
 ### Contributing
 

@@ -1,9 +1,9 @@
 # Audit log
 
 Security-relevant actions across the workspace are recorded in an
-append-only audit log (`AuditLog`), which administrators browse and export
-at `/account/audit_log`. Rows are kept for one year, then pruned by
-`Retention::PruneJob`.
+append-only audit log (`rust/crates/db/src/models/audit_log.rs`), which
+administrators browse and export at `/account/audit_log`. Rows are kept for
+one year, then pruned by the daily retention prune job.
 
 ## What is recorded
 
@@ -41,13 +41,18 @@ successful operation behind them.
 All writes funnel through one entry point. Call it from the controller,
 service, or job that performs the action, after the operation succeeds:
 
-```ruby
-AuditLog.record!(
-  action: "agent.grant.create",
-  actor: Current.user,      # optional: defaults to Current.user
-  target: grant,            # optional: any model; type, id, and label are snapshotted
-  changes: { capability: grant.capability, room: grant.room&.name }
-)
+```rust
+AuditLog::record(
+    tx,
+    NewAuditLog {
+        action: "agent.grant.create".into(),
+        // optional: type, id, and label are snapshotted
+        target: Some(Target::from(&room)),
+        changes: Some(json!({ "capability": capability, "room": room.name })),
+        ..Default::default()
+    },
+    &context, // the request's actor, IP, and user agent; jobs pass their own
+)?;
 ```
 
 Conventions for new actions:
@@ -57,21 +62,21 @@ Conventions for new actions:
   integrations' external actions: the approving human is the actor, the
   approval is the target, `changes` carries the action name, status, and
   outcome URL or message.
-- Add the name to `AuditLog::ACTIONS` so it appears in the admin filter
-  dropdown. Rows store plain strings, so this needs no migration.
-- `changes` values SHOULD be `AuditLog.pair(before, after)` pairs, which
+- Add the name to `ACTIONS` in `audit_log.rs` so it appears in the admin
+  filter dropdown. Rows store plain strings, so this needs no migration.
+- `changes` values SHOULD be `pair(before, after)` pairs, which
   the admin UI renders as "before → after"; scalar context values
   (reasons, URLs, notes) are allowed. Plain two-element arrays render as
   lists, never as pairs.
-- The request IP and user agent default to `Current.request` (the user
-  agent is truncated to 512 chars); jobs pass `actor:` explicitly and
+- The request IP and user agent default to the current request's (the user
+  agent is truncated to 512 chars); jobs pass the actor explicitly and
   leave them blank.
 
 ## Secrets never reach the log
 
-Callers pass explicit change hashes — never raw params — and `record!`
+Callers pass explicit change hashes — never raw params — and `record`
 additionally filters every key matching passwords, tokens, secrets, keys,
-credentials, and session values (see `AuditLog::SECRET_KEY_PATTERN`),
+credentials, and session values (see `filter_secrets` in `audit_log.rs`),
 replacing them with `[FILTERED]`, including inside nested hashes and
 arrays. Join codes, bot keys, credential secrets, signing secrets, OAuth
 tokens, and passwords therefore cannot land in the log even if a caller

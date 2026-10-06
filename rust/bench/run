@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Benchmark the reference (Rails) app against the Rust port on the same seed and CPUs.
+# Benchmark the Rust app on the committed default seed and fixed CPUs. The recorded results
+# compare it with the Rails app it replaced (`reference`); that app has been removed from the
+# repository, so `--apps reference` needs a Rails image built from the git history.
 #
-#   bench/run [--apps reference,rust[,rust-identity]] [--reps 3] [--out DIR]
+#   bench/run [--apps rust[,rust-identity][,reference]] [--reps 3] [--out DIR]
 #   bench/report DIR            # median + spread table from a results dir
 #
 # Each rep, for each app in turn (never two at once; the order alternates between reps): a fresh
@@ -17,8 +19,8 @@
 #
 # Images (unmodified production images, not the parity ones: no libfaketime, no pinned cable pool,
 # the reference's own resque-pool.yml):
-#   REFERENCE_IMAGE  campfire-reference:app   (parity/bin/reference build)
-#   RUST_IMAGE       campfire-rust:app        (parity/bin/candidate build, from /Dockerfile)
+#   RUST_IMAGE       campfire-rust:app        (docker build -t campfire-rust:app rust)
+#   REFERENCE_IMAGE  campfire-reference:app   (the Rails app's image, from before its removal)
 #
 # Knobs (env): SERVER_CPUS=8-11 LOADGEN_CPUS=12-15 HTTP_SECS=8 HTTP_CONCS="1 16 64"
 #   CABLE_CLIENTS="100 500 1000" CABLE_TPUT_SECS=15 CABLE_POSTERS=4 UPLOAD_REPS=5 PORT=4390
@@ -58,7 +60,7 @@ RUST_EXTRA_ENV=${RUST_EXTRA_ENV-}
 BASE=http://127.0.0.1:$PORT
 LOADGEN=$ROOT/target/bench/release/loadgen
 
-APPS=reference,rust REPS=3 OUT=""
+APPS=rust REPS=3 OUT=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --apps) APPS=$2; shift 2 ;;

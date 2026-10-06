@@ -4,58 +4,40 @@ Smartfire huddles use a project-local LiveKit Server for development. The setup 
 
 ## Start it
 
-From the Smartfire checkout:
+From the repository root:
 
 ```sh
-bin/livekit-local setup
-bin/livekit-local serve
+rust/web/bin/livekit-local setup
+rust/web/bin/livekit-local serve
 ```
 
-`serve` is the normal way to run the huddle infrastructure. It keeps the private LiveKit server, the authorization gateway, and durable cleanup reconciliation in one foreground process. If any one of them exits, it stops the others. This prevents media from continuing after the gateway can no longer enforce access.
+`serve` is the normal way to run the huddle infrastructure. It keeps the private LiveKit server and the authorization gateway in one foreground process. If either exits, it stops the other. This prevents media from continuing after the gateway can no longer enforce access. Smartfire itself runs cleanup reconciliation in-process, so there is no separate reconciler to start.
 
 In another terminal, verify both endpoints:
 
 ```sh
-bin/livekit-local status
-bin/livekit-local gateway-status
+rust/web/bin/livekit-local status
+rust/web/bin/livekit-local gateway-status
 ```
 
-Setup stores the binary, archive, config, and credentials under the git-ignored `.bundle/livekit/` directory. Source the generated mode-600 environment file before starting Smartfire or running integration tests:
+Setup stores the binary, archive, config, and credentials under the git-ignored `rust/web/.bundle/livekit/` directory. Source the generated mode-600 environment file before starting Smartfire or running integration tests:
 
 ```sh
-source .bundle/livekit/env
+source rust/web/.bundle/livekit/env
 ```
 
 It exports the public `LIVEKIT_URL=ws://127.0.0.1:7883`, the private `LIVEKIT_INTERNAL_URL=http://127.0.0.1:7880`, and locally generated API and gateway secrets. Running setup again migrates an older local environment to this layout while preserving its existing LiveKit API key and secret. Setup never prints secret values. Do not copy these development credentials to a deployed environment.
 
-Keep `serve` running in the first terminal. In a second terminal, load its environment and start Smartfire:
+Keep `serve` running in the first terminal. In a second terminal, load its environment and start Smartfire as described in the [development guide](development.md#running-the-server):
 
 ```sh
-source .bundle/livekit/env
-bin/dev
+source rust/web/.bundle/livekit/env
+cd rust && SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 cargo run -p campfire -- server
 ```
 
-This prepared checkout also provides `.bundle/dev` as a native Redis and Smartfire launcher, so it can replace `bin/dev` in that second terminal. To run the real huddle system test against local LiveKit with synthetic browser media:
+The real-media huddle browser test runs in the `livekit` correctness suite (`bash rust/ci/correctness.sh livekit`, see [`rust/ci/README.md`](../rust/ci/README.md)), which starts the private server with `livekit-local start` and its own gateway. The `start` and `gateway` commands run the private server or gateway separately for that kind of controlled test and for diagnosis. They are not safe substitutes for `serve` in normal operation because a separately launched LiveKit process can outlive gateway enforcement.
 
-```sh
-source .bundle/livekit/env
-LIVEKIT_SYSTEM_TESTS=1 PARALLEL_WORKERS=1 bin/rails test test/system/huddles_test.rb
-```
-
-The test suite starts its own gateway on port 7884 and pins the Rails fixture server to port 3001 only when `LIVEKIT_SYSTEM_TESTS=1` is set, so ordinary parallel `bin/rails test:system` runs keep using random ports. The `start` and `gateway` commands run the private server or gateway separately for that kind of controlled test and for diagnosis. They are not safe substitutes for `serve` in normal operation because a separately launched LiveKit process can outlive gateway enforcement.
-
-The same suite can opt into a remote production-shaped media stack while keeping Rails, fixtures, and application data local. Point `LIVEKIT_INTERNAL_URL` through a local SSH forward to remote port 7880 (for example, `http://127.0.0.1:7880`). Use a separate reverse forward from remote `127.0.0.1:3301` to the local fixture Rails server on port 3001, and set the remote gateway's `GATEWAY_CAMPFIRE_URL=http://127.0.0.1:3301`. Then run:
-
-```sh
-LIVEKIT_SYSTEM_TESTS=1 \
-LIVEKIT_SYSTEM_TEST_GATEWAY_URL=wss://huddles.chat.smartdata.net \
-LIVEKIT_SYSTEM_TEST_FORCE_RELAY=1 \
-PARALLEL_WORKERS=1 bin/rails test test/system/huddles_test.rb --name /two_users_exchange_audio/
-```
-
-`LIVEKIT_SYSTEM_TEST_GATEWAY_URL` makes the browser use that public gateway and prevents the suite from spawning its local gateway. `LIVEKIT_SYSTEM_TEST_FORCE_RELAY=1` modifies only the test browser's peer-connection configuration, requires a selected relay candidate, and retains the existing received-audio and decoded-screen assertions. Use isolated media-test API and gateway credentials: the remote gateway callback must target the local fixture server on `127.0.0.1:3001`, never a production Smartfire database. The test harness does not print credentials or captured signaling URLs.
-
-Smartfire serves a checked-in LiveKit browser bundle. See the [browser SDK rebuild guide](../script/livekit-client/README.md) when updating its pinned version.
+Smartfire serves a checked-in LiveKit browser bundle. See the [browser SDK rebuild guide](../rust/web/script/livekit-client/README.md) when updating its pinned version.
 
 ## Behavior and access control
 
@@ -65,7 +47,7 @@ The first join in a browser stops at a compact device check with microphone, spe
 
 Smartfire issues room-scoped tokens only to active, signed-in human members. Tokens allow microphone, screen, and camera publishing, with no data or administration grants. Join tokens expire after two minutes; participant identities are scoped to individual sign-in sessions and room names are opaque. The API response is not cacheable and the browser bundle is served locally.
 
-Membership removal, sign-out, account ban or deactivation, and room deletion persist revocation and cleanup work in the same database transaction. Queue delivery starts after commit. The normal job worker handles prompt cleanup, while the reconciler recovers work after enqueue failures, worker restarts, and temporary LiveKit outages.
+Membership removal, sign-out, account ban or deactivation, and room deletion persist revocation and cleanup work in the same database transaction. Queue delivery starts after commit. The in-process job queue handles prompt cleanup, while the periodic huddle reconciler recovers work after enqueue failures, restarts, and temporary LiveKit outages.
 
 All original joins and LiveKit reconnects pass through the gateway. It checks the current database grant before contacting LiveKit, holds the first upstream signal, checks again, and then checks once per second while the grant has a signaling connection or is in its reconnect window. A saved original or server-refreshed token cannot bypass a revoked database grant.
 
@@ -73,7 +55,7 @@ When signaling closes normally, the gateway retains the grant for a three-second
 
 Participant removal retries after a temporary LiveKit administration failure. If removal still cannot be confirmed after ten seconds, the gateway exits unsuccessfully. `serve` then stops LiveKit, interrupting every call on that local server rather than allowing media whose authorization cannot be enforced. See the [authorization boundary and acceptance checks](huddle-enforcement.md) for the full failure model.
 
-The system suite runs two headless browsers against the real server with synthetic microphone, screen, and camera content. It checks received audio/video bytes, decoded screen and camera video, camera toggling and failure retry, channel navigation without a new connection, mute state, media cleanup, permission-denial retry, and server-initiated participant removal. It also checks device pickers and switching, the microphone meter including its restart after a full reconnect, the pre-join device check, the connection indicator with its details panel, SDK retargets preserving stored preferences, and microphone denial both before and after credentials are issued. It also checks actual SDK reconnects with server-refreshed tokens and rejection of saved tokens after membership or session revocation. It does not capture the operator's desktop or use their physical microphone.
+The huddle browser cases in the correctness suites (see [`rust/ci/README.md`](../rust/ci/README.md)) run headless browsers against the real server with synthetic media, and the gateway's own Node tests run against the Rust endpoints; the real-media case runs in the `livekit` suite against the project-local LiveKit server. They do not capture the operator's desktop or use their physical microphone.
 
 The local gateway listens on loopback TCP 7883. LiveKit's raw signaling and administration API listens on loopback TCP 7880, and the WebRTC UDP mux uses UDP 7882. The raw endpoint must remain private because reaching it directly bypasses admission checks. Embedded TURN is disabled. This is suitable for one-machine development and browser tests, but another computer cannot join it.
 
@@ -107,18 +89,18 @@ Starting a huddle in a DM rings every other human member — one-to-one DMs ring
 
 "In the call" is a liveness signal, not grant existence: grants persist per session, but every gateway authorization check records `last_seen_at` on the grant (at most once per 10 seconds), and a participant counts as in the call when seen within the last 20 seconds. Issuing a grant also marks the issuer's own open invitations for the room handled, so joining late clears even a missed item.
 
-The recipient's banner arrives over the same per-user `ActivityChannel` broadcast as other activity, with an invitation payload naming the caller and room. Join marks the item handled immediately and dispatches the same `huddle:join` window event with `{ roomId, roomName }` that the room header's join control uses, navigating to the DM first when the recipient is elsewhere; Dismiss marks the item read. The banner stays hidden while the huddle panel is already connected or connecting to that room. Disconnected recipients also get a Web Push "<name> started a huddle" notification linking to the DM, limited to opted-in memberships like message push. Invitation push goes through `Notifications::Policy`, so Do Not Disturb and quiet hours suppress it (with the starred-caller exception); the inbox item and its missed-call resolution are unaffected.
+The recipient's banner arrives over the same per-user `ActivityChannel` broadcast as other activity, with an invitation payload naming the caller and room. Join marks the item handled immediately and dispatches the same `huddle:join` window event with `{ roomId, roomName }` that the room header's join control uses, navigating to the DM first when the recipient is elsewhere; Dismiss marks the item read. The banner stays hidden while the huddle panel is already connected or connecting to that room. Disconnected recipients also get a Web Push "<name> started a huddle" notification linking to the DM, limited to opted-in memberships like message push. Invitation push goes through the notification policy, so Do Not Disturb and quiet hours suppress it (with the starred-caller exception); the inbox item and its missed-call resolution are unaffected.
 
 Every room that can huddle — open and closed channels plus one-to-one and group DMs — shows the same live "who is in the call" indicator as voice channels: an avatar stack with a count on the room's sidebar row and in the room header next to the join button, reading "N in huddle: names" (voice keeps "in voice", stage keeps "on stage"). Server pushes replace the stacks when a grant is issued, revoked, or first seen in the call; grants that quietly expire fall off through polling. The header polls its room every 15 seconds, while the whole sidebar shares one aggregate poll of `GET /users/huddle_presence`, which returns only the current user's rooms with at least one participant. The sidebar poll pauses while the tab is hidden and fetches immediately when it becomes visible again. Quiet rooms render an empty stack as the push target but show nothing.
 
-Forty-five seconds after the start, `Huddle::InvitationResolver` resolves the invitation: a recipient who obtained a grant since the start, or is in the call, has the item marked handled automatically, while an unanswered invitation, including one whose starter already left, becomes an unread `huddle_missed` item. Resolution runs in the `huddle_reconciler` process loop alongside cleanup reconciliation, so missed-huddle resolution depends on the reconciler process the same way huddle cleanup does; the activity inbox also resolves the current user's overdue invitations lazily on load, so it is never stale when the reconciler is down. Both event types appear in the activity inbox with a link to the DM. Persistent voice channels build on the same grant and liveness foundation; see [voice channels](voice-channels.md).
+Forty-five seconds after the start, the invitation is resolved: a recipient who obtained a grant since the start, or is in the call, has the item marked handled automatically, while an unanswered invitation, including one whose starter already left, becomes an unread `huddle_missed` item. Resolution runs in the periodic huddle reconciliation alongside cleanup; the activity inbox also resolves the current user's overdue invitations lazily on load, so it is never stale between reconciliation passes. Both event types appear in the activity inbox with a link to the DM. Persistent voice channels build on the same grant and liveness foundation; see [voice channels](voice-channels.md).
 
-While the banner shows, the call also rings audibly — a two-tone pattern synthesized in the browser, needing no audio asset. Browser autoplay policies suspend audio before the first gesture, so a ring that starts too early waits silently for the next click or keypress instead of failing. When the tab is hidden, the call raises a system Notification instead, but only with an already-granted permission, since asking needs a gesture the ring does not have. Answering, dismissing, the ring timeout, and the starter hanging up all stop the sound; the ended banner ("X left the huddle") never rings. Recipients in do-not-disturb or quiet hours get a silent invitation: the banner shows but nothing sounds and no Notification is raised. That decision lives in `Huddle::RingPolicy`, which currently rings for everyone; when `Notifications::Policy` lands on `main`, integration wires it there with one line (see the class comment) and both the inbox and banner-only payloads already carry the resulting `silent` flag.
+While the banner shows, the call also rings audibly — a two-tone pattern synthesized in the browser, needing no audio asset. Browser autoplay policies suspend audio before the first gesture, so a ring that starts too early waits silently for the next click or keypress instead of failing. When the tab is hidden, the call raises a system Notification instead, but only with an already-granted permission, since asking needs a gesture the ring does not have. Answering, dismissing, the ring timeout, and the starter hanging up all stop the sound; the ended banner ("X left the huddle") never rings. Recipients in do-not-disturb or quiet hours get a silent invitation: the banner shows but nothing sounds and no Notification is raised. That decision follows the notification policy: do-not-disturb (including timed DND) silences the ring unless the caller is on the recipient's "Allow during DND" list, and both the inbox and banner-only payloads carry the resulting `silent` flag.
 
 ## Join and leave notices
 
 Starting a call is not the only event worth hearing about: when Chris joins a huddle Riel is already in, Riel sees a small in-call toast, "Chris joined". Rapid joins batch into one toast ("Chris and Dean joined") with a single subtle blip, played through the same `sound` controller as every chat sound, so DND, quiet hours, meeting quiet, and out-of-office silence it the same way. Leaving toasts quietly in the call too ("Chris left"), with no sound. These toasts fire in every room kind — DMs, channels, and voice rooms — but only for members currently in the call. A leave waits about five seconds before toasting, so a server mute — which revokes the grant and rejoins it automatically — never flashes "left" followed by "joined": a join from the same person inside the window cancels the pending leave and stays silent itself. The suppression works in either arrival order, because ActionCable delivers each broadcast on its own thread and the join can land first under load: the server marks the rejoin (`rejoin: true` when the joiner had an in-call grant revoked in the last five seconds, matching the leave delay), and a marked join the viewer still shows as present arms a one-shot quiet window that swallows the leave landing inside it. A marked join landing after the leave already toasted reads as genuine and toasts, so a slow rejoin never looks like a disappearance. The pending leave and the armed rejoin both survive Turbo navigations, so a mute cycle during a room switch stays silent too.
 
-Members outside the call hear about joins only in one-to-one and group DMs, and never with a ring: the room shows a slim "Chris is in your huddle" banner with a Join button, and the DM's sidebar row grows the same pill. Each leave drops its joiner from the roster while the others remain, and presence refreshes prune anyone no longer in the call; both hide when the roster empties, when the huddle ends, or when the viewer joins. Disconnected outsiders also get one Web Push ("Chris joined your huddle"), gated through `Notifications::Policy` like every other push — DND, meeting DND, quiet hours, out of office, the starred-people exception, and per-room involvement — and throttled to one per huddle per viewer every ten minutes (`memberships.last_huddle_join_push_at`, claimed with one conditional UPDATE so concurrent joins push once). Members who switched huddle inbox items off, or muted the room, skip the push; their in-app banner still shows, and in-call toasts are unaffected.
+Members outside the call hear about joins only in one-to-one and group DMs, and never with a ring: the room shows a slim "Chris is in your huddle" banner with a Join button, and the DM's sidebar row grows the same pill. Each leave drops its joiner from the roster while the others remain, and presence refreshes prune anyone no longer in the call; both hide when the roster empties, when the huddle ends, or when the viewer joins. Disconnected outsiders also get one Web Push ("Chris joined your huddle"), gated through the notification policy like every other push — DND, meeting DND, quiet hours, out of office, the starred-people exception, and per-room involvement — and throttled to one per huddle per viewer every ten minutes (`memberships.last_huddle_join_push_at`, claimed with one conditional UPDATE so concurrent joins push once). Members who switched huddle inbox items off, or muted the room, skip the push; their in-app banner still shows, and in-call toasts are unaffected.
 
 Join notices fan out from the grant's first gateway sighting (`Huddle::JoinNoticeJob`), not from token issuance, so they fire when the joiner actually connects and reconnects inside the liveness window stay silent. The job re-checks that the grant is still in the call before fanning out, so a quick join-then-leave never toasts "joined" after the "left". A second device joining while another of the joiner's grants is already listed changes no roster and notifies nobody. A viewer whose start-of-huddle ring is still live gets no join notice for sixty seconds — the ring is already the notice — and the join itself never rings, so existing ring behavior is unchanged. Notices go out on each viewer's own `HuddleNoticeChannel` stream, never the room's, and the sidebar pills are injected client-side per viewer rather than rendered into the shared row cache. The joiner is never notified, bots and deactivated members neither trigger nor receive notices, and members with no access to the room are skipped. No inbox items are recorded.

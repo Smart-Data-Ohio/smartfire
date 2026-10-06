@@ -38,7 +38,7 @@ class HostSourceTests(unittest.TestCase):
         content = (project / module).read_bytes()
         includes = re.findall(r'\binclude_(?:str|bytes)!\s*\(\s*"([^"]+)"', content.decode())
         self.assertTrue(includes, "the real PWA module must exercise compile-time inputs")
-        inputs = {module: content, Path("public/500.html"): (project / "public/500.html").read_bytes()}
+        inputs = {module: content, Path("rust/web/public/500.html"): (project / "rust/web/public/500.html").read_bytes()}
         for include in includes:
             path = (project / module.parent / include).resolve().relative_to(project)
             inputs[path] = (project / path).read_bytes()
@@ -74,11 +74,9 @@ class HostSourceTests(unittest.TestCase):
             with patch('browser_host.prepare_source', return_value=root / 'generated'), \
                     patch('browser_host.audit_build') as audit, \
                     patch('browser_host.subprocess.run', return_value=result) as run:
-                self.assertEqual(build_host(root, {'CARGO_TARGET_DIR': str(root / 'target'), 'CAMPFIRE_REFERENCE': str(root)}), artifact['executable'])
+                self.assertEqual(build_host(root, {'CARGO_TARGET_DIR': str(root / 'target')}), artifact['executable'])
             audit.assert_called_once()
             self.assertEqual(run.call_args.kwargs['env']['CARGO_TARGET_DIR'], str(root / 'target/ws8bm-browser-host'))
-            # The generated tree reads its own copies of rust/web and rust/fixtures.
-            self.assertNotIn('CAMPFIRE_REFERENCE', run.call_args.kwargs['env'])
 
     def test_refreshes_outer_inputs_without_copying_targets_or_old_files(self):
         with tempfile.TemporaryDirectory() as directory:

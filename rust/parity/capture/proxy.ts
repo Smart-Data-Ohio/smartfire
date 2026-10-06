@@ -1,9 +1,9 @@
-// Both servers are shown to the browser under one shared origin (default http://localhost:3999),
-// because join and transfer links, QR codes and bot curl commands embed the request's host
-// (parity/seeds/README.md). Each target gets its own forward proxy; a browser context for that
-// target uses it, and the proxy sends everything, including the Action Cable WebSocket (tunneled
+// The server is shown to the browser under one fixed origin (default http://localhost:3999),
+// because join and transfer links, QR codes and bot curl commands embed the request's host, and
+// the recorded expectations use that origin. Each target gets its own forward proxy; a browser
+// context for that target uses it, and the proxy sends everything, including the Action Cable WebSocket (tunneled
 // with CONNECT, or an absolute-URI upgrade), to the real server with the Host header untouched.
-// Connections to the server go through forward.ts when the capture runs without a network.
+// Connections to the server go through forward.ts when the browser runs without a network.
 import http from "node:http"
 import net from "node:net"
 import type { AddressInfo } from "node:net"
@@ -26,7 +26,7 @@ export async function startProxy(upstreamUrl: string): Promise<Proxy> {
   const host = upstream.hostname
   const port = Number(upstream.port || 80)
   const agent = new http.Agent({ keepAlive: true, maxSockets: 64 })
-  // Through forward.ts when the capture has no network of its own.
+  // Through forward.ts when the browser has no network of its own.
   ;(agent as any).createConnection = (_options: unknown, callback: (error: Error | null, socket: net.Socket) => void) => {
     const socket = connectUpstream(host, port, () => callback(null, socket))
     track(socket)

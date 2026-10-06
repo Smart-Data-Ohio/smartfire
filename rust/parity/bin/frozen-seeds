@@ -2,9 +2,8 @@
 """The committed test seeds: verify, restore, and migrate them.
 
 The `default`, `first_run`, `agents_ui` and `ledger_originals` seeds were built once by the Rails app
-(parity/bin/seed, validated by reference-tools/campfire/verify_parity_seed.rb) and
-frozen under parity/seeds/frozen/. Rails no longer runs, so they're never rebuilt:
-schema changes are applied to them with this build's `campfire db-migrate`.
+(at parity/reference.sha) and frozen under parity/seeds/frozen/. The Rails app is gone, so they're
+never rebuilt: schema changes are applied to them with this build's `campfire db-migrate`.
 
   parity/bin/frozen-seeds check              hashes, keys and schema match this checkout
   parity/bin/frozen-seeds restore            check, then copy them to parity/.seed/NAME

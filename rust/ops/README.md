@@ -69,7 +69,6 @@ Local checks use fake Docker/ONCE/cloud boundaries:
 ```sh
 python3 -m unittest discover -s rust/ops/tests -p 'test_release.py'
 python3 -m unittest discover -s rust/ops/tests -p 'test_workflows.py'
-WS18_BINARY="$PWD/rust/target/debug/campfire" python3 -m unittest discover -s rust/ops/tests -p 'test_additive_reference.py'
 ```
 
 `rust/ops/tests/simulate_release.sh PREVIOUS CANDIDATE MIGRATING` runs the release

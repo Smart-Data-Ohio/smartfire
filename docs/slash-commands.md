@@ -14,12 +14,12 @@ Commands that post (shrug, me, play, remind) broadcast live like typed
 messages; the rest answer ephemerally — visible to the invoker only,
 never posted — or open UI.
 
-Commands live in one registry
-(`SlashCommands::Registry`, handlers in `SlashCommands::Handlers`):
-each entry has a name, a description, an argument hint, a permission
-check, a handler, and a `takes_arguments` flag that decides the picker
-behavior above. Adding a command means adding one entry plus one
-handler method. `/play` is a registry entry that posts through the
+Commands live in one registry (`registry()` in
+`rust/crates/db/src/slash_commands.rs`, dispatched by `handle` in the
+same file): each entry has a name, a description, an argument hint, and
+a `takes_arguments` flag that decides the picker behavior above.
+Adding a command means adding one registry entry plus its branch in
+`handle`. `/play` is a registry entry that posts through the
 normal message path, so sounds keep their optimistic preview and mute
 rules; see [status and notifications](notifications.md).
 

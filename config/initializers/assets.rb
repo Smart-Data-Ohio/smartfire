@@ -1,1 +1,0 @@
-../../rust/web/config/initializers/assets.rb

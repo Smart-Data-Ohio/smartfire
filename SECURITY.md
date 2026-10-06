@@ -14,9 +14,10 @@ network path held by the Smartfire process but not by the operator's own shell.
 
 ## Intentional behavior
 
-Every webhook POST, legacy bot or agent delivery, resolves through
-`RestrictedHTTP::PrivateNetworkGuard` and pins the connection to the
-resolved public address, like link unfurling: loopback and private
-destinations are refused instead of posted to. Operators who need bots
+Every webhook POST, legacy bot or agent delivery, resolves through the
+private-network guard (`rust/crates/campfire/src/integrations/net/guard.rs`)
+and pins the connection to the resolved public address, like link
+unfurling: loopback and private destinations are refused instead of
+posted to. Operators who need bots
 on internal services must expose them at a public address the guard
 accepts.

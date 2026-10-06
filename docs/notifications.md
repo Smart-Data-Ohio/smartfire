@@ -2,8 +2,8 @@
 
 People set a presence and custom status, silence push and sounds with Do
 Not Disturb or scheduled quiet hours, follow or mute channel threads,
-watch keywords, and pick a time zone and theme. One policy object,
-`Notifications::Policy`, gates every push and sound; the pushers call
+watch keywords, and pick a time zone and theme. One notification policy
+(`rust/crates/db/src/models/notification_policy.rs`) gates every push and sound; the pushers call
 it instead of re-deciding the rules, and the inbox recorder implements
 the same inbox rules in its own candidate flow.
 
@@ -47,17 +47,10 @@ the meeting label alike.
 
 ### Profile card integration
 
-The profile card renders status through one helper, so it never queries
-leases itself:
-
-```erb
-<%= render_user_status_badge(user) %>
-```
-
-This renders `users/statuses/_badge` (dot, presence label, custom status
-text). Pass `presence:` to reuse a preloaded value, or render
-`presence_dot_tag(user, presence:)` for the dot alone. Presence labels
-come from `Users::PresenceHelper#presence_label`.
+The profile card renders status through one shared partial
+(`users/statuses/_badge`, in `rust/crates/views/templates/`) showing the
+presence dot, presence label, and custom status text, so it never queries
+leases itself.
 
 ## Do Not Disturb and quiet hours
 
@@ -116,14 +109,13 @@ Matching runs once per message: thread messages reuse the already-loaded
 memberships, root messages match only members holding an alert (a join
 from `keyword_alerts` into the room's memberships, so the roster size
 never matters), and every distinct phrase compiles into its own pattern
-checked independently (`Notifications::KeywordMatcher`), so overlapping
+checked independently, so overlapping
 phrases held by different users all match. Thread-muted and invisible
 members match nothing; members with room notifications off or the room
 muted still match, since a keyword is an explicit opt-in like a
 mention. A keyword never overrides a mention, reply, or thread item for
-the same message. The query-count tests in
-`test/services/activity_items/recorder_keyword_test.rb` pin the constant
-query cost as followers and the roster grow.
+the same message. The recorder's query cost stays constant as followers
+and the roster grow.
 
 ## Time zone
 
@@ -132,12 +124,11 @@ Each member has a time zone, detected from the browser on first visit
 `Intl.DateTimeFormat().resolvedOptions().timeZone` once, only while none
 is saved and none was explicitly chosen) and editable on the profile
 page. The form's options carry IANA identifiers (what detection
-stores); legacy Rails names still validate and map to their identifier
-for display. Saving the form — even as "Not set" — marks the choice
+stores); legacy Rails time zone names (the `Eastern Time (US & Canada)` style)
+still validate and map to their identifier for display. Saving the form — even as "Not set" — marks the choice
 explicit (`users.time_zone_explicit`), so detection never overwrites a
 decision the member made. Every request renders in the member's zone
-(`SetTimeZone`, with an around hook that restores the previous zone
-even when the action raises), and quiet hours plus custom status
+and quiet hours plus custom status
 expiries evaluate in it.
 
 ## Theme
@@ -155,27 +146,25 @@ have no theme picker and keep following the OS.
 
 ## The policy object
 
-`Notifications::Policy` answers two questions for one recipient:
+The policy answers two questions for one recipient:
 
 - `inbox_event_type`: which item to record (`mention`, `reply`,
   `thread_activity`, `keyword_alert`), or nil.
-- `push?` / `sound?`: whether push and sounds go out.
+- `push` / `sound`: whether push and sounds go out.
 
-Every push path calls `push?` (`Room::MessagePusher`,
-`ChannelThread::MessagePusher`, `Event::ReminderPusher`,
-`Huddle::InvitationPusher`, `Huddle::JoinPusher`); sounds follow through the DND marker and
+Every push path (room and thread messages, event reminders, huddle
+invitations and huddle joins) asks `push`; sounds follow through the DND marker and
 quiet-hours window the layout renders for the `sound` controller. The
-inbox recorder calls `inbox_event_type` for each candidate:
-`ActivityItems::Recorder` batches keyword matching once per message
+inbox recorder calls `inbox_event_type` for each candidate: it batches
+keyword matching once per message
 (the candidates are the thread members for thread messages, and the
 mentionees plus the reply author plus the keyword matches for room
 messages), then asks the policy for each candidate's winner with the
-already-loaded memberships. The matrix test in
-`test/models/notifications/policy_test.rb` pins the rules, and
-`test/services/activity_items/recorder_test.rb` plus
-`test/services/activity_items/recorder_keyword_test.rb` pin the
-recorder's identical behavior and flat query cost.
+already-loaded memberships. The tests in `rust/crates/db/src/tests/`
+(`notification_policy_test.rs`, `keyword_alert_test.rs` and the recorder
+tests) pin the rules, the recorder's identical behavior and its flat
+query cost.
 
 Pushers preload one membership map, one user map, and one DND-exception
-set (`Policy.dnd_exceptions_for`) per batch, then decide per recipient
-in Ruby.
+set (`dnd_exceptions_for`) per batch, then decide per recipient
+in memory.

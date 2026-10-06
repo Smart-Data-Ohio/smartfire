@@ -51,8 +51,7 @@ def main():
     # Use current working files, including uncommitted fixes. No source file in
     # the real worktree is ever mutated, and no git stash or checkout is needed.
     tracked = subprocess.check_output(
-        ['git', 'ls-files', '-z', '--', 'rust', 'app', 'config', 'db',
-         'public', 'vendor', 'test'], cwd=ROOT.parent).decode().split('\0')
+        ['git', 'ls-files', '-z', '--', 'rust'], cwd=ROOT.parent).decode().split('\0')
     with tempfile.TemporaryDirectory(prefix='template-rendering-', dir=target) as tmp:
         checkout = Path(tmp)
         for relative in filter(None, tracked):
@@ -62,8 +61,7 @@ def main():
             shutil.copy2(source, destination)
         (checkout / 'rust/parity/.seed').symlink_to(ROOT / 'parity/.seed',
                                                   target_is_directory=True)
-        env = dict(os.environ, CI='1', CAMPFIRE_REFERENCE=str(ROOT.parent),
-                   CARGO_TARGET_DIR=str(target))
+        env = dict(os.environ, CI='1', CARGO_TARGET_DIR=str(target))
         (checkout / 'tmp').mkdir()
         env['TMPDIR'] = str(checkout / 'tmp')
         controls = {r['test']: r for group in receipts.values() for r in group}

@@ -55,7 +55,7 @@ date and time. Presets resolve in the viewer's own time zone in the
 browser and submit as UTC; the server rejects past or unparseable
 times.
 
-At the reminder time, the periodic runner (`bin/periodic`) fires the
+At the reminder time, the server's periodic runner fires the
 reminder: a separate "Reminder" inbox item (`message_reminder`, under
 the Reminders inbox filter, kept read/unread/handled like any other
 item) is created for the saved item, leaving any mention or reply

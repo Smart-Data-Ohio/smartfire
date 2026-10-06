@@ -4,14 +4,12 @@ This is a port. Copy the output of Smartfire's Rails templates, including whites
 order, escaping, and the browser controllers they connect. Do not redesign a screen or silently
 keep an upstream Campfire template because it compiles.
 
-## Reference and ownership
+## Provenance and ownership
 
-Read the matching `app/views/**/*.erb` and `app/helpers/**/*.rb` first. The pin is recorded in
-`parity/reference.sha`. The current pin is `78b9b1546`, including Rails PR #148,
-`PRESENTATION_CACHE_VERSION = 3` and the Edge icon correction in #151. The default image is
-`campfire-reference`: the pinned reference
-runtime with the pin's actual `app`, `config`, `lib`, `db`, `test`, `vendor` and `public` trees.
-The generator refuses an older presentation version.
+The templates were ported from Smartfire's Rails `app/views/**/*.erb` and `app/helpers/**/*.rb`
+at the commit in `parity/reference.sha` (`78b9b1546`, including Rails PR #148,
+`PRESENTATION_CACHE_VERSION = 3` and the Edge icon correction in #151). The Rails app has since
+been removed; read those files in the git history when a template's origin matters.
 
 Domain owners port their own templates and queries. WS6 owns the layout, helpers and shared
 partials. Templates consume plain view models, never database rows. A controller gathers data
@@ -86,25 +84,20 @@ would accept inputs Rails rejects. `to_fs(:db)` uses UTC, matching Rails.
 ## Whitespace and byte checks
 
 Erubi removes lines containing only Ruby statements, including their indentation and newline.
-Askama does not do that automatically. `reference-tools/views/erubi_trim.py` moves statement
-tags to the following line while leaving expression/block-render indentation in place. Review
-its result: an expression that renders empty can still leave a whitespace-only line.
+Askama does not do that automatically: move statement tags to the following line while leaving
+expression/block-render indentation in place. An expression that renders empty can still leave a
+whitespace-only line.
 Askama removes the final literal newline; use an explicit `{{ "\n" }}` when Rails emits it.
 Do not normalize, trim, parse/reserialize, or widen masks to make an HTML comparison pass.
 
-Add a state to `reference-tools/views/core/goldens.rb` (or your domain's equivalent). It renders
-in our reference container with real fixtures, fixed clock and test-only signing secrets. Fixed
-CSRF placeholders (`GLOBAL`, `method:action`) and nonce (`NONCE`) are lent identically to both
-renderers. Signed stream names and avatar URLs are generated using our real SHA1-derived test
-keys, not copied from upstream's goldens. The cache-key generator does not patch Rails helpers.
-
-Run from `rust/`, with the worker's own target and named image:
+The byte goldens were recorded from the Rails app with real fixtures, a fixed clock and
+test-only signing secrets (`reference-tools/views/core`, removed with the Rails app), and are
+frozen: change one only with the behavior it pins. Fixed CSRF placeholders (`GLOBAL`,
+`method:action`) and nonce (`NONCE`) were lent identically to both renderers. Signed stream names
+and avatar URLs use our real SHA1-derived test keys, not upstream's goldens.
 
 ```sh
-bash reference-tools/views/core/build_reference.sh
-PARITY_IMAGE=campfire-reference PARITY_OWNER=ws6 STORE=/home/riels/.cache/rust-port/ws6/core-reference bash reference-tools/views/core/run.sh
-PARITY_IMAGE=campfire-reference STORE=/home/riels/.cache/rust-port/ws6/image-reference bash reference-tools/views/core/images.sh
-TMPDIR=/home/riels/.cache/rust-port/ws6/tmp WS6_VIEW_DIFF_DIR=/home/riels/.cache/rust-port/ws6/view-diffs cargo test -j 4 -p campfire_views --test core
+cargo test -j 4 -p campfire_views --test core
 ```
 
 `tests/core.rs` compares complete strings and reports the first differing byte. The optional
@@ -184,22 +177,3 @@ JSON. WS8b must gather these inputs and wire these keys into its cache reads and
 agent facts from WS11, huddle/sidebar inputs from WS13, event/Google/calendar/Drive inputs from
 WS14 and card facts from WS15. The inherited message cache entry point still needs that wiring.
 The process-local template digest is not ActionView::Digestor's shared Redis digest.
-
-## Pixel parity with WS19
-
-Register the real domain state and covered templates in `parity/screens.yml`; follow
-`parity/SCREENS.md` for fixtures, interaction steps and the engine/viewport/theme matrix.
-Have WS19 provide matching seeded reference/candidate servers and its worker-safe capture
-launcher. For WS6 use ports 46000–46099, worker-prefixed Docker names and cache/worktree scratch.
-The comparison invocation for existing servers is:
-
-```sh
-parity/bin/compare --expected http://127.0.0.1:46000 --actual http://127.0.0.1:46001 \
-  --only 'your/domain/state' --engines chromium --viewports desktop,phone \
-  --schemes light,dark --no-allowlist --out target/ws6-layout-parity
-```
-
-Do not use the checkout's inherited generic Docker launcher without fixing its worker namespace
-or using WS19's updated launcher. Byte goldens do not prove pixel parity. WS6 has not run the
-screen matrix: this checkout has no parity seeds, its inventory is inherited upstream, and
-the optional chrome providers/domain pages remain incomplete. No masks or allowlists changed.

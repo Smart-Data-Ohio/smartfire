@@ -1,7 +1,10 @@
 # See https://git-scm.com/docs/gitattributes for more about git attribute files.
 
-# Mark the database schema as having been generated.
-db/schema.rb linguist-generated
+# Generated from the migrations (CAMPFIRE_SCHEMA_DUMP=write; see rust/AGENTS.md).
+rust/crates/db/src/schema.sql linguist-generated
 
-# Mark any vendored files as having been vendored.
-vendor/* linguist-vendored
+# Vendored JavaScript and gem assets, and the recorded test data.
+rust/web/vendor/** linguist-vendored
+rust/crates/assets/vendor/** linguist-vendored
+rust/crates/richtext/vendor/** linguist-vendored
+rust/vectors/** linguist-generated

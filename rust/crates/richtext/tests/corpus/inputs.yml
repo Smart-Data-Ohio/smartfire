@@ -1,7 +1,7 @@
 # Differential corpus for the rich text pipeline. Each case is a stored message body (the raw
-# action_text_rich_texts.body column). reference-tools/richtext/generate.rb expands the
-# placeholders, runs the real Rails pipeline in the campfire-reference image, and writes
-# expected.json next to this file.
+# action_text_rich_texts.body column). The Rails recorder (reference-tools/richtext/generate.rb,
+# removed with the Rails app) expanded the placeholders, ran the real Rails pipeline and wrote
+# expected.json next to this file; both are frozen.
 #
 # Placeholders:
 #   {{sgid:NAME}}          the user's attachable SGID

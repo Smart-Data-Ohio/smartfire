@@ -30,14 +30,10 @@ fn vectors() -> J {
     serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))).unwrap()
 }
 
-/// The reference's `test/fixtures/files`: the port's copy in `rust/fixtures/files`, or a reference
-/// Rails app's (`CAMPFIRE_REFERENCE`), as `campfire_db::fixtures::reference_dir` finds them.
+/// The Rails app's `test/fixtures/files`: the port's copy in `rust/fixtures/files`, as
+/// `campfire_db::fixtures::reference_dir` finds them.
 fn fixture(name: &str) -> PathBuf {
-    option_env!("CAMPFIRE_REFERENCE")
-        .map(|root| PathBuf::from(root).join("test/fixtures"))
-        .unwrap_or_else(|| repo_root().join("fixtures"))
-        .join("files")
-        .join(name)
+    repo_root().join("fixtures/files").join(name)
 }
 
 /// `Rails.application.key_generator.generate_key("ActiveStorage")`: PBKDF2-HMAC-SHA1, 1000

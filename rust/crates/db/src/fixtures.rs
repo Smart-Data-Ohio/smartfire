@@ -1,4 +1,4 @@
-//! Loads the reference's `test/fixtures/*.yml` (the port's copy is `rust/fixtures/`) the way `ActiveRecord::FixtureSet` does, so Rust
+//! Loads the Rails app's `test/fixtures/*.yml` (now `rust/fixtures/`) the way `ActiveRecord::FixtureSet` does, so Rust
 //! tests run against the same rows as the Ruby tests:
 //!
 //! - ids are `Zlib.crc32(label) % (2**30 - 1)` unless given;
@@ -36,26 +36,19 @@ pub fn identify(label: &str) -> i64 {
     i64::from(crc32fast::hash(label.as_bytes()) % MAX_ID)
 }
 
-/// The port's own copy of the reference Rails app's static inputs: `rust/web/`, laid out like the
-/// Rails app (`app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`,
-/// `script/livekit-gateway`, ...). `CAMPFIRE_REFERENCE` at compile time names a reference Rails
-/// app's root to read them, and the fixtures, from instead.
+/// The app's static inputs: `rust/web/`, laid out like the Rails app they came from
+/// (`app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`,
+/// `script/livekit-gateway`, ...).
 pub fn reference_root() -> PathBuf {
-    match option_env!("CAMPFIRE_REFERENCE") {
-        Some(root) => PathBuf::from(root),
-        None => rust_root().join("web"),
-    }
+    rust_root().join("web")
 }
 
-/// The reference's `test/fixtures`: `rust/fixtures/`.
+/// The fixtures, the Rails app's `test/fixtures`: `rust/fixtures/`.
 pub fn reference_dir() -> PathBuf {
-    match option_env!("CAMPFIRE_REFERENCE") {
-        Some(root) => Path::new(root).join("test/fixtures"),
-        None => rust_root().join("fixtures"),
-    }
+    rust_root().join("fixtures")
 }
 
-/// A file named by its path in the reference Rails app (`public/500.html`,
+/// A file named by its path in the Rails app (`public/500.html`,
 /// `test/fixtures/files/earth.png`, `script/livekit-gateway/package.json`), in the port's copy.
 pub fn reference_path(path: &str) -> PathBuf {
     match path.strip_prefix("test/fixtures/") {

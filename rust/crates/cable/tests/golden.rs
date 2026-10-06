@@ -1,16 +1,9 @@
-//! Frame sequences recorded from the reference app's `/cable`, replayed against this server.
+//! Frame sequences recorded from the Rails app's `/cable`, replayed against this server.
 //!
-//! `tests/golden/reference.json` holds the fixture values the reference run used (user, rooms,
+//! `tests/golden/reference.json` holds the fixture values the Rails run used (user, rooms,
 //! signed stream names) and the frames it answered each step with. It was recorded from the
-//! Docker reference (Thruster, Puma, Redis adapter). To re-record:
-//!
-//!   bash reference-tools/cable/record.sh
-//!
-//! Re-recording uses the current pinned `campfire-reference` image, a fresh database, port 47040, and
-//! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in `/home/riels/.cache/rust-port/ws7/`.
-//! The checked-in recording was produced at `fec615be`; #151 changed only the Edge install image path.
-//!
-//! (The fixtures script starts a fresh session each time, because the script signs it out.)
+//! Rails app's Docker image (Thruster, Puma, Redis adapter) at `fec615be`; #151 changed only the
+//! Edge install image path. The Rails app is gone, so the recording is frozen.
 //!
 //! The replay builds Campfire's channels over the same fixture values, so every frame must match
 //! byte for byte; only ping timestamps are normalized.
@@ -436,38 +429,6 @@ fn dechunk(body: &str) -> String {
         rest = &after[size + 2..];
     }
     out
-}
-
-#[tokio::test]
-#[ignore = "utility: needs a running reference app; see the module docs"]
-async fn record_reference() {
-    let url = std::env::var("CABLE_REFERENCE_URL").expect("CABLE_REFERENCE_URL");
-    let fixtures: Value = serde_json::from_str(
-        &std::fs::read_to_string(
-            std::env::var("CABLE_REFERENCE_FIXTURES").expect("CABLE_REFERENCE_FIXTURES"),
-        )
-        .unwrap(),
-    )
-    .unwrap();
-    let tokens: BTreeMap<String, String> =
-        serde_json::from_value(fixtures["tokens"].clone()).unwrap();
-    let origin = url
-        .replace("ws://", "http://")
-        .trim_end_matches("/cable")
-        .to_string();
-    let target = Target {
-        url,
-        origin,
-        cookie: fixtures["cookie"].as_str().unwrap().to_string(),
-        server: None,
-    };
-    let sessions = run_script(&target, &tokens).await;
-    let recording = Recording { tokens, sessions };
-    std::fs::write(
-        GOLDEN,
-        serde_json::to_string_pretty(&recording).unwrap() + "\n",
-    )
-    .unwrap();
 }
 
 #[tokio::test]
