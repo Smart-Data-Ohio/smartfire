@@ -24,7 +24,9 @@ pub mod directory;
 mod dto;
 pub mod endpoints;
 mod error;
+pub mod huddles;
 pub mod message_actions;
+pub mod stage;
 pub mod sync;
 pub mod threads;
 #[cfg(feature = "test-support")]
@@ -209,5 +211,33 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route("/api/v1/switcher", get(action(directory::switcher)))
         .route("/api/v1/users", get(action(endpoints::users)))
         .route("/api/v1/presence", get(action(endpoints::presence)))
+        .route("/api/v1/huddles", get(action(huddles::index)))
+        .route(
+            "/api/v1/rooms/{room_id}/huddle",
+            get(action(huddles::show)).post(unparsed_action(huddles::join)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/huddle/leave",
+            axum::routing::post(unparsed_action(huddles::leave)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/huddle/moderation",
+            axum::routing::post(unparsed_action(huddles::moderate)),
+        )
+        .route("/api/v1/rooms/{room_id}/stage", get(action(stage::show)))
+        .route(
+            "/api/v1/rooms/{room_id}/stage/members/{membership_id}",
+            axum::routing::patch(unparsed_action(stage::change_role)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/stage/hand",
+            axum::routing::post(unparsed_action(stage::raise_hand))
+                .delete(unparsed_action(stage::lower_hand)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/stage/stream",
+            axum::routing::post(unparsed_action(stage::start_stream))
+                .delete(unparsed_action(stage::stop_stream)),
+        )
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))
 }

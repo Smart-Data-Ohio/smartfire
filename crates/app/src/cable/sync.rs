@@ -126,8 +126,9 @@ pub const TWINS: &[(&str, &[&str])] = &[
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
     // (`Partial::PinBadge`) and the thread indicator (`Partial::ThreadIndicator`, which also
-    // carries the thread's new count and activity), and a direct room's sidebar row
-    // (`Partial::DirectSidebar`, with the member's row). Its other frames (message features, room
+    // carries the thread's new count and activity), a direct room's sidebar row
+    // (`Partial::DirectSidebar`, with the member's row), and the huddle notices and invitations on
+    // `user_<id>_huddle_notices`/`user_<id>_activity`. Its other frames (message features, room
     // headers, polls, board rows and the other directory partials) have no twin yet. Its
     // `ActivityChannel` frames (`user_<id>_activity`) have `activity.item`.
     (
@@ -143,10 +144,22 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "thread.indicator",
             "thread.updated",
             "sidebar.row.upserted",
+            "huddle.notice",
+            "huddle.ring",
         ],
     ),
     // `POST /api/v1/saved` and `DELETE /api/v1/saved/:id` publish to the person's other tabs.
     ("campfire_api::saved_items", &["saved.changed"]),
+    ("huddle_effects::Presence", &["huddle.presence"]),
+    (
+        "huddle_effects::StreamChanged",
+        &["stage.updated", "huddle.presence"],
+    ),
+    ("huddle_effects::StreamStopped", &["stage.stream.stopped"]),
+    ("huddle_effects::StageRoster", &["stage.updated"]),
+    ("huddle_effects::StagePanel", &["stage.updated"]),
+    ("huddle_effects::RoleEvent", &["huddle.role"]),
+    ("huddle_effects::StageEndedNote", &["message.created"]),
     ("RoomRemovalBroadcast", &["sidebar.row.removed"]),
     (
         "user_status_settings::updates::StatusBadgeBroadcast",
@@ -160,13 +173,6 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "Broadcasts::boost_create",
     "Broadcasts::boost_remove",
     "board_automations::DigestNotes",
-    "huddle_effects::StageEndedNote",
-    "huddle_effects::StagePanel",
-    "huddle_effects::StreamChanged",
-    "huddle_effects::StreamStopped",
-    "huddle_effects::StageRoster",
-    "huddle_effects::RoleEvent",
-    "huddle_effects::Presence",
     "user_status_settings::updates::OooNoticeBroadcast",
     "calendar_event::CardUpdate",
     "link_embed::store::CardUpdate",
@@ -178,23 +184,15 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "agent_step::StepParentChange",
 ];
 
-/// Sync events the contract defines that no broadcast point publishes yet (the S3 and S5
-/// events: their endpoints and twins come with each slice's server work). The coverage test
-/// fails when an event is in neither this list nor [`TWINS`], or in both.
+/// Sync events the contract defines that no broadcast point publishes yet (the S3 events: their
+/// endpoints and twins come with the S3 server work). The coverage test fails when an event is
+/// in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
     "sidebar.category.upserted",
     "sidebar.category.removed",
     "poll.updated",
     "poll.ballot",
     "message.cards",
-    // S5: huddles and stages. Their endpoints and the twins of `huddle_effects::*`, the join
-    // notices and the invitation frames come with the S5 server work.
-    "huddle.presence",
-    "huddle.role",
-    "huddle.notice",
-    "huddle.ring",
-    "stage.updated",
-    "stage.stream.stopped",
 ];
 
 /// The conversation topic a message's events go to: its thread's, or its room's.
@@ -435,9 +433,10 @@ pub fn room_read(server: &Cable, user_id: i64, room_id: i64) {
 }
 
 /// The twin of a `Broadcast::Cable` the database layer emits, by its stream: unread and read
-/// pings. Anything else has none.
+/// pings, and the huddle notices and invitations (`huddle_sync::cable_stream`). Anything else
+/// has none.
 pub fn cable_stream(server: &Cable, stream: &str, payload: &serde_json::Value) {
-    if !server.sync_wanted() {
+    if !server.sync_wanted() || super::huddle_sync::cable_stream(server, stream, payload) {
         return;
     }
     let user_id = |suffix: &str| {

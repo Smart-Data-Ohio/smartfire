@@ -27,3 +27,6 @@ mod api_directory_tests;
 #[cfg(test)]
 #[path = "spa_api_activity_tests.rs"]
 mod api_activity_tests;
+#[cfg(test)]
+#[path = "spa_huddle_tests.rs"]
+mod huddle_tests;
