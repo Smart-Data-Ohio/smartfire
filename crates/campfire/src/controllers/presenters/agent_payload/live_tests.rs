@@ -1,6 +1,7 @@
 //! WS8's shared reader through the production presenter; rendered bytes come from Rails.
 use super::super::test_support::{ALL_TALK, BENDER, DAVID, SEED_NOW, TestApp};
-use super::*;
+use campfire_db::Message;
+use campfire_web::controllers::presenters::Presenter;
 use campfire_db::{ChannelThread, NewChannelThread, NewMessage, ThreadMembership};
 use serde_json::Value;
 use std::sync::Arc;

@@ -221,6 +221,8 @@ async fn open_database(
     let mut db_config = campfire_db::Config::new(&config.storage.database);
     db_config.readers = config.db_readers;
     db_config.environment = config.environment.clone();
+    // The update fills campfire_db's test-support fields when a test build enables them.
+    #[allow(clippy::needless_update)]
     let env = campfire_db::Env {
         clock: Arc::new(DbClock(clock)),
         sink: Arc::new(jobs),

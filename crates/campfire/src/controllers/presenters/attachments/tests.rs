@@ -4,6 +4,8 @@ use campfire_storage::{Blob, Filename};
 use sha2::Digest as _;
 
 use super::*;
+use campfire_db::Connection;
+use campfire_db::Event;
 use crate::controllers::presenters::test_support::*;
 
 fn vectors() -> serde_json::Value {

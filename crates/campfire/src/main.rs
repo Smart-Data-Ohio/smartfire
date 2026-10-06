@@ -1,24 +1,37 @@
 //! The Campfire server: controllers, channels, jobs and integrations wired over the crates.
 
-mod active_storage;
 mod admin;
-mod authentication;
 mod channels;
-mod concerns;
 mod controllers;
 mod jobs;
-mod mail;
-mod rich_text;
-mod messaging;
 // Boot, the HTTP stack and the binary's commands.
 mod server;
 
 // The app layer (crates/app), at the paths its modules had in this crate. `app`, `huddle` and
 // `integrations` also hold the tests of theirs that boot the whole app or reach the layers
 // above, until the test crate takes them (plans/crate-split-plan.md, "Tests").
-use campfire_app::{account_security, cable, config, errors, icons, net, queue, ruby, security, state};
+use campfire_app::{account_security, cable, config, errors, net, queue, security};
 #[cfg(test)]
-use campfire_app::test_support;
+use campfire_app::{state, test_support};
+
+// The web layer (crates/web), likewise. `concerns`, `mail` and `controllers::presenters` (with
+// `controllers::messages::rendered`, mirrored in `controllers`) also hold tests of theirs that
+// boot the whole app.
+use campfire_web::{active_storage, authentication, messaging, rich_text};
+
+mod concerns {
+    pub use campfire_web::concerns::*;
+
+    #[cfg(test)]
+    mod bot_model_cases;
+}
+
+mod mail {
+    pub(crate) use campfire_web::mail::*;
+
+    #[cfg(test)]
+    mod tests;
+}
 
 mod app {
     pub(crate) use campfire_app::app::*;
