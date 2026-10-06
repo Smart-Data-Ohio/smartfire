@@ -69,6 +69,15 @@ jobs:
       CI: "true"
       RUST_CI_IMAGE: campfire-toolchain
       RUST_CI_CONTAINER_PREFIX: campfire-ci
+      # Dev/test builds compile campfire with Cranelift (rust/.cargo/config.toml), which can't
+      # unwind, so these panic-recovery tests run in their own step with campfire on LLVM, as
+      # production builds it. The scheduled run tests the whole campfire suite on LLVM.
+      CAMPFIRE_LLVM: --config=profile.dev.package.campfire.codegen-backend="llvm"
+      CAMPFIRE_LLVM_ONLY_TESTS: >-
+        test(=channels::message_features::tests::origin_is_present_for_commit_callbacks_and_restored_after_errors_and_panics) |
+        test(=controllers::agent_review_r5_tests::ws11_proxy_header_oracle_rejects_unapproved_changes) |
+        test(=jobs::tests::a_panicking_ad_hoc_job_is_logged_and_its_worker_carries_on) |
+        test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -87,6 +96,16 @@ jobs:
 
       - name: Clippy
         run: bash rust/ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+
+      # Production builds on the image's stable toolchain, not the nightly the tests use. From the
+      # repository root neither rust-toolchain.toml nor .cargo/config.toml applies; the separate
+      # target dir keeps stable artifacts out of the cache.
+      - name: Check with the production toolchain
+        env:
+          RUSTUP_TOOLCHAIN: "1.98.1"
+          RUST_CI_WORKDIR: /src
+          CARGO_TARGET_DIR: /ci-tmp/stable-target
+        run: bash rust/ci/cargo.sh check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever
 
       # The app has no integration-test target, so nextest builds its test harness but not its
       # normal executable. Retain that cfg(not(test))/link coverage, without building extra targets.
@@ -116,8 +135,13 @@ jobs:
         shell: bash
         run: |
           status=0
+          if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
+            selection=(-E 'package(campfire)' "$CAMPFIRE_LLVM")
+          else
+            selection=(-E "package(campfire) and not ($CAMPFIRE_LLVM_ONLY_TESTS)")
+          fi
           bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci -j 4 --no-fail-fast -E 'package(campfire)' 2>&1 |
+            --profile ci -j 4 --no-fail-fast "${selection[@]}" 2>&1 |
             tee "$RUNNER_TEMP/campfire-nextest.log" || status=$?
           cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/campfire-junit.xml"
           exit "$status"
@@ -153,6 +177,23 @@ jobs:
             --junit "$RUNNER_TEMP/db-junit.xml" --junit "$RUNNER_TEMP/campfire-junit.xml" --junit rust/target/nextest/ci/junit.xml \
             --doc-log "$RUNNER_TEMP/db-doc.log" --doc-log "$RUNNER_TEMP/workspace-doc.log"
 
+      # After the summary, which reads the other workspace's junit.xml. Same target dir: only the
+      # campfire crate rebuilds. The scheduled run already ran these with the whole suite.
+      - name: Tests (campfire panic recovery, LLVM)
+        if: ${{ !cancelled() && github.event_name != 'schedule' && steps.tests.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          bash rust/ci/cargo.sh nextest run --locked -p campfire --profile ci -j 4 --no-fail-fast \
+            "$CAMPFIRE_LLVM" -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)"
+          python3 - rust/target/nextest/ci/junit.xml <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          # The ci profile also reports the crate's #[ignore] tests, as skipped.
+          ran = [c for c in ET.parse(sys.argv[1]).getroot().iter('testcase') if c.find('skipped') is None]
+          passed = [c for c in ran if c.find('failure') is None and c.find('error') is None]
+          print(f'{len(passed)} of {len(ran)} panic-recovery tests passed on LLVM')
+          sys.exit(0 if len(ran) == len(passed) == 4 else 1)
+          PY
+
       - name: Gate seed-dependent tests
         if: ${{ !cancelled() && steps.app-tests.outcome != 'success' }}
         run: |
@@ -172,7 +213,7 @@ jobs:
           path: |
             rust/.cargo-home/registry
             rust/target
-          key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+          key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
 
   correctness:
     name: Rust correctness (${{ matrix.suite }})

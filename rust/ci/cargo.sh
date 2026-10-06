@@ -9,8 +9,8 @@ repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 scratch="$RUNNER_TEMP/rust-scratch"
 mkdir -p -- "$scratch"
 docker run --rm --name "${RUST_CI_CONTAINER_PREFIX:-campfire-ci}-cargo-$$" --user "$(id -u):$(id -g)" \
-  --volume "$repo:/src" --volume "$scratch:/ci-tmp" --workdir /src/rust \
-  --env HOME=/ci-tmp --env TMPDIR=/ci-tmp \
+  --volume "$repo:/src" --volume "$scratch:/ci-tmp" --workdir "${RUST_CI_WORKDIR:-/src/rust}" \
+  --env HOME=/ci-tmp --env TMPDIR=/ci-tmp ${RUSTUP_TOOLCHAIN:+--env RUSTUP_TOOLCHAIN} \
   --env CI \
   --env CARGO_HOME="${CARGO_HOME:-/src/rust/.cargo-home}" \
   --env CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/src/rust/target}" \
