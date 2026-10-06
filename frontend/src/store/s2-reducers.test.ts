@@ -7,6 +7,7 @@ import {
   applyEvents,
   applyPage,
   applyThreadPage,
+  moveUnreadDivider,
   receiveMessage,
   removeMessage,
   setRoomDetail,
@@ -86,6 +87,22 @@ function events(state: State, ...payloads: DistributiveOmit<SyncEvent, "seq">[])
 
 const opened = (messages: readonly MessageDTO[], saved: MessagePage["saved"] = []) =>
   applyPage(initialState, ROOM, page(messages, saved), "replace");
+
+describe("mark unread", () => {
+  it("moves the divider to the message, counting it and what follows", () => {
+    const state = opened([message(1, 1), message(2, 2), message(3, 3), message(4, 4)]);
+    const moved = moveUnreadDivider(state, ROOM, 2);
+
+    expect(moved.timelines[ROOM]?.unreadFromId).toBe(2);
+    expect(moved.timelines[ROOM]?.unreadCount).toBe(3);
+  });
+
+  it("leaves the divider alone for a message outside the window", () => {
+    const state = opened([message(1, 1), message(2, 2)]);
+
+    expect(moveUnreadDivider(state, ROOM, 99)).toBe(state);
+  });
+});
 
 describe("saved marks", () => {
   it("take each page's word for its own messages, and follow saved.changed", () => {

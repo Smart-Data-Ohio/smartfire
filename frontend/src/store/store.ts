@@ -63,6 +63,8 @@ export const mutations = {
   setPageFailed: (roomId: number) => apply((state) => reduce.setPageFailed(state, roomId)),
   clearUnreadDivider: (roomId: number) =>
     apply((state) => reduce.clearUnreadDivider(state, roomId)),
+  moveUnreadDivider: (roomId: number, fromId: number) =>
+    apply((state) => reduce.moveUnreadDivider(state, roomId, fromId)),
   receiveMessage: (message: MessageDTO) => apply((state) => reduce.receiveMessage(state, message)),
   addPending: (pending: PendingMessage) => apply((state) => reduce.addPending(state, pending)),
   setPendingState: (

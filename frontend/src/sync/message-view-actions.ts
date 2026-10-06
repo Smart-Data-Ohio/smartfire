@@ -46,6 +46,8 @@ export const markUnreadFrom = Effect.fn("messages.markUnreadFrom")(function* (
     yield* Clock.currentTimeMillis,
   );
 
+  mutations.moveUnreadDivider(roomId, reply.firstUnreadMessageId ?? messageId);
+
   return reply.firstUnreadMessageId;
 });
 

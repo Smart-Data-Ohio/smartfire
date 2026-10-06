@@ -292,6 +292,25 @@ export function setThreadPageFailed(state: State, threadId: number): State {
   });
 }
 
+/**
+ * "Mark unread from here": the divider moves to `fromId`, counting it and every loaded root
+ * message after it. A message outside the loaded window leaves the divider alone.
+ */
+export function moveUnreadDivider(state: State, roomId: number, fromId: number): State {
+  const timeline = state.timelines[roomId];
+  const index = timeline?.ids.indexOf(fromId) ?? -1;
+
+  if (timeline === undefined || index < 0) {
+    return state;
+  }
+
+  return withTimeline(state, roomId, {
+    ...timeline,
+    unreadFromId: fromId,
+    unreadCount: timeline.ids.length - index,
+  });
+}
+
 /** Forgets the divider once the room is left, so the next visit computes a fresh one. */
 export function clearUnreadDivider(state: State, roomId: number): State {
   const timeline = state.timelines[roomId];
