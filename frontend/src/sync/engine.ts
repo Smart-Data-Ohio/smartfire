@@ -10,6 +10,7 @@ import {
   type Scope,
   Stream,
 } from "effect";
+import { activityUnreadCount } from "../api/activity-endpoints.ts";
 import type { ApiClient } from "../api/client.ts";
 import { messages, sidebar, users } from "../api/endpoints.ts";
 import { thread, threadMessages } from "../api/thread-endpoints.ts";
@@ -99,6 +100,14 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   for (const event of events) {
     if (event.type === "message.created" && known[event.data.creatorId] === undefined) {
       missing.add(event.data.creatorId);
+    }
+
+    if (event.type === "activity.item") {
+      const creatorId = event.data.item.source?.creatorId ?? null;
+
+      if (creatorId !== null && known[creatorId] === undefined) {
+        missing.add(creatorId);
+      }
     }
   }
 
@@ -196,6 +205,18 @@ export class Engine extends Context.Service<
               Effect.tap((data) => Effect.sync(() => mutations.loadSidebar(data))),
               Effect.catch((error) =>
                 Effect.logWarning("sync: sidebar resync failed", error.message),
+              ),
+              Effect.provideContext(api),
+            );
+            // The inbox, saved and scheduled lists can't be replayed either: they reload when
+            // next shown, and the badge refreshes now.
+            mutations.markInboxStale();
+            yield* activityUnreadCount().pipe(
+              Effect.tap(({ unreadCount }) =>
+                Effect.sync(() => mutations.setActivityUnreadCount(unreadCount)),
+              ),
+              Effect.catch((error) =>
+                Effect.logWarning("sync: activity count resync failed", error.message),
               ),
               Effect.provideContext(api),
             );

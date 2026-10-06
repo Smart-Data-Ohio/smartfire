@@ -385,6 +385,7 @@ describe("resync", () => {
 
         expect((yield* api.requests).slice(before)).toEqual([
           { method: "GET", path: "/sidebar" },
+          { method: "GET", path: "/activity/unread_count" },
           { method: "GET", path: "/rooms/12/messages" },
         ]);
         expect(timelineIds(12)).toEqual([1, 2, 3]);

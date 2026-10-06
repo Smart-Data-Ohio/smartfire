@@ -1,27 +1,19 @@
 /**
- * The composer's request/response calls (autocomplete, slash commands, preview, scheduled
- * messages) as plain async functions, so React code never touches Effect. None of these land in
- * the store: their answers belong to the composer that asked. Failures reject with an
- * `ActionError` whose message is fit to show.
+ * The composer's request/response calls (autocomplete, slash commands, preview) as plain async
+ * functions, so React code never touches Effect. None of these land in the store: their answers
+ * belong to the composer that asked. Failures reject with an `ActionError` whose message is fit
+ * to show. Scheduled messages live in the store: `actions.scheduled` in runtime.ts.
  */
 import {
-  cancelScheduledMessage,
   previewMessage,
   runSlashCommand,
-  scheduledMessages,
-  scheduleMessage,
-  sendScheduledNow,
   slashCommands,
   suggestIcons,
   suggestUsers,
-  updateScheduledMessage,
 } from "../api/composer-endpoints.ts";
-import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { Icon } from "../gen/Icon.ts";
-import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
 import type { SlashCommand } from "../gen/SlashCommand.ts";
 import type { SlashCommandResult } from "../gen/SlashCommandResult.ts";
-import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UserSuggestion } from "../gen/UserSuggestion.ts";
 import { runAction } from "./runtime.ts";
 
@@ -51,18 +43,4 @@ export const composerActions = {
   /** The server's sanitized rendering of a draft. */
   preview: async (roomId: number, markdown: string): Promise<string> =>
     (await runAction(previewMessage(roomId, markdown))).bodyHtml,
-
-  /** The viewer's pending scheduled messages in the room, soonest first. */
-  scheduled: async (roomId: number): Promise<readonly ScheduledMessage[]> =>
-    (await runAction(scheduledMessages(roomId))).scheduledMessages,
-
-  schedule: (roomId: number, body: CreateScheduledMessage): Promise<ScheduledMessage> =>
-    runAction(scheduleMessage(roomId, body)),
-
-  updateScheduled: (id: number, body: UpdateScheduledMessage): Promise<ScheduledMessage> =>
-    runAction(updateScheduledMessage(id, body)),
-
-  cancelScheduled: (id: number): Promise<void> => runAction(cancelScheduledMessage(id)),
-
-  sendScheduledNow: (id: number): Promise<ScheduledMessage> => runAction(sendScheduledNow(id)),
 };

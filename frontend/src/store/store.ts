@@ -1,11 +1,21 @@
 import { useStore as useZustandStore } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 import { createStore } from "zustand/vanilla";
+import type { ActivityItem } from "../gen/ActivityItem.ts";
+import type { ActivityList } from "../gen/ActivityList.ts";
+import type { ActivityState } from "../gen/ActivityState.ts";
+import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
 import type { PinState } from "../gen/PinState.ts";
+import type { SavedFilter } from "../gen/SavedFilter.ts";
+import type { SavedItem } from "../gen/SavedItem.ts";
+import type { SavedItemList } from "../gen/SavedItemList.ts";
+import type { ScheduledMessage } from "../gen/ScheduledMessage.ts";
+import type { ScheduledMessageList } from "../gen/ScheduledMessageList.ts";
 import type { ThreadCreated } from "../gen/ThreadCreated.ts";
 import type { ThreadDetail } from "../gen/ThreadDetail.ts";
 import type { ThreadList } from "../gen/ThreadList.ts";
+import * as activity from "./activity.ts";
 import * as extras from "./message-extras.ts";
 import type {
   Boot,
@@ -24,6 +34,8 @@ import type {
   UserPresence,
 } from "./model.ts";
 import * as reduce from "./reducers.ts";
+import * as savedList from "./saved-list.ts";
+import * as scheduled from "./scheduled.ts";
 import { initialState, type State } from "./state.ts";
 import * as threads from "./threads.ts";
 
@@ -140,6 +152,50 @@ export const mutations = {
     apply((state) => threads.setThreadListFailed(state, roomId, filter)),
   loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
     apply((state) => threads.loadThreadList(state, roomId, filter, list)),
+  // --- S3: the activity inbox, saved items and scheduled messages ---
+  setActivityListLoading: (tab: ActivityTab, status: ActivityState, more: boolean) =>
+    apply((state) => activity.setActivityListLoading(state, tab, status, more)),
+  setActivityListFailed: (tab: ActivityTab, status: ActivityState, error: string) =>
+    apply((state) => activity.setActivityListFailed(state, tab, status, error)),
+  landActivityPage: (
+    tab: ActivityTab,
+    status: ActivityState,
+    page: ActivityList,
+    mode: "replace" | "more",
+  ) => apply((state) => activity.landActivityPage(state, tab, status, page, mode)),
+  /** An item as it is now; `unreadCount` `null` keeps the badge. */
+  applyActivityItem: (item: ActivityItem, unreadCount: number | null) =>
+    apply((state) => activity.applyActivityItem(state, item, unreadCount)),
+  setActivityUnreadCount: (unreadCount: number) =>
+    apply((state) => activity.setActivityUnreadCount(state, unreadCount)),
+  setSavedListLoading: (filter: SavedFilter, more: boolean) =>
+    apply((state) => savedList.setSavedListLoading(state, filter, more)),
+  setSavedListFailed: (filter: SavedFilter, error: string) =>
+    apply((state) => savedList.setSavedListFailed(state, filter, error)),
+  landSavedPage: (filter: SavedFilter, page: SavedItemList, mode: "replace" | "more") =>
+    apply((state) => savedList.landSavedPage(state, filter, page, mode)),
+  /** A message saved, changed (`item`) or unsaved (`null`): its mark, item and lists follow. */
+  applySavedChange: (messageId: number, item: SavedItem | null) =>
+    apply((state) => savedList.applySavedChange(state, messageId, item)),
+  setScheduledListLoading: (key: scheduled.ScheduledListKey, more: boolean) =>
+    apply((state) => scheduled.setScheduledListLoading(state, key, more)),
+  setScheduledListFailed: (key: scheduled.ScheduledListKey, error: string) =>
+    apply((state) => scheduled.setScheduledListFailed(state, key, error)),
+  landScheduledPage: (
+    key: scheduled.ScheduledListKey,
+    page: ScheduledMessageList,
+    mode: "replace" | "more",
+  ) => apply((state) => scheduled.landScheduledPage(state, key, page, mode)),
+  applyScheduled: (message: ScheduledMessage) =>
+    apply((state) => scheduled.applyScheduled(state, message)),
+  removeScheduled: (id: number) => apply((state) => scheduled.removeScheduled(state, id)),
+  /** Every scheduled list reloads when next shown (a send that dropped it instead). */
+  markScheduledStale: () => apply((state) => scheduled.markScheduledStale(state)),
+  /** Missed events the server can't replay: every S3 list reloads when next shown. */
+  markInboxStale: () =>
+    apply((state) =>
+      scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
+    ),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };
