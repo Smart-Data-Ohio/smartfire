@@ -13,6 +13,13 @@ pub struct State {
     google: RwLock<Option<Arc<dyn GoogleReauthentication>>>,
 }
 impl State {
+    #[cfg(test)]
+    pub(crate) fn fixture_snapshot(&self) -> Self {
+        Self {
+            google: RwLock::new(self.google.read().unwrap_or_else(|p| p.into_inner()).clone()),
+        }
+    }
+
     #[allow(dead_code)] // WS14 installs its adapter at boot.
     pub fn install_google(&self, adapter: Arc<dyn GoogleReauthentication>) {
         *self.google.write().unwrap_or_else(|e| e.into_inner()) = Some(adapter);

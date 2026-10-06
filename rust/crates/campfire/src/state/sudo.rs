@@ -30,6 +30,14 @@ impl Default for State {
 }
 
 impl State {
+    #[cfg(test)]
+    pub(crate) fn fixture_snapshot(&self) -> Self {
+        Self {
+            google: RwLock::new(self.google.read().unwrap_or_else(|p| p.into_inner()).clone()),
+            extra_verifiers: RwLock::new(self.extra_verifiers()),
+        }
+    }
+
     /// The registered verifier's model API, shared by the prompt and confirmation action.
     pub fn verifier_available(
         &self,

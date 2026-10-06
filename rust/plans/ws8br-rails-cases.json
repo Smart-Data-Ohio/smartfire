@@ -8198,20 +8198,60 @@
           "line": 12,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0287",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "admin browses filters and exports the audit log",
+                "line": 12,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0287",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0287",
+          "assertion_count": 8,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "audit log stays usable at phone width",
           "line": 36,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0288",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "audit log stays usable at phone width",
+                "line": 36,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0288",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0288",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         }
       ],
       "declared_count": 2,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 2 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -8242,34 +8282,114 @@
           "line": 21,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0289",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "members are online across channels and go offline after signing out",
+                "line": 21,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0289",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0289",
+          "assertion_count": 9,
+          "private_helper_assertion_count": 7
         },
         {
           "name": "a bot with a checked-in agent shows online in the member panel",
           "line": 49,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0290",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a bot with a checked-in agent shows online in the member panel",
+                "line": 49,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0290",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0290",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "closing one tab keeps a member online until their last tab closes",
           "line": 63,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0291",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "closing one tab keeps a member online until their last tab closes",
+                "line": 63,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0291",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0291",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 5
         },
         {
           "name": "the member panel follows channel access and remains usable on a phone",
           "line": 82,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0292",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the member panel follows channel access and remains usable on a phone",
+                "line": 82,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0292",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0292",
+          "assertion_count": 21,
+          "private_helper_assertion_count": 18
         }
       ],
       "declared_count": 4,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 4 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -8300,55 +8420,195 @@
           "line": 10,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0293",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "switching channels hides the progress bar and lands without a reload",
+                "line": 10,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0293",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0293",
+          "assertion_count": 8,
+          "private_helper_assertion_count": 5
         },
         {
           "name": "browser back returns to the previous channel without a reload",
           "line": 34,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0294",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "browser back returns to the previous channel without a reload",
+                "line": 34,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0294",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0294",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "slow back and forward restores never flash the channel loader",
           "line": 53,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0295",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "slow back and forward restores never flash the channel loader",
+                "line": 53,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0295",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0295",
+          "assertion_count": 7,
+          "private_helper_assertion_count": 4
         },
         {
           "name": "canceling a channel visit does not suppress the next page loader",
           "line": 78,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0296",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "canceling a channel visit does not suppress the next page loader",
+                "line": 78,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0296",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0296",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "shared message links also navigate without a channel loader",
           "line": 95,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0297",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "shared message links also navigate without a channel loader",
+                "line": 95,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0297",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0297",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 4
         },
         {
           "name": "channel switch from the mobile drawer closes the drawer without a reload",
           "line": 110,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0298",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "channel switch from the mobile drawer closes the drawer without a reload",
+                "line": 110,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0298",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0298",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "non-room visits still show the progress bar",
           "line": 130,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0299",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "non-room visits still show the progress bar",
+                "line": 130,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0299",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0299",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 1
         }
       ],
       "declared_count": 7,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 7 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -8517,34 +8777,114 @@
           "line": 19,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0304",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "colon autocomplete inserts a brand shortcode that renders in both themes",
+                "line": 19,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0304",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0304",
+          "assertion_count": 14,
+          "private_helper_assertion_count": 3
         },
         {
           "name": "room icon picker sets an icon that shows in the sidebar and header",
           "line": 47,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0305",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "room icon picker sets an icon that shows in the sidebar and header",
+                "line": 47,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0305",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0305",
+          "assertion_count": 8,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "icon rooms suppress the search arrow marker",
           "line": 67,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0306",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "icon rooms suppress the search arrow marker",
+                "line": 67,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0306",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0306",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "lobehub brand icons render visibly in both themes",
           "line": 80,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0307",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "lobehub brand icons render visibly in both themes",
+                "line": 80,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0307",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0307",
+          "assertion_count": 10,
+          "private_helper_assertion_count": 8
         }
       ],
       "declared_count": 4,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 4 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -8575,104 +8915,384 @@
           "line": 8,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0308",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "? opens the shortcut sheet everywhere except while typing",
+                "line": 8,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0308",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0308",
+          "assertion_count": 7,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "? while typing stays in the composer",
           "line": 28,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0309",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "? while typing stays in the composer",
+                "line": 28,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0309",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0309",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "ctrl+k fires while typing and inserts no link markup",
           "line": 37,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0310",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "ctrl+k fires while typing and inserts no link markup",
+                "line": 37,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0310",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0310",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "alt+up and alt+down move between rooms",
           "line": 49,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0311",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "alt+up and alt+down move between rooms",
+                "line": 49,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0311",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0311",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "alt+shift+arrows jump between unread rooms",
           "line": 65,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0312",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "alt+shift+arrows jump between unread rooms",
+                "line": 65,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0312",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0312",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "escape marks the current room read",
           "line": 78,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0313",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "escape marks the current room read",
+                "line": 78,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0313",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0313",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 6
         },
         {
           "name": "escape while typing leaves the room unread",
           "line": 88,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0314",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "escape while typing leaves the room unread",
+                "line": 88,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0314",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0314",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 6
         },
         {
           "name": "escape with a menu open closes the menu instead of marking read",
           "line": 99,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0315",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "escape with a menu open closes the menu instead of marking read",
+                "line": 99,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0315",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0315",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 8
         },
         {
           "name": "escape with the huddle theater open yields to the theater instead of marking read",
           "line": 111,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0316",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "escape with the huddle theater open yields to the theater instead of marking read",
+                "line": 111,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0316",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0316",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 7
         },
         {
           "name": "escape in full screen leaves the room unread",
           "line": 148,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0317",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "escape in full screen leaves the room unread",
+                "line": 148,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0317",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0317",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 5
         },
         {
           "name": "alt+arrows while typing stay in the room",
           "line": 189,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0318",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "alt+arrows while typing stay in the room",
+                "line": 189,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0318",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0318",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "ctrl+k ignores IME composition",
           "line": 204,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0319",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "ctrl+k ignores IME composition",
+                "line": 204,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0319",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0319",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "ctrl+k does not open over an open modal dialog",
           "line": 216,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0320",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "ctrl+k does not open over an open modal dialog",
+                "line": 216,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0320",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0320",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "ctrl+k still toggles the switcher closed",
           "line": 231,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0321",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "ctrl+k still toggles the switcher closed",
+                "line": 231,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0321",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0321",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0
         }
       ],
       "declared_count": 14,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 14 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -8704,132 +9324,493 @@
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
           "cutover_id": "P0322",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "member rows render without checkboxes and stay inline on desktop and phone",
+                "line": 17,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
+                "cutover_id": "P0322",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0322",
+          "assertion_count": 11,
+          "private_helper_assertion_count": 4
         },
         {
           "name": "a plain click opens the profile card outside selection mode and toggles inside it",
           "line": 37,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0323",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a plain click opens the profile card outside selection mode and toggles inside it",
+                "line": 37,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0323",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0323",
+          "assertion_count": 8,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "ctrl-click and cmd-click toggle members, and dropping to zero exits the mode",
           "line": 56,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0324",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "ctrl-click and cmd-click toggle members, and dropping to zero exits the mode",
+                "line": 56,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0324",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0324",
+          "assertion_count": 10,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "ctrl-shift-click selects a range across groups and skips your own row",
           "line": 76,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0325",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "ctrl-shift-click selects a range across groups and skips your own row",
+                "line": 76,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0325",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0325",
+          "assertion_count": 13,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "ctrl-shift-click on a checked checkbox adds the range instead of clearing it",
           "line": 104,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0326",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "ctrl-shift-click on a checked checkbox adds the range instead of clearing it",
+                "line": 104,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0326",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0326",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "a plain click opens the profile card again after the selected member leaves",
           "line": 121,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0327",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a plain click opens the profile card again after the selected member leaves",
+                "line": 121,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0327",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0327",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "esc and the exit button leave selection mode with the panel open",
           "line": 135,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0328",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "esc and the exit button leave selection mode with the panel open",
+                "line": 135,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0328",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0328",
+          "assertion_count": 8,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the exit button returns focus to the last-touched row",
           "line": 152,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0329",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the exit button returns focus to the last-touched row",
+                "line": 152,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0329",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0329",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the exit button falls back to the first row when the last-touched row is gone",
           "line": 161,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0330",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the exit button falls back to the first row when the last-touched row is gone",
+                "line": 161,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0330",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0330",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "unchecking the last box returns focus to that row",
           "line": 175,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0331",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "unchecking the last box returns focus to that row",
+                "line": 175,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0331",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0331",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "esc closes the mobile drawer when only a departed member's hidden selection remains",
           "line": 184,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0332",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "esc closes the mobile drawer when only a departed member's hidden selection remains",
+                "line": 184,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0332",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0332",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "esc on desktop leaves a departed member's hidden selection alone",
           "line": 205,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0333",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "esc on desktop leaves a departed member's hidden selection alone",
+                "line": 205,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0333",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0333",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "esc with the row menu open closes only the menu",
           "line": 222,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0334",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "esc with the row menu open closes only the menu",
+                "line": 222,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0334",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0334",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the selection count is announced through a dedicated status element",
           "line": 238,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0335",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the selection count is announced through a dedicated status element",
+                "line": 238,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0335",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0335",
+          "assertion_count": 7,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "space toggles the focused row without opening the profile card",
           "line": 254,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0336",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "space toggles the focused row without opening the profile card",
+                "line": 254,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0336",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0336",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "selection, mode, and anchor survive a presence re-render",
           "line": 268,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0337",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "selection, mode, and anchor survive a presence re-render",
+                "line": 268,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0337",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0337",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the star row menu works in and out of selection mode",
           "line": 283,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0338",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the star row menu works in and out of selection mode",
+                "line": 283,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0338",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0338",
+          "assertion_count": 10,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "a phone long-press enters selection mode, then taps toggle and Message submits the set",
           "line": 310,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0339",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a phone long-press enters selection mode, then taps toggle and Message submits the set",
+                "line": 310,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0339",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0339",
+          "assertion_count": 12,
+          "private_helper_assertion_count": 2
         }
       ],
       "declared_count": 18,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 18 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -8884,20 +9865,60 @@
           "line": 113,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0343",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "pages outside the workspace shell show no drawer toggle that opens nothing",
+                "line": 113,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0343",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0343",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "every drawer destination has one toggle that opens the drawer on itself",
           "line": 123,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0344",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "every drawer destination has one toggle that opens the drawer on itself",
+                "line": 123,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0344",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0344",
+          "assertion_count": 9,
+          "private_helper_assertion_count": 0
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 2 active original declarations; 3 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 3 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -8928,7 +9949,27 @@
           "line": 18,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0345",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "motion is off by default in the test environment",
+                "line": 18,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0345",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0345",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "mobile drawer animates in, lands in place, and returns focus with motion on",
@@ -8936,7 +9977,28 @@
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
           "cutover_id": "P0346",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "mobile drawer animates in, lands in place, and returns focus with motion on",
+                "line": 25,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
+                "cutover_id": "P0346",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0346",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "member selection mode moves no rows and resizes nothing",
@@ -8944,7 +10006,28 @@
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
           "cutover_id": "P0347",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "member selection mode moves no rows and resizes nothing",
+                "line": 72,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
+                "cutover_id": "P0347",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0347",
+          "assertion_count": 12,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "people directory bar shifts no rows when toggling",
@@ -8952,7 +10035,28 @@
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
           "cutover_id": "P0348",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "people directory bar shifts no rows when toggling",
+                "line": 102,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
+                "cutover_id": "P0348",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0348",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "people directory bar stays stuck while scrolling",
@@ -8960,7 +10064,28 @@
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
           "cutover_id": "P0349",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "people directory bar stays stuck while scrolling",
+                "line": 118,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
+                "cutover_id": "P0349",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0349",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "room menu measures at full scale when clamping to the viewport edge",
@@ -8968,34 +10093,115 @@
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
           "cutover_id": "P0350",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "room menu measures at full scale when clamping to the viewport edge",
+                "line": 148,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "omitted_assertions": "geometry, movement, opacity and positioning; retain interaction/focus/selection assertions only",
+                "cutover_id": "P0350",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0350",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "mobile drawer keeps the room list scroll position across close and reopen",
           "line": 176,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0351",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "mobile drawer keeps the room list scroll position across close and reopen",
+                "line": 176,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0351",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0351",
+          "assertion_count": 10,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "mobile drawer reveals a current room far down the list on first open",
           "line": 240,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0352",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "mobile drawer reveals a current room far down the list on first open",
+                "line": 240,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0352",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0352",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "mobile drawer reopens on the current room when it is already in view",
           "line": 259,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0353",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "mobile drawer reopens on the current room when it is already in view",
+                "line": 259,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0353",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_member_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-members-receipts.json#P0353",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 2
         }
       ],
       "declared_count": 9,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 9 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -9460,7 +10666,27 @@
           "line": 340,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0370",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "starting a group huddle rings every other member",
+                "line": 340,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0370",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0370",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "Esc closes only the profile card inside the mobile member panel",
@@ -9520,7 +10746,7 @@
       "declared_count": 19,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 19 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -9601,69 +10827,249 @@
           "line": 17,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0373",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "phone header keeps members, call, search and More with the rest in the menu",
+                "line": 17,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0373",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0373",
+          "assertion_count": 28,
+          "private_helper_assertion_count": 14
         },
         {
           "name": "tablet header keeps notifications and settings visible with the rest in the menu",
           "line": 70,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0374",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "tablet header keeps notifications and settings visible with the rest in the menu",
+                "line": 70,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0374",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0374",
+          "assertion_count": 20,
+          "private_helper_assertion_count": 9
         },
         {
           "name": "desktop header is unchanged with no More button",
           "line": 111,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0375",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "desktop header is unchanged with no More button",
+                "line": 111,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0375",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0375",
+          "assertion_count": 12,
+          "private_helper_assertion_count": 8
         },
         {
           "name": "every phone overflow menu item works",
           "line": 139,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0376",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "every phone overflow menu item works",
+                "line": 139,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0376",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0376",
+          "assertion_count": 19,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the overflow menu scrolls within a landscape phone viewport",
           "line": 236,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0377",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the overflow menu scrolls within a landscape phone viewport",
+                "line": 236,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0377",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0377",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "opening threads from the menu returns focus to More on close",
           "line": 278,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0378",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "opening threads from the menu returns focus to More on close",
+                "line": 278,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0378",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0378",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "the overflow menu is keyboard accessible and closes on outside tap",
           "line": 298,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0379",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the overflow menu is keyboard accessible and closes on outside tap",
+                "line": 298,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0379",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0379",
+          "assertion_count": 9,
+          "private_helper_assertion_count": 3
         },
         {
           "name": "the overflow dot lights for unread threads, not pins, and the pins badge hides at zero",
           "line": 327,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0380",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the overflow dot lights for unread threads, not pins, and the pins badge hides at zero",
+                "line": 327,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0380",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0380",
+          "assertion_count": 8,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the tour restarts from the overflow menu on phones",
           "line": 375,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0381",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the tour restarts from the overflow menu on phones",
+                "line": 375,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0381",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0381",
+          "assertion_count": 9,
+          "private_helper_assertion_count": 0
         }
       ],
       "declared_count": 9,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 9 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -9694,20 +11100,60 @@
           "line": 9,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0382",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the worker caches static assets and never authenticated responses",
+                "line": 9,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0382",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0382",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the offline shell renders with working retry behavior",
           "line": 26,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0383",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the offline shell renders with working retry behavior",
+                "line": 26,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0383",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0383",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         }
       ],
       "declared_count": 2,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 2 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -9795,118 +11241,438 @@
           "line": 4,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0384",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "an admin deletes a channel from the room menu",
+                "line": 4,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0384",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0384",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "the creator sees Delete on their own room but not on others",
           "line": 22,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0385",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the creator sees Delete on their own room but not on others",
+                "line": 22,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0385",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0385",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "a plain member does not see Delete",
           "line": 36,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0386",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a plain member does not see Delete",
+                "line": 36,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0386",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0386",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "Cancel and Escape keep the room",
           "line": 44,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0387",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "Cancel and Escape keep the room",
+                "line": 44,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0387",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0387",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "deleting the room you are in navigates you home",
           "line": 66,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0388",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "deleting the room you are in navigates you home",
+                "line": 66,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0388",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0388",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "Delete is offered on every room kind for admins",
           "line": 82,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0389",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "Delete is offered on every room kind for admins",
+                "line": 82,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0389",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0389",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "a group dm shows Delete only for admins",
           "line": 107,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0390",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a group dm shows Delete only for admins",
+                "line": 107,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0390",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0390",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "one-to-one dms follow the server delete rule",
           "line": 124,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0391",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "one-to-one dms follow the server delete rule",
+                "line": 124,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0391",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0391",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "Delete is reachable by arrow keys",
           "line": 139,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0392",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "Delete is reachable by arrow keys",
+                "line": 139,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0392",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0392",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "deleting from the long-press menu on phones",
           "line": 158,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0393",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "deleting from the long-press menu on phones",
+                "line": 158,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0393",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0393",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "a member leaves an open channel and rejoins through the join page",
           "line": 183,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0394",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a member leaves an open channel and rejoins through the join page",
+                "line": 183,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0394",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0394",
+          "assertion_count": 7,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "leaving a private channel warns about being re-added",
           "line": 208,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0395",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "leaving a private channel warns about being re-added",
+                "line": 208,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0395",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0395",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "leaving the room you are in sends you home",
           "line": 228,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0396",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "leaving the room you are in sends you home",
+                "line": 228,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0396",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0396",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "the last member out leaves the room behind for no one to lose",
           "line": 243,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0397",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the last member out leaves the room behind for no one to lose",
+                "line": 243,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0397",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0397",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "Leave is offered on every room kind and never deletes",
           "line": 256,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0398",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "Leave is offered on every room kind and never deletes",
+                "line": 256,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0398",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0398",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "a member leaves a group dm from the menu",
           "line": 291,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0399",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a member leaves a group dm from the menu",
+                "line": 291,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0399",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0399",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 2
         }
       ],
       "declared_count": 16,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 16 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -10075,20 +11841,60 @@
           "line": 4,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0404",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the browser does not report its zone without a CSRF token",
+                "line": 4,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0404",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0404",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "the browser reports its detected zone once",
           "line": 17,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0405",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the browser reports its detected zone once",
+                "line": 17,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0405",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0405",
+          "assertion_count": 1,
+          "private_helper_assertion_count": 0
         }
       ],
       "declared_count": 2,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 2 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -10119,41 +11925,141 @@
           "line": 8,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0406",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "few unread render the divider above the first new message and keep the bottom scroll",
+                "line": 8,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0406",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0406",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 2
         },
         {
           "name": "many unread scroll the room to the divider",
           "line": 23,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0407",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "many unread scroll the room to the divider",
+                "line": 23,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0407",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0407",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "the jump pill shows while the divider is off-screen and returns to it",
           "line": 48,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0408",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the jump pill shows while the divider is off-screen and returns to it",
+                "line": 48,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0408",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0408",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "unread older than the last page keeps the last page and the pill links to the first unread",
           "line": 73,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0409",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "unread older than the last page keeps the last page and the pill links to the first unread",
+                "line": 73,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0409",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0409",
+          "assertion_count": 4,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "mark unread from the message menu points the divider at that message",
           "line": 97,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0410",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "mark unread from the message menu points the divider at that message",
+                "line": 97,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0410",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0410",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 4
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 5 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -10184,20 +12090,60 @@
           "line": 7,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0411",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "sending messages between two users",
+                "line": 7,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0411",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0411",
+          "assertion_count": 3,
+          "private_helper_assertion_count": 3
         },
         {
           "name": "channel and DM rows keep exactly one unread badge next to the huddle stack",
           "line": 27,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0412",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "channel and DM rows keep exactly one unread badge next to the huddle stack",
+                "line": 27,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0412",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-navigation-receipts.json#P0412",
+          "assertion_count": 10,
+          "private_helper_assertion_count": 12
         }
       ],
       "declared_count": 2,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 2 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -10228,13 +12174,33 @@
           "line": 16,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0413",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "upload post in both themes then delete falls back to the shortcode",
+                "line": 16,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0413",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0413",
+          "assertion_count": 8,
+          "private_helper_assertion_count": 0
         }
       ],
       "declared_count": 1,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 1 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -10265,13 +12231,33 @@
           "line": 11,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0414",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "the browser launches with a managed profile under the worker TMPDIR",
+                "line": 11,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0414",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0414",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 2
         }
       ],
       "declared_count": 1,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 1 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -10302,41 +12288,141 @@
           "line": 54,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0415",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "signing in through the real login form lands on the signed-in page",
+                "line": 54,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0415",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0415",
+          "assertion_count": 5,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations",
           "line": 81,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0416",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations",
+                "line": 81,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0416",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0416",
+          "assertion_count": 12,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "a Turbo visit to the event form fills the time zone with no violations",
           "line": 115,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0417",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a Turbo visit to the event form fills the time zone with no violations",
+                "line": 115,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0417",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0417",
+          "assertion_count": 6,
+          "private_helper_assertion_count": 1
         },
         {
           "name": "a forced inline script without the nonce is blocked and reported",
           "line": 137,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0418",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "a forced inline script without the nonce is blocked and reported",
+                "line": 137,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0418",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0418",
+          "assertion_count": 2,
+          "private_helper_assertion_count": 0
         },
         {
           "name": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
           "line": 153,
           "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
           "cutover_id": "P0419",
-          "cutover_disposition": "acceptance-receipt-pending"
+          "cutover_disposition": "ported-current-assertion-receipt",
+          "history": [
+            {
+              "date": "2026-10-05",
+              "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+              "previous": {
+                "name": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
+                "line": 153,
+                "acceptance_phase": "behaviour/system interactions only; no screenshot or pixel comparisons",
+                "cutover_id": "P0419",
+                "cutover_disposition": "acceptance-receipt-pending",
+                "history": []
+              }
+            }
+          ],
+          "rust_tests": [
+            "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+          ],
+          "assertion_receipt": "rust/plans/ledger-ws8br-ws17-ws11ui-d-surfaces-receipts.json#P0419",
+          "assertion_count": 10,
+          "private_helper_assertion_count": 1
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 0,
       "rails_pass_count": 0,
-      "status": "cutover receipt pending: 5 active original declarations; 0 geometry-only excluded",
+      "status": "Original per-assertion browser receipts complete; 0 existing geometry exclusions retained.",
       "history": [
         {
           "date": "2026-10-04",
@@ -10359,14 +12445,14 @@
   ],
   "pixel_phase": "Historical source counts retain excluded declarations. Geometry/style-only cases and geometry assertions within mixed cases are outside the current phase, not remaining work.",
   "cutover_reconciliation": {
-    "date": "2026-10-04",
+    "date": "2026-10-05",
     "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
     "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
     "approved_queue_supersessions": 1,
     "sidebar_original_receipts_pending": 0,
-    "broad_original_receipts_pending": 104,
+    "broad_original_receipts_pending": 0,
     "geometry_only_excluded": 3,
-    "partial": true,
+    "partial": false,
     "broad_original_receipts_superseded": 9,
     "history": [
       {
@@ -10440,10 +12526,27 @@
         "reason": "Original-setup sweep closes eight previously reopened B declarations.",
         "broad_original_receipts_pending": 216,
         "broad_original_assertion_receipts": 112
+      },
+      {
+        "date": "2026-10-05",
+        "branch": "rust/ledger-ws8br-ws17-ws11ui-d",
+        "previous": {
+          "date": "2026-10-04",
+          "base": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+          "report": "rust/plans/ledger-ws8br-ws17-ws11ui-report.md",
+          "approved_queue_supersessions": 1,
+          "sidebar_original_receipts_pending": 0,
+          "broad_original_receipts_pending": 104,
+          "geometry_only_excluded": 3,
+          "partial": true,
+          "broad_original_receipts_superseded": 9,
+          "broad_original_assertion_receipts": 233,
+          "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-c-report.md"
+        }
       }
     ],
-    "broad_original_assertion_receipts": 233,
-    "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-c-report.md"
+    "broad_original_assertion_receipts": 337,
+    "current_report": "rust/plans/ledger-ws8br-ws17-ws11ui-d-report.md"
   },
   "source_pin_refresh": {
     "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",

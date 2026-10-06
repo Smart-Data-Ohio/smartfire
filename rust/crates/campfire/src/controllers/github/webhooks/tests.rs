@@ -32,7 +32,7 @@ impl Fresh {
         })
         .unwrap();
         let booted = crate::server::boot(config).await.unwrap();
-        let crate::server::Booted { app, router, jobs } = booted;
+        let crate::server::Booted { app, router, jobs, .. } = booted;
         jobs.shutdown(std::time::Duration::from_secs(1)).await;
         Self {
             app,

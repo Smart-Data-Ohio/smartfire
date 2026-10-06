@@ -45,6 +45,45 @@ pub struct AppState {
 }
 
 impl AppState {
+    /// The original system helpers change LiveKit ENV inside a test body.
+    /// Rebind only that real configuration, keeping the booted model/service
+    /// dependencies and all installed adapter contents in the private host.
+    #[cfg(test)]
+    pub(crate) fn fixture_huddle_config(&self, lookup: impl Fn(&str) -> Option<String>) -> App {
+        let mut config = self.config.clone();
+        config.livekit_url = lookup("LIVEKIT_URL");
+        config.huddle = crate::huddle::Config::from_lookup(&lookup);
+        config.huddles_configured = crate::huddle_readiness::huddles_configured(&lookup);
+        Arc::new(Self {
+            config,
+            secrets: self.secrets.clone(),
+            ar_encryption: self.ar_encryption.clone(),
+            clock: self.clock.clone(),
+            db: self.db.clone(),
+            storage: self.storage.clone(),
+            cable: self.cable.clone(),
+            broadcasts: self.broadcasts.clone(),
+            jobs: self.jobs.clone(),
+            mail: self.mail.fixture_snapshot(),
+            fizzy: crate::integrations::fizzy::State {
+                network: self.fizzy.network.clone(), base: self.fizzy.base.clone(),
+            },
+            agent_message_payload: self.agent_message_payload.fixture_snapshot(),
+            agent_repositories: self.agent_repositories.fixture_snapshot(),
+            sudo: self.sudo.fixture_snapshot(),
+            two_factor: self.two_factor.fixture_snapshot(),
+            google: self.google.clone(),
+            errors: self.errors.clone(),
+            web_push: self.web_push.clone(),
+            github_accounts: self.github_accounts.clone(),
+            github_app: self.github_app.clone(),
+            github_read: self.github_read.clone(),
+            subscription_network: self.subscription_network.clone(),
+            slack_network: self.slack_network.clone(),
+            fragment_cache: self.fragment_cache.clone(),
+        })
+    }
+
     /// The key pages offer browsers to subscribe with: none while Web Push is off, so that browsers
     /// don't subscribe to notifications that would never be sent.
     pub fn vapid_public_key(&self) -> Option<String> {

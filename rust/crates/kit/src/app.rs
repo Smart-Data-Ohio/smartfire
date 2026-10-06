@@ -94,6 +94,9 @@ pub(crate) struct KitInner {
     pub clock: SharedClock,
     pub state: Arc<dyn Any + Send + Sync>,
     /// The counters `rate_limit` keeps (Rails' cache store).
+    #[cfg(any(test, feature = "test-support"))]
+    pub rate_limits: Arc<RateLimitStore>,
+    #[cfg(not(any(test, feature = "test-support")))]
     pub rate_limits: RateLimitStore,
 }
 
@@ -107,7 +110,21 @@ impl Kit {
     /// `state` is the application's own state (database handles etc.), reachable from actions
     /// with [`crate::Ctx::state`].
     pub fn new<S: Send + Sync + 'static>(config: KitConfig, crypto: SharedCrypto, clock: SharedClock, state: S) -> Self {
-        Self { inner: Arc::new(KitInner { config, crypto, clock, state: Arc::new(state), rate_limits: RateLimitStore::new() }) }
+        Self { inner: Arc::new(KitInner { config, crypto, clock, state: Arc::new(state), rate_limits: Default::default() }) }
+    }
+
+    /// The original system helpers change configuration during a browser
+    /// session. Their private host rebinds state without losing crypto, clock
+    /// or the original middleware's rate-limit counters.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn fixture_rebind<S: Send + Sync + 'static>(&self, config: KitConfig, state: S) -> Self {
+        Self { inner: Arc::new(KitInner {
+            config,
+            crypto: self.inner.crypto.clone(),
+            clock: self.inner.clock.clone(),
+            state: Arc::new(state),
+            rate_limits: self.inner.rate_limits.clone(),
+        }) }
     }
 
     pub fn config(&self) -> &KitConfig {
@@ -133,5 +150,39 @@ impl Kit {
 
     pub fn state<S: Send + Sync + 'static>(&self) -> &S {
         self.inner.state.downcast_ref::<S>().expect("Kit state has a different type")
+    }
+}
+
+#[cfg(test)]
+mod fixture_tests {
+    use super::*;
+    use crate::clock::{Clock, FrozenClock};
+    use crate::crypto::RailsCrypto;
+    use jiff::SignedDuration;
+    use rails_compat::Secrets;
+    use serde_json::json;
+
+    #[test]
+    fn fixture_rebind_preserves_live_counters_clock_and_cookies() {
+        let now = "2026-03-02T15:55:00Z".parse().unwrap();
+        let clock = Arc::new(FrozenClock::new(now));
+        let crypto: SharedCrypto = Arc::new(RailsCrypto::new(Arc::new(Secrets::new(&"6".repeat(128)))));
+        let original = Kit::new(KitConfig::default(), crypto, clock.clone(), "initial state");
+        let session = json!({"session_id": 42});
+        let cookie = original.crypto().encrypt_cookie("_campfire_session", &session, None);
+        assert_eq!(original.rate_limits().increment("fixture-session", SignedDuration::from_secs(60), now), 1);
+
+        let rebound = original.fixture_rebind(KitConfig { force_ssl: true, ..original.config().clone() }, 19_u64);
+        assert!(rebound.config().force_ssl);
+        assert!(!original.config().force_ssl);
+        assert_eq!(*rebound.state::<u64>(), 19);
+        assert_eq!(*original.state::<&str>(), "initial state");
+        assert_eq!(rebound.crypto().decrypt_cookie("_campfire_session", &cookie, rebound.clock().now()), Some(session));
+        assert_eq!(rebound.rate_limits().increment("fixture-session", SignedDuration::from_secs(60), now), 2);
+        assert_eq!(original.rate_limits().increment("fixture-session", SignedDuration::from_secs(60), now), 3);
+
+        clock.advance(SignedDuration::from_secs(61));
+        assert_eq!(rebound.clock().now(), clock.now());
+        assert_eq!(rebound.rate_limits().increment("fixture-session", SignedDuration::from_secs(60), rebound.clock().now()), 1);
     }
 }

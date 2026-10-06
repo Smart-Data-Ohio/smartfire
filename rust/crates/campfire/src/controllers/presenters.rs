@@ -80,11 +80,17 @@ const THUMBNAIL_MAX_HEIGHT: i64 = 800;
 pub type Result<T> = std::result::Result<T, campfire_db::Error>;
 
 /// `String#all_emoji?` (reference/lib/rails_ext/string.rb).
+#[cfg(test)]
 pub fn all_emoji(text: &str) -> bool {
+    all_emoji_with_icons(text, crate::rich_text::builtin_icon)
+}
+
+fn all_emoji_with_icons(text: &str, is_icon: impl Fn(&str) -> bool) -> bool {
     static ALL_EMOJI: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"\A(\p{Emoji_Presentation}|\p{Extended_Pictographic}|\x{FE0F})+\z").unwrap()
+        Regex::new(r"\A((\p{Emoji_Presentation}|\p{Extended_Pictographic}|\x{FE0F})|(:[a-z0-9_]+:))+\z").unwrap()
     });
-    ALL_EMOJI.is_match(text)
+    static SHORTCODES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r":([a-z0-9_]+):").unwrap());
+    ALL_EMOJI.is_match(text) && SHORTCODES.captures_iter(text).all(|capture| is_icon(&capture[1]))
 }
 
 /// `Time#to_fs(:number)`: `%Y%m%d%H%M%S` in UTC (the app's time zone).
@@ -819,7 +825,11 @@ impl<'a> Presenter<'a> {
             creator: self.user_view(message.creator_id)?,
             created_at: message.created_at.jiff(),
             updated_at: message.updated_at.jiff(),
-            all_emoji: all_emoji(&plain_text),
+            all_emoji: all_emoji_with_icons(&plain_text, |name| {
+                use campfire_views::helpers::{AvatarIcon, IconSource};
+                crate::rich_text::builtin_icon(name)
+                    || matches!(self.resolve_avatar_icon(name), Some(AvatarIcon::Image { .. }))
+            }),
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
@@ -1036,7 +1046,11 @@ impl<'a> Presenter<'a> {
             updated_at: boost.updated_at.jiff(),
             message_id: boost.message_id,
             content: boost.content.clone(),
-            all_emoji: all_emoji(&boost.content),
+            all_emoji: all_emoji_with_icons(&boost.content, |name| {
+                use campfire_views::helpers::{AvatarIcon, IconSource};
+                crate::rich_text::builtin_icon(name)
+                    || matches!(self.resolve_avatar_icon(name), Some(AvatarIcon::Image { .. }))
+            }),
             booster: self.user_view(boost.booster_id)?,
             reaction: campfire_views::messages::reactions::resolve(&boost.content, self),
         })
@@ -1362,8 +1376,34 @@ mod tests {
     fn all_emoji_matches_ruby() {
         assert!(all_emoji("👍"));
         assert!(all_emoji("❤️"));
+        assert!(all_emoji(":openai:"));
+        assert!(all_emoji("👍:openai::xai:"));
+        assert!(!all_emoji(":no_such_brand:"));
+        assert!(!all_emoji(":openai: "));
         assert!(!all_emoji("hi 👍"));
         assert!(!all_emoji(""));
+    }
+
+    #[test]
+    fn all_emoji_shortcodes_follow_current_workspace_catalog() {
+        use campfire_views::helpers::AvatarIcon;
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE workspace_icons(name TEXT PRIMARY KEY, title TEXT NOT NULL)").unwrap();
+        let classified = |text| {
+            all_emoji_with_icons(text, |name| {
+                crate::rich_text::builtin_icon(name)
+                    || matches!(resolve_avatar_icon(&conn, name), Some(AvatarIcon::Image { .. }))
+            })
+        };
+        assert!(!classified(":acme:"));
+        conn.execute("INSERT INTO workspace_icons(name,title) VALUES ('acme','Acme Corp')", []).unwrap();
+        assert!(classified(":acme:"));
+        assert!(classified("👍:acme::openai:"));
+        assert!(!classified(":acme: words"));
+        assert!(!classified(":acme::no_such_brand:"));
+        conn.execute("DELETE FROM workspace_icons WHERE name='acme'", []).unwrap();
+        assert!(!classified(":acme:"));
+        assert!(classified(":openai:"));
     }
 
     #[test]

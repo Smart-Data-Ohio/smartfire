@@ -183,6 +183,10 @@ pub struct Jobs {
     cable: Arc<OnceLock<campfire_cable::WeakServer<CableUser>>>,
     /// Weak because the app holds the database, which holds this sink.
     app: Arc<OnceLock<Weak<AppState>>>,
+    /// The original system tests can change ENV after sign-in. Their private
+    /// fixture host keeps the same sink and Cable while replacing its App config.
+    #[cfg(test)]
+    fixture_app: Arc<std::sync::RwLock<Option<Weak<AppState>>>>,
     delivery: Arc<OnceLock<Delivery>>,
 }
 
@@ -206,6 +210,8 @@ impl Jobs {
             ad_hoc,
             cable: Arc::new(OnceLock::new()),
             app: Arc::new(OnceLock::new()),
+            #[cfg(test)]
+            fixture_app: Arc::new(std::sync::RwLock::new(None)),
             delivery: Arc::new(OnceLock::new()),
         }, AdHocQueue(receiver)))
 
@@ -226,6 +232,19 @@ impl Jobs {
         let _ = self.app.set(Arc::downgrade(app));
     }
 
+    #[cfg(test)]
+    pub(crate) fn set_fixture_app(&self, app: &App) {
+        *self.fixture_app.write().unwrap_or_else(|p| p.into_inner()) = Some(Arc::downgrade(app));
+    }
+
+    fn current_app(&self) -> Option<App> {
+        #[cfg(test)]
+        if let Some(app) = self.fixture_app.read().unwrap_or_else(|p| p.into_inner()).as_ref().and_then(Weak::upgrade) {
+            return Some(app);
+        }
+        self.app.get().and_then(Weak::upgrade)
+    }
+
     pub(crate) fn set_delivery(&self, delivery: Delivery) {
         let _ = self.delivery.set(delivery);
     }
@@ -239,7 +258,7 @@ impl EventSink for Jobs {
     fn broadcast_digest_notes(&self, notes: &campfire_db::models::board_automations::DigestNotes) -> campfire_db::Result<Vec<i64>> {
         let cable = self.cable.get().and_then(campfire_cable::WeakServer::upgrade)
             .ok_or_else(|| campfire_db::Error::Other("digest cable server not booted".into()))?;
-        let app = self.app.get().and_then(Weak::upgrade)
+        let app = self.current_app()
             .ok_or_else(|| campfire_db::Error::Other("digest app not booted".into()))?;
         // Installed with the cable server, so it's there whenever the cable server is.
         let delivery = self.delivery.get()
@@ -252,7 +271,7 @@ impl EventSink for Jobs {
     }
 
     fn disconnect_user_accounts(&self, tx: &mut Tx<'_>, user_id: i64) -> campfire_db::Result<()> {
-        if let Some(app) = self.app.get().and_then(Weak::upgrade) {
+        if let Some(app) = self.current_app() {
             campfire_db::models::google_connection::deactivate(tx, user_id, &app.secrets)?;
         }
         if let Some(account) = crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)? {
@@ -263,13 +282,13 @@ impl EventSink for Jobs {
     }
 
     fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
-        let app = self.app.get().and_then(Weak::upgrade);
+        let app = self.current_app();
         let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
         crate::integrations::sync_message_references(tx, message, enqueue, crypto)
     }
 
     fn sync_message_reference_phase(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, phase: campfire_db::callbacks::Phase, enqueue: bool) -> campfire_db::Result<()> {
-        let app = self.app.get().and_then(Weak::upgrade);
+        let app = self.current_app();
         let crypto = app.as_ref().map(|app| app.ar_encryption.as_ref());
         crate::integrations::sync_message_reference_phase(tx,message,phase,enqueue,crypto)
     }
@@ -328,7 +347,7 @@ impl EventSink for Jobs {
                 if let Some(cable) = self.cable.get().and_then(campfire_cable::WeakServer::upgrade)
                     && let Some(delivery) = self.delivery.get()
                 {
-                    let app = self.app.get().and_then(Weak::upgrade);
+                    let app = self.current_app();
                     (delivery.broadcast)(&cable, app.as_ref(), &event);
                 }
             }
