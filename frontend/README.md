@@ -1,0 +1,52 @@
+# Smartfire front end
+
+The React 19 single-page app that replaces the Hotwire UI (`web/`) screen by screen. The Rust app
+will serve the production build under `/app/`; production runs no Node.
+
+Stack: Vite 8 (Rolldown), React 19 with the React Compiler (Babel preset), typescript@7, Effect 4
+in the data layer, Biome, the vendored anti-slop Oxlint rules, Vitest and Playwright. pnpm, with
+the versions pinned in `package.json` and `pnpm-lock.yaml`.
+
+## Commands
+
+Run from `frontend/`, with Node 24 or later and pnpm (pnpm switches itself to the version in
+`package.json`'s `packageManager` field):
+
+| Command | What |
+| --- | --- |
+| `pnpm install` | Install the locked dependencies |
+| `pnpm dev` | Vite dev server on http://localhost:5173/app/; it proxies `/api`, `/cable`, `/rails` and `/session` to `cargo run` on :3000 |
+| `pnpm build` | Production build into `dist/` (asset URLs under `/app/`) |
+| `pnpm preview` | Serve `dist/` |
+| `pnpm lint` | Biome lint and format check (`pnpm format` applies fixes) |
+| `pnpm lint:anti-slop` | The anti-slop Oxlint rules |
+| `pnpm typecheck` | `tsc --noEmit` for the app, then for the vendored plugin |
+| `pnpm test` | Vitest unit tests (`src/**/*.test.ts(x)`) |
+| `pnpm test:e2e` | Playwright specs in `e2e/` against `vite preview` (first run: `pnpm exec playwright install chromium`) |
+| `pnpm check` | lint, anti-slop, typecheck, test and build: what the `Frontend` CI check runs |
+
+## Layout
+
+`src/main.tsx` mounts the app. `src/api/` is the HTTP client and `src/sync/` the live-update
+engine and the shared Effect runtime; `src/store/` holds client state, `src/routes/` the routes,
+`src/features/` one folder per product area, `src/ui/` the design system, and `src/motion/`,
+`src/styles/` and `src/lib/` the shared pieces. `src/gen/` will hold the TypeScript types
+generated from the Rust API structs; never edit it by hand. `e2e/` holds the Playwright specs.
+
+## The Effect boundary
+
+Effect is used only in `src/api/` and `src/sync/`. Everything else in `src/` (components, routes,
+the store, the design system) is plain TypeScript and React, and calls the plain async functions
+in `src/sync/runtime.ts` (`actions`), which run Effect programs on the app's one
+`ManagedRuntime`. Biome's `noRestrictedImports` (the override in `biome.json`) rejects `effect`,
+`effect/*` and `@effect/*` imports anywhere else in `src/`. Test Effect code with
+`@effect/vitest`.
+
+## Anti-slop
+
+`tools/oxlint-anti-slop/` is a vendored copy of
+[dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop) (MIT; commit and update steps in
+its `UPSTREAM.md`). Oxlint runs only these rules, configured in `.oxlintrc.json`: every generic
+rule plus the optional Effect rules, all at `error`. Biome does the general linting. The rules
+are repository-owned code: change them deliberately, and fix findings rather than disabling a
+rule or casting around it.

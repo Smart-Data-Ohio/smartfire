@@ -19,5 +19,6 @@ https://github.com/github/gemoji/blob/master/LICENSE
 Other vendored third-party code keeps its license file beside it,
 for example `crates/richtext/vendor/html5ever/`,
 `crates/rails_compat/vendor/onigmo/`, `crates/assets/vendor/`
-(Rails' JavaScript packages and Trix) and
+(Rails' JavaScript packages and Trix), `frontend/tools/oxlint-anti-slop/`
+(lint rules, not shipped) and
 `crates/richtext/data/JSON-PARSER-LICENSE`.
