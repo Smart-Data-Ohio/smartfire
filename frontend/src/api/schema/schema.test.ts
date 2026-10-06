@@ -36,7 +36,14 @@ const messageJson = {
   embedsSuppressed: false,
   replyToMessageId: 8999,
   forwardedFromMessageId: null,
+  forwardedAt: null,
+  forwardNote: null,
   editedAt: null,
+  attachment: null,
+  reactions: [],
+  boosts: [],
+  pinned: false,
+  thread: null,
   createdAt: "2026-10-06T09:15:00.123Z",
   updatedAt: "2026-10-06T09:15:00.123Z",
 } as const;
@@ -129,12 +136,14 @@ describe("DTO schemas", () => {
       users: [userJson],
       before: 9001,
       after: null,
+      saved: [{ messageId: 9001, savedItemId: 31 }],
     });
     roundTrips(CreateMessage, {
       clientMessageId: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11",
       markdownSource: "Ship it",
       replyToMessageId: null,
       replyNotifyAuthor: null,
+      attachmentSignedId: null,
     });
     roundTrips(Sidebar, {
       rows: [sidebarRowJson],

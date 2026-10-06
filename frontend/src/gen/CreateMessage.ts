@@ -2,6 +2,10 @@
 
 /**
  * `POST /api/v1/rooms/:id/messages`: post to the room's root timeline (`messages#create`).
+ * `POST /api/v1/threads/:id/messages` takes the same body and posts a reply to a thread
+ * (`channel_thread_messages#create`; 403 in a locked thread unless the viewer may moderate it),
+ * published as `message.created` on `thread:<id>`. A thread's first reply goes through
+ * `POST /api/v1/rooms/:id/threads` ([`crate::CreateThread`]) instead.
  *
  * Idempotent on `clientMessageId` (`Message::find_duplicate`): posting the same id again
  * returns the message already created, with 200 instead of 201. The response body is the
@@ -15,7 +19,7 @@ export type CreateMessage = {
 clientMessageId: string, 
 /**
  * The Markdown source, rendered by the server's pipeline into `bodyHtml`. Up to
- * `Message::SOURCE_LIMIT` (50 000) characters.
+ * `Message::SOURCE_LIMIT` (50 000) characters. May be empty only with an attachment.
  */
 markdownSource: string, 
 /**
@@ -25,4 +29,10 @@ replyToMessageId: number | null,
 /**
  * Whether the replied-to author is notified; `null` keeps the default (true).
  */
-replyNotifyAuthor: boolean | null, };
+replyNotifyAuthor: boolean | null, 
+/**
+ * A finished direct upload's `signedId` ([`crate::DirectUpload`]), attached as the
+ * message's one file (`message[attachment]` given a signed blob id); `null` for none. Several
+ * files are sent as several messages, one each, as the classic composer does.
+ */
+attachmentSignedId: string | null, };

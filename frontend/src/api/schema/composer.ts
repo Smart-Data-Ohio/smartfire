@@ -1,0 +1,187 @@
+import { Schema } from "effect";
+import type { CreateScheduledMessage as GeneratedCreateScheduledMessage } from "../../gen/CreateScheduledMessage.ts";
+import type { Icon as GeneratedIcon } from "../../gen/Icon.ts";
+import type { IconKind as GeneratedIconKind } from "../../gen/IconKind.ts";
+import type { IconList as GeneratedIconList } from "../../gen/IconList.ts";
+import type { MessagePreview as GeneratedMessagePreview } from "../../gen/MessagePreview.ts";
+import type { PreviewMessage as GeneratedPreviewMessage } from "../../gen/PreviewMessage.ts";
+import type { RunSlashCommand as GeneratedRunSlashCommand } from "../../gen/RunSlashCommand.ts";
+import type { ScheduledMessage as GeneratedScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import type { ScheduledMessageList as GeneratedScheduledMessageList } from "../../gen/ScheduledMessageList.ts";
+import type { SlashCommand as GeneratedSlashCommand } from "../../gen/SlashCommand.ts";
+import type { SlashCommandList as GeneratedSlashCommandList } from "../../gen/SlashCommandList.ts";
+import type { SlashCommandResult as GeneratedSlashCommandResult } from "../../gen/SlashCommandResult.ts";
+import type { UpdateScheduledMessage as GeneratedUpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
+import type { UserSuggestion as GeneratedUserSuggestion } from "../../gen/UserSuggestion.ts";
+import type { UserSuggestionList as GeneratedUserSuggestionList } from "../../gen/UserSuggestionList.ts";
+import { MessageId, RoomId, ScheduledMessageId, ThreadId } from "./ids.ts";
+import type { Assert, Pinned } from "./pin.ts";
+import { Timestamp } from "./time.ts";
+import { User } from "./user.ts";
+
+/** An `@` suggestion: insert `mentionToken`; `null` means the name is ambiguous (disabled). */
+export const UserSuggestion = Schema.Struct({
+  user: User,
+  mentionToken: Schema.NullOr(Schema.String),
+});
+
+export type UserSuggestion = typeof UserSuggestion.Type;
+
+export type UserSuggestionPin = Assert<Pinned<typeof UserSuggestion, GeneratedUserSuggestion>>;
+
+/** `GET /api/v1/autocomplete/users?roomId=&query=`: at most 20. */
+export const UserSuggestionList = Schema.Struct({ suggestions: Schema.Array(UserSuggestion) });
+
+export type UserSuggestionList = typeof UserSuggestionList.Type;
+
+export type UserSuggestionListPin = Assert<
+  Pinned<typeof UserSuggestionList, GeneratedUserSuggestionList>
+>;
+
+export const IconKind = Schema.Literals(["brand", "custom", "emoji"]);
+
+export type IconKind = typeof IconKind.Type;
+
+export type IconKindPin = Assert<Pinned<typeof IconKind, GeneratedIconKind>>;
+
+/** What `:name:` expands to: an emoji `character`, or a brand/custom `imageUrl`. */
+export const Icon = Schema.Struct({
+  name: Schema.String,
+  title: Schema.String,
+  kind: IconKind,
+  character: Schema.NullOr(Schema.String),
+  imageUrl: Schema.NullOr(Schema.String),
+});
+
+export type Icon = typeof Icon.Type;
+
+export type IconPin = Assert<Pinned<typeof Icon, GeneratedIcon>>;
+
+/** `GET /api/v1/autocomplete/icons?query=` (at most 8) and `GET /api/v1/icons` (all non-emoji). */
+export const IconList = Schema.Struct({ icons: Schema.Array(Icon) });
+
+export type IconList = typeof IconList.Type;
+
+export type IconListPin = Assert<Pinned<typeof IconList, GeneratedIconList>>;
+
+export const SlashCommand = Schema.Struct({
+  name: Schema.String,
+  description: Schema.String,
+  argHint: Schema.String,
+  takesArguments: Schema.Boolean,
+  agentName: Schema.NullOr(Schema.String),
+});
+
+export type SlashCommand = typeof SlashCommand.Type;
+
+export type SlashCommandPin = Assert<Pinned<typeof SlashCommand, GeneratedSlashCommand>>;
+
+/** `GET /api/v1/rooms/:id/slash_commands?threadId=`: built-ins, then the room's agent commands. */
+export const SlashCommandList = Schema.Struct({ commands: Schema.Array(SlashCommand) });
+
+export type SlashCommandList = typeof SlashCommandList.Type;
+
+export type SlashCommandListPin = Assert<
+  Pinned<typeof SlashCommandList, GeneratedSlashCommandList>
+>;
+
+/** The body of `POST /api/v1/rooms/:id/slash_commands`. */
+export const RunSlashCommand = Schema.Struct({
+  text: Schema.String,
+  threadId: Schema.NullOr(ThreadId),
+});
+
+export type RunSlashCommand = typeof RunSlashCommand.Type;
+
+export type RunSlashCommandPin = Assert<Pinned<typeof RunSlashCommand, GeneratedRunSlashCommand>>;
+
+/** What a slash command did, tagged by `status`. */
+export const SlashCommandResult = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("posted"),
+    messageId: MessageId,
+    notice: Schema.NullOr(Schema.String),
+  }),
+  Schema.Struct({ status: Schema.Literal("ephemeral"), message: Schema.String }),
+  Schema.Struct({ status: Schema.Literal("error"), message: Schema.String }),
+  Schema.Struct({ status: Schema.Literal("open_url"), url: Schema.String }),
+  Schema.Struct({ status: Schema.Literal("open_poll") }),
+  Schema.Struct({
+    status: Schema.Literal("start_huddle"),
+    roomId: RoomId,
+    roomName: Schema.String,
+  }),
+]);
+
+export type SlashCommandResult = typeof SlashCommandResult.Type;
+
+export type SlashCommandResultPin = Assert<
+  Pinned<typeof SlashCommandResult, GeneratedSlashCommandResult>
+>;
+
+/** The body of `POST /api/v1/rooms/:id/messages/preview`. */
+export const PreviewMessage = Schema.Struct({ markdownSource: Schema.String });
+
+export type PreviewMessagePin = Assert<Pinned<typeof PreviewMessage, GeneratedPreviewMessage>>;
+
+export const MessagePreview = Schema.Struct({ bodyHtml: Schema.String });
+
+export type MessagePreview = typeof MessagePreview.Type;
+
+export type MessagePreviewPin = Assert<Pinned<typeof MessagePreview, GeneratedMessagePreview>>;
+
+/** A message to send later; text only. */
+export const ScheduledMessage = Schema.Struct({
+  id: ScheduledMessageId,
+  roomId: RoomId,
+  threadId: Schema.NullOr(ThreadId),
+  replyToMessageId: Schema.NullOr(MessageId),
+  markdownSource: Schema.String,
+  sendAt: Timestamp,
+  sentAt: Schema.NullOr(Timestamp),
+  droppedAt: Schema.NullOr(Timestamp),
+  createdAt: Timestamp,
+});
+
+export type ScheduledMessage = typeof ScheduledMessage.Type;
+
+export type ScheduledMessagePin = Assert<
+  Pinned<typeof ScheduledMessage, GeneratedScheduledMessage>
+>;
+
+/** The body of `POST /api/v1/rooms/:id/scheduled_messages`; `sendAt` must be in the future. */
+export const CreateScheduledMessage = Schema.Struct({
+  markdownSource: Schema.String,
+  sendAt: Timestamp,
+  threadId: Schema.NullOr(ThreadId),
+  replyToMessageId: Schema.NullOr(MessageId),
+});
+
+export type CreateScheduledMessage = typeof CreateScheduledMessage.Type;
+
+export type CreateScheduledMessagePin = Assert<
+  Pinned<typeof CreateScheduledMessage, GeneratedCreateScheduledMessage>
+>;
+
+/** The body of `PATCH /api/v1/scheduled_messages/:id`. */
+export const UpdateScheduledMessage = Schema.Struct({
+  markdownSource: Schema.String,
+  sendAt: Timestamp,
+});
+
+export type UpdateScheduledMessage = typeof UpdateScheduledMessage.Type;
+
+export type UpdateScheduledMessagePin = Assert<
+  Pinned<typeof UpdateScheduledMessage, GeneratedUpdateScheduledMessage>
+>;
+
+/** `GET /api/v1/scheduled_messages?roomId=`: the viewer's pending ones, soonest first. */
+export const ScheduledMessageList = Schema.Struct({
+  scheduledMessages: Schema.Array(ScheduledMessage),
+});
+
+export type ScheduledMessageList = typeof ScheduledMessageList.Type;
+
+export type ScheduledMessageListPin = Assert<
+  Pinned<typeof ScheduledMessageList, GeneratedScheduledMessageList>
+>;

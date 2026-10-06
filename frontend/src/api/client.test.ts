@@ -149,7 +149,7 @@ describe("ApiClient", () => {
 
   it.effect("puts the page cursor in the query", () => {
     const { layer, seen } = harness(() =>
-      json(200, { messages: [], users: [], before: null, after: null }),
+      json(200, { messages: [], users: [], before: null, after: null, saved: [] }),
     );
 
     return Effect.gen(function* () {

@@ -397,6 +397,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       users: usersFor(messages.map((message) => message.creatorId)),
       before: oldest !== undefined && start > 0 ? oldest.id : null,
       after: newest !== undefined && end < record.messages.length ? newest.id : null,
+      saved: [],
     };
   };
 
@@ -459,7 +460,14 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       embedsSuppressed: false,
       replyToMessageId,
       forwardedFromMessageId: null,
+      forwardedAt: null,
+      forwardNote: null,
       editedAt: null,
+      attachment: null,
+      reactions: [],
+      boosts: [],
+      pinned: false,
+      thread: null,
       createdAt,
       updatedAt: createdAt,
     };

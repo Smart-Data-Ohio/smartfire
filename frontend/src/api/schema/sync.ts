@@ -5,12 +5,21 @@ import type { ServerFrame as GeneratedServerFrame } from "../../gen/ServerFrame.
 import type { SyncEvent as GeneratedSyncEvent } from "../../gen/SyncEvent.ts";
 import type { SyncPayload as GeneratedSyncPayload } from "../../gen/SyncPayload.ts";
 import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
+import { PinState, SavedChanged } from "./actions.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { UserPresence } from "./presence.ts";
+import { MessageReactions } from "./reaction.ts";
 import { RoomRead, RoomUnread } from "./read.ts";
 import { SidebarRow, SidebarRowRemoved } from "./sidebar.ts";
+import {
+  Thread,
+  ThreadIndicatorChanged,
+  ThreadRead,
+  ThreadRemoved,
+  ThreadUnread,
+} from "./thread.ts";
 
 /** A sync topic: `user`, `room:<id>` or `thread:<id>`. */
 const Topic = Schema.String;
@@ -56,6 +65,15 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("sidebar.row.upserted"), data: SidebarRow }),
   Schema.Struct({ type: Schema.Literal("sidebar.row.removed"), data: SidebarRowRemoved }),
   Schema.Struct({ type: Schema.Literal("presence"), data: UserPresence }),
+  Schema.Struct({ type: Schema.Literal("message.reactions"), data: MessageReactions }),
+  Schema.Struct({ type: Schema.Literal("message.pinned"), data: PinState }),
+  Schema.Struct({ type: Schema.Literal("thread.indicator"), data: ThreadIndicatorChanged }),
+  Schema.Struct({ type: Schema.Literal("thread.created"), data: Thread }),
+  Schema.Struct({ type: Schema.Literal("thread.updated"), data: Thread }),
+  Schema.Struct({ type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
+  Schema.Struct({ type: Schema.Literal("thread.unread"), data: ThreadUnread }),
+  Schema.Struct({ type: Schema.Literal("thread.read"), data: ThreadRead }),
+  Schema.Struct({ type: Schema.Literal("saved.changed"), data: SavedChanged }),
 ]);
 
 export type SyncPayload = typeof SyncPayload.Type;
@@ -82,6 +100,23 @@ export const SyncEvent = Schema.Union([
     data: SidebarRowRemoved,
   }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("presence"), data: UserPresence }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("message.reactions"),
+    data: MessageReactions,
+  }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("message.pinned"), data: PinState }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("thread.indicator"),
+    data: ThreadIndicatorChanged,
+  }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("thread.created"), data: Thread }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("thread.updated"), data: Thread }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("thread.removed"), data: ThreadRemoved }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("thread.unread"), data: ThreadUnread }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("thread.read"), data: ThreadRead }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("saved.changed"), data: SavedChanged }),
 ]);
 
 export type SyncEvent = typeof SyncEvent.Type;

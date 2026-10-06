@@ -9,7 +9,7 @@ use crate::*;
 
 /// `value` serializes to exactly `wire`, and `wire` deserializes back to `value`.
 #[track_caller]
-fn assert_wire<T>(value: &T, wire: Value)
+pub(crate) fn assert_wire<T>(value: &T, wire: Value)
 where
     T: Serialize + DeserializeOwned + PartialEq + Debug,
 {
@@ -17,7 +17,7 @@ where
     assert_eq!(&serde_json::from_value::<T>(wire).unwrap(), value);
 }
 
-fn user() -> User {
+pub(crate) fn user() -> User {
     User {
         id: 7,
         name: "Ada Lovelace".into(),
@@ -34,7 +34,7 @@ fn user() -> User {
     }
 }
 
-fn message() -> MessageDTO {
+pub(crate) fn message() -> MessageDTO {
     MessageDTO {
         id: 9001,
         room_id: 12,
@@ -49,7 +49,14 @@ fn message() -> MessageDTO {
         embeds_suppressed: false,
         reply_to_message_id: Some(8999),
         forwarded_from_message_id: None,
+        forwarded_at: None,
+        forward_note: None,
         edited_at: None,
+        attachment: None,
+        reactions: vec![],
+        boosts: vec![],
+        pinned: false,
+        thread: None,
         created_at: "2026-10-06T09:15:00.123Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
     }
@@ -222,7 +229,14 @@ fn message_round_trips() {
             "embedsSuppressed": false,
             "replyToMessageId": 8999,
             "forwardedFromMessageId": null,
+            "forwardedAt": null,
+            "forwardNote": null,
             "editedAt": null,
+            "attachment": null,
+            "reactions": [],
+            "boosts": [],
+            "pinned": false,
+            "thread": null,
             "createdAt": "2026-10-06T09:15:00.123Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
         }),
@@ -477,7 +491,7 @@ fn membership() -> Membership {
     }
 }
 
-fn row() -> SidebarRow {
+pub(crate) fn row() -> SidebarRow {
     SidebarRow {
         room: room(),
         membership: membership(),
@@ -533,6 +547,10 @@ fn message_page_carries_its_authors_and_cursors() {
         users: vec![user()],
         before: Some(9001),
         after: None,
+        saved: vec![SavedMark {
+            message_id: 9001,
+            saved_item_id: 31,
+        }],
     };
     let wire = serde_json::to_value(&page).unwrap();
     assert_eq!(
@@ -542,6 +560,10 @@ fn message_page_carries_its_authors_and_cursors() {
     assert_eq!(wire["users"][0]["id"], 7);
     assert_eq!(wire["before"], 9001);
     assert_eq!(wire["after"], Value::Null);
+    assert_eq!(
+        wire["saved"],
+        json!([{"messageId": 9001, "savedItemId": 31}])
+    );
     assert_wire(&page, wire);
 }
 
@@ -553,12 +575,14 @@ fn create_message_requests_round_trip() {
             markdown_source: "Ship it :rocket:".into(),
             reply_to_message_id: None,
             reply_notify_author: None,
+            attachment_signed_id: None,
         },
         json!({
             "clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11",
             "markdownSource": "Ship it :rocket:",
             "replyToMessageId": null,
             "replyNotifyAuthor": null,
+            "attachmentSignedId": null,
         }),
     );
 }

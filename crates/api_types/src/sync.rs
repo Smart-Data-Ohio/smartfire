@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    MessageDTO, MessageRemoved, RoomRead, RoomUnread, SidebarRow, SidebarRowRemoved, UserPresence,
+    MessageDTO, MessageReactions, MessageRemoved, PinState, RoomRead, RoomUnread, SavedChanged,
+    SidebarRow, SidebarRowRemoved, Thread, ThreadIndicatorChanged, ThreadRead, ThreadRemoved,
+    ThreadUnread, UserPresence,
 };
 
 /// A frame the client sends.
@@ -25,7 +27,8 @@ pub enum ClientFrame {
     Unsub {
         topics: Vec<String>,
     },
-    /// Typing started or stopped in `conv` (a topic such as `room:12`).
+    /// Typing started or stopped in `conv`: `room:<id>` in a room's composer, `thread:<id>` in a
+    /// thread's.
     Typing {
         conv: String,
         on: bool,
@@ -132,6 +135,36 @@ pub enum SyncPayload {
     /// changed (connected, went idle, disconnected, turned do-not-disturb on or off).
     #[serde(rename = "presence")]
     Presence(UserPresence),
+    /// On the message's conversation topic: its reactions or boosts changed.
+    #[serde(rename = "message.reactions")]
+    MessageReactions(MessageReactions),
+    /// On `room:<id>`: a message was pinned or unpinned (`pinned` says which). Sets the
+    /// message's `pinned` and the room's pin count.
+    #[serde(rename = "message.pinned")]
+    MessagePinned(PinState),
+    /// On `room:<id>`: a root message's reply indicator changed.
+    #[serde(rename = "thread.indicator")]
+    ThreadIndicator(ThreadIndicatorChanged),
+    /// On `room:<id>`: a thread was started there. New: the classic app shows new threads only
+    /// through the parent's indicator.
+    #[serde(rename = "thread.created")]
+    ThreadCreated(Thread),
+    /// On `room:<id>` and `thread:<id>`: a thread was renamed, closed, reopened, locked or
+    /// unlocked, or its reply count or last activity moved. New, as `thread.created`.
+    #[serde(rename = "thread.updated")]
+    ThreadUpdated(Thread),
+    /// On `room:<id>` and `thread:<id>`: a thread was deleted.
+    #[serde(rename = "thread.removed")]
+    ThreadRemoved(ThreadRemoved),
+    /// On a member's `user` topic: a thread went unread for them, or needs refreshing.
+    #[serde(rename = "thread.unread")]
+    ThreadUnread(ThreadUnread),
+    /// On the person's `user` topic: they read a thread elsewhere.
+    #[serde(rename = "thread.read")]
+    ThreadRead(ThreadRead),
+    /// On the person's `user` topic: they saved or unsaved a message elsewhere.
+    #[serde(rename = "saved.changed")]
+    SavedChanged(SavedChanged),
 }
 
 /// Someone started or stopped typing in the event's topic. Never echoed to the typist.

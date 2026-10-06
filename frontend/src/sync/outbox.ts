@@ -44,6 +44,7 @@ export class Outbox extends Context.Service<
           markdownSource,
           replyToMessageId: null,
           replyNotifyAuthor: null,
+          attachmentSignedId: null,
         }).pipe(
           Effect.retry({ schedule: resendSchedule, while: isTransient }),
           Effect.matchEffect({
