@@ -8,6 +8,7 @@ import { Button } from "../../ui/button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { joinHint } from "./alerts.ts";
 import { callController } from "./call-controller.ts";
 import { activePhase, useCall } from "./call-store.ts";
 import { useCallParticipants, useHuddlesAvailable } from "./presence.ts";
@@ -63,13 +64,6 @@ export function HuddleLauncher({ roomId }: { readonly roomId: number }) {
   const row = useStore((state) => state.sidebar.rows[roomId] ?? null);
   const detailName = useStore((state) => state.rooms[roomId]?.detail?.displayName ?? null);
 
-  const stageRole = useStore((state) => {
-    const viewerId = state.me?.user.id;
-    const member = state.stages[roomId]?.members.find((entry) => entry.userId === viewerId);
-
-    return member?.role ?? state.sidebar.rows[roomId]?.membership.stageRole ?? null;
-  });
-
   const callRoomId = useCall((state) => state.roomId);
   const phase = useCall((state) => state.phase);
 
@@ -91,10 +85,7 @@ export function HuddleLauncher({ roomId }: { readonly roomId: number }) {
       return;
     }
 
-    // A stage's hint is advisory (the token decides); elsewhere there is none.
-    const hint = row.room.kind === "stage" ? stageRole !== null && stageRole !== "listener" : null;
-
-    void callController.join(roomId, name, hint);
+    void callController.join(roomId, name, joinHint(roomId));
   };
 
   return (

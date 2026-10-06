@@ -4,6 +4,7 @@ import { useStore } from "../../store/store.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Badge } from "../../ui/badge.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { JoinPill } from "../huddle/call-alerts.tsx";
 import { CallMark, VoiceParticipants } from "../huddle/voice-participants.tsx";
 import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
@@ -103,6 +104,7 @@ export function SidebarRow({ row, selected }: SidebarRowProps) {
       {room.kind === "voice" || room.kind === "stage" ? (
         <VoiceParticipants roomId={room.id} />
       ) : null}
+      <JoinPill roomId={room.id} />
     </li>
   );
 }

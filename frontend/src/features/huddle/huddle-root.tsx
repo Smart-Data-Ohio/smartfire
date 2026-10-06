@@ -4,18 +4,32 @@
  * the S5 sync signals, another account signing in, and the presence poll. Renders the device
  * check while one is open.
  */
+import { useNavigate } from "@tanstack/react-router";
 import { lazy, Suspense, useEffect } from "react";
 import { store } from "../../store/store.ts";
 import { onHuddleSignal } from "../../sync/huddles.ts";
+import { callNotices, incomingCalls, setCallNavigator } from "./alerts.ts";
+import { CallToasts, RingBanner } from "./call-alerts.tsx";
 import { callController } from "./call-controller.ts";
 import { callStore, useCall } from "./call-store.ts";
+import { noticeStore } from "./notices.ts";
 import { startPresencePolling } from "./presence.ts";
+
+function noticeBanners() {
+  return noticeStore.getState().banners;
+}
+
 import "./huddle.css";
 
 const PrejoinDialog = lazy(() => import("./prejoin-dialog.tsx"));
 
 export function HuddleRoot() {
   const prejoin = useCall((state) => state.phase === "prejoin");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setCallNavigator((roomId) => navigate({ to: "/r/$roomId", params: { roomId } }));
+  }, [navigate]);
 
   useEffect(() => {
     const stopPolling = startPresencePolling();
@@ -64,13 +78,48 @@ export function HuddleRoot() {
       }
     });
 
-    // A second account in this browser ends the first one's call.
+    // A second account in this browser ends the first one's call (and its notices and ring).
     const stopAccount = store.subscribe((state, previous) => {
       const before = previous.me?.user.id ?? null;
       const after = state.me?.user.id ?? null;
 
       if (before !== null && after !== before) {
         callController.endForPageChange();
+        callNotices.reset();
+        incomingCalls.hide();
+      }
+    });
+
+    // Presence is authoritative for join banners: an emptied call clears its banner.
+    const stopBanners = store.subscribe((state, previous) => {
+      if (state.huddles === previous.huddles) {
+        return;
+      }
+
+      for (const roomId of Object.keys(noticeBanners())) {
+        const id = Number(roomId);
+
+        callNotices.presenceChanged(
+          id,
+          (state.huddles[id]?.participants ?? []).map((participant) => participant.userId),
+        );
+      }
+    });
+
+    // Joining a call answers its banner and its ring.
+    const stopCall = callStore.subscribe((state, previous) => {
+      const active =
+        state.phase === "connecting" ||
+        state.phase === "connected" ||
+        state.phase === "reconnecting";
+
+      if (
+        active &&
+        state.roomId !== null &&
+        (state.roomId !== previous.roomId || state.phase !== previous.phase)
+      ) {
+        callNotices.callActive(state.roomId);
+        incomingCalls.callActive(state.roomId);
       }
     });
 
@@ -83,6 +132,10 @@ export function HuddleRoot() {
         );
       } else if (signal.type === "stage.stream.stopped") {
         void callController.streamStopped(signal.data.roomId);
+      } else if (signal.type === "huddle.notice") {
+        callNotices.received(signal.data);
+      } else if (signal.type === "huddle.ring") {
+        incomingCalls.received(signal.data);
       }
     });
 
@@ -90,6 +143,8 @@ export function HuddleRoot() {
       stopPolling();
       stopPresence();
       stopAccount();
+      stopBanners();
+      stopCall();
       stopSignals();
       window.removeEventListener("keydown", keyDown);
       window.removeEventListener("keyup", keyUp);
@@ -100,9 +155,15 @@ export function HuddleRoot() {
     };
   }, []);
 
-  return prejoin ? (
-    <Suspense fallback={null}>
-      <PrejoinDialog />
-    </Suspense>
-  ) : null;
+  return (
+    <>
+      <RingBanner />
+      <CallToasts />
+      {prejoin ? (
+        <Suspense fallback={null}>
+          <PrejoinDialog />
+        </Suspense>
+      ) : null}
+    </>
+  );
 }

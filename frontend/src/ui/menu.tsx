@@ -361,7 +361,7 @@ interface MenuItemProps {
   readonly icon?: IconName;
   /** Shown faint at the end, e.g. ["⌘", "E"]. */
   readonly shortcut?: readonly string[];
-  readonly tone?: "danger";
+  readonly tone?: "danger" | undefined;
   readonly disabled?: boolean;
   readonly onSelect?: () => void;
   readonly children: ReactNode;

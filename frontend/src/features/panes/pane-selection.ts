@@ -73,4 +73,5 @@ export const PANE_TITLES = {
   pins: "Pinned messages",
   files: "Files",
   threads: "Threads",
+  stage: "Stage",
 } as const satisfies Record<PaneKind, string>;
