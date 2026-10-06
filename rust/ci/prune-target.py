@@ -6,6 +6,10 @@ A fresh checkout gives every workspace file a new mtime, so Cargo rebuilds works
 them only costs upload, download and the eviction of other caches. Registry crates'
 fingerprints don't depend on checkout mtimes, so their artifacts are what the cache is for.
 
+Two layouts are understood: stable Cargo's (deps/, build/ and .fingerprint/ entries named
+CRATE-HASH) and the nightly's per-unit build directory (build/PACKAGE/HASH/, holding each
+unit's fingerprint and outputs), which keeps a package's directory whole.
+
 Usage: prune-target.py TARGET_DIR [PROFILE_DIR...]   (default profile directory: debug)
 """
 import re
@@ -34,6 +38,12 @@ def is_registry(name, registry):
     return crate in registry or (crate.startswith("lib") and crate[3:] in registry)
 
 
+def is_registry_package_dir(entry, registry):
+    """The nightly layout's build/PACKAGE/ directory, holding HASH/ unit directories."""
+    return (entry.parent.name == "build" and entry.is_dir() and not ARTIFACT.match(entry.name)
+            and entry.name.replace("-", "_") in registry)
+
+
 def remove(path):
     if path.is_dir() and not path.is_symlink():
         shutil.rmtree(path)
@@ -51,7 +61,7 @@ def prune(profile, registry):
             removed += 1
             continue
         for artifact in entry.iterdir():
-            if not is_registry(artifact.name, registry):
+            if not (is_registry(artifact.name, registry) or is_registry_package_dir(artifact, registry)):
                 remove(artifact)
                 removed += 1
     return removed
