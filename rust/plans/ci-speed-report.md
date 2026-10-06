@@ -18,8 +18,12 @@ dispatch 37350631485 (74.5 min), main push 37360757177 (84.2 min), and PR runs
 37350629501 (43.5 min) and 37362400997 (62.6 min). After, on 3f8ca3aed: PR run
 [37389036857](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37389036857) (8.8 min)
 and full dispatch [37389035197](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37389035197)
-(23.1 min, every job green first time: messaging done at 13 min, browsers 21–22.5 min). The
-pull request lists the runs on its final head.
+(23.1 min, every job green first time: messaging done at 13 min, browsers 21–22.5 min).
+
+Those numbers predate Cranelift (#256), which merged into this branch afterwards. On main,
+#256's own serial PR run took 80 min ([37393465943](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37393465943):
+campfire tests 50 min, LLVM panic tests 3.4 min, stable check 2 min). The pull request lists
+the measured runs on this branch's final head, with Cranelift.
 
 ## Where the time went (before)
 
@@ -86,7 +90,21 @@ regex compilation, all at opt-level 0. Profiling one boot loop:
    only if all of them were skipped; with Rust inputs, any failed, skipped or cancelled job
    still fails it. Pushes, nightly and manual runs, empty diffs and unavailable history run
    everything.
-6. **One test fix** (outside CI, see below): the stage join browser test now holds the
+6. **Cranelift (#256) carried into the shards.** The twelve shards build campfire with
+   Cranelift and leave out the four `CAMPFIRE_LLVM_ONLY_TESTS`. A parallel
+   `Rust tests (campfire panic recovery, LLVM)` job runs exactly those four with campfire on
+   LLVM, and its report counts toward `Rust port`'s totals. `-p campfire` there resolves the
+   same dependency features as `--workspace` (checked with `cargo tree`), so it reuses the
+   shards' cache. The nightly run builds campfire with LLVM in every shard. The stable
+   `cargo check` is its own parallel job, `Rust production toolchain check`, which reads the
+   release from the Dockerfile's `RUST_VERSION`. The correctness suites build from the
+   repository root on stable and LLVM, as production does, so they restore a separate
+   `correctness` Cargo cache that browsers shard 2/4 saves on main. Every Cargo cache key,
+   down to the broadest fallback, is scoped to `rust-toolchain.toml` and the Dockerfile. The
+nightly lays the target directory out per unit (`build/PACKAGE/HASH/`), so
+`prune-target.py` now keeps registry packages' directories in that layout too; before
+that fix the nightly caches were saved holding only registry sources.
+7. **One test fix** (outside CI, see below): the stage join browser test now holds the
    fake LiveKit server's validate request as well as its socket.
 
 ## Test counts
