@@ -1,0 +1,25 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "note": "Rails sources at the pin that behavior-check.py and behavior.mjs read: declaration names, heredoc literals, SOURCE_LIMIT and upload fixtures. Copied verbatim with git show.",
+  "files": {
+    "app/models/message/markdown.rb": "5b4d5e94bc93ec3a0f0720dced9581d1f46c30bdd50cf734edc381bae44de88a",
+    "test/controllers/channel_threads_controller_test.rb": "30ae635713ce0e15ff4ad01e5705a4c909b300e4d8a800cde0aa7231e091d5dd",
+    "test/fixtures/files/alpha-centuri.mov": "420726f9cdff7b48f6bb2d6c79af6ff69dfcc4d290a8376d1901be0de9c62286",
+    "test/fixtures/files/moon.jpg": "f95cac806ae17f0d59ad75e5d03d82a05019a65469e9e325baae898d46e7f1e5",
+    "test/system/boosting_messages_test.rb": "5456542ed9ee1b3685552bcb1cca4acf6c0d8e62b47f5bf792370fd3dfef15be",
+    "test/system/code_highlighting_test.rb": "bd8e2522a1fab8e0054b401d199acc3a942f4e4be866b7b1c011de650bed2014",
+    "test/system/composer_attach_menu_test.rb": "1c8f431e79e272d8fc3794d902c7c979d632b515297a4bbe8938624b96ca6dfb",
+    "test/system/composer_test.rb": "1a0f4fe134c5d4c920fc4dc45c51352aaef7a58f1f451060d954037731cf3173",
+    "test/system/message_actions_mobile_test.rb": "4d930fbf29081825c2696f1be81ec062b0e6968031b93fef02d47b08818e856d",
+    "test/system/message_interactions_test.rb": "4c867b252b0697ea694a9a3637b4242195638e261b62ccfe6e90ff21ea20d8db",
+    "test/system/message_list_a11y_test.rb": "9c17b5c9dccb9b10eb3c56e52aed5583c43e0a47166218ecfd9c0ec2bdd169fa",
+    "test/system/message_toolbar_test.rb": "d0e63bfb2c31db13f5786afd5ff28728f7dffead32468143fe3cb513598fdc12",
+    "test/system/mobile_layout_test.rb": "1397e2d10e2f98eef646ebe49b8c57471e5a65328318ce205ac44fbc8c2757ca",
+    "test/system/motion_test.rb": "5c88aad84b6fe9f518e3512cf33c0c40854bad5a59f9f722c400b5bb5b2235d7",
+    "test/system/search_forward_edit_test.rb": "60c7ecfe60cd0a51ec1235f547795c2400e8f02a830ef0991af9dea833d89366",
+    "test/system/sending_messages_test.rb": "4acc5a273fd08dd9a61a957b771723597c530c40bd23b8c12ceef27171d75934",
+    "test/system/threads_test.rb": "f8fed193c6250fac292270817066559a44c8a88760be770029ca78377dd5971b",
+    "test/system/unread_divider_test.rb": "006147f6e9ffb9066a4e82e8b50e841f150ce7c079047833efcf560f93546a1e",
+    "test/system/workspace_markdown_test.rb": "2b161117e767cca6d1eff36942eecb15879d5ab59038424aa5b8896608ceb817"
+  }
+}
