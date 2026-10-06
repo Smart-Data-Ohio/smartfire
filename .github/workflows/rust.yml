@@ -62,10 +62,10 @@ env:
 
 jobs:
   # Rust-relevant inputs: everything but docs/, deploy/, frontend/ (the SPA, checked by
-  # frontend.yml), the other workflows and the root's prose files; the setup action and this
-  # workflow count. A PR touching only those skips the build, and "Rust port" passes on that
-  # intentional skip. Pushes, the nightly run, manual runs, empty
-  # diffs and unavailable history all keep the full run.
+  # frontend.yml), the other workflows and the root's prose files; the setup action, this
+  # workflow and frontend/src/gen (generated from crates/api_types, checked by clippy) count. A PR
+  # touching only those skips the build, and "Rust port" passes on that intentional skip. Pushes,
+  # the nightly run, manual runs, empty diffs and unavailable history all keep the full run.
   changes:
     name: Rust changes
     runs-on: ubuntu-latest
@@ -97,15 +97,17 @@ jobs:
           # The workspace is the repository root, and the app reads only its own tree: docs,
           # deploy scripts, the SPA's sources (frontend/, which no crate reads yet), other
           # workflows and the root's prose files can't affect it. Any other path, including a new
-          # top-level one, runs the gates.
+          # top-level one, runs the gates. frontend/src/gen is the TypeScript crates/api_types
+          # generates; the clippy job fails if it differs from a fresh export.
           OUTSIDE = (b"docs/", b"deploy/", b"frontend/", b".github/")
           PROSE = (b"README.md", b"ROADMAP.md", b"CONTRIBUTING.md", b"SECURITY.md",
                    b"THIRD_PARTY_NOTICES.md", b"MIT-LICENSE")
           SETUP = (b".github/actions/rust-setup/",)
+          GENERATED = (b"frontend/src/gen/",)
           FILES = (b".github/workflows/rust.yml",)
 
           def rust_input(path):
-              if path.startswith(SETUP) or path in FILES:
+              if path.startswith(SETUP + GENERATED) or path in FILES:
                   return True
               return not (path.startswith(OUTSIDE) or path in PROSE)
 
@@ -280,6 +282,20 @@ jobs:
 
       - name: Clippy
         run: bash ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+
+      # The front end's types are generated from crates/api_types and committed. Regenerate them
+      # from scratch (so a removed type's file shows up too) and fail on any difference.
+      - name: Check the generated TypeScript types (frontend/src/gen)
+        shell: bash
+        run: |
+          rm -f frontend/src/gen/*.ts
+          bash ci/cargo.sh test --locked -p campfire_api_types export_bindings
+          if [[ -n "$(git status --porcelain -- frontend/src/gen)" ]]; then
+            git status --short -- frontend/src/gen
+            git --no-pager diff -- frontend/src/gen
+            echo '::error::frontend/src/gen is out of date with crates/api_types. Run pnpm gen in frontend/ and commit the result.'
+            exit 1
+          fi
 
       # The app has no integration-test target, so nextest builds its test harness but not its
       # normal executable. Retain that cfg(not(test))/link coverage, without building extra targets.

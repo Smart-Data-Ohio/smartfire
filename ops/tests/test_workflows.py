@@ -163,8 +163,10 @@ class WorkflowTest(unittest.TestCase):
         for path in [b"frontend/src/main.tsx", b"frontend/pnpm-lock.yaml", b"docs/development.md",
                      b".github/workflows/frontend.yml"]:
             self.assertFalse(rust_input(path), path)
+        # frontend/src/gen is generated from crates/api_types; the clippy job checks it.
         for path in [b"crates/kit/src/lib.rs", b"Cargo.lock", b"web/app/javascript/application.js",
-                     b".github/workflows/rust.yml", b"frontendish/x"]:
+                     b".github/workflows/rust.yml", b"frontendish/x", b"crates/api_types/src/lib.rs",
+                     b"frontend/src/gen/MessageDTO.ts"]:
             self.assertTrue(rust_input(path), path)
         print("WORKFLOW RUST SCOPE: frontend/-only pull requests skip the Rust gates")
 

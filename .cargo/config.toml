@@ -26,3 +26,9 @@ codegen-backend = "cranelift"
 
 [profile.release]
 codegen-backend = "llvm"
+
+# ts-rs (crates/api_types): `cargo test -p campfire_api_types export_bindings` writes the front
+# end's generated types to frontend/src/gen, with i64 ids as plain numbers (all below 2^53).
+[env]
+TS_RS_EXPORT_DIR = { value = "frontend/src/gen", relative = true }
+TS_RS_LARGE_INT = "number"

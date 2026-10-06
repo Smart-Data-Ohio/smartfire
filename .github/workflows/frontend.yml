@@ -4,7 +4,9 @@ name: Frontend
 # production build, with the entry chunks' gzip sizes in the job summary.
 #
 # "Frontend" reports on every pull request so it can be a required check: a PR that touches
-# neither frontend/ nor this workflow passes after the scope step, without installing anything.
+# none of frontend/, crates/api_types (whose generated types the schemas in frontend/src/api are
+# pinned to) and this workflow passes after the scope step, without installing anything. The
+# check that frontend/src/gen matches crates/api_types runs in rust.yml's clippy job.
 # Pushes to main always run everything, and so does a PR whose diff can't be read.
 #
 # This workflow only checks: read-only contents permission, no secrets, nothing published.
@@ -57,7 +59,7 @@ jobs:
           run=true
           if [ "$EVENT" = pull_request ]; then
             if paths="$(git diff --no-renames --name-only "$BASE...$HEAD" --)"; then
-              if [ -n "$paths" ] && ! grep -qE '^(frontend/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
+              if [ -n "$paths" ] && ! grep -qE '^(frontend/|crates/api_types/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
                 run=false
               fi
             else
