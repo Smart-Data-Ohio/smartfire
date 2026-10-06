@@ -18,6 +18,5 @@ for path in app/assets app/javascript vendor/javascript public config/importmap.
     mkdir -p "$inputs/rust/web/$(dirname -- "$path")"
     cp -a "web/$path" "$inputs/rust/web/$path"
 done
-unset CAMPFIRE_REFERENCE
 
 "$@" --manifest-path "$inputs/rust/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-target}"

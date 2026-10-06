@@ -200,6 +200,17 @@ else:
     sys.exit("unhandled fake " + name)
 '''
 
+INSTALL_WITHOUT_OWNERSHIP = r'''#!/bin/bash
+args=()
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -o|-g) shift 2 ;;
+        *) args+=("$1"); shift ;;
+    esac
+done
+exec /usr/bin/install "${args[@]}"
+'''
+
 
 class Host:
     """A scratch VM: the volume, the release state root and the fakes."""
@@ -220,6 +231,12 @@ class Host:
             fake = self.bin / name
             fake.write_text(FAKE)
             fake.chmod(0o755)
+        # The release runs as root on the VM and hands the rehearsal scratch to the app's uid
+        # (install -o 1000 -g 1000). The fixture runs unprivileged as whatever uid the host has,
+        # so drop the ownership and keep everything else install does.
+        install = self.bin / "install"
+        install.write_text(INSTALL_WITHOUT_OWNERSHIP)
+        install.chmod(0o755)
 
     @property
     def db(self):

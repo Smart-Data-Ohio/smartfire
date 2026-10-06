@@ -2,8 +2,8 @@ name: Rust
 
 # The Rust port in rust/: clippy, binary build and tests, in the toolchain stage of rust/Dockerfile (the
 # same libvips and ffmpeg builds as its image, so the storage vectors' byte checks run rather than
-# skip). The port reads only its own inputs under rust/: rust/web and rust/fixtures (copied from
-# the Rails app) and the seeds and recordings Rails built once, which are committed.
+# skip). The app reads only its own inputs under rust/: rust/web and rust/fixtures, and the seeds
+# and recordings the original Rails app built once, which are committed and frozen.
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
 # nothing is pushed or published. Deploys stay behind the manual Deploy to GCP workflow, which
@@ -91,7 +91,7 @@ jobs:
           import os
           import subprocess
 
-          # The port reads only its own tree: a Rails-only change can't affect it.
+          # The app reads only its own tree: changes elsewhere (docs, deploy) can't affect it.
           PREFIXES = (b"rust/", b".github/actions/rust-setup/")
           FILES = (b".github/workflows/rust.yml",)
 
@@ -636,8 +636,7 @@ jobs:
         env:
           RUST_CORRECTNESS_IMAGE: campfire-toolchain
         run: |
-          bash rust/ci/exec.sh env CAMPFIRE_REFERENCE="$GITHUB_WORKSPACE" \
-            cargo build --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire
+          bash rust/ci/exec.sh cargo build --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire
           tar -C rust/target -cf "$RUNNER_TEMP/messaging-host.tar" debug/campfire
 
       # browser_host.py builds the generated paused-jobs test host in target/ws8bm-browser-host

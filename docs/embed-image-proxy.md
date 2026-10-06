@@ -9,17 +9,17 @@ from the Smartfire host with no cookies.
 ## How it works
 
 Every embed `<img>` points at the proxy with a signed source URL
-(`Embeds::ImageProxy.signed_path`), rendered by
-`action_text/attachables/_opengraph_embed`. The signature
+(`signed_path` in `rust/crates/campfire/src/integrations/image_proxy.rs`), rendered by the
+rich-text OpenGraph embed renderer. The signature
 (`embed_image` message verifier) binds the exact remote URL, so the
 endpoint is not an open proxy: it serves only image URLs the server
 itself rendered into an embed. Tampered signatures answer 404 without
 touching the network, and the endpoint requires a signed-in member.
 
 Fetches follow the same rules as the unfurl fetcher
-(`Opengraph::Fetch`):
+(`rust/crates/campfire/src/integrations/opengraph`):
 
-- Each hop resolves through `RestrictedHTTP::PrivateNetworkGuard` and the
+- Each hop resolves through the private-network guard and the
   connection is pinned to the resolved public address. Loopback, private,
   and unresolvable hosts are refused with 404, including redirect
   targets. Redirects are capped at 10; non-HTTP targets are denied.
@@ -35,15 +35,14 @@ Fetches follow the same rules as the unfurl fetcher
   errors answer 502. Every failure body is empty.
 
 Successful responses carry `Cache-Control: private, max-age=3600` and
-`Content-Disposition: inline`. Private keeps shared caches (Thruster and
+`Content-Disposition: inline`. Private keeps shared caches (proxies and
 the like) from serving one member's authenticated fetch to another; the
 signature is deterministic per source URL, so cached message fragments
 keep stable `src` attributes.
 
 ## Integration note
 
-The `w2/link-embeds` branch renders its own card image directly from
-`embed.image_url` (`app/views/link_embeds/_card.html.erb`). When that
-merges, its image tag should use `Embeds::ImageProxy.signed_path` too,
-which closes the per-viewer image disclosure documented in that
-branch's privacy section.
+[Link embed cards](link-embeds.md) still render their image directly from
+`embed.image_url` (`rust/crates/views/templates/link_embeds/_card.html`).
+Routing that image through `signed_path` too would close the per-viewer
+image disclosure documented in their [privacy section](link-embeds.md#privacy).

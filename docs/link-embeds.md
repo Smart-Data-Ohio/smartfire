@@ -17,7 +17,7 @@ created or its Markdown source is edited.
 
 ## Which URLs get embeds
 
-`LinkEmbed::UrlClassifier` scans the rendered message text outside code
+The URL classifier scans the rendered message text outside code
 spans and fenced blocks (labeled links resolve through their hrefs) and
 keeps up to 3 unique URLs in order of appearance. These URLs are skipped
 — they have their own cards or need none:
@@ -58,19 +58,16 @@ the fetch-request claim still bounds this to one enqueue per URL per
 10-minute window. The job is idempotent, safe to enqueue concurrently,
 and records failures as `fetch_error` instead of retrying forever.
 
-The fetch client (`LinkEmbed::Fetcher`) reuses the existing
-`Opengraph::Location`/`Opengraph::Fetch` pipeline, so it inherits the
-SSRF guard (hostnames resolved through `PrivateNetworkGuard` with the
+The fetch client reuses the existing OpenGraph unfurl pipeline, so it
+inherits the SSRF guard (hostnames resolved through the private-network
+guard with the
 resolved address pinned for the connection, redirect targets
 re-resolved), explicit 5 s open/read/write timeouts, the 5 MB body cap,
 and no cookies (no `Cookie` header is ever set). On top of that each
 embed fetch has an overall 10 s deadline across all its redirects and
-reads (`LinkEmbed::Fetcher::FETCH_DEADLINE_SECONDS`, enforced with
-`Timeout`, with `Net::HTTP`'s silent idempotent retry disabled so the
-retry cannot swallow the deadline's own fire) and follows at most 3
-redirects (`LinkEmbed::Fetcher::MAX_REDIRECTS`); a slow drip or a
-redirect loop records the usual negative result. The parser
-(`LinkEmbed::MetadataParser`) reads OpenGraph tags first, then the
+reads, with no silent retry that could outlast the deadline, and follows
+at most 3 redirects; a slow drip or a
+redirect loop records the usual negative result. The metadata parser reads OpenGraph tags first, then the
 Twitter-card equivalents, then the document `<title>` and meta
 description; `og:site_name` falls back to the page host. There is no
 image proxy, so card images render directly from their `https:` URL
@@ -94,10 +91,9 @@ embedded post" button, which loads
 `https://www.linkedin.com/embed/feed/update/<urn>` in an iframe on click
 — the player (and its tracking) never loads until the reader asks. Only
 numeric URN ids are recognized (`urn:li:(activity|share|ugcPost):<digits>`,
-enforced in `Linkedin::PostUrl::PATTERN`), so a crafted link cannot smuggle
+enforced by the LinkedIn post URL pattern), so a crafted link cannot smuggle
 an unexpected path into the player URL. The
-Content Security Policy allows that host in `frame-src` (report-only,
-like the rest of the policy; see the initializer comment). No LinkedIn
+Content Security Policy allows that host in `frame-src`. No LinkedIn
 brand icon ships with the workspace set, so the card uses a small CSS
 "in" badge in LinkedIn blue.
 

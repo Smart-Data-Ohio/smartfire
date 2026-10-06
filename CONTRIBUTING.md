@@ -29,6 +29,9 @@ something to work on if you'd like to do so.
 3. Similarly, if you need any help or guidance on the issue, please comment on
    the issue as you go, and we'll do our best to help.
 4. When you have something ready for review or collaboration, open a PR.
+   Before you do, run the tests and clippy as described in the
+   [development guide](docs/development.md); the required `Rust port` check
+   runs them again on the PR.
 
 ### If you've found a bug...
 

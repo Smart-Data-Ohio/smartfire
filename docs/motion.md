@@ -7,7 +7,7 @@ removing the node.
 
 ## Tokens
 
-`app/assets/stylesheets/motion.css` holds the whole vocabulary:
+`rust/web/app/assets/stylesheets/motion.css` holds the whole vocabulary:
 
 - `--motion-quick: 100ms` — hover and press color changes on buttons
   and rows.
@@ -51,9 +51,4 @@ message list inserts never animate, so scroll never jumps.
 in `_reset.css` shrinks every transition and animation to 0.01ms), so
 everything becomes instant. The layout renders
 `data-test-motion="off"` on `<html>` in the test environment for the
-same effect, since system tests assert right after acting.
-`test/system/motion_test.rb` pins that switch, re-enables motion to
-prove the mobile drawer animates in (mid-travel sample plus
-`transitionrun` and `getAnimations()`) and lands with focus inside it,
-and proves the room list keeps its scroll position while closed and
-across reopen.
+same effect, since browser tests assert right after acting.

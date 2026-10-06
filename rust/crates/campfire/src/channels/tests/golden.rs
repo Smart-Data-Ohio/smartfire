@@ -1,18 +1,13 @@
-//! Frame sequences recorded from the reference app's channels, replayed against ours.
+//! Frame sequences recorded from the Rails app's channels, replayed against ours.
 //!
-//! `golden/reference.json` holds what `golden/fixtures.rb` created in the reference (the rows
-//! the replay loads into a fresh database, the session cookies and the signed stream names)
-//! and the frames each socket received at every step of [`script`]. Server-side events (an
-//! unread fanout, a message removal, revoking a membership, deactivating a user) run through
-//! `golden/trigger.rb` inside the reference, and through the equivalent Rust calls on replay.
-//! Both sides use `SECRET_KEY_BASE` from `parity/.env.reference`, so the cookies and signed
-//! names work on either. To re-record:
-//!
-//!   bash reference-tools/cable/record.sh
-//!
-//! Re-recording uses the current pinned `campfire-reference` image, a fresh database, port 47040, and
-//! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in `/home/riels/.cache/rust-port/ws7/`.
-//! The checked-in recording was produced at `fec615be`; #151 changed only the Edge install image path.
+//! `golden/reference.json` holds what the Rails app's fixture script created (the rows the
+//! replay loads into a fresh database, the session cookies and the signed stream names) and the
+//! frames each socket received at every step of [`script`]. Server-side events (an unread
+//! fanout, a message removal, revoking a membership, deactivating a user) ran through a Rails
+//! runner script there, and run through the equivalent Rust calls on replay. Both sides use
+//! `SECRET_KEY_BASE` from `parity/.env.reference`, so the cookies and signed names work on
+//! either. The recording was produced at `fec615be` (#151 changed only the Edge install image
+//! path) and is frozen now that the Rails app is gone.
 //!
 //! Frames that reach one socket in one step by different paths (a confirmation and a broadcast)
 //! race in Rails, where the confirmation waits for Redis to acknowledge the subscription, so each
@@ -35,7 +30,6 @@ use crate::channels::{self, Broadcasts, Cable, Deps, sink};
 const GOLDEN: &str = "crates/campfire/src/channels/tests/golden/reference.json";
 /// How long a replay waits for a frame the recording says is coming.
 const EXPECTED_FRAME_WAIT: Duration = crate::test_support::WAIT;
-const TRIGGER: &str = "crates/campfire/src/channels/tests/golden/trigger.rb";
 
 /// The repository root (`CAMPFIRE_REPO_ROOT` when this module is built outside the workspace).
 fn repo_root() -> std::path::PathBuf {
@@ -368,13 +362,12 @@ fn script(tokens: &BTreeMap<String, String>) -> Vec<(String, Step)> {
 type Socket =
     tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
-/// Where the script runs: the reference (triggers through its runner) or our server.
+/// Our server, where the script runs.
 struct Target {
     url: String,
     origin: String,
     fixtures: Fixtures,
     rust: Option<RustApp>,
-    reference_port: Option<String>,
     /// How long a socket must stay quiet before a step's frames are considered complete.
     quiet: Duration,
 }
@@ -472,31 +465,6 @@ async fn collect(ws: &mut Socket, quiet: Duration, at_least: usize) -> Vec<Strin
 }
 
 async fn trigger(target: &Target, event: &str, args: &[String]) {
-    if let Some(port) = &target.reference_port {
-        let root = repo_root();
-        let mut command = if let Ok(container) = std::env::var("CHANNELS_REFERENCE_CONTAINER") {
-            let mut command = tokio::process::Command::new("docker");
-            command.args([
-                "exec",
-                "-e",
-                "RAILS_LOG_LEVEL=warn",
-                &container,
-                "bin/rails",
-                "runner",
-            ]);
-            command.arg(format!("/work/{TRIGGER}")).arg(event);
-            command
-        } else {
-            let mut command = tokio::process::Command::new(root.join("parity/bin/reference"));
-            command
-                .current_dir(&root)
-                .args(["runner", "--port", port, TRIGGER, event]);
-            command
-        };
-        let status = command.args(args).status().await.unwrap();
-        assert!(status.success(), "trigger {event} failed");
-        return;
-    }
     let app = target.rust.as_ref().unwrap();
     let ids: Vec<i64> = args.iter().map(|a| a.parse().unwrap()).collect();
     let broadcasts = app.broadcasts.clone();
@@ -692,7 +660,6 @@ async fn start_rust(fixtures: &Fixtures, dir: &Path) -> Target {
             db,
             broadcasts: Broadcasts::new(server),
         }),
-        reference_port: None,
         quiet: Duration::from_millis(100),
     }
 }
@@ -714,29 +681,6 @@ fn sorted(steps: &[Exchange]) -> Vec<Exchange> {
                 .collect(),
         })
         .collect()
-}
-
-#[tokio::test]
-#[ignore = "utility: needs a running reference app; see the module docs"]
-async fn record_reference() {
-    let port = std::env::var("CHANNELS_REFERENCE_PORT").expect("CHANNELS_REFERENCE_PORT");
-    let path = std::env::var("CHANNELS_REFERENCE_FIXTURES").expect("CHANNELS_REFERENCE_FIXTURES");
-    let fixtures: Fixtures = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
-    let target = Target {
-        url: format!("ws://127.0.0.1:{port}/cable"),
-        origin: format!("http://127.0.0.1:{port}"),
-        fixtures: fixtures.clone(),
-        rust: None,
-        reference_port: Some(port),
-        quiet: Duration::from_millis(500),
-    };
-    let steps = run_script(&target, None).await;
-    let recording = Recording { fixtures, steps };
-    std::fs::write(
-        repo_root().join(GOLDEN),
-        serde_json::to_string_pretty(&recording).unwrap() + "\n",
-    )
-    .unwrap();
 }
 
 #[tokio::test]

@@ -79,7 +79,7 @@ one-to-one DM.
 
 ## Member-set lookup
 
-`Rooms::Direct.find_or_create_for` matches on the exact member set through
+`Room::find_or_create_direct_for` matches on the exact member set through
 an indexed `direct_member_key`: `dm:` plus the SHA-256 of the sorted
 member ids, under a partial unique index (NULL keys and deleted rooms
 stay outside it). Adding or removing a member recomputes the key. A

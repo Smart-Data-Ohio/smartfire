@@ -1,5 +1,0 @@
-# WS19 developer baseline: current dev-profile executable in the pinned media runtime.
-# build --build-context binary=rust/target/debug -f parity/docker/candidate/Dockerfile.dev parity/docker/candidate
-ARG BASE_IMAGE=campfire-candidate
-FROM ${BASE_IMAGE}
-COPY --from=binary --chmod=755 campfire /usr/local/bin/campfire

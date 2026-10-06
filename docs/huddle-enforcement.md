@@ -67,7 +67,7 @@ Gateway tests exercise controlled connection races and failure handling. Browser
 - Gateway: 13 tests passed, including pending-join revocation, backend failure, dropped signaling, reconnect cleanup races, and the removal deadline.
 - Browser suite: all 16 tests and 238 assertions passed. A browser that ignored its access polls still lost media after grant revocation, while the other participant remained connected. Original and real server-refreshed tokens were denied after revocation and after membership restoration; a valid refreshed-token reconnect received audio on a new peer connection.
 - Application suite: 441 tests and 1,424 assertions completed without failures or errors; two existing image-operation tests were skipped. The subsequent bounded-conflict regression passed in a focused four-test run.
-- Ruby lint and the security scanner passed. Production assets compiled, and the huddle controllers, stylesheet, and bundled LiveKit client were present in the generated manifest.
+- Lint and the security scanner passed. Production assets compiled, and the huddle controllers, stylesheet, and bundled LiveKit client were present in the generated manifest.
 - Forced gateway process failure stopped all three supervised children and closed raw signaling, gateway, and UDP media ports in 4.47 seconds in this local check. This observation does not replace the configured failure bounds above.
 - GCP deployment, public firewall rules, external TLS/TURN connectivity, and production container execution remain unverified by these local checks.
 

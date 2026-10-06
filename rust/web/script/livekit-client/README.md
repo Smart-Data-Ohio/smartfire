@@ -11,7 +11,7 @@ The same build produces the huddle's RNNoise microphone filter, because it has t
 | `vendor/javascript/noise-suppressor-worklet.js` | The RNNoise AudioWorklet processor, copied verbatim. It cannot be bundled because `audioWorklet.addModule()` loads it by URL into its own global scope. |
 | `vendor/javascript/rnnoise.wasm`, `vendor/javascript/rnnoise-simd.wasm` | The model. The SIMD build is chosen at runtime when the browser supports it. |
 
-Propshaft serves the worklet and the two binaries; `app/views/layouts/_huddle.html.erb` passes their digested URLs to the huddle controller. See the [quality assessment](../../docs/huddle-quality.md) for what the filter does and how to check it.
+Propshaft serves the worklet and the two binaries; `app/views/layouts/_huddle.html.erb` passes their digested URLs to the huddle controller. See the [quality assessment](../../../../docs/huddle-quality.md) for what the filter does and how to check it.
 
 To regenerate after changing the pinned SDK version:
 

@@ -1,9 +1,9 @@
 name: Repository checks
 
 # Checks for everything outside the Rust port's own gates (rust.yml): the workflows
-# themselves, the deploy configuration, the huddle gateway, and the dependency advisories
-# for what production ships. All three jobs are required status checks, so none has a
-# paths filter: each one runs, and reports, on every pull request. They are cheap.
+# themselves, the deploy and backup scripts, the huddle gateway and media image, and the
+# dependency advisories for what production ships. Every job is a required status check, so
+# none has a paths filter: each one runs, and reports, on every pull request. They are cheap.
 
 on:
   push:
@@ -41,8 +41,32 @@ jobs:
         with:
           advanced-security: false
 
-      - name: Test Google deployment configuration
-        run: python3 -m unittest discover -s deploy/gcp -p 'test_google_configuration.py'
+  # The release, backup and host scripts production runs, and the workflows that drive them:
+  # the rust/ops release contract (fake Docker/ONCE/cloud boundaries), the GCP configuration
+  # helpers, and the backup contract (real sqlite, tar, gzip and gpg against a fake volume).
+  # Tests that need a locally built image skip unless one is named.
+  ops-scripts:
+    name: Ops scripts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # test_workflows.py compares deploy-gcp.yml with an older revision of itself, so it needs
+      # the history; blobs are fetched only when read.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Test the release contract and workflows (rust/ops)
+        run: python3 -m unittest discover -s rust/ops/tests -p 'test_*.py' -v
+
+      - name: Test the GCP deployment configuration (deploy/gcp)
+        run: python3 -m unittest discover -s deploy/gcp -p 'test_*.py' -v
+
+      - name: Test the backup contract (deploy/backups)
+        run: python3 -m unittest discover -s deploy/backups/tests -p 'test_*.py' -v
 
   test_gateway:
     name: Huddle authorization gateway
@@ -61,12 +85,22 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      # npm rejects the script/livekit-gateway symlink as a prefix; use the real directory.
       - name: Install gateway dependencies
         run: npm ci --ignore-scripts --prefix rust/web/script/livekit-gateway
 
       - name: Test authorization and connection races
         run: npm test --prefix rust/web/script/livekit-gateway
+
+      - name: Test the media container runtime
+        run: node --test deploy/huddles/runtime/*.test.mjs
+
+      # Builds the media image exactly as the host does (compose.yaml, repository-root context
+      # filtered by deploy/huddles/Dockerfile.dockerignore) without pushing it anywhere.
+      - name: Build the huddle media image
+        run: |
+          export HUDDLES_ENV_FILE="$PWD/deploy/huddles/env.example"
+          docker compose -f deploy/huddles/compose.yaml config --quiet
+          docker compose -f deploy/huddles/compose.yaml build media
 
   # Known advisories against the dependencies production ships: the Rust binary's crates
   # (rust/Cargo.lock) and the huddle gateway's npm runtime dependencies. Fails on any

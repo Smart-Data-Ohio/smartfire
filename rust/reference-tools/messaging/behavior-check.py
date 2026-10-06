@@ -242,7 +242,7 @@ if args.mutant:
 for case in args.exclude_case:
     assert any(case in CASES[file] for file in files), "unknown excluded named case"
 SCRATCH.mkdir(exist_ok=True)
-env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="4", TMPDIR=str(SCRATCH), CAMPFIRE_REFERENCE=str(ROOT))
+env = dict(os.environ, CARGO_BUILD_JOBS="2", RUST_TEST_THREADS="4", TMPDIR=str(SCRATCH))
 env["WS8BM_NEGATIVE"] = "1" if args.negative else "0"
 env["WS8BM_KEEP_GOING"] = "1" if args.keep_going else "0"
 if args.mutant:

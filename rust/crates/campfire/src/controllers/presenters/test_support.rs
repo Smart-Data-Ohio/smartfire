@@ -178,9 +178,9 @@ fn find_seed(root: &Path, name: &str, ci: bool) -> Option<PathBuf> {
     }
     assert!(
         !ci,
-        "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests"
+        "CI requires parity/.seed/{name}; run python3 parity/bin/frozen-seeds restore before the tests"
     );
-    eprintln!("skipping locally: parity/.seed/{name} isn't built (parity/bin/seed build {name})");
+    eprintln!("skipping locally: parity/.seed/{name} isn't restored (python3 parity/bin/frozen-seeds restore)");
     None
 }
 

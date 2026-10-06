@@ -1356,56 +1356,6 @@ fn source_truncation_counts_unicode_characters() {
 }
 
 #[tokio::test]
-#[ignore = "utility: exports a database for the Rails rollback check; requires CAMPFIRE_MAIL_EXPORT_DIR"]
-async fn export_for_rails() {
-    let out = std::path::PathBuf::from(
-        std::env::var("CAMPFIRE_MAIL_EXPORT_DIR").expect("set CAMPFIRE_MAIL_EXPORT_DIR"),
-    );
-    std::fs::create_dir_all(out.join("db")).unwrap();
-    let h = Harness::new().await;
-    assert!(matches!(
-        h.deliver(h.raw(
-            "david@37signals.com",
-            &["mx.mail.test; dkim=pass header.d=37signals.com"],
-            "Launch",
-            "Friday."
-        ))
-        .await,
-        Routed::Posted(_)
-    ));
-    let raw = attachment_mail(&h, "notes.txt", "text/plain", "ZmlsZS1ieXRlcw==");
-    assert!(matches!(h.deliver(raw).await, Routed::Posted(_)));
-    let raw = String::from_utf8(h.raw("outside@example.com", &[], "", "Hello"))
-        .unwrap()
-        .replace(&format!("room-{}@mail.test", h.token), "nobody@mail.test");
-    assert_eq!(h.deliver(raw.into_bytes()).await, Routed::Bounced);
-    let conn = rusqlite::Connection::open(h.db.path()).unwrap();
-    let target = out.join("db/test.sqlite3");
-    assert!(!target.exists(), "choose an empty export directory");
-    conn.execute_batch(&format!(
-        "VACUUM INTO '{}'",
-        target.to_string_lossy().replace('\'', "''")
-    ))
-    .unwrap();
-    fn copy(from: &std::path::Path, to: &std::path::Path) {
-        std::fs::create_dir_all(to).unwrap();
-        for entry in std::fs::read_dir(from).unwrap() {
-            let entry = entry.unwrap();
-            let target = to.join(entry.file_name());
-            if entry.file_type().unwrap().is_dir() {
-                copy(&entry.path(), &target);
-            } else {
-                std::fs::copy(entry.path(), target).unwrap();
-            }
-        }
-    }
-    copy(h.storage.service.root(), &out.join("files"));
-    println!(
-        "mail rollback artifact: 2 posted messages, 3 inbound emails, raw email and attachment files"
-    );
-}
-
-#[tokio::test]
 async fn markdown_api_rejects_blank_and_overlong_sources() {
     let h = Harness::new().await;
     let room = h.room_id;

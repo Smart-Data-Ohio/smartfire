@@ -75,7 +75,7 @@ Titles and names are escaped as plain text.
 
 ## Running and idempotency
 
-Both dispatchers run from `Periodic::Runner` (`board sla nudges` every
+Both dispatchers run from the periodic runner (`board sla nudges` every
 5 minutes, `board stale digests` every hour):
 
 - Each SLA stage claims a `board_sla_nudges` row — unique per thread,

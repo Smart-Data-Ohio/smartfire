@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -12,8 +13,15 @@ REVISION = "a2fbe296f0675b1a657cf81c1f537b6687451403"
 
 
 def yaml_json(text):
-    return json.loads(subprocess.check_output(["mise", "exec", "ruby@3.4.10", "--", "ruby", "-ryaml", "-rjson",
-        "-e", "puts JSON.generate(YAML.safe_load(STDIN.read))"], input=text, text=True))
+    """The workflow as JSON-shaped data, from PyYAML when it's installed and otherwise from Ruby's
+    YAML (the runner's ruby, or mise's). Both read YAML 1.1, so `on:` is the key "true"."""
+    try:
+        import yaml
+    except ImportError:
+        ruby = ["ruby"] if shutil.which("ruby") else ["mise", "exec", "ruby@3.4.10", "--", "ruby"]
+        return json.loads(subprocess.check_output([*ruby, "-ryaml", "-rjson",
+            "-e", "puts JSON.generate(YAML.safe_load(STDIN.read))"], input=text, text=True))
+    return json.loads(json.dumps(yaml.safe_load(text)))
 
 
 def audit_actions(document):

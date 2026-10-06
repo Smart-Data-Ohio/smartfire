@@ -7,7 +7,7 @@ use crate::controllers::presenters::test_support::*;
 async fn boot() -> TestApp {
     TestApp::boot()
         .await
-        .expect("WS8bm HTTP tests require parity/bin/seed build default")
+        .expect("WS8bm HTTP tests require the default seed (python3 parity/bin/frozen-seeds restore)")
 }
 
 async fn create(app: &TestApp, creator_id: i64, system_note: bool) -> Message {

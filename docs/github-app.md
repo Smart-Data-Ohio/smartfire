@@ -52,8 +52,7 @@ logged or shown again; unlinking deletes it.
   first: cards for private repositories render only for viewers whose
   linked account can read the repository.
 - Agent GitHub actions run as the owner's personal GitHub App identity
-  once the owner has linked it (else the agent's own linked account, via
-  `Github::AgentIdentity`). Every write needs a current administrator's
+  once the owner has linked it (else the agent's own linked account). Every write needs a current administrator's
   approval first — the agent's owner cannot approve a GitHub write, only
   deny it. The request, the approval card ("Acts on GitHub as @login"),
   and execution all resolve the same identity, so the decider's

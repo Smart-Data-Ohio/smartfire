@@ -87,7 +87,7 @@ the member's own note — the same string for every viewer.
 ## Notifications
 
 While out of office, push, sounds, and huddle rings stay silent, exactly
-like DND through `Notifications::Policy`, with the same "Allow during DND"
+like DND through the notification policy, with the same "Allow during DND"
 exception. Inbox items are still recorded. The per-member
 "Keep notifying me while I'm out of office" switch (notification settings,
 default off) opts back into notifications: with it on, OOO shows but never
@@ -108,7 +108,7 @@ intervals and refresh through `Calendar::MeetingRefreshJob`:
   refresh through the OOO dispatcher; members with both opt-ins refresh
   through the meeting dispatcher, so one tick never enqueues two).
 
-The `out of office` task in `Periodic::Runner` runs every minute. Each tick
+The `out of office` task in the periodic runner runs every minute. Each tick
 checks every member with a manual OOO or the calendar opt-in; a flip is
 claimed with one conditional `UPDATE` (`User#claim_ooo_broadcast!`), so
 concurrent ticks announce each boundary exactly once, and a tick with no

@@ -45,8 +45,9 @@ only. **Disconnect** removes the whole connection, as before.
 
 ## Link shapes
 
-`Google::DriveLink.file_id` (Ruby) and `driveFileId`
-(`app/javascript/controllers/drive_link_controller.js`) recognize the same
+The server's link parser (`rust/crates/db/src/models/google_drive_link.rs`)
+and `driveFileId`
+(`rust/web/app/javascript/controllers/drive_link_controller.js`) recognize the same
 URL shapes; keep the two lists in sync:
 
 - `https://docs.google.com/document/d/<id>/...`
@@ -99,7 +100,7 @@ preview endpoint. Google failures answer 502 with
 `{ error: "drive_unavailable" }`; a revoked grant answers 404 like the
 preview endpoint. Results are never stored.
 
-List calls are throttled to 30 per user per minute (a `Rails.cache`
+List calls are throttled to 30 per user per minute (an in-process
 minute-bucketed counter); past that the endpoint answers 429 with
 `{ error: "rate_limited" }` and the popover shows "Try again in a moment".
 
@@ -255,12 +256,12 @@ name is never logged.
 
 ## Caching
 
-The only persistence is a short `Rails.cache` entry (5 minutes) keyed by the
+The only persistence is a short in-process cache entry (5 minutes) keyed by the
 viewer's user id and the file id, so one member's cached metadata is never
 served to another. The browser additionally shares one in-memory request per
 file id per page load, so twenty messages linking the same document make one
 request. Preview calls are throttled to 60 per user per minute (a
-`Rails.cache` minute-bucketed counter like the list throttle); past that
+minute-bucketed counter like the list throttle); past that
 the endpoint answers 429 with `{ error: "rate_limited" }` and the plain
 chip stays.
 

@@ -44,7 +44,6 @@ fn main() {
     );
     println!("cargo:rerun-if-changed=build");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
-    println!("cargo:rerun-if-env-changed=CAMPFIRE_REFERENCE");
 
     let load_path = propshaft::LoadPath::new(
         &load_path_dirs(&crate_dir, &rails_root),
@@ -168,30 +167,22 @@ fn main() {
     fs::write(out_dir.join("embedded.rs"), code).unwrap();
 }
 
-/// The Rails-shaped root of the frontend inputs: `rust/web/` (crates/assets -> rust -> web), or a
-/// reference Rails app's root named by `CAMPFIRE_REFERENCE`.
+/// The Rails-shaped root of the frontend inputs: `rust/web/` (crates/assets -> rust -> web).
 fn reference_root(crate_dir: &Path) -> PathBuf {
-    let root = env::var_os("CAMPFIRE_REFERENCE")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| crate_dir.join("../../web"));
+    let root = crate_dir.join("../../web");
     root.canonicalize()
         .ok()
         .filter(|root| root.join("config/importmap.rb").is_file())
-        .unwrap_or_else(|| {
-            panic!(
-                "no reference frontend inputs at {} (rust/web, or set CAMPFIRE_REFERENCE to a Rails app's root)",
-                root.display()
-            )
-        })
+        .unwrap_or_else(|| panic!("no frontend inputs at {}", root.display()))
 }
 
 /// `overrides/` first, so the app's own changes to the frontend shadow the reference's files of
-/// the same logical path, then vendor/LOAD_PATH (written by script/revendor from
-/// `Rails.application.assets.load_path.paths`).
+/// the same logical path, then vendor/LOAD_PATH (exported from the Rails app's
+/// `Rails.application.assets.load_path.paths`, and frozen since).
 fn load_path_dirs(crate_dir: &Path, rails_root: &Path) -> Vec<PathBuf> {
     let overrides = crate_dir.join("overrides");
     let load_path = fs::read_to_string(crate_dir.join("vendor/LOAD_PATH"))
-        .expect("vendor/LOAD_PATH is missing; run crates/assets/script/revendor");
+        .expect("vendor/LOAD_PATH is missing");
     let exported = load_path
         .lines()
         .filter(|line| !line.trim().is_empty())

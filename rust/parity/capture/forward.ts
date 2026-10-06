@@ -1,14 +1,13 @@
-// The capture's only way out of its network namespace (parity/capture/sandbox/run.sh).
+// The browser's only way out of its network namespace (the browser suites run Playwright with
+// docker --network none).
 //
-// Captures run with no network of their own (docker --network none, bwrap --unshare-net): only
-// loopback, where the browsers talk to the harness's proxies (proxy.ts). Chromium fails every
-// request in flight with ERR_NETWORK_CHANGED when an interface appears or goes in its namespace,
-// and on the host network that happens whenever Docker starts or stops a container (a veth pair),
-// which the harness itself does for every capture of a mutating state. So the proxies reach the
-// servers under test through this forwarder instead, which runs on the host network and listens
-// on a Unix socket in a directory both share. Each connection starts with one line naming the
-// server, "127.0.0.1:3100\n"; after that bytes flow both ways untouched. Only loopback servers are
-// reachable through it.
+// The browsers have only loopback, where they talk to the test proxies (proxy.ts). Chromium fails
+// every request in flight with ERR_NETWORK_CHANGED when an interface appears or goes in its
+// namespace, and on the host network that happens whenever Docker starts or stops a container (a
+// veth pair). So the proxies reach the servers under test through this forwarder instead, which
+// runs on the host network and listens on a Unix socket in a directory both share. Each
+// connection starts with one line naming the server, "127.0.0.1:3100\n"; after that bytes flow
+// both ways untouched. Only loopback servers are reachable through it.
 //
 //   node capture/forward.ts SOCKET
 import fs from "node:fs"

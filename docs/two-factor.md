@@ -123,8 +123,8 @@ count toward the same lockout; backup codes are never accepted there.
 
 ## How it is stored
 
-- Authenticator secrets are encrypted at rest with Active Record
-  encryption, like the other OAuth tokens.
+- Authenticator secrets are encrypted at rest (in the Rails Active Record
+  encryption format the app keeps), like the OAuth tokens.
 - Unconfirmed setup secrets live in their own table, one row per
   session at most, encrypted at rest, and are spent at confirm time.
 - Backup codes exist as SHA-256 digests only; a database read cannot
@@ -136,10 +136,9 @@ count toward the same lockout; backup codes are never accepted there.
 
 ## Local development
 
-The remember cookie is `Secure`, so browsers only send it over HTTPS
-and Rails does not even set it over plain HTTP. On a plain-HTTP
-development server, ticking "Remember this device" has no effect and
-every sign-in asks for a code. Production serves HTTPS, where it works
+The remember cookie is `Secure`, so browsers only send it over HTTPS.
+On a plain-HTTP development server, ticking "Remember this device" has
+no effect and every sign-in asks for a code. Production serves HTTPS, where it works
 normally. The test suite enables cookie write-through so integration
 and browser tests exercise the real cookie.
 

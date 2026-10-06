@@ -18,11 +18,11 @@ The read uses `events.list` on the primary calendar under the existing
   `nextPageToken` up to 4 pages (1000 events), so the 30-day calendar-OOO
   lookahead is never truncated at 250 events on a busy calendar.
 - A `fields` mask (`items(eventType,start,end,status,transparency,...)`,
-  see `Google::Client::MEETING_STATUS_FIELDS`) keeps titles,
+  see `rust/crates/campfire/src/integrations/google/api.rs`) keeps titles,
   descriptions, locations, and attendee identities out of the response
   entirely. Only the event type, start/end times, the status, the
   transparency, and each attendee's self/declined flags arrive.
-- Busy intervals are derived in `Calendar::MeetingIntervals`: cancelled,
+- Busy intervals are derived from the events: cancelled,
   out-of-office (`eventType: "outOfOffice"` — those feed [calendar
   OOO](out-of-office.md) instead), focus-time (`eventType: "focusTime"`,
   a do-not-disturb block rather than a meeting), declined-by-self,
@@ -79,7 +79,7 @@ its own opt-in:
   delayed follow-up, so the change is never dropped);
 - at most every 15 minutes by the periodic sweep.
 
-The `meeting status` task in `Periodic::Runner` runs every minute. Each
+The `meeting status` periodic task runs every minute. Each
 tick enqueues refreshes for stale caches and checks every opted-in
 member's cached boundaries; a flip is claimed with one conditional
 `UPDATE` (`MeetingCache#claim_broadcast!`), so concurrent ticks
@@ -98,8 +98,7 @@ label is the same string for every viewer.
 "Do not disturb during meetings" is a per-member on/off switch on the
 notification settings. It only works while meeting status itself is
 on. During a busy interval the member reads exactly as DND through
-`Notifications::Policy`: push and huddle rings (via
-`Huddle::RingPolicy`) stay silent, inbox items are still recorded,
+the notification policy: push and huddle rings stay silent, inbox items are still recorded,
 and people starred with "Allow during DND" still get through.
 `/play` chat sounds mute the same way: the layout sends the cached
 busy intervals as epoch windows and the sound controller

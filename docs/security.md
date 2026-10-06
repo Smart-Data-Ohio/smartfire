@@ -6,8 +6,8 @@ exist. For the audit log's action vocabulary see
 
 ## Content Security Policy
 
-The policy in `config/initializers/content_security_policy.rb` is
-**enforced** (not report-only). Browsers block anything outside it and
+The policy built by `content_security_policy` in
+`rust/crates/campfire/src/security.rs` is **enforced** (not report-only). Browsers block anything outside it and
 report violations to `/csp_reports`, which logs one line per violation,
 rate-limited, without query strings. The main pages (room, huddle,
 stage, board, search, account settings, profile, event form, and the
@@ -26,14 +26,14 @@ Every response carries `X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`, and a
 `Permissions-Policy` of `camera=(self), display-capture=(self),
 microphone=(self), notifications=(self)`, pinned in
-`config/initializers/security_headers.rb`. `notifications` is not a
+`rust/crates/campfire/src/security.rs` (`PERMISSIONS_POLICY`). `notifications` is not a
 real Permissions-Policy directive (the Notifications API is gated by
 its own user prompt), so browsers log a console note and ignore that
 entry; it is listed for completeness.
 
-Production serves HSTS (`max-age=31556952; includeSubDomains`) through
-`force_ssl` with explicit `ssl_options` in
-`config/environments/production.rb`.
+Production serves HSTS (`max-age=31556952; includeSubDomains`) with its
+HTTPS redirect, unless `DISABLE_SSL` is set (`KitConfig::production` in
+`rust/crates/kit/src/app.rs`).
 
 ## Sudo mode
 
@@ -77,7 +77,7 @@ counters, under the prompt's own rate limit, and is audit-logged like
 every other verifier (`sudo.confirm.success`,
 `sudo.confirm.failure` with verifier `totp`). Backup codes are not
 accepted at the sudo prompt: they are single-use sign-in recovery.
-See `config/initializers/sudo_mode_totp.rb` and
+See `rust/crates/campfire/src/controllers/sudos.rs` and
 [two-step sign-in](two-factor.md).
 
 ## Sessions
@@ -122,7 +122,8 @@ them the inbox item is the whole alert and nothing is sent.
 `.github/dependabot.yml` runs weekly updates, with minor and patch
 updates grouped, for GitHub Actions, the Rust workspace (`rust/`,
 cargo), every live Node lockfile (the huddle gateway, the LiveKit
-client and code highlighter bundle builders, and the parity harness),
+client and code highlighter bundle builders, and the pinned Playwright
+the browser suites run in),
 and the production image's `rust/Dockerfile`. The Rust and Debian base
 images take their tags from build args the updater cannot read, so
 those bumps stay a manual, reviewed step (see the file's comments).

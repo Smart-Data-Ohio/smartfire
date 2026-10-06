@@ -121,7 +121,7 @@ def main():
     output = root / '.scratch/ws8bm-work-producers'
     output.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, CARGO_BUILD_JOBS='2', RUST_TEST_THREADS='8',
-               CAMPFIRE_REFERENCE=str(root), TMPDIR=str(root / '.scratch'))
+               TMPDIR=str(root / '.scratch'))
     target = Path(env.get('CARGO_TARGET_DIR', root / 'rust/target')).resolve()
     env['CARGO_TARGET_DIR'] = str(target)
     bootstrap = ['python3', str(root / 'rust/reference-tools/messaging/behavior-check.py'),

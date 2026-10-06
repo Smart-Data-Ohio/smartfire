@@ -50,7 +50,7 @@ runs:
 
     # The Dockerfile's toolchain stage: Rust with the image's own libvips and ffmpeg builds.
     # Only pushes to main write caches. PRs and branch pushes may read but never write: this
-    # prevents cache poisoning and keeps their multi-gigabyte targets from evicting Rails/image
+    # prevents cache poisoning and keeps their multi-gigabyte targets from evicting the image
     # caches. Use immutable GitHub context directly, never a step-writable environment variable.
     - name: Build toolchain image
       if: ${{ inputs.toolchain == 'true' }}

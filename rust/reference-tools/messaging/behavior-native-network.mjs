@@ -1,4 +1,4 @@
-// Same stable network boundary as parity/capture/sandbox/run.sh. HTTP, Cable
+// A stable network boundary for the behavior browsers. HTTP, Cable
 // and Selenium protocol bytes cross Unix sockets unchanged; assertions do not.
 import net from 'node:net';
 import {spawn,execFileSync} from 'node:child_process';

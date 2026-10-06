@@ -12,15 +12,12 @@ name: Smartfire CodeQL
 # instead. Keep these patterns specific: CodeQL matches a bare vendor/** at any
 # depth, which would also drop the vendored Onigmo C under
 # rust/crates/rails_compat/vendor/ that build.rs compiles into the binary.
-# vendor/javascript/ is the Rails tree's symlink to rust/web/vendor/javascript/,
-# until that tree is deleted.
 #
 # rust/crates/db/src/tests/ws17_settings_zones.json is runtime data embedded by
 # models/user_status_settings/writes.rs. JSON is not analyzed, so excluding it
 # hides nothing; its Rust consumer is still scanned.
 paths-ignore:
   - rust/web/vendor/javascript/**
-  - vendor/javascript/**
   - rust/fixtures/**
   - rust/crates/assets/vendor/**
   - rust/reference-tools/**
