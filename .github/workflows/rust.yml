@@ -42,7 +42,7 @@ permissions: {}
 # A new push to a pull request supersedes the run for its previous commit.
 # Pushes to main are never cancelled, so every main commit keeps a full run.
 concurrency:
-  group: rust-${{ github.event_name == 'pull_request' && github.head_ref || inputs.ref || github.sha }}
+  group: rust-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || inputs.ref || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -187,11 +187,28 @@ jobs:
           selection=(-E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))")
           if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then selection+=("$CAMPFIRE_LLVM"); fi
           bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci -j 4 --no-fail-fast --partition "slice:$SHARD" "${selection[@]}" 2>&1 |
+            --profile ci -j 4 --no-fail-fast --no-tests fail --partition "slice:$SHARD" "${selection[@]}" 2>&1 |
             tee "$RUNNER_TEMP/nextest.log" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
           cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-${SHARD/\//of}.xml"
           exit "$status"
+
+      # What the shards together, and the LLVM job, must run, listed from the harnesses compiled
+      # above (no partition, so nothing rebuilds). `Rust port` checks the receipts against these.
+      - name: List the tests the shards and the LLVM job must run
+        if: ${{ !cancelled() && matrix.shard == '1/12' }}
+        shell: bash
+        run: |
+          llvm=()
+          if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then llvm=("$CAMPFIRE_LLVM"); fi
+          mkdir -p "$RUNNER_TEMP/results"
+          # Each list names the same packages its run does. -p campfire resolves the same
+          # dependency features as --workspace, so the second list doesn't rebuild either.
+          list() { bash rust/ci/cargo.sh nextest list --locked --profile ci --message-format json "${llvm[@]}" "$@"; }
+          list --workspace --exclude html5ever -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))" \
+            > "$RUNNER_TEMP/results/list-shards.json"
+          list -p campfire -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)" \
+            > "$RUNNER_TEMP/results/list-llvm.json"
 
       # Lists ignored tests from the harnesses compiled above, with no partition or filter.
       - name: Enumerate compiled ignored tests
@@ -202,6 +219,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-tests-${{ strategy.job-index }}
           path: ${{ runner.temp }}/results/
           if-no-files-found: error
@@ -278,6 +296,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-doctests
           path: ${{ runner.temp }}/results/
           if-no-files-found: error
@@ -329,7 +348,7 @@ jobs:
         shell: bash
         run: |
           status=0
-          bash rust/ci/cargo.sh nextest run --locked -p campfire --profile ci -j 4 --no-fail-fast \
+          bash rust/ci/cargo.sh nextest run --locked -p campfire --profile ci -j 4 --no-fail-fast --no-tests fail \
             "$CAMPFIRE_LLVM" -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
           cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
@@ -339,6 +358,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-tests-llvm
           path: ${{ runner.temp }}/results/
           if-no-files-found: error
@@ -409,12 +429,16 @@ jobs:
         run: test "$CHANGE_RESULT" = success
 
       - name: Checkout code
-        if: needs.changes.outputs.rust == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          sparse-checkout: rust/ci
+          sparse-checkout: |
+            rust/ci
+            .github/workflows
+
+      - name: Require every job to be gated
+        run: python3 rust/ci/check_gate_needs.py .github/workflows/rust.yml
 
       - name: Collect test results
         if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped' || needs.llvm.result != 'skipped') }}
@@ -433,14 +457,21 @@ jobs:
         run: |
           shopt -s nullglob
           args=()
-          for path in "$RUNNER_TEMP"/results/junit-*.xml; do args+=(--junit "$path"); done
-          for path in "$RUNNER_TEMP"/results/*-doc.log; do args+=(--doc-log "$path"); done
+          results="$RUNNER_TEMP/results"
+          shards=("$results"/junit-*of12.xml)
+          for path in "${shards[@]}" "$results/junit-llvm.xml"; do args+=(--junit "$path"); done
+          args+=(--doc-log "$results/db-doc.log" --doc-log "$results/workspace-doc.log")
+          # Each listed test passed exactly once, each #[ignore] test was reported, and libtest
+          # accounted for every doctest; any difference fails this job.
+          args+=(--expect "$results/list-shards.json" "${shards[@]}")
+          args+=(--expect "$results/list-llvm.json" "$results/junit-llvm.xml")
           python3 rust/ci/summarize-tests.py "${args[@]}"
 
       # When Rust inputs changed, every shard and prerequisite job must have succeeded:
       # failed, cancelled and skipped all fail this check. When none changed, every one of
       # them must have been skipped by that decision.
       - name: Gate on every Rust port job
+        if: ${{ !cancelled() }}
         env:
           NEEDS: ${{ toJSON(needs) }}
           RUST: ${{ needs.changes.outputs.rust }}
@@ -494,6 +525,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-correctness-${{ matrix.suite }}
           path: rust/target/ci-receipts/
           if-no-files-found: error
@@ -546,6 +578,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-correctness-browsers-${{ strategy.job-index }}
           path: rust/target/ci-receipts/
           if-no-files-found: error
@@ -620,6 +653,7 @@ jobs:
       - name: Retain the host
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-messaging-host-${{ matrix.host }}
           path: ${{ runner.temp }}/messaging-host.tar
           if-no-files-found: error
@@ -638,6 +672,7 @@ jobs:
         if: ${{ matrix.host == 'app' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-messaging-prerequisites-image
           path: ${{ runner.temp }}/correctness-image.tar.zst
           if-no-files-found: error
@@ -708,6 +743,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-correctness-messaging-behavior-${{ strategy.job-index }}
           path: rust/target/ci-receipts/
           if-no-files-found: error
@@ -757,6 +793,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
+          overwrite: true
           name: rust-correctness-messaging-originals-${{ strategy.job-index }}
           path: rust/target/ci-receipts/
           if-no-files-found: error
@@ -775,6 +812,9 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
+
+      - name: Require every job to be gated
+        run: python3 rust/ci/check_gate_needs.py .github/workflows/rust.yml
 
       # The correctness matrix is skipped, not failed, for a messaging-and-browsers check.
       - name: Gate on every correctness job

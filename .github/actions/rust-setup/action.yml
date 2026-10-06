@@ -23,11 +23,13 @@ inputs:
     default: 'false'
 outputs:
   cargo-cache-hit:
-    description: Whether the exact Cargo cache was restored
+    description: Whether the exact Cargo cache was restored (then nothing needs saving)
     value: ${{ steps.cargo-cache.outputs.cache-hit }}
   cargo-cache-key:
-    description: This commit's exact Cargo cache key (saved by one job on pushes to main)
-    value: ${{ steps.cargo-key.outputs.prefix }}${{ github.sha }}
+    description: >-
+      The Cargo cache's content key: toolchains, build inputs and Cargo.lock, not the commit. One
+      job saves it on a push to main only when no entry has that key yet.
+    value: ${{ steps.cargo-key.outputs.prefix }}
 runs:
   using: composite
   steps:
@@ -170,7 +172,9 @@ runs:
     # builds. Workspace crates are pruned before saving (rust/ci/prune-target.py): a fresh
     # checkout's mtimes make Cargo rebuild them anyway. Every key, including the fallbacks, is
     # scoped to the toolchains (rust-toolchain.toml's nightly, the Dockerfile's stable release
-    # and toolchain image), so an entry built by another compiler is never restored.
+    # and toolchain image), so an entry built by another compiler is never restored. The cache
+    # holds only registry dependencies, which those inputs fully determine, so the key leaves out
+    # the commit: a push to main that changes none of them restores an exact hit and saves nothing.
     - name: Name the Cargo cache
       id: cargo-key
       if: ${{ inputs.cargo-cache != 'none' }}
@@ -195,7 +199,7 @@ runs:
         path: |
           rust/.cargo-home/registry
           rust/target
-        key: ${{ steps.cargo-key.outputs.prefix }}${{ github.sha }}
+        key: ${{ steps.cargo-key.outputs.prefix }}
         restore-keys: |
           ${{ steps.cargo-key.outputs.prefix }}
           ${{ steps.cargo-key.outputs.inputs }}
