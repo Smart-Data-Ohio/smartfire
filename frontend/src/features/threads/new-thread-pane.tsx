@@ -5,6 +5,7 @@ import { actions } from "../../sync/runtime.ts";
 import { TextField } from "../../ui/text-field.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { Composer, type ComposerDraft } from "../composer/composer.tsx";
+import { newThreadDraftKey } from "../composer/draft.ts";
 import { PaneFrame } from "../panes/pane-frame.tsx";
 import { PaneEmpty } from "../panes/pane-states.tsx";
 import { MessageRow } from "../room/message-row.tsx";
@@ -83,7 +84,12 @@ export function NewThreadPane({
       title="New thread"
       footer={
         parent === undefined ? undefined : (
-          <Composer roomId={roomId} onSubmit={submit} placeholder="Reply…" />
+          <Composer
+            roomId={roomId}
+            onSubmit={submit}
+            placeholder="Reply…"
+            draftKey={newThreadDraftKey(roomId, parent.id)}
+          />
         )
       }
     >

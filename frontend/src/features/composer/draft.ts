@@ -7,6 +7,11 @@ export function draftKey(roomId: number, threadId: number | null): string {
   return `${DRAFT_PREFIX}${roomId}${threadId === null ? "" : `.t${threadId}`}`;
 }
 
+/** `12.p501` for the first reply of a thread being started on message 501. */
+export function newThreadDraftKey(roomId: number, parentMessageId: number): string {
+  return `${DRAFT_PREFIX}${roomId}.p${parentMessageId}`;
+}
+
 export function readDraft(key: string): string {
   try {
     return sessionStorage.getItem(key) ?? "";

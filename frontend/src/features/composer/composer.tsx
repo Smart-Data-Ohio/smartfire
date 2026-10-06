@@ -29,7 +29,7 @@ import { AutocompleteList } from "./autocomplete/autocomplete-list.tsx";
 import { loadCommands, selectable } from "./autocomplete/suggestions.ts";
 import { applyCompletion, findTrigger } from "./autocomplete/trigger.ts";
 import { useAutocomplete } from "./autocomplete/use-autocomplete.ts";
-import { draftKey, readDraft, writeDraft } from "./draft.ts";
+import { draftKey as conversationDraftKey, readDraft, writeDraft } from "./draft.ts";
 import { editLastOwnMessage } from "./edit-last.ts";
 import { composerEmojiPicker } from "./emoji-hook.ts";
 import { useKeyboardInset } from "./keyboard-inset.ts";
@@ -65,6 +65,11 @@ export interface ComposerProps {
   readonly onSubmit?: (draft: ComposerDraft) => Promise<void>;
   /** Overrides "Message #general". */
   readonly placeholder?: string;
+  /**
+   * Where the draft is kept, when it isn't the conversation's own (see `draft.ts`), e.g. a new
+   * thread's first reply, so it neither shows nor clears the room's draft.
+   */
+  readonly draftKey?: string;
 }
 
 /** How many files one message can carry along (the rest go as their own messages). */
@@ -159,8 +164,9 @@ export function Composer({
   threadId = null,
   onSubmit,
   placeholder: placeholderOverride,
+  draftKey,
 }: ComposerProps) {
-  const key = draftKey(roomId, threadId);
+  const key = draftKey ?? conversationDraftKey(roomId, threadId);
   const creating = onSubmit !== undefined;
   const [text, setText] = useState(() => readDraft(key));
   const [caret, setCaret] = useState(() => ({ start: text.length, end: text.length }));
