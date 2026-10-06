@@ -207,19 +207,30 @@ async fn index_messages(c: &mut Ctx) -> Result {
             let timeline = Timeline::Room(room_id);
             let anchor = |id| Message::find_in(conn, timeline, id);
             // A `before`/`after` cursor whose message was deleted since pages from its id, so
-            // paging doesn't stall on it; an `around` anchor that's gone is a 404.
-            let gone =
-                |error: &campfire_db::Error| matches!(error, campfire_db::Error::RecordNotFound(_));
+            // paging doesn't stall on it. Messages are deleted outright, so a cursor that isn't
+            // on this timeline but still exists is another room's or a thread's: that's a 404,
+            // as is an `around` anchor that's gone.
+            let gone = |error: &campfire_db::Error, id: i64| -> campfire_db::Result<bool> {
+                if !matches!(error, campfire_db::Error::RecordNotFound(_)) {
+                    return Ok(false);
+                }
+                let elsewhere: bool = conn.query_row(
+                    r#"SELECT EXISTS (SELECT 1 FROM "messages" WHERE "messages"."id" = ?)"#,
+                    [id],
+                    |row| row.get(0),
+                )?;
+                Ok(!elsewhere)
+            };
             let messages = match cursor {
                 Cursor::Newest => Message::last_page(conn, timeline)?,
                 Cursor::Before(id) => match anchor(id) {
                     Ok(message) => Message::page_before(conn, timeline, &message)?,
-                    Err(error) if gone(&error) => Message::page_before_id(conn, timeline, id)?,
+                    Err(error) if gone(&error, id)? => Message::page_before_id(conn, timeline, id)?,
                     Err(error) => return Err(error),
                 },
                 Cursor::After(id) => match anchor(id) {
                     Ok(message) => Message::page_after(conn, timeline, &message)?,
-                    Err(error) if gone(&error) => Message::page_after_id(conn, timeline, id)?,
+                    Err(error) if gone(&error, id)? => Message::page_after_id(conn, timeline, id)?,
                     Err(error) => return Err(error),
                 },
                 Cursor::Around(id) => Message::page_around(conn, timeline, &anchor(id)?)?,
@@ -287,6 +298,8 @@ async fn post_message(c: &mut Ctx) -> Result {
     let (message, status) = match duplicate {
         Some(message) => (message, StatusCode::OK),
         None => {
+            #[cfg(feature = "test-support")]
+            crate::test_hooks::after_duplicate_check(&client_message_id).await;
             if let Some(reply_to) = input.reply_to_message_id {
                 let found = c
                     .app()

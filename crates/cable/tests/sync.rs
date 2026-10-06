@@ -465,13 +465,32 @@ async fn nothing_is_wanted_without_a_socket_and_the_gap_ends_resumes() {
         assert!(waits < 500, "the closed socket is still counted");
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    let (_client, welcome) = app
+    let (client, welcome) = app
         .hello(1, json!({ "epoch": epoch, "seq": seen }), &[])
         .await;
     assert_eq!(
         welcome["resumed"], false,
         "the skipped event can't be replayed: {welcome}"
     );
+
+    // The second gap: welcomed at the first gap's sequence with nothing kept, the client drops,
+    // and an event goes unbuilt again. Resuming at the welcome's sequence must not skip past it.
+    let welcomed = welcome["seq"].as_i64().unwrap();
+    drop(client);
+    let mut waits = 0;
+    while app.cable.server.sync_wanted() {
+        waits += 1;
+        assert!(waits < 500, "the closed socket is still counted");
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let (_client, welcome) = app
+        .hello(1, json!({ "epoch": epoch, "seq": welcomed }), &[])
+        .await;
+    assert_eq!(
+        welcome["resumed"], false,
+        "the second skipped event can't be replayed either: {welcome}"
+    );
+    assert!(welcome["seq"].as_i64().unwrap() > welcomed);
 }
 
 #[tokio::test]

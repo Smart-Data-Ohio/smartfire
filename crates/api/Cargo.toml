@@ -8,6 +8,11 @@ edition.workspace = true
 # broadcasts. The wire types are campfire_api_types'; the socket protocol is campfire_cable's
 # `sync` module.
 
+[features]
+# Test hooks the crates above drive in their own tests (`test_hooks`). Production builds don't
+# compile them.
+test-support = []
+
 [dependencies]
 campfire_api_types.workspace = true
 campfire_app.workspace = true

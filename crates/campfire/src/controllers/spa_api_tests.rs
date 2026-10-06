@@ -865,6 +865,9 @@ async fn identical_posts_in_flight_create_one_message() {
     let mut second = a.sign_in(DAVID).await;
     first.authenticity_token().await;
     second.authenticity_token().await;
+    // Both posts pass the endpoint's early lookup before either writes, so only the check in the
+    // create's write transaction can keep the second from making another message.
+    campfire_api::test_hooks::hold_after_duplicate_check("race-1", 2);
     let (one, two) = tokio::join!(
         post(&mut first, ALL_TALK, "race-1", "Only once"),
         post(&mut second, ALL_TALK, "race-1", "Only once"),
@@ -946,6 +949,31 @@ async fn a_cursor_on_a_deleted_message_still_pages() {
         StatusCode::NOT_FOUND,
         "an around anchor that's gone"
     );
+
+    // A cursor that was never on the room's timeline is a 404, not a page: another room's
+    // message, or a reply in one of the room's threads (David is in both rooms).
+    const THREADED_ROOM: i64 = 654632876;
+    const THREAD_REPLY: i64 = 935962046;
+    const ALL_PETS_MESSAGE: i64 = 935961886;
+    let newest = david
+        .send(get(&format!("/api/v1/rooms/{THREADED_ROOM}/messages")))
+        .await;
+    assert_eq!(newest.status, StatusCode::OK, "{}", newest.text());
+    for (room, cursor) in [(THREADED_ROOM, THREAD_REPLY), (ALL_TALK, ALL_PETS_MESSAGE)] {
+        for direction in ["before", "after"] {
+            let reply = david
+                .send(get(&format!(
+                    "/api/v1/rooms/{room}/messages?{direction}={cursor}"
+                )))
+                .await;
+            assert_eq!(
+                reply.status,
+                StatusCode::NOT_FOUND,
+                "{direction}={cursor} in {room}: {}",
+                reply.text()
+            );
+        }
+    }
 }
 
 async fn b_page(b: &mut Browser<'_>, query: &str) -> api::MessagePage {
@@ -1101,9 +1129,19 @@ async fn a_database_unread_carries_its_message_and_mention() {
     const ROOM: i64 = 654632876;
     let Some(a) = app(true).await else { return };
     let (addr, server) = serve(&a).await;
+    // David's classic page, listening for unreads, beside his sync socket.
+    let (mut client, cable) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
+    client
+        .confirm(&crate::channels::tests::support::identifier(
+            json!({ "channel": "UnreadRoomsChannel" }),
+        ))
+        .await;
     let david = a.sign_in(DAVID).await;
     let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
     sync.welcome().await;
+    let capture = a.publications();
+    capture.take();
     let sgid = rails_compat::global_id::attachable_sgid(
         &a.booted.app.secrets,
         &rails_compat::global_id::GlobalId::new("User", DAVID),
@@ -1143,8 +1181,35 @@ async fn a_database_unread_carries_its_message_and_mention() {
         })
         .await
         .unwrap();
+    // One of the rerouted emitters end to end: a scheduled message going out.
+    let scheduled = a
+        .db()
+        .write(|tx| {
+            use campfire_db::{NewScheduledMessage, ScheduledMessage};
+            // An hour past the seed's frozen now, sent when it comes due.
+            let now = campfire_db::Timestamp::from_jiff("2026-03-02T17:00:00Z".parse().unwrap());
+            let row = ScheduledMessage::create(
+                tx,
+                NewScheduledMessage {
+                    user_id: JASON,
+                    room_id: ALL_TALK,
+                    thread_id: None,
+                    reply_to_message_id: None,
+                    markdown_source: "Scheduled unread".into(),
+                    send_at: now,
+                },
+            )?;
+            assert!(ScheduledMessage::dispatch(tx, row.id, now, true)?);
+            Ok(tx
+                .conn()
+                .query_row("SELECT MAX(id) FROM messages", [], |row| {
+                    row.get::<_, i64>(0)
+                })?)
+        })
+        .await
+        .unwrap();
     let mut unreads = Vec::new();
-    while unreads.len() < 3 {
+    while unreads.len() < 4 {
         let event = sync
             .until(
                 |event| matches!(event.payload, api::SyncPayload::RoomUnread(_)),
@@ -1174,8 +1239,34 @@ async fn a_database_unread_carries_its_message_and_mention() {
                 message_id: None,
                 mentioned: false
             },
+            api::RoomUnread {
+                room_id: ALL_TALK,
+                message_id: Some(scheduled),
+                mentioned: false
+            },
         ]
     );
+    // The classic frames are unchanged: `{roomId}` on the person's unreads stream.
+    let stream = campfire_db::broadcasts::unread_rooms_stream_name(DAVID);
+    let mut classic = Vec::new();
+    for _ in 0..100 {
+        classic.extend(
+            capture
+                .take()
+                .into_iter()
+                .filter(|(name, _)| *name == stream)
+                .map(|(_, frame)| serde_json::from_str::<Value>(&frame).unwrap()),
+        );
+        if classic.len() >= 4 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    assert_eq!(
+        classic,
+        [ROOM, ALL_TALK, HQ, ALL_TALK].map(|room_id| json!({ "roomId": room_id }))
+    );
+    cable.abort();
     server.abort();
 }
 

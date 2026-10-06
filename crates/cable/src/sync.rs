@@ -160,6 +160,9 @@ struct RingState {
     head: u64,
     /// The latest sequence dropped from the ring (0 before any): a cursor below it missed events.
     evicted_through: u64,
+    /// Whether a `hello` has been answered since the last gap: some client may hold a cursor at
+    /// the head, even with the ring empty, so skipping an event must be recorded.
+    handed_out: bool,
 }
 
 /// What a cursor reads from the ring.
@@ -239,10 +242,13 @@ impl Ring {
         Read::Events(state.entries.range(start..).cloned().collect(), state.head)
     }
 
-    /// Whether [`Ring::skip`] has anything to record: events since the last gap, or none yet.
+    /// Whether [`Ring::skip`] has anything to record: a client may hold a cursor that would
+    /// otherwise resume past the skipped event. That's so once any `hello` has been answered since
+    /// the last gap (its cursor can sit at the head of an empty ring), or with events kept. A
+    /// fresh ring that nobody has read needs no gap.
     pub fn gap_needed(&self) -> bool {
         let state = self.state.lock().unwrap();
-        !(state.entries.is_empty() && state.evicted_through == state.head)
+        state.handed_out || !state.entries.is_empty()
     }
 
     /// Records that the event published at `seq` was skipped (nobody was connected to read it):
@@ -253,6 +259,7 @@ impl Ring {
         state.entries.clear();
         state.head = seq;
         state.evicted_through = seq;
+        state.handed_out = false;
         drop(state);
         self.head.send_replace(seq);
     }
@@ -262,6 +269,7 @@ impl Ring {
     pub fn resume(&self, point: Option<(&str, i64)>) -> (u64, bool) {
         let mut state = self.state.lock().unwrap();
         self.evict(&mut state, Instant::now());
+        state.handed_out = true;
         match point {
             Some((epoch, seq))
                 if epoch == self.epoch
@@ -452,16 +460,48 @@ mod tests {
     fn a_skipped_event_ends_every_resume_point_before_it() {
         let ring = ring(10, Duration::from_secs(60));
         let epoch = ring.epoch().to_string();
-        assert!(!ring.gap_needed(), "nothing to lose yet");
         ring.push(1, publication("room:1", 1));
         assert!(ring.gap_needed());
         ring.skip(2);
-        assert!(!ring.gap_needed(), "the gap is recorded");
+        assert!(!ring.gap_needed(), "the gap is recorded and nobody has read since");
         assert_eq!(ring.resume(Some((&epoch, 1))), (2, false));
         assert!(matches!(ring.read(1), Read::Lost(2)));
         assert_eq!(ring.resume(Some((&epoch, 2))), (2, true));
         ring.push(3, publication("room:1", 3));
         assert_eq!(seqs(ring.read(2)), [3]);
+    }
+
+    #[test]
+    fn a_fresh_ring_needs_no_gap_until_someone_reads_it() {
+        let ring = ring(10, Duration::from_secs(60));
+        let epoch = ring.epoch().to_string();
+        assert!(!ring.gap_needed(), "no client holds a cursor from this epoch");
+        // A welcome hands out the head of the empty ring: skipping now must end that resume point.
+        assert_eq!(ring.resume(None), (0, false));
+        assert!(ring.gap_needed());
+        ring.skip(1);
+        assert_eq!(ring.resume(Some((&epoch, 0))), (1, false));
+    }
+
+    #[test]
+    fn every_gap_after_a_welcome_ends_its_resume_point() {
+        let ring = ring(10, Duration::from_secs(60));
+        let epoch = ring.epoch().to_string();
+        ring.push(1, publication("room:1", 1));
+        ring.skip(2);
+        // A client connects after the first gap and is welcomed at its sequence, with the ring
+        // empty, then drops. The next skipped event still has to be recorded.
+        assert_eq!(ring.resume(None), (2, false));
+        assert!(ring.gap_needed(), "the welcome's cursor sits at the head");
+        ring.skip(3);
+        assert!(!ring.gap_needed());
+        assert_eq!(ring.resume(Some((&epoch, 2))), (3, false));
+        assert!(matches!(ring.read(2), Read::Lost(3)));
+        // So does a gap after events aged out of the ring, leaving it empty at the head.
+        ring.push(4, publication("room:1", 4));
+        assert_eq!(ring.resume(Some((&epoch, 3))), (3, true));
+        ring.skip(5);
+        assert_eq!(ring.resume(Some((&epoch, 4))), (5, false));
     }
 
     #[test]
