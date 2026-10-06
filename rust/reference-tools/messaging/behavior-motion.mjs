@@ -65,6 +65,9 @@ export async function motion({author:page,base,caseName,fixture}) {
   const focusInside=message=>waitUntil(page,()=>document.querySelector('#sidebar').contains(document.activeElement),message);
   const scroll=()=>page.evaluate(()=>document.querySelector('#sidebar .sidebar__scroll').scrollTop);
   if(caseName===motionCases[0]) {
+    // track_transition_runs needs the lazy sidebar frame; served mutants route
+    // every request, which can leave it unrendered when the listeners attach.
+    await readySidebar(page);
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(()=>{document.documentElement.removeAttribute('data-test-motion');document.documentElement.style.setProperty('--motion-medium','30s');});
     const attached=await page.evaluate(()=>{
