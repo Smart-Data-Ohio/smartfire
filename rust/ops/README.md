@@ -1,57 +1,88 @@
 # Rust image operations
 
-Rails remains the schema owner until cutover. `campfire server` never invokes the
-migration runner on an existing database. The explicit commands need no app secrets:
+The Rust app owns the schema. `campfire server` never migrates an existing database:
+boot loads the compiled schema into an empty one and otherwise requires exactly the
+compiled set of migration versions. The explicit commands need no app secrets:
 
 ```sh
+campfire db-migrate /rails/storage/db/production.sqlite3
 campfire db-check /rails/storage/db/production.sqlite3
 campfire db-check --immutable /rails/storage/frozen.sqlite3
 campfire verify-additive-sqlite-migration before.sqlite3 after.sqlite3
-campfire db-migrate /rails/storage/db/production.sqlite3 /rails/migrations
 ```
 
-`db-check` opens an existing database read-only, checks integrity and the exact
-compiled Rails migration set, and prints counts without row contents. Unknown
-versions fail. A missing database is never created by these commands.
+`db-migrate` applies this build's pending migrations. They are the SQL files in
+`crates/db/migrations/<VERSION>_<name>.sql`, compiled into the binary, with
+14-digit Rails-style versions after the last Rails migration (20261003180000).
+All pending migrations and their `schema_migrations` rows go in one immediate
+transaction with foreign keys off, followed by `PRAGMA foreign_key_check`. Any
+failure leaves the database exactly as it was. When nothing is pending it writes
+nothing. It refuses:
+
+- versions it doesn't know, meaning a newer build already migrated the database
+  (the downgrade guard);
+- baseline versions that are missing;
+- a path that doesn't exist (it never creates a database).
+
+Migration SQL can't control transactions, attach databases, set pragmas or touch
+`schema_migrations`.
+
+`db-check` opens an existing database read-only. It checks integrity and the exact
+compiled version set, and prints counts without row contents.
+
 Use `--immutable` only for a standalone frozen snapshot on a read-only mount. It
 refuses a nonempty WAL sidecar, because ignoring a live WAL would lose committed
-data. This also permits reading a backup that retains SQLite's WAL journal-mode
-header without creating sidecars on the read-only filesystem.
+data.
 
-`db-migrate` is for **post-cutover use only**. Supply a complete directory of SQL
-files named `VERSION_description.sql`, with canonical decimal Rails versions.
-Versions run in numerical order. Every migration and its version insertion share
-one immediate transaction. A failure rolls back that migration; earlier successful
-migrations stay committed. Repeating the command skips recorded versions. The
-runner refuses unknown versions outside the compiled Rails baseline and supplied
-catalog, and refuses missing versions without migration definitions. A future
-build's manifest can already include its pending versions; the explicit runner
-applies their supplied definitions before that build's server can boot.
-SQL cannot control transactions or
-write the migration ledger itself. Regenerate the embedded schema and migration
-version set when building an app that accepts the resulting database. Until
-cutover those generated artifacts still come from the existing Rails reference
-tools; a post-cutover release must carry the new schema and version manifest as
-well as its migration definitions. Merely running a migration does not make an
-older binary accept its version.
+The additive verifier compares before and after backups. Preexisting columns,
+indexes, foreign keys, triggers and typed row values must survive; extra tables
+and columns are allowed. A mismatch exits 1; usage errors or unreadable input exit 2.
 
-Before any post-cutover migration, snapshot the database, rehearse on a separate
-copy, and run the preservation verifier against before/after snapshots. It follows
-our Ruby verifier: preserve preexisting columns, indexes, foreign keys, triggers,
-and typed row values; allow additional tables and columns; ignore Rails internal
-metadata tables. A mismatch exits 1, usage or unreadable input exits 2. The runner
-is deliberately absent from every release and startup path before cutover.
+### Writing a migration
 
-Local command-trace checks use fake Docker/ONCE/cloud boundaries:
+1. Add `crates/db/migrations/<VERSION>_<name>.sql`. Additive changes (new
+   tables, columns, indexes) pass the release verifier. A table rebuild works
+   because foreign keys are off during the run, but the verifier rejects it as
+   not additive, so such a release needs an explicit decision.
+2. Regenerate the schema files the build boots from:
+   `CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files`.
+   That test fails while `crates/db/src/schema.sql`, `schema_migrations.txt` or
+   `schema_sequences.txt` are stale, replacing `regenerate-schema.sh --check`.
+   It loads `crates/db/baseline/` (the frozen Rails-era dump), applies every
+   migration, and dumps.
+3. The catalog is generated by `crates/db/build.rs`, which Cargo reruns when the
+   directory changes (add, remove, rename, edit). A target directory shared with
+   another source tree can miss a file whose mtime is older than its last build, so
+   the image build also passes a content digest (`CAMPFIRE_MIGRATIONS_DIGEST`), and
+   `migrations::tests::catalog_matches_the_migrations_directory` compares the
+   compiled-in catalog with the files on disk. If it fails, run
+   `cargo clean -p campfire_db`.
+4. `schema_sha1.txt` is not regenerated. It stays in `baseline/` as the Rails
+   marker that fresh loads write to `ar_internal_metadata`. Nothing compares it
+   after cutover.
+
+Migrations must not insert rows into an empty database. The generator refuses
+any such data. Backfills of existing rows are fine.
+
+Local checks use fake Docker/ONCE/cloud boundaries:
 
 ```sh
 python3 -m unittest discover -s rust/ops/tests -p 'test_release.py'
+python3 -m unittest discover -s rust/ops/tests -p 'test_workflows.py'
 WS18_BINARY="$PWD/rust/target/debug/campfire" python3 -m unittest discover -s rust/ops/tests -p 'test_additive_reference.py'
 ```
 
-The committed Rails baseline comes from `parity/reference.sha`. The
-differential uses `campfire-reference` (or `PARITY_IMAGE`) unless
-`WS18_REFERENCE_IMAGE` selects another **pinned local reference image**.
+`rust/ops/tests/simulate_release.sh PREVIOUS CANDIDATE MIGRATING` runs the release
+script against real containers: real images served from a local registry, a real
+volume and the real `campfire` commands, with only ONCE, root, systemd and the TLS
+front door faked. It covers:
+
+- a plain release and a migrating release;
+- the downgrade refusal;
+- the three rollback outcomes.
+
+Run it before shipping the first release that carries a migration, with that
+release's image as MIGRATING.
 
 ## Image and release contract
 
@@ -61,56 +92,100 @@ Build with `rust/` as the context; it carries its own frontend inputs in `rust/w
 docker build -f rust/Dockerfile -t smartfire-rust rust
 ```
 
-The image has uid/gid 1000, `/rails`, `/rails/storage/{db,files,backups}`, ports
-80/443, `bin/boot`, and both ONCE hooks. Like the Rails image it has no
-`HEALTHCHECK`. Assets are digested and embedded from `rust/web/` at build
-time. `CARGO_BUILD_JOBS` defaults to 4; `CARGO_PROFILE` defaults to release. A
-developer can select dev; measurements intended to represent deployment use
-release. `CARGO_CACHE_SCOPE` separates a worker's Docker target/registry caches.
+The image:
+
+- has uid/gid 1000, `/rails`, `/rails/storage/{db,files,backups}`, ports 80/443,
+  `bin/boot`, and both ONCE hooks;
+- has no `HEALTHCHECK`;
+- embeds assets digested from `rust/web/` at build time;
+- uses `CARGO_BUILD_JOBS` (default 4) and `CARGO_PROFILE` (default release; a
+  developer can select dev, but measurements meant to represent deployment use
+  release). `CARGO_CACHE_SCOPE` separates a worker's Docker target/registry caches.
 
 `CAMPFIRE_STORAGE_PATH` takes precedence over `CAMPFIRE_STORAGE`, then defaults to
-`/rails/storage` in the image. `CAMPFIRE_DATABASE_PATH`, `CAMPFIRE_FILES_PATH`, and
-`CAMPFIRE_BACKUPS_PATH` independently override those locations. The backup shim
-and restore hook use the same precedence and basename of the selected database.
-The shim uses SQLite's online backup API and atomically replaces the completed
-snapshot. It takes no outer flock: the release/backup scripts already hold the
-release lock around it, and taking that lock again inside the container would
-deadlock. Busy database pages are retried; failed snapshots preserve the last
-complete backup and return nonzero.
+`/rails/storage` in the image. `CAMPFIRE_DATABASE_PATH`, `CAMPFIRE_FILES_PATH` and
+`CAMPFIRE_BACKUPS_PATH` override those locations independently.
 
-`net.smartdata.campfire.runtime=rust` identifies a Rust image. Preflight validates
-the candidate and current image labels once and records both runtimes. Freeze,
-rehearsal and cutover use that record without inspecting image metadata again.
-For records carrying `target_runtime`, every runtime read first requires the
-recorded `target_image` to equal `IMAGE_REF`. The deploy workflow resolves the
-tag once to `${GCP_IMAGE}@${digest}` and passes that same string through the VM's
-`sudo env IMAGE_REF=...` invocation for preflight, freeze and cutover, so the
-comparison is exact, without another Docker lookup. Manual runs must likewise
-keep the reference identical across phases; a mismatch requires fresh preflight.
-Legacy preflight records without runtime fields were written by the script
-that only supported Rails and therefore mean Rails, with no new image-reference
-check. Unlabelled images retain
-the original Rails rehearsal and process checks; unknown labels fail preflight.
-The unchanged committed Rails traces match with the dispatcher included.
-A Rust candidate must read the exact
-deployed migration set on a frozen copy mounted read-only, then the previous
-Rails image must boot and serve `/up` on another copy. Both containers have no
-network and the same 768 MB cap. Rust never runs a migration in this path.
-The existing release lock, 17:05–17:30 UTC refusal, snapshot, failure recovery,
-and live-data preservation rules remain in force. The pre-cutover rehearsal
-requires a previous Rails image; releasing Rust over an already-deployed Rust
-image needs a later ops decision.
+The backup shim:
 
-The nightly backup script already uses the shared admin path, so it needs no
-runtime branch. `restore-check.sh --image REF` additionally checks a disposable
-copy with either local runtime image; its existing `--rails-root` path remains.
+- uses SQLite's online backup API and atomically replaces the completed snapshot;
+- takes no outer flock, because the release and backup scripts already hold the
+  release lock around it;
+- retries busy pages, and on failure keeps the last complete backup and returns
+  nonzero.
 
-`publish-rust-image.yml` builds PRs without publishing or cloud credentials. Main
-publishes `rust-git-<full SHA>` to `GCP_IMAGE`, independently of immutable Rails
-`git-<full SHA>` tags. Deploy's `runtime` defaults to `rails`; `rust` selects the
-Rust tag and requires the Rust checks for production. Runtime selection inside
-the host script still comes from image metadata. Publication and VM/validation
-dry runs are performed by the lead, not by this workstream.
+`net.smartdata.campfire.runtime=rust` identifies a Rust image.
+`deploy/gcp/campfire-release.sh` only releases Rust to Rust. Preflight refuses a
+candidate or current image without that label, and records both. Later phases
+require the recorded target image to equal `IMAGE_REF`. The deploy workflow
+resolves `rust-git-<sha>` once to `${GCP_IMAGE}@${digest}` and passes that string
+to every phase.
+
+**Freeze.** It stops the app, fingerprints the database and keeps a frozen copy.
+It then rehearses on another copy with the candidate (no network, 768 MB):
+`db-migrate`, `db-check`, before/after backups and the additive verifier. The
+result records the image, the frozen database SHA-256 and the versions applied.
+
+**Cutover.** It requires that rehearsal for this exact image and these exact bytes.
+It runs `db-migrate` with the candidate on the stopped live database, and requires
+it to apply exactly what the rehearsal applied (`live-migration-result.json`).
+Only then does `once update` start the candidate.
+
+**Rollback.** A candidate always writes something when it boots, even if it never
+serves: its job queue and SQLite's AUTOINCREMENT counters. So rollback doesn't
+compare bytes. It runs the previous image's preservation verifier on copies of two
+databases: the live one, and the one the cutover left (kept as `migrated-live/`, or
+`frozen-live/` when nothing was migrated). The verdict is one of:
+
+- **every row of every table matches** and nothing was added;
+- **only `background_jobs` rows differ**: the single failed check is that table's
+  row data, its schema matches, and a second run with the two databases swapped
+  says the same, so the live database has no table, column, index or trigger the
+  reference lacks. The candidate claims due jobs, runs or fails them and enqueues
+  its periodic work at boot. Reverting discards that: jobs it enqueued are gone and
+  jobs it ran or failed are due again under the previous image, the queue's
+  at-least-once contract, as after a crash. A job that also wrote another table
+  shows up there and is not tolerated;
+- anything else.
+
+When the rows match:
+
+- If a migration ran, rollback puts the frozen copy back and returns to the
+  previous image (`migration-reverted`).
+- If no migration ran and every row matches, it returns to the previous image and
+  leaves the database as it is (`image-rolled-back`). If only the job queue
+  differs, it puts the frozen copy back first (`image-rolled-back`,
+  `database_restored: true`).
+
+`rollback-result.json` records `job_queue_changes_discarded`. The frozen copy is
+staged next to the live database, fingerprinted and synced before anything live is
+removed or replaced, so a failed copy leaves the live database as it was.
+
+If anything else has written since, rollback keeps those writes:
+
+- If the previous image's `db-check` accepts the database, rollback restarts the
+  previous image (`refused-database-changed`).
+- Otherwise it leaves the candidate running (`refused-database-incompatible`).
+
+Both outcomes exit 30 for an operator.
+
+The release lock, the 17:05-17:30 UTC refusal, the boot-disk snapshot and the
+pre-release ONCE backup still apply.
+
+The nightly backup script uses the shared admin path.
+`restore-check.sh --image REF` (the monthly workflow builds REF from the checkout)
+migrates a disposable copy and runs `db-check` on it.
+
+`publish-rust-image.yml` publishes `rust-git-<full SHA>` to `GCP_IMAGE` on pushes to
+main that touch the image's inputs. `deploy-gcp.yml` deploys only that tag, and
+production only from a run dispatched on main. Its gate is a successful `rust.yml`
+push or scheduled run for the revision with a successful `Rust port` job. Preflight
+refuses an image whose `GIT_REVISION` isn't that revision (`EXPECTED_GIT_REVISION`), and
+refuses an empty one unless an operator sets `ALLOW_UNVERIFIED_REVISION=1` by hand.
+
+`/hooks/post-restore` copies the backup snapshot over the database and runs
+`campfire db-migrate` on it, so an older backup restored under a newer image boots.
+A backup with migrations the image doesn't know is refused and the hook fails.
 
 ## Runtime environment at this workstream's base
 
