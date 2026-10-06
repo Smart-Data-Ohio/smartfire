@@ -1,8 +1,11 @@
 import { type Effect, Layer, ManagedRuntime } from "effect";
+import type { GithubCardScope } from "../api/cards-endpoints.ts";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
+import type { AttendanceResponse } from "../gen/AttendanceResponse.ts";
+import type { CreatePoll } from "../gen/CreatePoll.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { DirectUpload } from "../gen/DirectUpload.ts";
@@ -25,6 +28,7 @@ import type { ActivityAction } from "../store/activity.ts";
 import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
+import * as cardActions from "./card-actions.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -251,6 +255,34 @@ const organize = {
     runAction(organizeActions.setInvolvement(roomId, involvement)),
 };
 
+/** Card actions (S3): polls, events and previews. Loads land in the store; writes reject. */
+const cards = {
+  /** The viewer's results for a poll (an anonymous poll's own choice comes only from here). */
+  loadPoll: (roomId: number, pollId: number): Promise<void> =>
+    runAction(cardActions.loadPoll(roomId, pollId)),
+  /** Sends the viewer's whole ballot (`[]` takes it back); shown at once, put back if refused. */
+  vote: (roomId: number, pollId: number, optionIds: readonly number[]): Promise<void> =>
+    runAction(cardActions.vote(roomId, pollId, optionIds)),
+  /** Posts a question with its poll; a retry with the same `clientMessageId` posts nothing new. */
+  createPoll: (roomId: number, body: CreatePoll): Promise<MessageDTO> =>
+    runAction(cardActions.createPoll(roomId, body)),
+  loadAttendance: (roomId: number, eventId: number): Promise<void> =>
+    runAction(cardActions.loadAttendance(roomId, eventId)),
+  /** Answers an event; shown at once, put back if refused. */
+  respond: (
+    roomId: number,
+    eventId: number,
+    response: AttendanceResponse,
+    applyToFuture: boolean,
+  ): Promise<void> => runAction(cardActions.respond(roomId, eventId, response, applyToFuture)),
+  loadGithub: (roomId: number, pullRequestId: number, scope: GithubCardScope): Promise<void> =>
+    runAction(cardActions.loadGithub(roomId, pullRequestId, scope)),
+  loadFizzy: (roomId: number, fizzyCardId: number, messageId: number): Promise<void> =>
+    runAction(cardActions.loadFizzy(roomId, fizzyCardId, messageId)),
+  loadQuote: (roomId: number, referenceId: number): Promise<void> =>
+    runAction(cardActions.loadQuote(roomId, referenceId)),
+};
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
@@ -260,6 +292,7 @@ export const actions = {
   scheduled,
   search,
   organize,
+  cards,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 
