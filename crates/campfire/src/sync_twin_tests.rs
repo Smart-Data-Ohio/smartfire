@@ -15,6 +15,7 @@ const PRIMITIVES: &[&str] = &[
     "new",
     "install_sync_renderer",
     "sync_message",
+    "sync_thread_indicator",
     "turbo",
     "append",
     "prepend",

@@ -910,6 +910,141 @@ pub fn forward_destinations(
     Ok(api::ForwardDestinationList { destinations })
 }
 
+/// A thread as every member of its room sees it.
+pub fn thread(thread: &campfire_db::ChannelThread, room: &Room, now: Timestamp) -> api::Thread {
+    api::Thread {
+        id: thread.id,
+        room_id: thread.room_id,
+        parent_message_id: thread.parent_message_id,
+        creator_id: thread.creator_id,
+        name: thread.name.clone(),
+        status: thread_status(thread.status_in_room(room, now)),
+        reply_count: thread.messages_count,
+        last_activity_at: time(thread.last_activity_at),
+        auto_archive_after_minutes: thread.auto_archive_after_minutes,
+        created_at: time(thread.created_at),
+    }
+}
+
+/// A person's `thread_memberships` row.
+pub fn thread_membership(membership: &campfire_db::ThreadMembership) -> api::ThreadMembership {
+    use campfire_db::ThreadInvolvement as Db;
+    api::ThreadMembership {
+        thread_id: membership.thread_id,
+        involvement: match membership.involvement {
+            Db::Nothing => api::ThreadInvolvement::Nothing,
+            Db::Mentions => api::ThreadInvolvement::Mentions,
+            Db::Everything => api::ThreadInvolvement::Everything,
+        },
+        unread_at: membership.unread_at.map(time),
+        joined_at: time(membership.joined_at),
+    }
+}
+
+/// The reply indicator of the thread started from `parent`, if one was.
+pub fn thread_indicator(conn: &Connection, parent: &Message) -> Result<Option<api::ThreadIndicator>> {
+    Ok(thread_indicators(conn, std::slice::from_ref(parent))?.remove(&parent.id))
+}
+
+/// What `viewer` may do to `thread`, as `channel_threads#update` and `#destroy` decide it.
+pub fn thread_permissions(
+    thread: &campfire_db::ChannelThread,
+    room: &Room,
+    viewer: &User,
+    member: bool,
+    now: Timestamp,
+) -> api::ThreadPermissions {
+    use campfire_db::models::channel_thread::ThreadStatus as Db;
+    let settings = thread.settings_manageable_in_room(room, viewer);
+    let moderator = thread.manageable_in_room(room, viewer);
+    let status = thread.status_in_room(room, now);
+    let locked = thread.locked_at.is_some();
+    // The viewer reads the thread from a room they belong to; a board post's name is work
+    // metadata, which its owner may change too (`channel_threads#update`).
+    let rename = if room.board() {
+        thread.work_manageable_in_room(room, viewer, true)
+    } else {
+        settings
+    };
+    api::ThreadPermissions {
+        can_rename: rename,
+        can_close: status == Db::Active && if room.board() { moderator } else { settings },
+        can_reopen: status == Db::Closed && member,
+        can_lock: moderator && !locked,
+        can_unlock: moderator && locked,
+        can_delete: moderator,
+    }
+}
+
+/// `GET /api/v1/threads/:id`.
+pub fn thread_detail(
+    conn: &Connection,
+    app: &AppState,
+    viewer: &User,
+    thread: &campfire_db::ChannelThread,
+    room: &Room,
+    now: Timestamp,
+) -> Result<api::ThreadDetail> {
+    let membership = thread.membership_for(conn, viewer.id)?;
+    let parent = match thread.parent_message_id {
+        Some(id) => Message::find_by_id(conn, id)?,
+        None => None,
+    };
+    let parent_message = parent
+        .as_ref()
+        .map(|parent| message(conn, app, parent))
+        .transpose()?;
+    let people = std::iter::once(thread.creator_id).chain(parent.as_ref().map(|parent| parent.creator_id));
+    Ok(api::ThreadDetail {
+        thread: self::thread(thread, room, now),
+        permissions: thread_permissions(thread, room, viewer, membership.is_some(), now),
+        membership: membership.as_ref().map(thread_membership),
+        parent_message,
+        users: users(conn, &app.secrets, people, now)?,
+    })
+}
+
+/// `GET /api/v1/rooms/:id/threads`: `channel_threads#index`'s filters, most recently active
+/// first, with the viewer's memberships and the creators.
+pub fn thread_list(
+    conn: &Connection,
+    secrets: &Secrets,
+    viewer_id: i64,
+    room: &Room,
+    filter: api::ThreadFilter,
+    now: Timestamp,
+) -> Result<api::ThreadList> {
+    use campfire_db::ChannelThread;
+    let threads: Vec<ChannelThread> = match filter {
+        api::ThreadFilter::Closed => ChannelThread::effectively_closed_for_room(conn, room.id, now)?,
+        api::ThreadFilter::All => ChannelThread::for_room(conn, room.id)?,
+        api::ThreadFilter::Locked => ChannelThread::for_room(conn, room.id)?
+            .into_iter()
+            .filter(|thread| thread.locked_at.is_some())
+            .collect(),
+        api::ThreadFilter::Active => ChannelThread::for_room(conn, room.id)?
+            .into_iter()
+            .filter(|thread| {
+                thread.closed_at.is_none()
+                    && thread.locked_at.is_none()
+                    && (room.board() || thread.auto_archive_at() > now)
+            })
+            .collect(),
+    };
+    let mut summaries = Vec::with_capacity(threads.len());
+    for thread in &threads {
+        let membership = thread.membership_for(conn, viewer_id)?;
+        summaries.push(api::ThreadSummary {
+            thread: self::thread(thread, room, now),
+            membership: membership.as_ref().map(thread_membership),
+        });
+    }
+    Ok(api::ThreadList {
+        users: users(conn, secrets, threads.iter().map(|thread| thread.creator_id), now)?,
+        threads: summaries,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::inline_mentions;

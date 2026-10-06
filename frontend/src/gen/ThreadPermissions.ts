@@ -22,6 +22,8 @@ canReopen: boolean,
  */
 canLock: boolean, canUnlock: boolean, 
 /**
- * Moderators.
+ * `DELETE /api/v1/threads/:id` (`channel_threads#destroy`): moderators. Its replies go with
+ * it; the parent stays, its indicator cleared (`thread.indicator` with `thread: null`), and
+ * `thread.removed` follows. 204; 403 for anyone else.
  */
 canDelete: boolean, };

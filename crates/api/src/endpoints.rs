@@ -162,6 +162,11 @@ enum Cursor {
 async fn index_messages(c: &mut Ctx) -> Result {
     before_actions(c).await?;
     let (_, room) = set_room(c).await?;
+    message_page(c, Timeline::Room(room.id)).await
+}
+
+/// A [`api::MessagePage`] of `timeline`, by the `before`, `after` or `around` cursor.
+pub(crate) async fn message_page(c: &mut Ctx, timeline: Timeline) -> Result {
     let mut given = Vec::new();
     for key in ["before", "after", "around"] {
         if let Some(value) = c.param_str(key) {
@@ -187,18 +192,17 @@ async fn index_messages(c: &mut Ctx) -> Result {
             ));
         }
     };
-    let (app, now, room_id) = (c.app().clone(), now(c), room.id);
+    let (app, now) = (c.app().clone(), now(c));
     let viewer_id = concerns::require_current_user(c)?.id;
     let page = c
         .app()
         .db
         .read(move |conn| {
-            let timeline = Timeline::Room(room_id);
             let anchor = |id| Message::find_in(conn, timeline, id);
             // A `before`/`after` cursor whose message was deleted since pages from its id, so
             // paging doesn't stall on it. Messages are deleted outright, so a cursor that isn't
-            // on this timeline but still exists is another room's or a thread's: that's a 404,
-            // as is an `around` anchor that's gone.
+            // on this timeline but still exists is another room's or thread's, or the room's
+            // root timeline's: that's a 404, as is an `around` anchor that's gone.
             let gone = |error: &campfire_db::Error, id: i64| -> campfire_db::Result<bool> {
                 if !matches!(error, campfire_db::Error::RecordNotFound(_)) {
                     return Ok(false);
@@ -354,7 +358,7 @@ async fn post_message(c: &mut Ctx) -> Result {
 }
 
 /// The blob a direct upload's signed id names exists (`ActiveStorage::Blob.find_signed`).
-async fn blob_exists(c: &Ctx, signed_id: &str) -> Result<bool> {
+pub(crate) async fn blob_exists(c: &Ctx, signed_id: &str) -> Result<bool> {
     let app = c.app();
     let now = app.clock.now();
     let Some(id) =

@@ -22,6 +22,7 @@ pub mod endpoints;
 mod error;
 pub mod message_actions;
 pub mod sync;
+pub mod threads;
 #[cfg(feature = "test-support")]
 pub mod test_hooks;
 
@@ -99,6 +100,28 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route(
             "/api/v1/saved/{saved_id}",
             delete(action(message_actions::unsave)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/threads",
+            get(action(threads::threads)).post(unparsed_action(threads::create)),
+        )
+        .route(
+            "/api/v1/threads/{thread_id}",
+            get(action(threads::thread))
+                .patch(unparsed_action(threads::update))
+                .delete(action(threads::destroy)),
+        )
+        .route(
+            "/api/v1/threads/{thread_id}/messages",
+            get(action(threads::messages)).post(unparsed_action(threads::reply)),
+        )
+        .route(
+            "/api/v1/threads/{thread_id}/join",
+            post(unparsed_action(threads::join)).delete(action(threads::leave)),
+        )
+        .route(
+            "/api/v1/threads/{thread_id}/read",
+            post(action(threads::read)),
         )
         .route("/api/v1/users", get(action(endpoints::users)))
         .route("/api/v1/presence", get(action(endpoints::presence)))

@@ -6,8 +6,10 @@ import type { CreateMessage } from "./CreateMessage";
  * (`channel_threads#create`). The creator joins it.
  *
  * Idempotent on `message.clientMessageId`: a retry returns the thread already made (200 instead
- * of 201). A message that already has a thread is a 409 (open that one instead); a direct room
- * or a parent off the room's root timeline is a 403 / 404.
+ * of 201). A message that already has a thread is a 409 (open that one instead); a direct or
+ * board room is a 403 (a board takes posts, which come with S6), and a parent off the room's
+ * root timeline is a 404. A `clientMessageId` that an earlier message outside a thread already
+ * used is a 422 on `clientMessageId`.
  */
 export type CreateThread = { parentMessageId: number, 
 /**

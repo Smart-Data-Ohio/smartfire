@@ -69,8 +69,7 @@ pub async fn broadcast_thread_refresh(app: &App, room_id: i64, thread_id: i64) -
     let runtime = app.clone();
     app.db.read(move |conn| {
         for membership in campfire_db::Membership::for_room(conn, room_id)? {
-            runtime.broadcasts.channel(&format!("user_{}_unread_threads", membership.user_id),
-                &serde_json::json!({"threadId": thread_id, "roomId": room_id, "refreshOnly": true}));
+            runtime.broadcasts.thread_refresh(membership.user_id, room_id, thread_id);
         }
         Ok(())
     }).await.map_err(db_error)
