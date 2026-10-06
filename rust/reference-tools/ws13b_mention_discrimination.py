@@ -19,7 +19,7 @@ for name, relative, before, after in mutations:
     try:
         assert original.count(before) == 1, (name, original.count(before))
         path.write_text(original.replace(before, after, 1))
-        result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire", "huddle_neighbor_mention_test", "--", "--test-threads=8"], cwd=ROOT, env=environment, capture_output=True, text=True)
+        result = subprocess.run(["cargo", "test", "--locked", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire", "huddle_neighbor_mention_test", "--", "--test-threads=8"], cwd=ROOT, env=environment, capture_output=True, text=True)
         output = result.stdout + result.stderr
         (SCRATCH / f"{name}.log").write_text(output)
         summary = next((s for s in re.findall(r"^test result: FAILED\..*$", output, re.M) if "1 failed;" in s), None)

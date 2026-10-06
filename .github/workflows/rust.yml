@@ -49,6 +49,15 @@ env:
   CI: "true"
   RUST_CI_IMAGE: campfire-toolchain
   RUST_CI_CONTAINER_PREFIX: campfire-ci
+  # Dev/test builds compile campfire with Cranelift (rust/.cargo/config.toml), which can't
+  # unwind, so these panic-recovery tests run in their own job with campfire on LLVM, as
+  # production builds it. The scheduled run tests the whole campfire suite on LLVM.
+  CAMPFIRE_LLVM: --config=profile.dev.package.campfire.codegen-backend="llvm"
+  CAMPFIRE_LLVM_ONLY_TESTS: >-
+    test(=channels::message_features::tests::origin_is_present_for_commit_callbacks_and_restored_after_errors_and_panics) |
+    test(=controllers::agent_review_r5_tests::ws11_proxy_header_oracle_rejects_unapproved_changes) |
+    test(=jobs::tests::a_panicking_ad_hoc_job_is_logged_and_its_worker_carries_on) |
+    test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
   # Rust-relevant inputs: the port itself, the Rails app it reads as its reference, and this
@@ -137,7 +146,8 @@ jobs:
           toolchain: 'false'
           save-caches: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
 
-  # Every ordinary nextest test, split round-robin by nextest into twelve slices.
+  # Every ordinary nextest test but the four LLVM-only ones (the llvm job), split round-robin
+  # by nextest into twelve slices.
   test:
     name: Rust tests (${{ matrix.shard }})
     needs: changes
@@ -174,8 +184,10 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: |
           status=0
+          selection=(-E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))")
+          if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then selection+=("$CAMPFIRE_LLVM"); fi
           bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci -j 4 --no-fail-fast --partition "slice:$SHARD" 2>&1 |
+            --profile ci -j 4 --no-fail-fast --partition "slice:$SHARD" "${selection[@]}" 2>&1 |
             tee "$RUNNER_TEMP/nextest.log" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
           cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-${SHARD/\//of}.xml"
@@ -289,10 +301,96 @@ jobs:
             rust/target
           key: ${{ steps.setup.outputs.cargo-cache-key }}
 
+  # The panic-recovery tests the shards leave out, with campfire built by LLVM.
+  llvm:
+    name: Rust tests (campfire panic recovery, LLVM)
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: seeds
+          cargo-cache: tests
+
+      - name: Tests (campfire panic recovery, LLVM)
+        id: tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          status=0
+          bash rust/ci/cargo.sh nextest run --locked -p campfire --profile ci -j 4 --no-fail-fast \
+            "$CAMPFIRE_LLVM" -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)" || status=$?
+          mkdir -p "$RUNNER_TEMP/results"
+          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
+          exit "$status"
+
+      - name: Retain test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rust-tests-llvm
+          path: ${{ runner.temp }}/results/
+          if-no-files-found: error
+
+      - name: Gate tests
+        if: ${{ !cancelled() }}
+        env:
+          OUTCOME: ${{ steps.tests.outcome }}
+        run: |
+          python3 - "$RUNNER_TEMP/results/junit-llvm.xml" <<'PY'
+          import os, sys, xml.etree.ElementTree as ET
+          # The ci profile also reports the crate's #[ignore] tests, as skipped.
+          ran = [c for c in ET.parse(sys.argv[1]).getroot().iter('testcase') if c.find('skipped') is None]
+          passed = [c for c in ran if c.find('failure') is None and c.find('error') is None]
+          print(f'{len(passed)} of {len(ran)} panic-recovery tests passed on LLVM')
+          sys.exit(0 if os.environ['OUTCOME'] == 'success' and len(ran) == len(passed) == 4 else 1)
+          PY
+
+  # Production builds on the image's stable toolchain, not the nightly the tests use. From the
+  # repository root neither rust-toolchain.toml nor .cargo/config.toml applies; the separate
+  # target dir keeps stable artifacts out of the caches.
+  stable:
+    name: Rust production toolchain check
+    needs: changes
+    if: needs.changes.outputs.rust == 'true' && inputs.scope != 'messaging-and-browsers'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Prepare shared Rust CI inputs
+        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
+        with:
+          parity: none
+
+      - name: Check with the production toolchain
+        env:
+          RUSTUP_TOOLCHAIN: "1.98.1"
+          RUST_CI_WORKDIR: /src
+          CARGO_TARGET_DIR: /ci-tmp/stable-target
+        run: bash rust/ci/cargo.sh check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever
+
   rust:
     # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.
     name: Rust port
-    needs: [changes, seeds, test, clippy]
+    needs: [changes, seeds, test, clippy, llvm, stable]
     if: ${{ always() && inputs.scope != 'messaging-and-browsers' }}
     runs-on: ubuntu-latest
     permissions:
@@ -313,7 +411,7 @@ jobs:
           sparse-checkout: rust/ci
 
       - name: Collect test results
-        if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped') }}
+        if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped' || needs.llvm.result != 'skipped') }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: rust-{tests-*,doctests}
@@ -376,7 +474,7 @@ jobs:
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: reference
-          cargo-cache: tests
+          cargo-cache: correctness
 
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
@@ -415,10 +513,11 @@ jobs:
           # The external harnesses read original case bodies and the approved layout commit.
           fetch-depth: 0
       - name: Prepare shared Rust CI inputs
+        id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: reference
-          cargo-cache: tests
+          cargo-cache: correctness
       # The prerequisite image only adds browsers and tools to the toolchain image, so the
       # server binary and campfire's test harnesses (what correctness.sh builds first)
       # compile under the toolchain image meanwhile. Both images share the Cargo home and
@@ -444,6 +543,20 @@ jobs:
           name: rust-correctness-browsers-${{ strategy.job-index }}
           path: rust/target/ci-receipts/
           if-no-files-found: error
+      # Correctness builds run from the repository root on the image's stable toolchain and
+      # LLVM, unlike the test shards' nightly and Cranelift, so they keep their own cache of
+      # dependency artifacts. This shard has built the server binary and campfire's test harness.
+      - name: Keep only dependency artifacts for the cache
+        if: ${{ matrix.shard == '2/4' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        run: python3 rust/ci/prune-target.py rust/target
+      - name: Save cargo registry and target
+        if: ${{ matrix.shard == '2/4' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            rust/.cargo-home/registry
+            rust/target
+          key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   # The paired messaging run's two Rust hosts, built once from this checkout with the same
   # commands behavior-check.py would run, then shared by every behaviour shard.
@@ -469,7 +582,7 @@ jobs:
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: none
-          cargo-cache: ${{ matrix.host == 'app' && 'build' || 'tests' }}
+          cargo-cache: correctness
 
       - name: Build the application server
         if: ${{ matrix.host == 'app' }}
@@ -620,7 +733,7 @@ jobs:
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: reference
-          cargo-cache: tests
+          cargo-cache: correctness
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
       - name: Permit native browser namespaces

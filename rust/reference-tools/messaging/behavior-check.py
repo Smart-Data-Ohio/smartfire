@@ -267,7 +267,7 @@ if args.prepare_only:
 elif os.environ.get("WS8BM_PREBUILT_APP") == "1":
     assert (Path(env.get("CARGO_TARGET_DIR", RUST / "target")) / "debug/campfire").is_file(), "prebuilt campfire binary is missing"
 elif args.slice or any(name not in paused_job_cases for name in selected_names):
-    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 if args.prepare_only or not (needs_paused_jobs or needs_drive or needs_test_environment):
     test_host = None
 elif prebuilt_host:

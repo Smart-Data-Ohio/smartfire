@@ -161,6 +161,7 @@ impl AgentEvent {
         {
             errors.add("outcome", "is not included in the list");
         }
+        #[allow(clippy::single_element_loop)] // one association today, as in the Rails model
         for (table, field, id) in [("agents", "agent", Some(a.agent_id))] {
             if let Some(id) = id
                 && !captured_agent

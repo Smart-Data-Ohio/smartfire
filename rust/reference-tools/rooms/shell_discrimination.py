@@ -6,7 +6,7 @@ import subprocess
 root=Path(__file__).resolve().parents[2]
 scratch=root.parent/'.scratch'
 env=dict(os.environ,CI='1',TMPDIR=str(scratch),CARGO_TARGET_DIR=str(root/'target'),CABLE_TEST_PORT_RANGE='52100-52149',MAIL_TEST_PORT_RANGE='52100-52149')
-base=['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml')]
+base=['cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml')]
 def reject(name,path,old,new,package,test):
     original=path.read_text()
     assert original.count(old)==1,'mutation must apply once'

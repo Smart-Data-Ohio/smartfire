@@ -10,7 +10,7 @@ def check(name,path,before,after,test,package="campfire"):
     assert before in source
     try:
         path.write_text(source.replace(before,after,1))
-        result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','-p',package,test,'--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        result=subprocess.run(['cargo','test','--locked','-j','4','-p',package,test,'--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         (scratch/f'{name}.log').write_text(result.stdout)
         lines=[line for line in result.stdout.splitlines() if line.startswith('test result:')]
         assert result.returncode==101 and 'assertion' in result.stdout and any('FAILED' in line for line in lines),result.stdout

@@ -18,7 +18,7 @@ def check(name, file, old, new, package, test, suite=None):
     assert original.count(old) == 1, f"{name}: ambiguous mutation"
     try:
         path.write_text(original.replace(old, new))
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "-j", "4", "-p", package]
+        command = ["cargo", "test", "-j", "4", "-p", package]
         if suite:
             command += ["--test", suite]
         command += [test, "--", "--nocapture"]

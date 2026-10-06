@@ -238,7 +238,7 @@ def build_host(root, env):
     host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
     host_env = dict(env, CAMPFIRE_REFERENCE=str(root), CARGO_TARGET_DIR=str(host_target))
     jobs = env.get("WS8BM_HOST_BUILD_JOBS", "2")  # parallelism only; the output is the same
-    command = shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["test", "--locked", f"-j{jobs}",
+    command = shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["test", "--locked", f"-j{jobs}",
                "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
                "--no-run", "--message-format=json"]
     result = subprocess.run(command, cwd=root, env=host_env, stdout=subprocess.PIPE, text=True)

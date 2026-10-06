@@ -60,12 +60,20 @@ for anything that walks directories.
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on
 every pull request, building only when Rust or Rails comparison inputs changed. Every ordinary nextest group and runnable doctest is
-required; tests run as twelve nextest partitions beside seed validation and clippy/doctest
-jobs, and the `Rust port` job fails unless all of them succeeded.
+required; tests run as twelve nextest partitions beside seed validation, clippy/doctest,
+LLVM panic-recovery and stable-toolchain jobs, and the `Rust port` job fails unless all of
+them succeeded.
 `ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold, and the CI-only
 `ci/cargo-config.toml` (optimized dependencies, unoptimized workspace crates); local builds
 retain their normal linker and profile. Shared pinned Rails seed build/restore/validation
 lives in `.github/actions/rust-setup`.
+
+Dev, test and CI builds use the nightly in `rust-toolchain.toml`, and `.cargo/config.toml` builds
+the `campfire` crate with the Cranelift backend (everything else, and every release build, uses
+LLVM; the production image stays on the Dockerfile's stable toolchain, and so do the CI
+correctness suites, which build from the repository root). Cranelift can't unwind:
+tests of panic recovery need `--config 'profile.dev.package.campfire.codegen-backend="llvm"'`.
+Measurements and rejected options: `plans/build-speed-report.md`.
 
 Separate required correctness jobs (some sharded, behind the `Rust correctness` gate) run
 Rails differential/rollback, Pebble ACME,
@@ -88,8 +96,9 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
 
 ## Working rules
 
-- Work from `rust/`. Rust comes from mise if it isn't on the PATH:
-  `mise exec rust@1.98.1 -- cargo ...` (the version in `Dockerfile`).
+- Work from `rust/`, with rustup's `cargo` (`~/.cargo/bin`): `rust-toolchain.toml` selects the
+  nightly. Stable cargo, including `mise exec rust@1.98.1` (it sets `RUSTUP_TOOLCHAIN`), rejects
+  `.cargo/config.toml`'s Cranelift settings.
 - `cargo test --workspace --exclude html5ever` runs everything. The app's integration tests need
   the `default`, `first_run` and `agents_ui` seeds (`parity/bin/seed build default first_run agents_ui`, which runs the
   reference). Missing seeds fail whenever `CI` is set; locally they skip with a message, so say

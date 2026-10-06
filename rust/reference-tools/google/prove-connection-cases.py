@@ -11,7 +11,7 @@ def check(name, relative, before, after, test):
     assert before in source, name
     try:
         path.write_text(source.replace(before, after, 1))
-        result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j', '4', '-p', 'campfire', test, '--', '--nocapture'], cwd=root,
+        result = subprocess.run(['cargo', 'test', '--locked', '-j', '4', '-p', 'campfire', test, '--', '--nocapture'], cwd=root,
             env=dict(os.environ, CI='1', TMPDIR=str(scratch), CARGO_PROFILE_TEST_DEBUG='0', CARGO_PROFILE_DEV_DEBUG='0'),
             text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (scratch / f'{name}.log').write_text(result.stdout)

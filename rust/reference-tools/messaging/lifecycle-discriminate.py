@@ -15,7 +15,7 @@ def check(name, path, old, new, test):
     assert old in original, name
     try:
         source.write_text(original.replace(old, new))
-        result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j4',
+        result = subprocess.run(['cargo', 'test', '--locked', '-j4',
             '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire', '--bin', 'campfire', test, '--', '--exact'],
             cwd=ROOT, env=env, capture_output=True, text=True)
         output = result.stdout + result.stderr

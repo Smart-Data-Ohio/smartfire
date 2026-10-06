@@ -27,7 +27,7 @@ def check(name, relative, old, new, test):
     full_test = test if test.startswith(("channels::", "controllers::")) else f"controllers::message_features::tests::{test}"
     try:
         source.write_text(original.replace(old, new, 1))
-        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+        run = subprocess.run(["cargo", "test", "--locked", "-j", "4",
                               "-p", "campfire", "--bin", "campfire", full_test, "--", "--exact", "--nocapture"],
                              cwd=ROOT / "rust", env=ENV, capture_output=True, text=True)
         output = run.stdout + run.stderr

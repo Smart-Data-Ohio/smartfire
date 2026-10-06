@@ -11,7 +11,7 @@ scratch = worktree / '.scratch' / 'ws11-mutations'
 scratch.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, TMPDIR=str(worktree / '.scratch'), CARGO_TARGET_DIR=str(root / 'target'),
            CABLE_TEST_PORT_RANGE='52200-52249', MAIL_TEST_PORT_RANGE='52200-52249')
-cmd = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j', '4', '-p', 'campfire',
+cmd = ['cargo', 'test', '--locked', '-j', '4', '-p', 'campfire',
        '--bin', 'campfire']
 mutations = [
     ('reply-scope', 'crates/campfire/src/controllers/messages/by_bots.rs',

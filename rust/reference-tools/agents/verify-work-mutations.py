@@ -18,7 +18,7 @@ for name,file,before,after,package,test in mutations:
  if not re.search(pattern,original):raise RuntimeError(f'{name}: missing anchor')
  try:
   p.write_text(re.sub(pattern,lambda _:after,original))
-  r=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','-p',package,test,'--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+  r=subprocess.run(['cargo','test','--locked','-j4','-p',package,test,'--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
   (scratch/f'{name}.log').write_text(r.stdout);summary=re.search(r'^test result: FAILED\..*$',r.stdout,re.M)
   if r.returncode!=101 or not summary or 'error[E' in r.stdout:raise RuntimeError(f'{name}: no compiled assertion failure')
   print(f'{name}: {summary.group()}',flush=True)

@@ -178,7 +178,7 @@ def preflight(entries):
 
 
 def test_command(package, test):
-    command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "2",
+    command = ["cargo", "test", "--locked", "-j", "2",
                "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", package]
     if package == "campfire":
         command += ["--bin", "campfire"]

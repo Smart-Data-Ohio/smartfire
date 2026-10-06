@@ -18,7 +18,7 @@ for path in ['rust/crates/db/src/tests/ws17_review_test.rs','rust/crates/db/src/
     (dest/path).write_bytes((root/path).read_bytes())
 modules=dest/'rust/crates/db/src/tests.rs'
 modules.write_text(modules.read_text().replace('mod keyword_alert_test;', 'mod keyword_alert_test;\nmod ws17_review_test;\nmod ws17_endpoint_review_test;'))
-command=['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path',str(dest/'rust/Cargo.toml'),'-p','campfire_db','ws17_review_','--','--test-threads=4']
+command=['cargo','test','--locked','-j4','--manifest-path',str(dest/'rust/Cargo.toml'),'-p','campfire_db','ws17_review_','--','--test-threads=4']
 result=subprocess.run(command,cwd=root,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
 print(result.stdout,end='')
 assert result.returncode==101 and re.search(r'test result: FAILED\. 0 passed; 7 failed; 0 ignored;', result.stdout), 'baseline must fail seven runtime assertions'

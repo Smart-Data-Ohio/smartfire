@@ -13,7 +13,7 @@ inputs:
     description: Build the toolchain image from the main-written Buildx cache
     default: 'true'
   cargo-cache:
-    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), or none'
+    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds from the repository root), or none'
     default: none
   free-disk:
     description: Delete unused preinstalled SDKs in the background
@@ -173,7 +173,7 @@ runs:
       if: ${{ inputs.cargo-cache != 'none' }}
       shell: bash
       env:
-        PREFIX: rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-${{ hashFiles('rust/Cargo.lock') }}-
+        PREFIX: rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-${{ hashFiles('rust/Cargo.lock') }}-
       run: echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
 
     - name: Restore cargo registry and target
@@ -188,5 +188,5 @@ runs:
         key: ${{ steps.cargo-key.outputs.prefix }}${{ github.sha }}
         restore-keys: |
           ${{ steps.cargo-key.outputs.prefix }}
-          rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
+          rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
           rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-

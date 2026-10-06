@@ -12,8 +12,15 @@ nightly and manual runs, empty diffs and unavailable history always run everythi
 | Job | Runs |
 | --- | --- |
 | `Rust seeds` | Builds or restores the pinned reference image and seeds, validates them with Rails, and proves the parity gates reject bad inputs. Saves both caches on main. |
-| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --partition slice:K/12`: nextest's round-robin slice of every ordinary test. Shard 1 also runs `verify-ignored.sh` against the harnesses it compiled. |
+| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (campfire on Cranelift; the nightly run builds campfire with LLVM). Shard 1 also runs `verify-ignored.sh` against the harnesses it compiled. |
+| `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with campfire on LLVM: Cranelift can't unwind. Fails unless exactly those four ran and passed. |
+| `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with. |
 | `Rust clippy, binaries and doctests` | rust/ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
+
+Correctness builds run from the repository root, where neither `rust-toolchain.toml` nor
+`.cargo/config.toml` applies, so they use the stable toolchain and LLVM and restore their
+own `correctness` Cargo cache (saved on main by browsers shard 2/4); the test shards' cache
+holds nightly artifacts.
 
 Test and correctness jobs restore the seed cache entry by its exact key, the same
 immutable entry `Rust seeds` validates in that run; on a miss they build and validate

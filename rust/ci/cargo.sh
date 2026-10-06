@@ -17,8 +17,8 @@ if [[ -z "${CARGO_HOME:-}" ]]; then
   install -m 644 -- "$repo/rust/ci/cargo-config.toml" "$cargo_home/config.toml"
 fi
 docker run --rm --name "${RUST_CI_CONTAINER_PREFIX:-campfire-ci}-cargo-$$" --user "$(id -u):$(id -g)" \
-  --volume "$repo:$repo" --volume "$repo:/src" --volume "$scratch:/ci-tmp" --workdir "$repo/rust" \
-  --env HOME=/ci-tmp --env TMPDIR=/ci-tmp \
+  --volume "$repo:$repo" --volume "$repo:/src" --volume "$scratch:/ci-tmp" --workdir "${RUST_CI_WORKDIR:-$repo/rust}" \
+  --env HOME=/ci-tmp --env TMPDIR=/ci-tmp ${RUSTUP_TOOLCHAIN:+--env RUSTUP_TOOLCHAIN} \
   --env CI \
   --env CARGO_HOME="$cargo_home" \
   --env CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$repo/rust/target}" \

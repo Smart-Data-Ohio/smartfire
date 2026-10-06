@@ -13,7 +13,7 @@ environment = dict(os.environ, CARGO_BUILD_JOBS="2", TMPDIR=str(ROOT / ".scratch
 try:
     assert original.count(before) == 1
     path.write_text(original.replace(before, after, 1))
-    result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", "huddle_ring_policy_seam_test", "--", "--test-threads=8"], cwd=ROOT, env=environment, capture_output=True, text=True)
+    result = subprocess.run(["cargo", "test", "--locked", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", "huddle_ring_policy_seam_test", "--", "--test-threads=8"], cwd=ROOT, env=environment, capture_output=True, text=True)
     output = result.stdout + result.stderr
     (ROOT / ".scratch/ring-discrimination-detail.log").write_text(output)
     summary = next((s for s in re.findall(r"^test result: FAILED\..*$", output, re.M) if "8 failed;" in s), None)
