@@ -1,7 +1,13 @@
 {
   "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
-  "about": "The pinned Rails system-test declarations parity/system/drive-*.test.mjs port, one per Rust test in crates/campfire/src/controllers/drive_browser_tests.rs.",
+  "about": "The pinned Rails system-test declarations parity/system/{drive-*,events}.test.mjs port, one per Rust test in crates/campfire/src/controllers/drive_browser_tests.rs.",
   "records": [
+    {
+      "id": "WS14e-101",
+      "file": "test/system/events_test.rb",
+      "line": 102,
+      "title": "scheduling an event announces it in the room with a card members respond from"
+    },
     {
       "id": "WS14g-224",
       "file": "test/system/drive_attachments_test.rb",

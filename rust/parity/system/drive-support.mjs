@@ -181,9 +181,11 @@ export class Capybara {
   async clickButton(name,{wait}={}) {await (await this.named('button',name,{disabled:false,wait})).click();}
   async clickLink(name) {await (await this.named('link',name)).click();}
   async findField(name,options={}) {return this.named('field',name,{disabled:false,...options});}
-  // Selenium's set on a text field: select the current value, then type over it.
+  // Selenium's set on a text field: select the current value, then type over it. On date and
+  // time inputs a Rails string is timeable, so Capybara sets the value by script instead.
   async fillIn(name,value) {
     const field=await this.findField(name);
+    if(['date','time','datetime-local'].includes(await field.evaluate(element=>element.type))) return field.fill(value);
     await field.focus();
     await field.evaluate(element=>element.select());
     await field.pressSequentially(value);

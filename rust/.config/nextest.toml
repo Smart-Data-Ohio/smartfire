@@ -24,7 +24,7 @@ test-group = "browser"
 
 [[profile.ci.overrides]]
 # Each Drive declaration runs its own app and a pinned Chromium container.
-filter = 'package(campfire) & test(/^controllers::drive_browser_tests::drive_browser_ws14g_/)'
+filter = 'package(campfire) & test(/^controllers::drive_browser_tests::drive_browser_ws14/)'
 threads-required = 2
 
 [[profile.ci.overrides]]

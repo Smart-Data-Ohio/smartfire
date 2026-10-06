@@ -1,7 +1,8 @@
-//! Rust-only browser ports of the pinned Rails Drive and sudo system tests:
+//! Rust-only browser ports of the pinned Rails Drive, sudo and events system tests:
 //! `drive_attachments_test.rb`, `drive_link_previews_test.rb` and `sudo_mode_test.rb`
-//! (`parity/system/drive-sudo.test.mjs`) and `drive_share_test.rb`
-//! (`parity/system/drive-share.test.mjs`). Playwright drives the real router, assets,
+//! (`parity/system/drive-sudo.test.mjs`), `drive_share_test.rb`
+//! (`parity/system/drive-share.test.mjs`) and `events_test.rb`'s announcement card
+//! (`parity/system/events.test.mjs`, the one assertion HTTP can't make: the page stays put). Playwright drives the real router, assets,
 //! forms, Turbo and Cable in the pinned image; each declaration gets its own app on the
 //! Rails fixtures. Google's server-side API is an in-process fake that answers only the
 //! WebMock stubs a declaration registers. The `/__drive_browser__/` control routes stand
@@ -98,7 +99,19 @@ impl Drop for Container {
 /// `drive_share_test.rb` (WS14g-232..267) sets the Picker configuration and expects
 /// the browser alone to talk to Google.
 fn share_case(key: &str) -> bool {
-    (232..=267).contains(&key["WS14g-".len()..].parse::<u16>().unwrap())
+    key.strip_prefix("WS14g-")
+        .is_some_and(|number| (232..=267).contains(&number.parse::<u16>().unwrap()))
+}
+
+/// The node:test file that holds a declaration.
+fn declaration_file(key: &str) -> &'static str {
+    if key.starts_with("WS14e-") {
+        "events.test.mjs"
+    } else if share_case(key) {
+        "drive-share.test.mjs"
+    } else {
+        "drive-sudo.test.mjs"
+    }
 }
 
 pub(super) async fn browser(key: &str) {
@@ -168,11 +181,7 @@ pub(super) async fn browser(key: &str) {
         std::process::id(),
         key.to_lowercase()
     ));
-    let file = if share {
-        "drive-share.test.mjs"
-    } else {
-        "drive-sudo.test.mjs"
-    };
+    let file = declaration_file(key);
     let output = tokio::process::Command::new("docker")
         .args(["run", "--rm", "--init", "--name", &container.0])
         .args(["--network", "none", "--ipc", "host", "--cpus", "1"])
@@ -270,7 +279,8 @@ fn id(input: &Value, name: &str) -> i64 {
 
 /// The Ruby bodies' model calls, through the same domain functions the app uses.
 fn control_routes(app: &crate::app::App, fake: Arc<FakeGoogle>) -> axum::Router {
-    let (accounts, threads, messages, revocations, emails, users) = (
+    let (accounts, threads, messages, revocations, emails, users, events) = (
+        app.clone(),
         app.clone(),
         app.clone(),
         app.clone(),
@@ -394,6 +404,19 @@ fn control_routes(app: &crate::app::App, fake: Arc<FakeGoogle>) -> axum::Router 
                 Json(json!({"id": user}))
             }
         }))
+        // Event.find_by!(title:).reload.response_for(user)
+        .route("/__drive_browser__/events/response", get(move |Query(query): Query<std::collections::HashMap<String, String>>| {
+            let app = events.clone();
+            async move {
+                let response = app.db.read(move |c| {
+                    let title = &query["title"];
+                    let event: i64 = c.query_row("SELECT id FROM events WHERE title = ?", [title], |row| row.get(0))?;
+                    let user = query["user"].parse::<i64>().unwrap();
+                    campfire_db::models::CalendarEvent::find(c, event)?.response_for(c, Some(user))
+                }).await.unwrap();
+                Json(json!({"response": response}))
+            }
+        }))
 }
 
 /// Every in-scope pinned declaration has exactly one node declaration, under its Rails title,
@@ -401,10 +424,13 @@ fn control_routes(app: &crate::app::App, fake: Arc<FakeGoogle>) -> axum::Router 
 #[test]
 fn every_pinned_declaration_has_one_browser_test() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let expected: Vec<String> = (224..=230)
-        .chain(232..=267)
-        .chain([272])
-        .map(|number| format!("WS14g-{number}"))
+    let expected: Vec<String> = std::iter::once("WS14e-101".to_owned())
+        .chain(
+            (224..=230)
+                .chain(232..=267)
+                .chain([272])
+                .map(|number| format!("WS14g-{number}")),
+        )
         .collect();
     let manifest: Value = serde_json::from_str(
         &std::fs::read_to_string(root.join("parity/system/drive-declarations.json"))
@@ -423,7 +449,7 @@ fn every_pinned_declaration_has_one_browser_test() {
         })
         .collect();
     let mut declared = Vec::new();
-    for file in ["drive-sudo.test.mjs", "drive-share.test.mjs"] {
+    for file in ["events.test.mjs", "drive-sudo.test.mjs", "drive-share.test.mjs"] {
         let source = std::fs::read_to_string(root.join("parity/system").join(file)).unwrap();
         for call in source.lines().filter_map(|line| line.strip_prefix("test(")) {
             let quote = &call[..1];
@@ -438,6 +464,7 @@ fn every_pinned_declaration_has_one_browser_test() {
                 Some(&title),
                 "{file}: {key} keeps its Rails title"
             );
+            assert_eq!(declaration_file(key), file, "{key} runs from {file}");
             declared.push(key.to_owned());
         }
     }
@@ -445,10 +472,16 @@ fn every_pinned_declaration_has_one_browser_test() {
     assert_eq!(declared, expected);
     let functions: Vec<String> = include_str!("drive_browser_tests.rs")
         .lines()
-        .filter_map(|line| line.strip_prefix("async fn drive_browser_ws14g_"))
-        .map(|rest| format!("WS14g-{}", &rest[..3]))
+        .filter_map(|line| line.strip_prefix("async fn drive_browser_ws14"))
+        .map(|rest| format!("WS14{}-{}", &rest[..1], &rest[2..5]))
         .collect();
     assert_eq!(functions, expected);
+}
+
+#[tokio::test]
+#[ignore = "requires Node, Docker and the pinned Playwright image; run parity/system/drive"]
+async fn drive_browser_ws14e_101() {
+    browser("WS14e-101").await;
 }
 
 #[tokio::test]

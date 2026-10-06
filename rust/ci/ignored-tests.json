@@ -155,6 +155,12 @@
       "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
+      "test": "controllers::drive_browser_tests::drive_browser_ws14e_101"
+    },
+    {
+      "path": "crates/campfire/src/controllers/drive_browser_tests.rs",
+      "package": "campfire",
+      "binary": "campfire",
       "test": "controllers::drive_browser_tests::drive_browser_ws14g_224"
     },
     {
