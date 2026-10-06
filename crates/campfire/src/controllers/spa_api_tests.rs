@@ -772,7 +772,17 @@ async fn a_classic_post_reaches_the_sync_socket_and_an_api_post_too() {
     let posted = post(&mut david, HQ, "api-1", "From the API").await;
     let posted: api::MessageDTO = parse(&posted);
     let event = sync.until(created_in(HQ), |_| false).await;
-    assert_eq!(event.payload, api::SyncPayload::MessageCreated(posted));
+    let api::SyncPayload::MessageCreated(published) = event.payload else {
+        unreachable!("created_in matches message.created only")
+    };
+    // The same message; `cardsAsOf` is each read's own time.
+    assert_eq!(
+        api::MessageDTO {
+            cards_as_of: posted.cards_as_of.clone(),
+            ..published
+        },
+        posted
+    );
     server.abort();
 }
 
