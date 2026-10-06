@@ -1,4 +1,5 @@
 import type { KeyboardEvent, MouseEvent } from "react";
+import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { formatFull } from "../../lib/time.ts";
@@ -13,9 +14,6 @@ import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
 import { EVENT_ICON, EVENT_LABEL, EVENT_TONE, statusChip } from "./activity-format.ts";
-
-/** A state change an item can take (`PATCH /api/v1/activity/:id`). */
-export type ActivityAction = "read" | "unread" | "handled" | "unhandled";
 
 interface ActivityMenuItemsProps {
   readonly item: ActivityItem;

@@ -266,7 +266,6 @@ export function activityTarget(item: ActivityItem): ActivityTarget {
       return targetFromPath(destination.path);
     case "room":
     case "scheduled":
-    case "none":
       return destination;
   }
 }

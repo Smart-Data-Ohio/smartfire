@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type KeyboardEvent, type MouseEvent, useState } from "react";
+import type { ActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
@@ -24,7 +25,7 @@ import {
   activityTarget,
   emptyCopy,
 } from "./activity-format.ts";
-import { type ActivityAction, ActivityMenuItems, ActivityRow } from "./activity-row.tsx";
+import { ActivityMenuItems, ActivityRow } from "./activity-row.tsx";
 import "./activity.css";
 
 /** The inbox's state filter, in the header. */
