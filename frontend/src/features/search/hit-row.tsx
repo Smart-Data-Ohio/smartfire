@@ -178,6 +178,7 @@ export function HitRow({ hit, conversation, terms, now }: HitRowProps) {
         {html === "" ? null : (
           <div
             className="search-hit-body message-body"
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: the server's sanitized body; the marks are added as DOM nodes, never as markup text
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )}
