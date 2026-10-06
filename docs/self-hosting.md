@@ -224,7 +224,17 @@ All of Smartfire's state lives in the mounted volume, so upgrading is a matter o
 docker pull ghcr.io/smart-data-ohio/smartfire:main
 ```
 
-Any pending database migrations run automatically when the container boots.
+The server never migrates the database on boot: it refuses to start on a database whose schema version differs from its own.
+When a release brings migrations, take a backup (below), stop the container, and apply them with the new image before starting it again:
+
+```sh
+docker stop smartfire
+docker run --rm --volume smartfire:/rails/storage \
+  ghcr.io/smart-data-ohio/smartfire:main \
+  campfire db-migrate /rails/storage/db/production.sqlite3
+```
+
+Running it when there's nothing to apply is harmless.
 
 ### Backups
 

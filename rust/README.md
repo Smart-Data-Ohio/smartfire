@@ -98,19 +98,19 @@ run the consuming crates' tests. See [`AGENTS.md`](AGENTS.md) for layout and wor
 ## Building and deploying
 
 This repository's deployable Rust image is private in **GCP Artifact Registry**, tagged
-**`rust-git-<full Git SHA>`** and built for **`linux/amd64`** by
-[`publish-rust-image.yml`](../.github/workflows/publish-rust-image.yml). Pull requests build
-without publishing; main pushes publish or resolve an existing immutable tag. The registry image
-path comes from the tracked workflow's `GCP_IMAGE` repository variable.
+**`rust-git-<full Git SHA>`**, for **`linux/amd64`**.
+[`publish-image.yml`](../.github/workflows/publish-image.yml) builds it on every push to main
+(or resolves an existing immutable tag), along with an arm64 build on a native runner, and
+publishes both as a multi-arch image to GHCR (`ghcr.io/smart-data-ohio/smartfire`) for
+self-hosters. A manual dry run builds both without pushing. The registry image path comes from
+the `GCP_IMAGE` repository variable.
 
 Deploy the selected commit with
-[`deploy-gcp.yml`](../.github/workflows/deploy-gcp.yml), selecting **`runtime=rust`**.
-Rails remains the default runtime. The workflow resolves `rust-git-SHA` to a digest and uses the
+[`deploy-gcp.yml`](../.github/workflows/deploy-gcp.yml). The workflow resolves `rust-git-SHA` to a digest and uses the
 common backup, freeze, rehearsal and cutover path in
-[`deploy/gcp/campfire-release.sh`](../deploy/gcp/campfire-release.sh). Production Rust deployment
-also checks for a successful Rust CI run for that commit. An image build or workflow definition
+[`deploy/gcp/campfire-release.sh`](../deploy/gcp/campfire-release.sh). Production deployment
+also requires a successful `Rust port` run for that commit. An image build or workflow definition
 does not establish that a candidate has completed a production-copy rehearsal.
-The upstream GHCR `latest`/version/`main` images and arm64 recipe are historical upstream artifacts.
 See [`deploy/README.md`](../deploy/README.md) for the release procedure.
 
 The image runs one `campfire` executable with libvips and ffmpeg, replacing Ruby/Puma,

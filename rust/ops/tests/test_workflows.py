@@ -102,14 +102,26 @@ class WorkflowTest(unittest.TestCase):
         print("WORKFLOW GATE: rust.yml push/schedule success with its 'Rust port' aggregate is the single gate")
 
     def test_image_workflow_publishes_from_main_only_with_pinned_actions(self):
-        image = yaml_json((ROOT / ".github/workflows/publish-rust-image.yml").read_text())
+        image = yaml_json((ROOT / ".github/workflows/publish-image.yml").read_text())
         on = image.get("on", image.get("true"))
-        self.assertEqual(set(on), {"push"})
+        self.assertEqual(set(on), {"push", "workflow_dispatch"})
         self.assertEqual(on["push"]["branches"], ["main"])
-        self.assertEqual(image["jobs"]["publish"]["if"].strip(), "github.event_name == 'push' && github.ref == 'refs/heads/main'")
+        self.assertIs(on["workflow_dispatch"]["inputs"]["dry_run"]["default"], True)
+        registry = image["jobs"]["artifact-registry"]
+        self.assertEqual(registry["if"].strip(),
+            "${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}")
+        plan = next(step["run"] for step in registry["steps"] if step.get("id") == "plan")
+        self.assertIn('tag="rust-git-${SHA}"', plan)
+        copy = next(step["run"] for step in registry["steps"] if "imagetools create" in step.get("run", ""))
+        self.assertIn("--prefer-index=false", copy)
+        build = next(step["with"] for step in image["jobs"]["build"]["steps"]
+                     if step.get("uses", "").startswith("docker/build-push-action@"))
+        self.assertEqual((build["context"], build["file"]), ("rust", "rust/Dockerfile"))
+        self.assertIn("GIT_REVISION=${{ github.sha }}", build["build-args"])
+        self.assertFalse(build["provenance"])
         for workflow in [image, yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())]:
             self.assertGreater(audit_actions(workflow), 0)
-        print("WORKFLOW ACTIONS: all third-party actions pinned; images publish from main pushes only")
+        print("WORKFLOW ACTIONS: all third-party actions pinned; rust-git-<sha> publishes from main pushes only")
 
     def test_action_audit_rejects_unpinned_references(self):
         with self.assertRaises(ValueError):

@@ -9,7 +9,7 @@ Two GitHub workflows drive it:
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| [`publish-rust-image.yml`](../../.github/workflows/publish-rust-image.yml) | push to `main` touching the image's inputs | Builds the Rust image for `linux/amd64` and pushes `rust-git-<full sha>` to Artifact Registry, then attests provenance. |
+| [`publish-image.yml`](../../.github/workflows/publish-image.yml) | push to `main`, push `v*` tags, manual (dry run by default) | Builds the Rust image for `linux/amd64` and `linux/arm64` on native runners. On a push to `main`, copies the amd64 manifest by digest to Artifact Registry as `rust-git-<full sha>` and attests provenance; it also publishes the multi-arch image to GHCR. |
 | [`deploy-gcp.yml`](../../.github/workflows/deploy-gcp.yml) | manual only | Production only from `main`. Requires a successful `rust.yml` push or scheduled run (with its `Rust port` job) for the revision, resolves `rust-git-<sha>` to a digest and runs `campfire-release.sh` on the app VM through an IAP SSH tunnel. |
 
 Production runs the Rust port. The release script only moves one Rust image (label
@@ -129,8 +129,8 @@ Run its local checks with
 
 ## Repository tags are immutable
 
-Artifact Registry rejects moving an existing tag. `publish-rust-image.yml` therefore
-looks the tag up first: if `rust-git-<sha>` already exists it skips the build and resolves
+Artifact Registry rejects moving an existing tag. `publish-image.yml` therefore
+looks the tag up first: if `rust-git-<sha>` already exists it skips the copy and resolves
 the published digest, so re-running the workflow for an already-released revision is a
 no-op rather than a failure. A lookup that fails for any reason *other* than "not
 found" — auth, network, permissions — fails the run instead of rebuilding blindly into
@@ -393,8 +393,8 @@ snapshot stops being a complete checkpoint.
 
 ## Running a release
 
-1. Merge to `main`. `publish-rust-image.yml` publishes `rust-git-<sha>` when the
-   push touches the image's inputs; deploy a sha that has that tag.
+1. Merge to `main`. `publish-image.yml` publishes `rust-git-<sha>` for every push;
+   deploy a sha that has that tag.
 2. There is no staging host: the `validation` environment currently falls back to the
    production VM, so don't use it. Rehearse locally instead: `rust/ops/tests` and, for
    a release that ships migrations, the migration from the deployed schema.
