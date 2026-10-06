@@ -118,7 +118,7 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
     // Multer stops at the MIME boundary, which may precede the HTTP body's end. Keep the
     // limited stream here so even bytes multer buffers or leaves unread count toward the cap.
     let mut stream = Body::new(http_body_util::Limited::new(body, limit)).into_data_stream();
-    let mut multipart = multer::Multipart::new(&mut stream, boundary);
+    let mut multipart = multer::Multipart::new(one_chunk_per_poll(&mut stream), boundary);
     let mut pairs = Vec::new();
     let mut parts = 0;
     let mut files = 0;
@@ -188,6 +188,24 @@ async fn parse_multipart(body: Body, boundary: String, limit: Option<usize>, pol
         }
     }
     Ok(ParsedBody { raw: Bytes::new(), params })
+}
+
+/// Multer 3.1 looks for the first boundary, polls the stream again if it isn't buffered yet, and
+/// calls the stream incomplete if that poll reached its end, without searching the bytes the same
+/// poll appended. Whether a body's last bytes and its end land in one poll depends on timing (a
+/// spooled file's blocking reads, a client's packets), so the same body could parse or be a 400.
+/// Pausing after each chunk keeps a chunk and the end of the stream out of a single poll.
+fn one_chunk_per_poll<S: futures_util::Stream + Unpin>(mut stream: S) -> impl futures_util::Stream<Item = S::Item> {
+    let mut paused = false;
+    futures_util::stream::poll_fn(move |cx| {
+        if std::mem::take(&mut paused) {
+            cx.waker().wake_by_ref();
+            return std::task::Poll::Pending;
+        }
+        let item = std::task::ready!(stream.poll_next_unpin(cx));
+        paused = item.is_some();
+        std::task::Poll::Ready(item)
+    })
 }
 
 /// Read an unparsed body's entire stream before entering the action, as Puma does. Spool it
@@ -447,6 +465,35 @@ mod tests {
         assert_eq!(avatar.size, 7);
         assert_eq!(avatar.read().unwrap(), b"PNGDATA");
         assert_eq!(params.to_json()["tags"], serde_json::json!(["a", "b"]));
+    }
+
+    /// A body whose first poll is pending, then delivers every byte and its end together, as a
+    /// spooled file's blocking reads (or a fast client) can between two polls.
+    fn late_body(bytes: Vec<u8>) -> Body {
+        let mut chunk = Some(Bytes::from(bytes));
+        let mut waited = false;
+        Body::from_stream(futures_util::stream::poll_fn(move |cx| {
+            if !std::mem::replace(&mut waited, true) {
+                cx.waker().wake_by_ref();
+                return std::task::Poll::Pending;
+            }
+            std::task::Poll::Ready(chunk.take().map(Ok::<_, std::io::Error>))
+        }))
+    }
+
+    #[tokio::test]
+    async fn multipart_parses_a_body_that_arrives_whole_after_a_pending_poll() {
+        let body = multipart_body("B", &[(r#"Content-Disposition: form-data; name="a""#, "x")]);
+        let mut headers = HeaderMap::new();
+        headers.insert(header::CONTENT_TYPE, "multipart/form-data; boundary=B".parse().unwrap());
+        let parsed = parse(&Method::POST, &headers, late_body(body), None).await.unwrap();
+        assert_eq!(parsed.params.unwrap().str("a"), Some("x"));
+
+        // DiskController's file-count limit stays a limit, not a parse error.
+        let part = "--B\r\nContent-Disposition: form-data; name=\"a[]\"; filename=\"\"\r\n\r\nx\r\n";
+        let body = format!("{}--B--\r\n", part.repeat(MULTIPART_FILE_LIMIT + 1)).into_bytes();
+        let parsed = parse_multipart(late_body(body), "B".into(), None, MultipartPolicy::Disk).await.unwrap();
+        assert!(matches!(parsed.params, Err(ParamError::Limit(_))), "{:?}", parsed.params);
     }
 
     #[tokio::test]
