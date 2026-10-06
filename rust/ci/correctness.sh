@@ -2,7 +2,7 @@
 set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$repo"
-suite=${1:?Expected acme, browsers, livekit, messaging, or agents-ui}
+suite=${1:?Expected acme, browsers, drive, livekit, messaging, or agents-ui}
 # CI splits the longest suites across parallel jobs. CORRECTNESS_SHARD=K/N runs one
 # deterministic slice; CORRECTNESS_PART selects messaging's behaviour cases or its
 # original WS14/WS15 declarations (default: both). rust/ci/correctness_gate.py then
@@ -73,6 +73,12 @@ run_suite() {
       cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire
       export WS11UI_BROWSER_BINARY="$repo/rust/target/debug/campfire"
       export CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499
+      ignored
+      ;;
+    drive)
+      # Each declaration boots its own app in the test process and drives it from the pinned
+      # Playwright image (WS13_PLAYWRIGHT_IMAGE).
+      browser_images
       ignored
       ;;
     livekit)

@@ -407,7 +407,7 @@ fn every_pinned_declaration_has_one_browser_test() {
         .map(|number| format!("WS14g-{number}"))
         .collect();
     let manifest: Value = serde_json::from_str(
-        &std::fs::read_to_string(root.join("reference-tools/users/original_browser/manifest.json"))
+        &std::fs::read_to_string(root.join("parity/system/drive-declarations.json"))
             .unwrap(),
     )
     .unwrap();

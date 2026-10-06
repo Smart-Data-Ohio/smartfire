@@ -761,29 +761,25 @@ jobs:
           path: rust/target/ci-receipts/
           if-no-files-found: error
 
-  # The pinned original WS14/WS15 declarations (ignored-tests.json "messaging").
-  correctness-messaging-originals:
-    name: Rust correctness (messaging originals ${{ matrix.shard }})
+  # The Drive attachment, share and sudo browser declarations (ignored-tests.json "drive"), each
+  # on its own app with pinned Chromium.
+  correctness-drive:
+    name: Rust correctness (drive browsers)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        suite: [messaging]
-        shard: ["1/2", "2/2"]
-    env:
-      CORRECTNESS_PART: originals
+        suite: [drive]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
@@ -791,29 +787,22 @@ jobs:
           cargo-cache: correctness
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
-      - name: Permit native browser namespaces
-        run: |
-          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
-            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
-            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
-          fi
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}
-          CORRECTNESS_SHARD: ${{ matrix.shard }}
         run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
       - name: Retain correctness receipts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-correctness-messaging-originals-${{ strategy.job-index }}
+          name: rust-correctness-drive
           path: rust/target/ci-receipts/
           if-no-files-found: error
 
   correctness-gate:
     name: Rust correctness
-    needs: [seeds, correctness, correctness-browsers, messaging-hosts, correctness-messaging, correctness-messaging-originals]
+    needs: [seeds, correctness, correctness-browsers, correctness-drive, messaging-hosts, correctness-messaging]
     if: ${{ always() && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:
