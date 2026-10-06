@@ -87,6 +87,27 @@ class CheckTests(unittest.TestCase):
         migrations.write_text("".join(f"{v}\n" for v in migrations.read_text().split() if v != latest))
         self.assert_rejected(f"has migrations this build doesn't know: {latest}")
 
+    def test_migrate_runs_db_migrate_on_each_seed_then_records_them(self):
+        # A stand-in for `campfire db-migrate DATABASE` that applies one new migration.
+        campfire = self.root / "campfire"
+        campfire.write_text("#!/usr/bin/env python3\n"
+                            "import sqlite3, sys\n"
+                            "assert sys.argv[1] == 'db-migrate', sys.argv\n"
+                            "conn = sqlite3.connect(sys.argv[2])\n"
+                            "conn.execute(\"INSERT INTO schema_migrations (version) VALUES ('29991231000000')\")\n"
+                            "conn.commit()\n")
+        campfire.chmod(0o755)
+        with (self.root / "migrations").open("a") as migrations:
+            migrations.write("29991231000000\n")
+        self.assert_rejected("missing migrations 29991231000000")
+        with contextlib.redirect_stdout(io.StringIO()):
+            frozen_seeds.migrate(campfire)
+            frozen_seeds.check()
+        for seed in frozen_seeds.SEEDS:
+            database = self.root / "frozen" / seed / frozen_seeds.DATABASE
+            self.assertIn("29991231000000", frozen_seeds.versions(database))
+            self.assertEqual(sorted(p.name for p in database.parent.iterdir()), [database.name])
+
 
 if __name__ == "__main__":
     unittest.main()
