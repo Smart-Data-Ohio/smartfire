@@ -47,7 +47,7 @@ own copies:
 | `crates/assets/build.rs` | `CAMPFIRE_REFERENCE`, else `rust/web`; reads `app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`, `config/initializers/assets.rb` |
 | Tests | `campfire_db::fixtures`: `reference_root()` is `rust/web`, `reference_dir()` is `rust/fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")` maps a Rails path to the port's copy (all `CAMPFIRE_REFERENCE` instead, when set at compile time) |
 | `Dockerfile` | copies `web/`'s inputs from its own context (`docker build .` from `rust/`) |
-| `parity/bin/reference`, `parity/bin/candidate`, `reference-tools/db/*`, `crates/assets/script/revendor` (they run Rails; nothing in CI does) | `REFERENCE_ROOT=${CAMPFIRE_REFERENCE:-rust/..}` |
+| `parity/bin/reference`, `parity/bin/candidate`, `crates/assets/script/revendor` (they run Rails; nothing in CI does) | `REFERENCE_ROOT=${CAMPFIRE_REFERENCE:-rust/..}` |
 | `parity/capture` (TypeScript) | `REFERENCE_DIR`; `reference/...` paths in `screens.yml` resolve against it (`repoPath`) |
 
 `reference/` in comments, docs and `screens.yml` means the reference app's root. There's no
@@ -69,7 +69,7 @@ submodule and no `rust/reference` symlink: a `rust/reference -> ..` link would m
 | `crates/views` | `campfire_views` | Askama templates (at the ERB file's relative path) and view helpers |
 | `crates/campfire` | `campfire` (bin) | Controllers, router wiring, channels, jobs, integrations |
 | `parity/` | — | Playwright parity harness, screen inventory, reference Docker setup |
-| `reference-tools/` | — | The browser and behaviour harnesses the correctness suites run against Rust; `db/` still holds the Rails schema tools |
+| `reference-tools/` | — | The browser and behaviour harnesses the correctness suites run against Rust |
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 
@@ -102,11 +102,15 @@ correctness selectors and explicit compiled utility list; source checks cover
 inactive conditional attributes and the tools-only host. See
 `ci/README.md` for commands, pins, and job names. All builds/tests use at most four slots.
 
-`crates/db/src/schema.sql` (with `schema_migrations.txt`, `schema_sha1.txt` and
-`schema_sequences.txt`) is generated from the Rails app by `reference-tools/db/regenerate-schema.sh`;
-rerun it after a Rails migration (`--check` verifies). `reference-tools/db/check-migration-replay.sh`
-checks that replaying every migration from empty (how production databases were built) gives the
-same schema. The Ruby differential and rollback comparisons are retired; their recorded results
+Schema changes are SQL migrations in `crates/db/migrations/<VERSION>_<name>.sql` (a 14-digit UTC
+timestamp after the last Rails migration, 20261003180000), compiled into the binary and applied only
+by `campfire db-migrate DATABASE`, which the release script runs; boot never migrates. After adding
+one, regenerate `crates/db/src/schema.sql`, `schema_migrations.txt` and `schema_sequences.txt` with
+`CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files` (the test
+fails while they're stale), and migrate the committed test seeds with
+`python3 parity/bin/frozen-seeds migrate target/debug/campfire`. `crates/db/baseline/` is the frozen
+Rails-era schema those start from, generated from the Rails app before it was removed. The Ruby
+differential and rollback comparisons are retired; their recorded results
 (`crates/db/src/tests/message_save_touches.json`, the differential test's expected rows) are frozen.
 
 ## Working rules

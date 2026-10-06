@@ -6,26 +6,40 @@
 # the app VM and is invoked one phase at a time by .github/workflows/deploy-gcp.yml
 # so the runner can interleave a boot-disk snapshot between `freeze` and `cutover`.
 #
+# Both the running image and the candidate are the Rust port (image label
+# net.smartdata.campfire.runtime=rust); anything else is refused at preflight.
+# The app never migrates on boot: it refuses a database that has not run exactly
+# its own migrations. Schema changes are an explicit step this script owns,
+# `campfire db-migrate`, run with the candidate image.
+#
 # The ordering matters and is deliberate. Everything that could discover a
 # migration problem happens while writes are frozen and BEFORE the live
 # application is touched: the candidate image migrates a *copy* of the frozen
-# database inside a throwaway, network-isolated container. Once the new image is
-# serving traffic it may have accepted writes, so the checks that run after the
-# cutover are read-only. They can fail the release loudly, but they never
-# restore a database over accepted writes.
+# database inside a throwaway, network-isolated container, and the result must
+# pass the candidate's own schema check and the additive verifier. Only then
+# does the cutover migrate the live database, with the app still stopped and
+# the exact pre-migration bytes kept aside, so a cutover that never serves can
+# put them back. Once the new image is serving traffic it may have accepted
+# writes, so the checks that run after the cutover are read-only. They can fail
+# the release loudly, but they never restore a database over accepted writes.
 #
 # Phases:
 #   prepare-host  ensure the host itself is fit to run a release: a swap file of
 #              the configured size and vm.swappiness. Needs no other phase's
 #              state and touches neither the application nor the registry.
-#   preflight  discover the app, check capacity, record the feed timer state,
-#              authenticate to the registry and pull the exact digest.
+#   preflight  discover the app, require Rust on both sides, check capacity,
+#              record the feed timer state, authenticate to the registry and
+#              pull the exact digest.
 #   freeze     pause the feed timer, snapshot the database through the SQLite
-#              backup API, stop the app, archive everything, then rehearse the
-#              migration on a copy with the candidate image.
-#   cutover    image-only `once update`, health wait, then read-only checks.
-#   rollback   return to the previous image, and restore the frozen database
-#              ONLY if the live database is provably untouched.
+#              backup API, stop the app, keep a byte-exact copy of the stopped
+#              database, archive everything, then rehearse the migration on a
+#              copy with the candidate image.
+#   cutover    `campfire db-migrate` on the live database with the candidate
+#              image (app still stopped), image-only `once update`, health
+#              wait, then read-only checks.
+#   rollback   return to the previous image. The database is put back to its
+#              frozen bytes ONLY when nothing but this release's migration
+#              touched it; otherwise it is left alone.
 #   finish     restore the feed timer, drop registry credentials, prune old
 #              release directories.
 #   logout     drop registry credentials only (used to end a dry run).
@@ -47,6 +61,11 @@ set -euo pipefail
 #                 that already completed. Off by default so a retry cannot
 #                 silently pair a new cutover with a stale backup.
 # EXPECTED_APP_HOST  when set, preflight refuses a VM serving a different host.
+# EXPECTED_GIT_REVISION  the full commit SHA the candidate must have been built from
+#                    (deploy-gcp.yml passes the one it resolved). Preflight refuses a
+#                    candidate whose GIT_REVISION differs, and refuses an empty value.
+# ALLOW_UNVERIFIED_REVISION  1 lets an operator skip that check by hand; preflight
+#                    records it, and freeze and cutover then need it set again.
 # REGISTRY_HOST   registry to authenticate against.
 # TIMER_UNIT      feed timer to pause and restore.
 # SERVICE_UNIT    the oneshot service the timer activates; derived from
@@ -73,8 +92,8 @@ set -euo pipefail
 # SYSCTL_FILE     sysctl drop-in `prepare-host` owns.
 # MIN_FREE_AFTER_SWAP_MB  free space that must remain after the swap file exists.
 # CAMPFIRE_RELEASE_SIMULATE_FAILURE  validation only. `1` aborts the cutover
-#                 before `once update`, so the database is provably untouched
-#                 and the rollback can complete. `2` lets the app go healthy and
+#                 before the live migration and `once update`, so the database
+#                 is provably untouched and the rollback can complete. `2` lets the app go healthy and
 #                 then forces a read-only check to fail, which is the case where
 #                 the rollback must refuse to touch the database.
 
@@ -85,6 +104,8 @@ REGISTRY_HOST="${REGISTRY_HOST:-us-central1-docker.pkg.dev}"
 TIMER_UNIT="${TIMER_UNIT:-campfire-open-roles.timer}"
 SERVICE_UNIT="${SERVICE_UNIT:-${TIMER_UNIT%.timer}.service}"
 EXPECTED_APP_HOST="${EXPECTED_APP_HOST:-}"
+EXPECTED_GIT_REVISION="${EXPECTED_GIT_REVISION:-}"
+ALLOW_UNVERIFIED_REVISION="${ALLOW_UNVERIFIED_REVISION:-0}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-300}"
 FEED_DRAIN_TIMEOUT="${FEED_DRAIN_TIMEOUT:-300}"
 MIN_FREE_DISK_MB="${MIN_FREE_DISK_MB:-3072}"
@@ -111,7 +132,7 @@ LOCK_FILE="${LOCK_FILE:-/var/lock/campfire-release.lock}"
 EXIT_UNHEALTHY=10
 EXIT_CHECKS_FAILED=20
 EXIT_ROLLBACK_REFUSED=30
-CANDIDATE_RUNTIME=rails
+RUNTIME_LABEL=net.smartdata.campfire.runtime
 
 log()  { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 warn() { printf '[%s] WARNING: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
@@ -243,39 +264,37 @@ image_git_revision() {
     | sed -n 's/^GIT_REVISION=//p' | head -n1
 }
 
-# Image metadata is the authority. Existing, unlabelled Rails images retain their path.
-image_runtime() {
-  local runtime
-  runtime="$(docker image inspect "$1" --format '{{index .Config.Labels "net.smartdata.campfire.runtime"}}')" \
-    || die "could not inspect runtime label on $1"
-  case "$runtime" in
-    rust) printf rust ;;
-    rails|''|'<no value>') printf rails ;;
-    *) die "unknown Campfire runtime label '$runtime' on $1" ;;
-  esac
+# Image metadata is the authority. This script only moves between Rust images:
+# a Rails image (labelled rails, or unlabelled) would migrate on boot and has
+# no `campfire` binary, and Rails is never redeployed.
+require_rust_image() {
+  local image="$1" role="$2" runtime
+  runtime="$(docker image inspect "$image" --format "{{index .Config.Labels \"$RUNTIME_LABEL\"}}")" \
+    || die "could not inspect the runtime label on the $role image $image"
+  [ "$runtime" = rust ] \
+    || die "the $role image $image is not a Rust image ($RUNTIME_LABEL='$runtime'); this script only releases Rust to Rust"
 }
 
-# Runtime metadata is validated before freeze, never queried during later phases.
-recorded_runtime() {
-  local field="$1" runtime preflight target_image
+# freeze and cutover act on the candidate preflight vetted. deploy-gcp.yml
+# resolves repository@digest once and passes the same string to every phase via
+# sudo env IMAGE_REF, so exact equality binds them without another Docker
+# lookup; manual runs must keep that reference unchanged across phases.
+require_preflight_target() {
+  local preflight target_image
   preflight="$(state_path preflight-result.json)"
-  if [ "$(read_json_field "$preflight" 'has("target_runtime")')" = true ]; then
-    target_image="$(read_json_field "$preflight" '.target_image')"
-    # deploy-gcp.yml resolves repository@digest once and passes the same output
-    # string to preflight, freeze and cutover via sudo env IMAGE_REF on the VM.
-    # Exact equality binds the metadata without a new Docker lookup; callers
-    # must keep that reference unchanged across phases, including manual runs.
-    [ "$target_image" = "$IMAGE_REF" ] \
-      || die "preflight target image '$target_image' does not match IMAGE_REF '$IMAGE_REF'; refusing recorded runtime (run preflight for this candidate)"
+  target_image="$(read_json_field "$preflight" '.target_image')"
+  [ "$target_image" = "$IMAGE_REF" ] \
+    || die "preflight target image '$target_image' does not match IMAGE_REF '$IMAGE_REF' (run preflight for this candidate)"
+  [ "$(read_json_field "$preflight" '[.current_runtime, .target_runtime] | map(. // "unrecorded") | join("-")')" = rust-rust ] \
+    || die "preflight did not record a Rust-to-Rust release in $preflight (run preflight again with this script)"
+  # Verified means preflight compared a non-empty requested commit with the
+  # candidate's GIT_REVISION and recorded them equal.
+  if [ "$(jq -r '(.revision_verified == true) and ((.expected_revision // "") != "")
+                 and (.expected_revision == .target_revision)' "$preflight" 2>/dev/null || echo false)" != true ]; then
+    [ "$ALLOW_UNVERIFIED_REVISION" = 1 ] \
+      || die "preflight did not verify the candidate's GIT_REVISION against a requested commit (run preflight with EXPECTED_GIT_REVISION, or set ALLOW_UNVERIFIED_REVISION=1 by hand)"
+    warn "the candidate's commit was not verified in preflight; continuing because ALLOW_UNVERIFIED_REVISION=1"
   fi
-  # Records without runtime fields came from the pre-change script, which only
-  # supported Rails releases. Their runtime is therefore Rails, not a guess.
-  runtime="$(read_json_field "$preflight" \
-    "if has(\"$field\") then .${field} else \"rails\" end")"
-  case "$runtime" in
-    rails|rust) printf '%s' "$runtime" ;;
-    *) die "unknown recorded Campfire runtime '$runtime' for $field" ;;
-  esac
 }
 
 # --------------------------------------------------------------- state I/O ---
@@ -347,17 +366,110 @@ sha256_of() { sha256sum "$1" | awk '{print $1}'; }
 # snapshot in before.sqlite3, which is a logically equivalent but physically
 # different file.
 live_database_fingerprint() {
-  local mountpoint="$1" db="$1/db/production.sqlite3" part
+  database_pair_fingerprint "$1/db/production.sqlite3" "$1/db/production.sqlite3-wal"
+}
+
+# The same fingerprint for a database and write-ahead log at any paths, so a
+# staged pair can be checked before it replaces the live one. A file that can't
+# be read hashes as "unreadable", which matches no real fingerprint.
+database_pair_fingerprint() {
+  local db="$1" wal="$2" hash
   [ -f "$db" ] || { printf 'missing'; return 0; }
   {
-    for part in "$db" "$db-wal"; do
-      if [ -f "$part" ]; then
-        printf '%s %s\n' "$(basename "$part")" "$(sha256_of "$part")"
-      else
-        printf '%s absent\n' "$(basename "$part")"
-      fi
-    done
+    hash="$(sha256_of "$db")" && [ -n "$hash" ] || hash=unreadable
+    printf 'production.sqlite3 %s\n' "$hash"
+    if [ -f "$wal" ]; then
+      hash="$(sha256_of "$wal")" && [ -n "$hash" ] || hash=unreadable
+      printf 'production.sqlite3-wal %s\n' "$hash"
+    else
+      printf 'production.sqlite3-wal absent\n'
+    fi
   } | sha256sum | awk '{print $1}'
+}
+
+# The stopped database's own files, byte for byte, beside the release state.
+# frozen-live is what the rehearsal migrates a copy of, and what a rollback puts
+# back when nothing but this release's migration and the new image's own
+# bookkeeping touched the live database. migrated-live is the live database as
+# the cutover's migration left it, which is what a rollback compares against.
+# The -shm index is not kept: SQLite rebuilds it from the log.
+FROZEN_DB_DIR_NAME="frozen-live"
+MIGRATED_DB_DIR_NAME="migrated-live"
+
+# Every function here returns 1 on any failed step, explicitly: callers use
+# them in `if`/`||` conditions, where bash ignores `set -e` for the whole
+# function body.
+keep_database_copy() {
+  local mountpoint="$1" fingerprint="$2" name="$3" dir part
+  dir="$(state_path "$name")"
+  rm -rf "$dir" || return 1
+  install -d -m 0700 "$dir" "$dir/db" || return 1
+  for part in production.sqlite3 production.sqlite3-wal; do
+    if [ -f "$mountpoint/db/$part" ]; then
+      cp -p "$mountpoint/db/$part" "$dir/db/$part" || return 1
+    fi
+  done
+  sync "$dir/db" || return 1
+  [ "$(live_database_fingerprint "$dir")" = "$fingerprint" ] || return 1
+  log "kept a byte-exact copy of the stopped database in $dir"
+}
+
+capture_frozen_database() {
+  keep_database_copy "$1" "$2" "$FROZEN_DB_DIR_NAME" \
+    || die "freeze: the byte-exact copy of the stopped database does not match its fingerprint"
+}
+
+# Only ever called with the application stopped and the live database proven to
+# be exactly what this release's migration left (or what it found).
+#
+# The frozen pair is first staged next to the live database (same filesystem,
+# so the final moves are renames), fingerprinted and synced. Nothing live is
+# removed or replaced until the staged copy is proven whole, so a full disk or
+# a failed copy leaves the live database exactly as it was.
+restore_frozen_database() {
+  local mountpoint="$1" fingerprint="$2" dir db="$1/db/production.sqlite3" stage stage_wal
+  dir="$(state_path "$FROZEN_DB_DIR_NAME")"
+  stage="$db.release-restore"
+  stage_wal="$db-wal.release-restore"
+  [ "$(live_database_fingerprint "$dir")" = "$fingerprint" ] \
+    || { warn "rollback: the kept copy in $dir no longer matches the frozen fingerprint"; return 1; }
+
+  rm -f "$stage" "$stage_wal" \
+    || { warn "rollback: could not clear the staging files next to $db"; return 1; }
+  if ! cp -p "$dir/db/production.sqlite3" "$stage"; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: could not stage the frozen database next to $db; the live database was not touched"
+    return 1
+  fi
+  if [ -f "$dir/db/production.sqlite3-wal" ] && ! cp -p "$dir/db/production.sqlite3-wal" "$stage_wal"; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: could not stage the frozen write-ahead log next to $db; the live database was not touched"
+    return 1
+  fi
+  if ! sync "$stage" || { [ -f "$stage_wal" ] && ! sync "$stage_wal"; }; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: could not sync the staged frozen database; the live database was not touched"
+    return 1
+  fi
+  if [ "$(database_pair_fingerprint "$stage" "$stage_wal")" != "$fingerprint" ]; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: the staged frozen database does not match the frozen fingerprint; the live database was not touched"
+    return 1
+  fi
+
+  # The live log goes first: the frozen main file must never meet the newer log.
+  rm -f "$db-wal" "$db-shm" \
+    || { warn "rollback: could not remove the live write-ahead log; the frozen copy is staged at $stage"; return 1; }
+  mv -f "$stage" "$db" \
+    || { warn "rollback: could not move the staged frozen database into place; it is at $stage, and the frozen copy in $dir"; return 1; }
+  if [ -f "$stage_wal" ]; then
+    mv -f "$stage_wal" "$db-wal" \
+      || { warn "rollback: could not move the staged write-ahead log into place; it is at $stage_wal, and the frozen copy in $dir"; return 1; }
+  fi
+  sync "$mountpoint/db" || { warn "rollback: could not sync $mountpoint/db"; return 1; }
+  [ "$(live_database_fingerprint "$mountpoint")" = "$fingerprint" ] \
+    || { warn "rollback: the restored database does not match the frozen fingerprint"; return 1; }
+  log "rollback: the live database is back to its frozen bytes ($fingerprint)"
 }
 
 # `prepare-backup` uses SQLite's backup API inside the running container, which
@@ -460,7 +572,8 @@ purge_volume_scratch() {
         "$mountpoint"/backups/release-*.sqlite3-shm \
         "$mountpoint"/rehearsal-*.sqlite3 \
         "$mountpoint"/rehearsal-*.sqlite3-wal \
-        "$mountpoint"/rehearsal-*.sqlite3-shm 2>/dev/null || true
+        "$mountpoint"/rehearsal-*.sqlite3-shm \
+        "$mountpoint"/db/*.release-restore 2>/dev/null || true
 }
 
 remove_scratch() {
@@ -959,7 +1072,7 @@ phase_preflight() {
   registry_login
   log "registry: pulling $IMAGE_REF"
   docker pull --quiet "$IMAGE_REF" >/dev/null
-  local pulled_arch pulled_os image_mb volume_mb target_runtime current_runtime
+  local pulled_arch pulled_os image_mb volume_mb db_mb target_runtime current_runtime
   pulled_arch="$(docker image inspect "$IMAGE_REF" --format '{{.Architecture}}')"
   pulled_os="$(docker image inspect "$IMAGE_REF" --format '{{.Os}}')"
   [ "$pulled_os/$pulled_arch" = "linux/amd64" ] \
@@ -968,19 +1081,43 @@ phase_preflight() {
 
   # Like the image validation above, inspection failure fails preflight before
   # anything is frozen. Preflight's existing inspections have no retry loop.
-  target_runtime="$(image_runtime "$IMAGE_REF")"
-  current_runtime="$(image_runtime "$current_image")"
+  require_rust_image "$IMAGE_REF" target
+  require_rust_image "$current_image" current
+  # The tag names a commit, but only the image's own GIT_REVISION (baked in by
+  # publish-rust-image.yml) proves which commit was built into it. Fails closed:
+  # no expected revision is a refusal, unless an operator explicitly opts out.
+  local built_revision revision_verified=false
+  built_revision="$(image_git_revision "$IMAGE_REF")"
+  if [ -n "$EXPECTED_GIT_REVISION" ]; then
+    [ "$built_revision" = "$EXPECTED_GIT_REVISION" ] \
+      || die "the candidate image was built from '${built_revision:-an unrecorded revision}', not the requested ${EXPECTED_GIT_REVISION}"
+    revision_verified=true
+    log "candidate image GIT_REVISION matches the requested ${EXPECTED_GIT_REVISION}"
+  elif [ "$ALLOW_UNVERIFIED_REVISION" = 1 ]; then
+    warn "EXPECTED_GIT_REVISION is empty and ALLOW_UNVERIFIED_REVISION=1: not checking which commit the candidate (GIT_REVISION '${built_revision:-unrecorded}') was built from"
+  else
+    die "EXPECTED_GIT_REVISION is empty: refusing a candidate whose commit nobody asked for (set ALLOW_UNVERIFIED_REVISION=1 to skip this check by hand)"
+  fi
+  target_runtime=rust
+  current_runtime=rust
 
   # Now that the real sizes are known, size the requirement properly: the
-  # storage volume is archived once and copied once more for the rehearsal.
+  # storage volume is archived once (the pre-release ONCE backup) and copied
+  # once more. At the peak the state directory holds seven copies of the
+  # database: before.sqlite3, frozen-live, the rehearsal's working copy, its
+  # backup-API snapshot, rehearsal-before, rehearsal-after and after.sqlite3.
+  # One more covers migrated-live and the rollback comparison copies made later.
+  # The live migration's write-ahead log grows inside the volume, on the Docker
+  # filesystem, and is counted there.
   image_mb=$(( $(docker image inspect "$IMAGE_REF" --format '{{.Size}}') / 1048576 ))
   volume_mb="$(du -sm "$mountpoint" | awk '{print $1}')"
+  db_mb="$(du -sm "$mountpoint/db" | awk '{print $1}')"
   local need_state_mb need_docker_mb state_fs docker_fs
-  need_state_mb=$(( volume_mb * 2 + 512 ))
-  need_docker_mb=$(( image_mb + 512 ))
+  need_state_mb=$(( volume_mb * 2 + db_mb * 8 + 512 ))
+  need_docker_mb=$(( image_mb + db_mb + 512 ))
   state_fs="$(df -P "$STATE_ROOT" | awk 'NR==2 {print $1}')"
   docker_fs="$(df -P /var/lib/docker | awk 'NR==2 {print $1}')"
-  log "capacity: volume ${volume_mb} MB, image ${image_mb} MB; need ${need_state_mb} MB on ${STATE_ROOT}, ${need_docker_mb} MB on /var/lib/docker"
+  log "capacity: volume ${volume_mb} MB, database ${db_mb} MB, image ${image_mb} MB; need ${need_state_mb} MB on ${STATE_ROOT}, ${need_docker_mb} MB on /var/lib/docker"
   if [ "$state_fs" = "$docker_fs" ]; then
     local need_total=$(( need_state_mb + need_docker_mb ))
     free_mb="$(df -Pm "$STATE_ROOT" | awk 'NR==2 {print $4}')"
@@ -1020,7 +1157,9 @@ phase_preflight() {
     --arg current_revision "$(image_git_revision "$current_image")" \
     --arg current_runtime "$current_runtime" \
     --arg target_image "$IMAGE_REF" \
-    --arg target_revision "$(image_git_revision "$IMAGE_REF")" \
+    --arg target_revision "$built_revision" \
+    --arg expected_revision "$EXPECTED_GIT_REVISION" \
+    --argjson revision_verified "$revision_verified" \
     --arg target_runtime "$target_runtime" \
     --arg once_version "$(once version 2>/dev/null || echo unknown)" \
     --argjson free_mb "$free_mb" \
@@ -1030,7 +1169,8 @@ phase_preflight() {
     '{phase:$phase, at:$at, release_label:$label, container:$container, app_host:$app_host,
       volume:$volume, volume_mountpoint:$mountpoint, current_image:$current_image,
       current_revision:$current_revision, current_runtime:$current_runtime, target_image:$target_image,
-      target_revision:$target_revision, target_runtime:$target_runtime, once_version:$once_version, free_disk_mb:$free_mb,
+      target_revision:$target_revision, expected_revision:$expected_revision,
+      revision_verified:$revision_verified, target_runtime:$target_runtime, once_version:$once_version, free_disk_mb:$free_mb,
       volume_mb:$volume_mb, image_mb:$image_mb, env_keys:$env_keys}' \
     | write_state preflight-result.json
 
@@ -1133,6 +1273,7 @@ phase_freeze() {
   local frozen_fingerprint
   frozen_fingerprint="$(live_database_fingerprint "$mountpoint")"
   log "freeze: live database fingerprint ${frozen_fingerprint}"
+  capture_frozen_database "$mountpoint" "$frozen_fingerprint"
 
   log "freeze: hashing uploaded files"
   hashes_json "$mountpoint/files" | write_state attachment-hashes-before.json
@@ -1166,7 +1307,7 @@ phase_freeze() {
     chmod 0600 "$(state_path before-host.tar.gz)"
   fi
 
-  rehearse_migration
+  rehearse_migration "$frozen_fingerprint"
 
   local once_sha host_sha db_sha
   once_sha="$(sha256_of "$(state_path before.once.tar.gz)")"
@@ -1204,34 +1345,38 @@ phase_freeze() {
   log "freeze: complete, writes are frozen and the migration has been rehearsed"
 }
 
-# Migrate a COPY of the frozen database with the candidate image, inside a
-# throwaway container with no network, then verify the migration was additive.
+# Migrate a COPY of the stopped database with the candidate image, inside a
+# throwaway container with no network, then verify the result: the candidate's
+# own schema check must accept it and the migration must have been additive.
 # This is deploy/README.md steps 4 and 5, and it happens before the live
-# application is touched so a bad migration never reaches production data.
+# application is touched so a bad migration never reaches production data. The
+# candidate's server is never booted on the copy: its job queue holds real work
+# that must only ever run once, in production.
 rehearse_migration() {
-  CANDIDATE_RUNTIME="$(recorded_runtime target_runtime)"
+  local fingerprint="$1"
   # A resumed run must not inherit a rehearsal performed against a different
-  # candidate: that would vouch for a migration nobody ran.
+  # candidate or a different database: that would vouch for a migration nobody ran.
   if have_state_file rehearsal-result.json \
      && [ "$(jq -r '.verified // false' "$(state_path rehearsal-result.json)")" = "true" ]; then
-    local rehearsed_image
+    local rehearsed_image rehearsed_database
     rehearsed_image="$(jq -r '.image // ""' "$(state_path rehearsal-result.json)")"
-    if [ "$rehearsed_image" = "$IMAGE_REF" ]; then
-      log "freeze: migration already rehearsed for this label and image, keeping the result"
+    rehearsed_database="$(jq -r '.database_sha256 // ""' "$(state_path rehearsal-result.json)")"
+    if [ "$rehearsed_image" = "$IMAGE_REF" ] && [ "$rehearsed_database" = "$fingerprint" ]; then
+      log "freeze: migration already rehearsed for this label, image and database, keeping the result"
       return 0
     fi
-    warn "freeze: the recorded rehearsal was run against ${rehearsed_image:-an unrecorded image}, not $IMAGE_REF; rehearsing again"
-  fi
-
-  if [ "$CANDIDATE_RUNTIME" = rust ]; then
-    rehearse_rust
-    return
+    warn "freeze: the recorded rehearsal was run against ${rehearsed_image:-an unrecorded image} and database ${rehearsed_database:-unrecorded}; rehearsing again"
   fi
 
   log "freeze: rehearsing the migration on a copy with the candidate image"
   rm -rf "$SCRATCH_DIR"
   install -d -o 1000 -g 1000 -m 0700 "$SCRATCH_DIR" "$SCRATCH_DIR/backups" "$SCRATCH_DIR/db" "$SCRATCH_DIR/files"
-  install -m 0600 -o 1000 -g 1000 "$(state_path before.sqlite3)" "$SCRATCH_DIR/backups/production.sqlite3"
+  local part
+  for part in production.sqlite3 production.sqlite3-wal; do
+    if [ -f "$(state_path "$FROZEN_DB_DIR_NAME")/db/$part" ]; then
+      install -m 0600 -o 1000 -g 1000 "$(state_path "$FROZEN_DB_DIR_NAME")/db/$part" "$SCRATCH_DIR/db/$part"
+    fi
+  done
 
   local status=0
   REHEARSAL_CONTAINER="campfire-rehearsal-$RELEASE_LABEL"
@@ -1242,28 +1387,32 @@ rehearse_migration() {
     "$IMAGE_REF" \
     bash -c '
       set -euo pipefail
-      /hooks/post-restore
+      db=/rails/storage/db/production.sqlite3
+      /rails/script/admin/prepare-backup
       cp /rails/storage/backups/production.sqlite3 /rails/storage/rehearsal-before.sqlite3
-      bin/rails db:migrate
+      campfire db-migrate "$db"
+      campfire db-check "$db"
       /rails/script/admin/prepare-backup
       cp /rails/storage/backups/production.sqlite3 /rails/storage/rehearsal-after.sqlite3
-      bundle exec script/admin/verify-additive-sqlite-migration \
+      campfire verify-additive-sqlite-migration \
         /rails/storage/rehearsal-before.sqlite3 /rails/storage/rehearsal-after.sqlite3
     ' > "$(state_path migration-verification.txt)" 2>&1 || status=$?
   REHEARSAL_CONTAINER=""
   chmod 0600 "$(state_path migration-verification.txt)"
 
-  local preserved additive
+  local preserved additive migrations
   preserved="$(sed -n 's/^MATCH: //p' "$(state_path migration-verification.txt)" | tail -n1)"
   additive="$(sed -n 's/^ADDITIVE: //p' "$(state_path migration-verification.txt)" | tail -n1)"
+  migrations="$(migrated_versions "$(state_path migration-verification.txt)")"
 
   if [ "$status" -ne 0 ]; then
-    jq -n --argjson verified false --arg exit_status "$status" --arg image "$IMAGE_REF" \
-      '{verified:false, exit_status:($exit_status|tonumber), image:$image, preserved:null, additive:null}' \
+    jq -n --arg exit_status "$status" --arg image "$IMAGE_REF" --arg database "$fingerprint" \
+      '{verified:false, exit_status:($exit_status|tonumber), image:$image, database_sha256:$database,
+        migrations:null, preserved:null, additive:null}' \
       | write_state rehearsal-result.json
     warn "migration rehearsal FAILED (exit ${status}); full output is in $(state_path migration-verification.txt)"
     tail -n 5 "$(state_path migration-verification.txt)" >&2 || true
-    die "refusing to cut over: the candidate image did not migrate the frozen database additively"
+    die "refusing to cut over: the candidate image did not migrate a copy of the frozen database additively"
   fi
 
   if [ -s "$SCRATCH_DIR/rehearsal-after.sqlite3" ]; then
@@ -1271,98 +1420,121 @@ rehearse_migration() {
   fi
 
   jq -n --arg preserved "${preserved:-unknown}" --arg additive "${additive:-unknown}" \
-    --arg image "$IMAGE_REF" \
-    '{verified:true, exit_status:0, image:$image, preserved:$preserved, additive:$additive}' \
+    --arg image "$IMAGE_REF" --arg database "$fingerprint" --argjson migrations "$migrations" \
+    '{verified:true, exit_status:0, image:$image, database_sha256:$database, migrations:$migrations,
+      preserved:$preserved, additive:$additive}' \
     | write_state rehearsal-result.json
 
-  log "migration rehearsal PASSED: ${preserved:-unknown}; ${additive:-unknown}"
+  log "migration rehearsal PASSED: $(describe_migrations "$migrations"); ${preserved:-unknown}; ${additive:-unknown}"
 }
 
-# Rails owns the schema until cutover. Rust only opens the copied deployed schema read-only.
-# Before declaring success, boot the previous Rails image on a separate copy of that same
-# database, with Redis unreachable, and require /up. Neither run mounts live storage.
-rehearse_rust() {
-  local previous_image status=0 prefix="${CAMPFIRE_RUST_REHEARSAL_PREFIX:-campfire-rehearsal}"
-  previous_image="$(read_json_field "$(state_path preflight-result.json)" '.current_image')"
-  [ "$(recorded_runtime current_runtime)" = rails ] || die "pre-cutover Rust rehearsal requires a previous Rails image"
-  rm -rf "$SCRATCH_DIR"
-  install -d -o 1000 -g 1000 -m 0700 "$SCRATCH_DIR" "$SCRATCH_DIR/db" "$SCRATCH_DIR/rollback" "$SCRATCH_DIR/rollback/db"
-  install -m 0600 -o 1000 -g 1000 "$(state_path before.sqlite3)" "$SCRATCH_DIR/db/production.sqlite3"
-  REHEARSAL_CONTAINER="$prefix-$RELEASE_LABEL"
-  docker rm -f "$REHEARSAL_CONTAINER" >/dev/null 2>&1 || true
-  docker run --rm --name "$REHEARSAL_CONTAINER" --network none --memory 768m \
-    -v "$SCRATCH_DIR:/rails/storage:ro" "$IMAGE_REF" \
-    campfire db-check --immutable /rails/storage/db/production.sqlite3 \
-    > "$(state_path migration-verification.txt)" 2>&1 || status=$?
-  REHEARSAL_CONTAINER=""
-  chmod 0600 "$(state_path migration-verification.txt)"
-  if [ "$status" -eq 0 ]; then
-    install -m 0600 "${SCRATCH_DIR}/db/production.sqlite3" "$(state_path after.sqlite3)"
-    install -m 0600 -o 1000 -g 1000 "${SCRATCH_DIR}/db/production.sqlite3" "$SCRATCH_DIR/rollback/db/production.sqlite3"
-    REHEARSAL_CONTAINER="$prefix-rollback-$RELEASE_LABEL"
-    docker rm -f "$REHEARSAL_CONTAINER" >/dev/null 2>&1 || true
-    docker run --rm --name "$REHEARSAL_CONTAINER" --network none --memory 768m \
-      -v "$SCRATCH_DIR/rollback:/rails/storage" \
-      -e SECRET_KEY_BASE_DUMMY=1 -e DISABLE_SSL=1 -e SKIP_TELEMETRY=1 \
-      -e WEB_CONCURRENCY=0 -e RAILS_MAX_THREADS=2 -e JOB_CONCURRENCY=1 \
-      -e REDIS_URL=redis://127.0.0.1:1 \
-      "$previous_image" bash -c '
-        set -euo pipefail
-        bin/start-app > /rails/storage/rollback-boot.log 2>&1 &
-        server=$!
-        trap '\''kill "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true'\'' EXIT
-        for attempt in $(seq 1 60); do
-          kill -0 "$server" || { tail -n 5 /rails/storage/rollback-boot.log; exit 1; }
-          if curl --fail --silent --output /dev/null --max-time 2 http://127.0.0.1:3000/up; then
-            echo "ROLLBACK: previous Rails image /up -> 200"
-            exit 0
-          fi
-          sleep 1
-        done
-        tail -n 5 /rails/storage/rollback-boot.log
-        exit 1
-      ' >> "$(state_path migration-verification.txt)" 2>&1 || status=$?
-    REHEARSAL_CONTAINER=""
-  fi
-  if [ "$status" -ne 0 ]; then
-    jq -n --argjson status "$status" --arg image "$IMAGE_REF" \
-      '{verified:false, exit_status:$status, image:$image, runtime:"rust", preserved:null, additive:null}' \
-      | write_state rehearsal-result.json
-    tail -n 5 "$(state_path migration-verification.txt)" >&2 || true
-    die "refusing to cut over: Rust read-only schema or Rails rollback rehearsal failed"
-  fi
-  jq -n --arg image "$IMAGE_REF" \
-    '{verified:true, exit_status:0, image:$image, runtime:"rust", preserved:"database read-only; migration set accepted", additive:"0 tables, 0 columns", rails_rollback_healthy:true}' \
-    | write_state rehearsal-result.json
-  log "Rust rehearsal PASSED: schema accepted read-only; previous Rails image /up -> 200"
+# "no migrations" or "2 migrations (20261006010000, 20261007090000)" from a JSON array.
+describe_migrations() {
+  jq -r 'if length == 0 then "no migrations"
+         else "\(length) migration\(if length == 1 then "" else "s" end) (\(join(", ")))" end' <<<"$1"
+}
+
+# The versions `campfire db-migrate` reports applying, as a JSON array.
+migrated_versions() {
+  sed -n 's/^MIGRATED: \([0-9][0-9]*\)$/\1/p' "$1" | jq -cRn '[inputs]'
 }
 
 # ------------------------------------------------------------------ cutover --
 
 CUTOVER_MOUNTPOINT=""
+MIGRATE_CONTAINER=""
 
 cutover_cleanup() {
+  if [ -n "$MIGRATE_CONTAINER" ]; then
+    docker rm -f "$MIGRATE_CONTAINER" >/dev/null 2>&1 \
+      && warn "cutover: removed the stranded migration container $MIGRATE_CONTAINER"
+    MIGRATE_CONTAINER=""
+  fi
   purge_volume_scratch "$CUTOVER_MOUNTPOINT"
+}
+
+# Runs the candidate's `campfire db-migrate` on the live database while the
+# application is stopped: the same command, image and starting bytes the freeze
+# rehearsed, so it must apply the same versions. db-migrate applies them in one
+# transaction and writes nothing when nothing is pending. Whatever happens, the
+# resulting fingerprint is recorded, so a rollback can tell "only this
+# migration touched the database" from "the application wrote to it".
+migrate_live_database() {
+  local volume="$1" mountpoint="$2" frozen="$3" rehearsed="$4" current status=0 applied migrated
+  assert_app_stopped
+  current="$(live_database_fingerprint "$mountpoint")"
+  if [ "$current" != "$frozen" ]; then
+    warn "cutover: the live database changed since the freeze (${frozen} -> ${current}); refusing to migrate it"
+    exit "$EXIT_UNHEALTHY"
+  fi
+
+  log "cutover: migrating the live database with the candidate image (campfire db-migrate)"
+  MIGRATE_CONTAINER="campfire-migrate-$RELEASE_LABEL"
+  docker rm -f "$MIGRATE_CONTAINER" >/dev/null 2>&1 || true
+  docker run --rm --name "$MIGRATE_CONTAINER" --network none --memory 768m \
+    -v "$volume:/rails/storage" \
+    "$IMAGE_REF" \
+    campfire db-migrate /rails/storage/db/production.sqlite3 \
+    > "$(state_path live-migration.txt)" 2>&1 || status=$?
+  MIGRATE_CONTAINER=""
+  chmod 0600 "$(state_path live-migration.txt)"
+  applied="$(migrated_versions "$(state_path live-migration.txt)")"
+  migrated="$(live_database_fingerprint "$mountpoint")"
+
+  jq -n --arg at "$(now_utc)" --arg image "$IMAGE_REF" --arg status "$status" \
+    --argjson applied "$applied" --argjson rehearsed "$rehearsed" \
+    --arg frozen "$frozen" --arg migrated "$migrated" \
+    '{at:$at, image:$image, exit_status:($status|tonumber), applied:$applied,
+      rehearsed:$rehearsed, matches_rehearsal:($applied == $rehearsed),
+      frozen_live_database_sha256:$frozen, migrated_live_database_sha256:$migrated}' \
+    | write_state live-migration-result.json
+
+  if [ "$status" -ne 0 ]; then
+    warn "cutover: campfire db-migrate failed on the live database (exit ${status}); see $(state_path live-migration.txt)"
+    tail -n 5 "$(state_path live-migration.txt)" >&2 || true
+    exit "$EXIT_UNHEALTHY"
+  fi
+  if [ "$applied" != "$rehearsed" ]; then
+    warn "cutover: the live migration applied $(jq -c . <<<"$applied") but the rehearsal applied $(jq -c . <<<"$rehearsed")"
+    exit "$EXIT_UNHEALTHY"
+  fi
+  log "cutover: live database migrated: $(describe_migrations "$applied")"
+  if [ "$migrated" != "$frozen" ] \
+     && ! keep_database_copy "$mountpoint" "$migrated" "$MIGRATED_DB_DIR_NAME"; then
+    warn "cutover: could not keep a copy of the migrated database"
+    exit "$EXIT_UNHEALTHY"
+  fi
 }
 
 phase_cutover() {
   require_image
-  local preflight freeze app_host volume mountpoint previous_image
+  local preflight freeze app_host volume mountpoint previous_image frozen_fingerprint rehearsed
   preflight="$(state_path preflight-result.json)"
   freeze="$(state_path freeze-result.json)"
   app_host="$(read_json_field "$preflight" '.app_host')"
   volume="$(read_json_field "$preflight" '.volume')"
   mountpoint="$(read_json_field "$preflight" '.volume_mountpoint')"
   previous_image="$(read_json_field "$freeze" '.previous_image')"
+  frozen_fingerprint="$(read_json_field "$freeze" '.frozen_live_database_sha256')"
   CUTOVER_MOUNTPOINT="$mountpoint"
   trap cutover_cleanup EXIT
 
   # Mode 1 aborts before the application is touched, so the database is provably
   # untouched and the rollback can complete. Validation only.
   if [ "$CAMPFIRE_RELEASE_SIMULATE_FAILURE" = "1" ]; then
-    warn "cutover: CAMPFIRE_RELEASE_SIMULATE_FAILURE=1, aborting before 'once update'"
+    warn "cutover: CAMPFIRE_RELEASE_SIMULATE_FAILURE=1, aborting before the migration and 'once update'"
     exit "$EXIT_UNHEALTHY"
   fi
+
+  # Only a migration the freeze rehearsed, for this very candidate and these
+  # very database bytes, may run on the live database.
+  if [ "$(jq -r --arg image "$IMAGE_REF" --arg database "$frozen_fingerprint" \
+          '.rehearsal | (.verified == true and .image == $image and .database_sha256 == $database)' "$freeze")" != true ]; then
+    warn "cutover: $freeze does not record a verified rehearsal of $IMAGE_REF on the frozen database"
+    exit "$EXIT_UNHEALTHY"
+  fi
+  rehearsed="$(jq -c '.rehearsal.migrations' "$freeze")"
+  migrate_live_database "$volume" "$mountpoint" "$frozen_fingerprint" "$rehearsed"
 
   log "cutover: once update $app_host --image $IMAGE_REF --auto-update=false"
   log "cutover: --env is deliberately omitted so the existing environment is preserved"
@@ -1455,19 +1627,7 @@ phase_cutover() {
 
   local processes
   processes="$(container_processes "$container")"
-  if [ "$CANDIDATE_RUNTIME" = rust ]; then
-    require_process "$processes" "/usr/local/bin/campfire server" "Rust server" || failures=$((failures + 1))
-  else
-    require_process "$processes" "puma" "puma web server" || failures=$((failures + 1))
-    require_process "$processes" "resque-pool" "resque-pool workers" || failures=$((failures + 1))
-    local livekit_keys
-    livekit_keys="$(jq -r '.envKeys | map(select(startswith("LIVEKIT_"))) | length' "$(state_path before-settings.json)")"
-    if [ "$livekit_keys" -gt 0 ]; then
-      require_process "$processes" "huddle-reconcile" "huddle reconciler" || failures=$((failures + 1))
-    else
-      log "process check: no LIVEKIT_* environment keys, huddle reconciler is not expected"
-    fi
-  fi
+  require_process "$processes" "/usr/local/bin/campfire server" "Rust server" || failures=$((failures + 1))
 
   # Mode 2 forces a post-health check failure. The application is healthy and may
   # have accepted writes, so this is the case where the rollback must refuse to
@@ -1489,10 +1649,11 @@ phase_cutover() {
     --argjson env_keys "$after_keys" \
     --argjson files_ok "$(jq -r '.matched' "$(state_path attachment-hashes.json)")" \
     --argjson failures "$failures" \
+    --argjson migrations "$(jq -c '.applied' "$(state_path live-migration-result.json)")" \
     '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, container:$container,
       image:$image, previous_image:$previous_image, volume:$volume, env_keys:$env_keys,
-      uploaded_files_identical:$files_ok, failed_checks:$failures, healthy:true,
-      accepted_writes:true}' \
+      migrations:$migrations, uploaded_files_identical:$files_ok, failed_checks:$failures,
+      healthy:true, accepted_writes:true}' \
     | write_state deploy-result.json
 
   if [ "$failures" -gt 0 ]; then
@@ -1508,11 +1669,10 @@ phase_cutover() {
 RESTORE_TARGET=""
 
 # Returns ONCE to the previous image and gets it serving again, WITHOUT touching
-# the database. Both rollback branches use this. Restoring the image is safe
-# even when the database has moved on: `bin/start-app` runs `db:prepare` before
-# puma, so the candidate migrates the live database as soon as it boots, and the
-# freeze rehearsal has already proved that migration additive. The previous
-# code therefore still reads the migrated schema.
+# the database. Callers only do this once the database is one the previous
+# image accepts: the Rust app refuses to boot on a database that has run
+# migrations it doesn't know, so a migrated database is either put back to its
+# frozen bytes first or checked with the previous image's own `db-check`.
 restore_previous_image() {
   local app_host="$1" previous_image="$2" rollback_tag="$3"
   local container settings_image="" started_image="" needs_update=1
@@ -1572,6 +1732,129 @@ restore_previous_image() {
   fi
 }
 
+# The one table whose changes a rollback may throw away: the durable job queue.
+# A candidate's boot claims due jobs, runs or fails them, enqueues its periodic
+# work and renews leases, all in this table, even when it never serves a
+# request. Reverting to the frozen copy discards those changes: jobs it
+# enqueued vanish and jobs it ran or failed are due again under the previous
+# image. That is the queue's at-least-once contract, the same as after a crash.
+# Any job that also wrote another table shows up there and is not tolerated.
+JOB_QUEUE_TABLE="background_jobs"
+
+# How one `verify-additive-sqlite-migration` run compared two databases:
+#   exact      every table, row and schema object matches, nothing was added;
+#   job-queue  both pass the integrity check and the single failed check is
+#              the job queue's row data (its schema still matches);
+#   other      anything else, including output this function doesn't recognise.
+verifier_outcome() {
+  local output="$1" status="$2"
+  if [ "$status" -eq 0 ] && grep -qx 'ADDITIVE: 0 tables, 0 columns' "$output"; then
+    printf exact
+  elif [ "$status" -eq 1 ] \
+       && grep -qx 'before: integrity MATCH' "$output" \
+       && grep -qx 'after: integrity MATCH' "$output" \
+       && grep -qx "${JOB_QUEUE_TABLE}: preexisting row data changed MISMATCH" "$output" \
+       && grep -qx 'MISMATCH: 1 preservation checks failed' "$output"; then
+    printf job-queue
+  else
+    printf other
+  fi
+}
+
+# live_rows_match_reference MOUNTPOINT REFERENCE IMAGE
+#
+# Compares the stopped live database with REFERENCE (the database as this
+# release left it before the new image started) using IMAGE's own preservation
+# verifier on copies, with no network. A booted image always changes bytes (its
+# job queue, SQLite's AUTOINCREMENT counters), so bytes can't decide this.
+# Returns 0 when every row of every table matches and nothing was added, 2 when
+# the only difference is the job queue's rows (checked in both directions, so
+# the live database also has no table, column, index or trigger the reference
+# lacks), and 1 otherwise, including when a copy or the verifier fails.
+live_rows_match_reference() {
+  local mountpoint="$1" reference="$2" image="$3" dir part status forward backward=""
+  local output reverse_output
+  dir="$(state_path rollback-compare)"
+  output="$(state_path rollback-compare.txt)"
+  reverse_output="$(state_path rollback-compare-reverse.txt)"
+  rm -rf "$dir" "$reverse_output" || return 1
+  install -d -o 1000 -g 1000 -m 0700 "$dir" "$dir/reference" "$dir/live" || return 1
+  for part in production.sqlite3 production.sqlite3-wal; do
+    if [ -f "$reference/db/$part" ]; then
+      install -m 0600 -o 1000 -g 1000 "$reference/db/$part" "$dir/reference/$part" \
+        || { warn "rollback: could not copy the reference database for the comparison"; rm -rf "$dir" || true; return 1; }
+    fi
+    if [ -f "$mountpoint/db/$part" ]; then
+      install -m 0600 -o 1000 -g 1000 "$mountpoint/db/$part" "$dir/live/$part" \
+        || { warn "rollback: could not copy the live database for the comparison"; rm -rf "$dir" || true; return 1; }
+    fi
+  done
+  if [ "$(database_pair_fingerprint "$dir/reference/production.sqlite3" "$dir/reference/production.sqlite3-wal")" \
+         != "$(live_database_fingerprint "$reference")" ] \
+     || [ "$(database_pair_fingerprint "$dir/live/production.sqlite3" "$dir/live/production.sqlite3-wal")" \
+         != "$(live_database_fingerprint "$mountpoint")" ]; then
+    warn "rollback: the comparison copies are not byte-exact"
+    rm -rf "$dir" || true
+    return 1
+  fi
+  status=0
+  docker run --rm --network none --memory 768m -v "$dir:/rails/storage" "$image" \
+    campfire verify-additive-sqlite-migration \
+      /rails/storage/reference/production.sqlite3 /rails/storage/live/production.sqlite3 \
+    > "$output" 2>&1 || status=$?
+  chmod 0600 "$output" || true
+  forward="$(verifier_outcome "$output" "$status")"
+  if [ "$forward" = job-queue ]; then
+    status=0
+    docker run --rm --network none --memory 768m -v "$dir:/rails/storage" "$image" \
+      campfire verify-additive-sqlite-migration \
+        /rails/storage/live/production.sqlite3 /rails/storage/reference/production.sqlite3 \
+      > "$reverse_output" 2>&1 || status=$?
+    chmod 0600 "$reverse_output" || true
+    backward="$(verifier_outcome "$reverse_output" "$status")"
+  fi
+  rm -rf "$dir" || warn "rollback: could not remove $dir"
+  case "$forward/$backward" in
+    exact/) return 0 ;;
+    job-queue/job-queue) return 2 ;;
+  esac
+  return 1
+}
+
+# Runs the previous image's own `campfire db-check` against a copy of the live
+# database (never the live files, and with no network), which is exactly the
+# schema test its boot applies.
+previous_image_accepts_database() {
+  local mountpoint="$1" image="$2" dir part status=0
+  dir="$(state_path rollback-check)"
+  # A partial copy (a missing write-ahead log above all) could show the previous
+  # image an older schema than the live one, so any failed step counts as a refusal.
+  rm -rf "$dir" || return 1
+  install -d -o 1000 -g 1000 -m 0700 "$dir" "$dir/db" || return 1
+  for part in production.sqlite3 production.sqlite3-wal; do
+    if [ -f "$mountpoint/db/$part" ]; then
+      install -m 0600 -o 1000 -g 1000 "$mountpoint/db/$part" "$dir/db/$part" \
+        || { warn "rollback: could not copy the live database for the previous image's check"; rm -rf "$dir" || true; return 1; }
+    fi
+  done
+  if [ "$(live_database_fingerprint "$dir")" != "$(live_database_fingerprint "$mountpoint")" ]; then
+    warn "rollback: the copy for the previous image's check is not byte-exact"
+    rm -rf "$dir" || true
+    return 1
+  fi
+  docker run --rm --network none --memory 768m -v "$dir:/rails/storage" "$image" \
+    campfire db-check /rails/storage/db/production.sqlite3 \
+    > "$(state_path rollback-check.txt)" 2>&1 || status=$?
+  chmod 0600 "$(state_path rollback-check.txt)" || true
+  rm -rf "$dir" || warn "rollback: could not remove $dir"
+  if [ "$status" -eq 0 ]; then
+    log "rollback: the previous image accepts the live database: $(head -n1 "$(state_path rollback-check.txt)")"
+    return 0
+  fi
+  warn "rollback: the previous image refuses the live database: $(tail -n1 "$(state_path rollback-check.txt)")"
+  return 1
+}
+
 phase_rollback() {
   local preflight freeze app_host mountpoint previous_image rollback_tag frozen_fingerprint
   preflight="$(state_path preflight-result.json)"
@@ -1629,23 +1912,173 @@ phase_rollback() {
   warn "rollback: stopping $app_host before inspecting the database"
   once stop "$app_host" || warn "rollback: once stop reported an error"
   assert_app_stopped
+  # A cutover killed mid-migration (a dropped SSH session) can leave its
+  # `docker run` behind. SQLite discards an uncommitted migration, but nothing
+  # may be writing while the database is inspected.
+  # (`docker rm -f` succeeds for a missing container, so look first.)
+  if docker inspect --type container "campfire-migrate-$RELEASE_LABEL" >/dev/null 2>&1; then
+    docker rm -f "campfire-migrate-$RELEASE_LABEL" >/dev/null 2>&1 \
+      || die "rollback: could not remove the leftover migration container campfire-migrate-$RELEASE_LABEL"
+    warn "rollback: removed the migration container an interrupted cutover left behind"
+  fi
   purge_volume_scratch "$mountpoint"
 
-  local current_fingerprint action reason health restore_target
+  local current_fingerprint migrated_fingerprint="" action reason health restore_target
   current_fingerprint="$(live_database_fingerprint "$mountpoint")"
+  if have_state_file live-migration-result.json; then
+    migrated_fingerprint="$(jq -r '.migrated_live_database_sha256 // ""' "$(state_path live-migration-result.json)")"
+  fi
+
+  if [ "$current_fingerprint" != "$frozen_fingerprint" ] \
+     && [ -n "$migrated_fingerprint" ] && [ "$current_fingerprint" = "$migrated_fingerprint" ]; then
+    # The cutover's `db-migrate` is the only thing that touched the database:
+    # it is byte for byte what the migration left, so the new image never wrote
+    # to it. Putting the frozen bytes back loses nothing, and the previous image
+    # needs them, because it refuses a database with migrations it doesn't know.
+    log "rollback: only this release's migration changed the live database; putting back its frozen bytes"
+    if restore_frozen_database "$mountpoint" "$frozen_fingerprint"; then
+      action="migration-reverted"
+      reason="only this release's migration had changed the live database, so its frozen bytes were put back and the previous image was restored; nothing was lost"
+      restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+      if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
+      warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
+      jq -n \
+        --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
+        --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
+        --arg restored_image "$RESTORE_TARGET" --arg previous_image "$previous_image" \
+        --arg rollback_tag "$rollback_tag" \
+        --arg frozen "$frozen_fingerprint" --arg current "$current_fingerprint" \
+        --arg health "$health" --arg timer "$TIMER_UNIT" \
+        '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
+          reason:$reason, database_restored:true, restored_image:$restored_image,
+          previous_image:$previous_image, retained_local_tag:$rollback_tag,
+          frozen_live_database_sha256:$frozen, migrated_live_database_sha256:$current,
+          current_live_database_sha256:$frozen,
+          health:$health, feed_timer:$timer,
+          feed_timer_state:"left paused for operator review"}' \
+        | write_state rollback-result.json
+      log "rollback: finished with health=$health"
+      return 0
+    fi
+    warn "rollback: could not put the frozen bytes back; treating the database as changed"
+    current_fingerprint="$(live_database_fingerprint "$mountpoint")"
+  elif [ "$current_fingerprint" != "$frozen_fingerprint" ]; then
+    # The bytes moved, but maybe only by the new image's boot: its job queue and
+    # SQLite's AUTOINCREMENT counters (see live_rows_match_reference).
+    local reference reference_fingerprint="$frozen_fingerprint" rows=1 migrated=false
+    reference="$(state_path "$FROZEN_DB_DIR_NAME")"
+    if [ -n "$migrated_fingerprint" ] && [ "$migrated_fingerprint" != "$frozen_fingerprint" ]; then
+      reference="$(state_path "$MIGRATED_DB_DIR_NAME")"
+      reference_fingerprint="$migrated_fingerprint"
+      migrated=true
+    fi
+    if [ "$(live_database_fingerprint "$reference")" = "$reference_fingerprint" ]; then
+      rows=0
+      live_rows_match_reference "$mountpoint" "$reference" "$rollback_tag" || rows=$?
+    else
+      warn "rollback: the kept copy in $reference no longer matches its fingerprint; cannot compare rows"
+    fi
+
+    if [ "$rows" -eq 0 ] && [ "$migrated" = false ]; then
+      # Every row matches and nothing was migrated, so the previous image reads
+      # this database as is: there is nothing to put back, and no reason to write.
+      log "rollback: every row matches the frozen database; only the new image's bookkeeping changed its bytes"
+      action="image-rolled-back"
+      reason="the new image changed only its own bookkeeping in the database, which the previous image reads as is; nothing was lost"
+      restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+      if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
+      warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
+      jq -n \
+        --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
+        --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
+        --arg restored_image "$RESTORE_TARGET" --arg previous_image "$previous_image" \
+        --arg rollback_tag "$rollback_tag" \
+        --arg frozen "$frozen_fingerprint" --arg current "$current_fingerprint" \
+        --arg health "$health" --arg timer "$TIMER_UNIT" \
+        '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
+          reason:$reason, database_restored:false, rows_match_freeze:true,
+          job_queue_changes_discarded:false,
+          restored_image:$restored_image, previous_image:$previous_image,
+          retained_local_tag:$rollback_tag, frozen_live_database_sha256:$frozen,
+          current_live_database_sha256:$current, health:$health, feed_timer:$timer,
+          feed_timer_state:"left paused for operator review"}' \
+        | write_state rollback-result.json
+      log "rollback: finished with health=$health"
+      return 0
+    fi
+
+    if [ "$rows" -eq 0 ] || [ "$rows" -eq 2 ]; then
+      local discarded=false
+      if [ "$rows" -eq 2 ]; then
+        discarded=true
+        log "rollback: every row outside ${JOB_QUEUE_TABLE} matches the database as this release left it; discarding the new image's job-queue changes"
+      else
+        log "rollback: every row matches the database as this release's migration left it"
+      fi
+      if restore_frozen_database "$mountpoint" "$frozen_fingerprint"; then
+        if [ "$migrated" = true ]; then
+          action="migration-reverted"
+          reason="only this release's migration and the new image's own bookkeeping had changed the live database, so its frozen bytes were put back and the previous image was restored"
+        else
+          action="image-rolled-back"
+          reason="only the new image's own bookkeeping had changed the live database, so its frozen bytes were put back and the previous image was restored"
+        fi
+        if [ "$discarded" = true ]; then
+          reason="${reason}; the new image's changes to ${JOB_QUEUE_TABLE} were discarded, so jobs it ran are due again and jobs it enqueued are gone"
+        else
+          reason="${reason}; nothing was lost"
+        fi
+        restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+        if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
+        warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
+        jq -n \
+          --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
+          --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
+          --arg restored_image "$RESTORE_TARGET" \
+          --arg previous_image "$previous_image" --arg rollback_tag "$rollback_tag" \
+          --arg frozen "$frozen_fingerprint" --arg migrated "$migrated_fingerprint" \
+          --arg replaced "$current_fingerprint" --argjson discarded "$discarded" \
+          --arg health "$health" --arg timer "$TIMER_UNIT" \
+          '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
+            reason:$reason, database_restored:true, rows_match_migration:true,
+            job_queue_changes_discarded:$discarded,
+            restored_image:$restored_image,
+            previous_image:$previous_image, retained_local_tag:$rollback_tag,
+            frozen_live_database_sha256:$frozen, migrated_live_database_sha256:$migrated,
+            replaced_live_database_sha256:$replaced, current_live_database_sha256:$frozen,
+            health:$health, feed_timer:$timer,
+            feed_timer_state:"left paused for operator review"}' \
+          | write_state rollback-result.json
+        log "rollback: finished with health=$health"
+        return 0
+      fi
+      warn "rollback: could not put the frozen bytes back; treating the database as changed"
+      current_fingerprint="$(live_database_fingerprint "$mountpoint")"
+    else
+      warn "rollback: the live database holds rows the release did not write (see $(state_path rollback-compare.txt))"
+    fi
+  fi
 
   if [ "$current_fingerprint" != "$frozen_fingerprint" ]; then
-    # The live database moved after the freeze. It holds migrations, user
-    # writes, or both. Restoring the frozen copy would discard them, so the
-    # database is left exactly as it is — but the service still comes back, on
-    # the previous image, which the rehearsal proved can read the migrated
-    # schema. Nothing is lost, the site is up, and the non-zero exit still pages.
-    action="refused-database-changed"
+    # The live database moved after the freeze and the migration: the new image
+    # wrote to it. Restoring the frozen copy would discard those writes, so the
+    # database is left exactly as it is. Whether the service can come back on
+    # the previous image depends on whether that image accepts this database.
     reason="the live database changed after the freeze (${frozen_fingerprint} -> ${current_fingerprint})"
     warn "rollback: $reason"
-    warn "rollback: the database will NOT be restored; returning to the previous image only"
+    warn "rollback: the database will NOT be restored"
 
-    restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+    if previous_image_accepts_database "$mountpoint" "$rollback_tag"; then
+      action="refused-database-changed"
+      warn "rollback: the previous image accepts the live database; returning to it without touching the database"
+      restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+    else
+      action="refused-database-incompatible"
+      reason="${reason}, and the previous image refuses it (it has run migrations the previous image doesn't know)"
+      warn "rollback: the previous image refuses the live database; restarting the new image instead so writes are not stranded"
+      RESTORE_TARGET="${IMAGE_REF:-the new image} (restarted; the previous image cannot read this database)"
+      once start "$app_host" || warn "rollback: once start reported an error"
+    fi
     if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
 
     jq -n \
@@ -1666,22 +2099,27 @@ phase_rollback() {
 
     printf '\n' >&2
     warn "================ OPERATOR ACTION REQUIRED ================"
-    warn "The database on ${app_host} changed after the write freeze, so this script"
-    warn "did NOT restore ${STATE_DIR}/before.sqlite3 over it: that would discard"
-    warn "whatever was written after the freeze."
+    warn "The database on ${app_host} changed after the write freeze and this release's"
+    warn "migration, so this script did NOT restore the frozen copy over it: that would"
+    warn "discard whatever was written since."
     warn ""
-    warn "The application has been returned to the previous image (${RESTORE_TARGET})"
-    warn "and /up reports ${health}. The database was left untouched. The previous code"
-    warn "is running against the migrated schema, which the pre-cutover rehearsal"
-    warn "verified as additive."
+    if [ "$action" = refused-database-changed ]; then
+      warn "The application has been returned to the previous image (${RESTORE_TARGET})"
+      warn "and /up reports ${health}. The database was left untouched; the previous"
+      warn "image's own schema check accepted it."
+    else
+      warn "The previous image refuses this database (it has run migrations that image"
+      warn "doesn't know), so the application was restarted on the new image"
+      warn "(${RESTORE_TARGET}) and /up reports ${health}. The database was left untouched."
+    fi
     warn ""
     warn "This still needs a human. Decide, then act:"
     warn "  * If the release should go ahead after all, put the new image back:"
     warn "      sudo once update ${app_host} --image ${IMAGE_REF:-<new image>} --auto-update=false"
-    warn "  * If the previous code is misreading the migrated schema, return to the"
-    warn "    frozen checkpoint and accept losing everything written after it:"
-    warn "    restore from ${STATE_DIR}/before.once.tar.gz and keep the feed delivery"
-    warn "    state consistent with the restored message history."
+    warn "  * Fix forward with a newer image whose migrations include these."
+    warn "  * Or return to the frozen checkpoint and accept losing everything written"
+    warn "    after it: restore from ${STATE_DIR}/before.once.tar.gz and keep the feed"
+    warn "    delivery state consistent with the restored message history."
     warn "  * Compare ${STATE_DIR}/before.sqlite3 with the live database before"
     warn "    discarding anything."
     warn ""
@@ -1846,7 +2284,7 @@ main() {
   case "${1:-}" in
     freeze|cutover)
       require_image
-      CANDIDATE_RUNTIME="$(recorded_runtime target_runtime)"
+      require_preflight_target
       ;;
   esac
   run_phase "$@"

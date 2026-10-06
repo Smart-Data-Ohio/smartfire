@@ -2,12 +2,13 @@
 #
 # Verifies one encrypted nightly backup: decrypts it, checks the tarball and
 # the inner SHA256SUMS, runs PRAGMA integrity_check on the database, counts
-# rows, and optionally boots the Rails app against a copy of the restored
-# database and counts rows through the models. Rails' SQLite adapter issues
-# its own PRAGMAs on connect, so the app cannot open a file-mode read-only
-# database; instead it only ever sees a disposable copy, the runner sets
-# PRAGMA query_only so no model code can write, and the extracted backup is
-# re-verified byte-identical afterwards.
+# rows, and optionally hands a disposable copy of the restored database to a
+# local Rust Smartfire image. That container migrates the copy with the
+# image's compiled-in migrations (`campfire db-migrate`), so a backup taken
+# before a schema change still checks against a newer image, then runs the
+# strict boot schema check and counts rows (`campfire db-check`). The
+# extracted backup itself is never mounted, and is re-verified byte-identical
+# afterwards.
 #
 # Used by the monthly restore-check workflow and runnable by hand on any
 # machine holding the decryption key. Exits non-zero (loudly) on any failure.
@@ -21,17 +22,13 @@
 #   --encryption E       age (default from the file extension), gpg, or auto.
 #   --age-identity FILE  age private key file (required for age).
 #   --gpg-home DIR       GnuPG home holding the private key (for gpg).
-#   --rails-root DIR     when set, also boot the app at DIR against a COPY of
-#                        the restored database and count rows with a Rails
-#                        runner, then re-verify the extracted backup is
-#                        untouched. Refuses when DIR already has a
-#                        storage/db/production.sqlite3, so it can never run
-#                        inside a live checkout by accident.
 #   --min-users N        fail unless the users table holds at least N rows.
 #   --min-messages N     fail unless the messages table holds at least N rows.
-#   --image REF          also check a disposable copy with this local Rails or
-#                        Rust image; runtime comes from the image label.
-#   --container-name N   name for that disposable container (default unique).
+#   --image REF          also migrate and check a disposable copy with this
+#                        local Rust image (labelled
+#                        net.smartdata.campfire.runtime=rust).
+#   --container-name N   name prefix for those disposable containers
+#                        (default unique).
 
 set -euo pipefail
 
@@ -40,7 +37,6 @@ WORK_DIR=""
 ENCRYPTION="auto"
 AGE_IDENTITY=""
 GPG_HOME=""
-RAILS_ROOT=""
 MIN_USERS=""
 MIN_MESSAGES=""
 APP_IMAGE=""
@@ -60,7 +56,6 @@ while [ "$#" -gt 0 ]; do
     --encryption) ENCRYPTION="${2:-}"; shift 2 ;;
     --age-identity) AGE_IDENTITY="${2:-}"; shift 2 ;;
     --gpg-home) GPG_HOME="${2:-}"; shift 2 ;;
-    --rails-root) RAILS_ROOT="${2:-}"; shift 2 ;;
     --min-users) MIN_USERS="${2:-}"; shift 2 ;;
     --min-messages) MIN_MESSAGES="${2:-}"; shift 2 ;;
     --image) APP_IMAGE="${2:-}"; shift 2 ;;
@@ -73,7 +68,6 @@ done
 [ -n "$BACKUP" ] || die "--backup is required"
 [ -n "$WORK_DIR" ] || die "--work-dir is required"
 [ -f "$BACKUP" ] || die "backup file not found: $BACKUP"
-[ -z "$APP_IMAGE" ] || [ -z "$RAILS_ROOT" ] || die "use either --image or --rails-root"
 command -v sqlite3 >/dev/null || die "sqlite3 is not installed"
 command -v tar >/dev/null || die "tar is not installed"
 command -v sha256sum >/dev/null || die "sha256sum is not installed"
@@ -89,6 +83,8 @@ fi
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 chmod 0700 "$WORK_DIR"
+# Absolute, because `docker run -v` reads a relative path as a volume name.
+WORK_DIR="$(cd "$WORK_DIR" && pwd)"
 
 log "decrypting $BACKUP ($ENCRYPTION)"
 plain="$WORK_DIR/backup.tar.gz"
@@ -151,50 +147,25 @@ if [ -n "$MIN_MESSAGES" ] && { [ "$messages" = "missing" ] || [ "$messages" -lt 
   die "messages=$messages is below --min-messages=$MIN_MESSAGES"
 fi
 
-if [ -n "$RAILS_ROOT" ]; then
-  log "booting the app against a copy of the restored database"
-  [ -d "$RAILS_ROOT" ] || die "rails root not found: $RAILS_ROOT"
-  [ -x "$RAILS_ROOT/bin/rails" ] || die "no executable bin/rails in $RAILS_ROOT"
-  target="$RAILS_ROOT/storage/db/production.sqlite3"
-  [ ! -e "$target" ] || die "$target already exists; refusing to run inside a live checkout"
-  mkdir -p "$RAILS_ROOT/storage/db"
-  cp "$db" "$target"
-  # shellcheck disable=SC2064
-  trap "rm -f '$target' '$target-wal' '$target-shm'" EXIT
-  ( cd "$RAILS_ROOT" && SECRET_KEY_BASE_DUMMY=1 RAILS_ENV=production bin/rails runner \
-    'ActiveRecord::Base.connection.execute("PRAGMA query_only = ON"); puts JSON.generate(users: User.count, rooms: Room.count, messages: Message.count)' )
-  log "rails runner row count succeeded; re-verifying the extracted backup is untouched"
-  ( cd "$stage" && sha256sum -c SHA256SUMS )
-fi
-
 if [ -n "$APP_IMAGE" ]; then
   command -v docker >/dev/null || die "docker is required for --image"
   runtime="$(docker image inspect "$APP_IMAGE" --format '{{index .Config.Labels "net.smartdata.campfire.runtime"}}')" \
     || die "cannot inspect local image $APP_IMAGE"
+  [ "$runtime" = "rust" ] || die "$APP_IMAGE is not a Rust Smartfire image (runtime label '$runtime')"
   copy="$WORK_DIR/app-check"
   mkdir -p "$copy/db"
   cp "$db" "$copy/db/production.sqlite3"
-  # Container uid 1000 must be able to read this disposable snapshot.
-  chmod 0755 "$copy" "$copy/db"
-  chmod 0644 "$copy/db/production.sqlite3"
-  case "$runtime" in
-    rust)
-      docker run --rm --name "$CHECK_CONTAINER" --network none --memory 768m \
-        -v "$copy:/rails/storage:ro" "$APP_IMAGE" \
-        campfire db-check --immutable /rails/storage/db/production.sqlite3
-      ;;
-    rails|''|'<no value>')
-      # Rails' adapter writes PRAGMAs; as with --rails-root it only sees a copy.
-      chmod 0777 "$copy" "$copy/db"
-      chmod 0666 "$copy/db/production.sqlite3"
-      docker run --rm --name "$CHECK_CONTAINER" --network none --memory 768m \
-        -v "$copy:/rails/storage" -e SECRET_KEY_BASE_DUMMY=1 -e RAILS_ENV=production \
-        -e SKIP_TELEMETRY=1 -e REDIS_URL=redis://127.0.0.1:1 "$APP_IMAGE" \
-        bin/rails runner 'ActiveRecord::Base.connection.execute("PRAGMA query_only = ON"); puts JSON.generate(users: User.count, rooms: Room.count, messages: Message.count)'
-      ;;
-    *) die "unknown Campfire runtime label '$runtime'" ;;
-  esac
-  log "$runtime image read the restored database; re-verifying extracted backup"
+  # Container uid 1000 migrates this disposable copy, so it (and SQLite's
+  # journal beside it) must be writable whatever uid extracted the backup.
+  chmod 0777 "$copy" "$copy/db"
+  chmod 0666 "$copy/db/production.sqlite3"
+  for command in db-migrate db-check; do
+    log "campfire $command on a copy of the restored database"
+    docker run --rm --name "$CHECK_CONTAINER-$command" --network none --memory 768m \
+      -v "$copy:/rails/storage" "$APP_IMAGE" \
+      campfire "$command" /rails/storage/db/production.sqlite3
+  done
+  log "the Rust image migrated and read the restored database; re-verifying the extracted backup"
   ( cd "$stage" && sha256sum -c SHA256SUMS )
 fi
 
