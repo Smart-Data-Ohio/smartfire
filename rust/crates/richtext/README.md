@@ -60,8 +60,8 @@ reference-tools/markdown/build-reference.sh
 reference-tools/markdown/run.sh
 reference-tools/richtext/run.sh
 reference-tools/richtext/run-sgids.sh
-mise exec rust@1.98.1 -- cargo test -j 6 -p campfire_richtext -- --nocapture
-mise exec rust@1.98.1 -- cargo clippy -j 6 -p campfire_richtext --all-targets -- -D warnings
+cargo test -j 6 -p campfire_richtext -- --nocapture
+cargo clippy -j 6 -p campfire_richtext --all-targets -- -D warnings
 ```
 
 The new corpus compares 4,200 cases byte-for-byte without normalization: the complete 652

@@ -14,7 +14,7 @@ env = dict(os.environ, CI="1", TMPDIR=str(scratch), CARGO_TARGET_DIR=str(root / 
            CABLE_TEST_PORT_RANGE="52100-52149", MAIL_TEST_PORT_RANGE="52100-52149")
 try:
     path.write_text(original.replace(old, '"switchers#show" => arc(not_yet_ported),'))
-    result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+    result = subprocess.run(["cargo", "test", "--locked", "-j", "4",
         "--manifest-path", str(root / "Cargo.toml"), "-p", "campfire", "--bin", "campfire", "controllers::switchers::tests",
         "--", "--nocapture"], cwd=root.parent, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     (scratch / "switcher-discrimination.log").write_text(result.stdout)

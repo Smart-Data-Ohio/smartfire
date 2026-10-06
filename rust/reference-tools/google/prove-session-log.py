@@ -11,7 +11,7 @@ warning = '    tracing::warn!("Google sign-in rejected: {reason}");\n'
 assert source.count(warning) == 1
 try:
     path.write_text(source.replace(warning, '', 1))
-    result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j', '4', '-p', 'campfire', 'google_sessions_rejection_log_names_reason', '--', '--nocapture'], cwd=root,
+    result = subprocess.run(['cargo', 'test', '--locked', '-j', '4', '-p', 'campfire', 'google_sessions_rejection_log_names_reason', '--', '--nocapture'], cwd=root,
         env=dict(os.environ, CI='1', TMPDIR=str(scratch), CARGO_PROFILE_TEST_DEBUG='0', CARGO_PROFILE_DEV_DEBUG='0'),
         text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     (scratch / 'session-log-warning.log').write_text(result.stdout)

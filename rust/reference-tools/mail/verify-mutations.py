@@ -21,7 +21,7 @@ for name, file, good, bad, suite, test in CASES:
         raise SystemExit(f'{name}: mutation target missing')
     try:
         path.write_text(re.sub(good, bad, original, count=1) if name == "auth-order" else original.replace(good, bad, 1))
-        command = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '-p', 'campfire' if suite == 'http' else 'campfire_mail']
+        command = ['cargo', 'test', '-p', 'campfire' if suite == 'http' else 'campfire_mail']
         if suite != 'http':
             command += ['--test', suite]
         command += ['-j', '4', test]

@@ -38,7 +38,7 @@ for name, relative, original, broken, package, test in mutations:
     changed = source.replace(original, broken, 1)
     try:
         path.write_text(changed)
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-p", package, test, "--", "--test-threads=4"]
+        command = ["cargo", "test", "--locked", "-p", package, test, "--", "--test-threads=4"]
         result = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         if result.returncode != 0 and "SIGKILL" in result.stdout and "test result:" not in result.stdout:
             (logs / f"human-work-mutant-{name}-compiler-killed.log").write_text(result.stdout)

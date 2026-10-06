@@ -11,7 +11,7 @@ needle='tx.emit_after_commit(crate::Event::job(&StreamTrailingBroadcastJob {'
 assert needle in original
 try:
     p.write_text(original.replace(needle,'let _ = (crate::Event::job(&StreamTrailingBroadcastJob {',1))
-    result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','-p','campfire','agent_stream_http_enqueue_failure','--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),capture_output=True,text=True)
+    result=subprocess.run(['cargo','test','--locked','-j','4','-p','campfire','agent_stream_http_enqueue_failure','--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),capture_output=True,text=True)
     output=result.stdout+result.stderr
     (scratch/'before.log').write_text(output)
     summary=re.search(r'^test result: FAILED\..*$',output,re.M)

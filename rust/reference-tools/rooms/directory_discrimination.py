@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[2]
 scratch = root.parent / ".scratch"
 env = dict(os.environ, CI="1", TMPDIR=str(scratch), CARGO_TARGET_DIR=str(root / "target"),
            CABLE_TEST_PORT_RANGE="52100-52149", MAIL_TEST_PORT_RANGE="52100-52149")
-base = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+base = ["cargo", "test", "--locked", "-j", "4",
         "--manifest-path", str(root / "Cargo.toml"), "-p", "campfire", "--bin", "campfire"]
 
 def reject(name, path, old, new, test):

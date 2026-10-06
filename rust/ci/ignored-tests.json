@@ -32,121 +32,141 @@
       "path": "crates/campfire/src/controllers/internal_huddle_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::internal_huddle_tests::huddle_gateway_own_node_suite_against_rust_endpoints"
+      "test": "controllers::internal_huddle_tests::huddle_gateway_own_node_suite_against_rust_endpoints",
+      "seconds": 9
     },
     {
       "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions"
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c221_original_named_system_assertions",
+      "seconds": 60
     },
     {
       "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions"
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c222_original_named_system_assertions",
+      "seconds": 39
     },
     {
       "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions"
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c223_original_named_system_assertions",
+      "seconds": 50
     },
     {
       "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c224_original_named_system_assertions"
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c224_original_named_system_assertions",
+      "seconds": 10
     },
     {
       "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c225_original_named_system_assertions"
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c225_original_named_system_assertions",
+      "seconds": 5
     },
     {
       "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c226_original_named_system_assertions"
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c226_original_named_system_assertions",
+      "seconds": 21
     },
     {
       "path": "crates/campfire/src/controllers/ws12_browser_remaining_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c227_original_named_system_assertions"
+      "test": "controllers::ws12_browser_remaining_tests::ws12_browser_c227_original_named_system_assertions",
+      "seconds": 5
     },
     {
       "path": "crates/campfire/src/controllers/rooms/system_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::rooms::system_browser_tests::huddle_system_cases_in_real_browser"
+      "test": "controllers::rooms::system_browser_tests::huddle_system_cases_in_real_browser",
+      "seconds": 208
     },
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_people_assertions"
+      "test": "controllers::ws11ui_original_browser_tests::original_people_assertions",
+      "seconds": 67
     },
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_picker_assertions"
+      "test": "controllers::ws11ui_original_browser_tests::original_picker_assertions",
+      "seconds": 49
     },
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions"
+      "test": "controllers::ws11ui_original_browser_tests::original_mobile_member_assertions",
+      "seconds": 24
     },
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions"
+      "test": "controllers::ws11ui_original_browser_tests::original_group_lifecycle_assertions",
+      "seconds": 27
     },
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_tour_assertions"
+      "test": "controllers::ws11ui_original_browser_tests::original_tour_assertions",
+      "seconds": 46
     },
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions"
+      "test": "controllers::ws11ui_original_browser_tests::original_starred_people_assertions",
+      "seconds": 41
     },
     {
       "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions"
+      "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions",
+      "seconds": 19
     },
     {
       "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ledger_browser_tests::original_ledger_navigation_assertions"
+      "test": "controllers::ledger_browser_tests::original_ledger_navigation_assertions",
+      "seconds": 653
     },
     {
       "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ledger_browser_tests::original_ledger_member_assertions"
+      "test": "controllers::ledger_browser_tests::original_ledger_member_assertions",
+      "seconds": 643
     },
     {
       "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ledger_browser_tests::original_ledger_surface_assertions"
+      "test": "controllers::ledger_browser_tests::original_ledger_surface_assertions",
+      "seconds": 379
     },
     {
       "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
-      "test": "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions"
+      "test": "controllers::ledger_browser_tests::original_ledger_lifecycle_assertions",
+      "seconds": 85
     }
   ],
   "livekit": [

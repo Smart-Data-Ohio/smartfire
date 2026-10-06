@@ -30,7 +30,7 @@ for name, before, after in mutations:
     try:
         path.write_text(original.replace(before, after))
         result = subprocess.run([
-            'mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j', '4',
+            'cargo', 'test', '--locked', '-j', '4',
             '-p', 'campfire_db', 'ws11_event_readability_and_ack_match_rails_access_matrix',
             '--', '--nocapture',
         ], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

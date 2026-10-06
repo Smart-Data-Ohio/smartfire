@@ -42,7 +42,7 @@ try:
     for package, expected in [("campfire_db", 7), ("campfire", 6)]:
         log = logs / (package + "-negative-controls.log")
         with log.open("w") as output:
-            result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", package, "ws11_next2_", "--", "--nocapture", "--test-threads=8"], cwd=root, stdout=output, stderr=subprocess.STDOUT)
+            result = subprocess.run(["cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", package, "ws11_next2_", "--", "--nocapture", "--test-threads=8"], cwd=root, stdout=output, stderr=subprocess.STDOUT)
         summaries = re.findall(r"^test result:.*$", log.read_text(), re.M)
         assert result.returncode == 101 and summaries, (package, result.returncode)
         assert f"{expected} failed;" in summaries[-1], summaries

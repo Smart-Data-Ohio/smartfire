@@ -74,6 +74,9 @@ impl Recorded {
     }
 }
 impl Client for Recorded {
+    // `fetch_update` is deprecated (renamed `try_update`) on the nightly the tests build with, but
+    // production builds on stable Rust, where `try_update` isn't available yet.
+    #[allow(deprecated)]
     fn request<'a>(
         &'a self,
         host: &'a str,

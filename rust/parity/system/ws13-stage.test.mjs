@@ -95,7 +95,11 @@ test('join stage dispatches huddle:join and toggles while connected',async t => 
   // The original declaration supplies a synthetic connected event. Keep its
   // unavailable external signaling connection pending, rather than routing TLS
   // to the Rust HTTP server through the capture proxy and failing immediately.
+  // When the socket fails, livekit-client asks /rtc/v1/validate why before it
+  // rejects; hold that request too, or a fast server lets the panel report
+  // "failed" between the synthetic event and the Leave stage click.
   await p.routeWebSocket('wss://public.example.test/**',()=>{});
+  await p.route('https://public.example.test/**',()=>{});
   await p.evaluate(()=>{window.stageJoinEvents=[];window.addEventListener('huddle:join',e=>window.stageJoinEvents.push(e.detail));});
   await p.getByRole('button',{name:'Join stage',exact:true}).click();
   await p.waitForFunction(()=>window.stageJoinEvents.length>0,null,{timeout:2000});

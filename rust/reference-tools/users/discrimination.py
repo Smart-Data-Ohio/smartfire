@@ -110,7 +110,7 @@ for name, relative, before, after, test in mutations:
     assert source.count(before) == 1, (name, "mutation anchor", source.count(before))
     try:
         path.write_text(source.replace(before, after))
-        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-p", "campfire", test, "--", "--nocapture", "--test-threads=4"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        run = subprocess.run(["cargo", "test", "--locked", "-p", "campfire", test, "--", "--nocapture", "--test-threads=4"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         (scratch / f"{name}.log").write_text(run.stdout)
         summaries = [line for line in run.stdout.splitlines() if line.startswith("test result:")]
         assert run.returncode == 101 and summaries and "FAILED" in summaries[-1] and f"::{test} ... FAILED" in run.stdout, (name, run.stdout[-4000:])

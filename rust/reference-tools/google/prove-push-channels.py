@@ -55,7 +55,7 @@ for name, relative, before, after, test in cases:
         path.write_text(source.replace(before, after))
         env = dict(os.environ, CI='1', TMPDIR=str(scratch), CARGO_BUILD_JOBS='2',
                    CARGO_PROFILE_DEV_DEBUG='0', CARGO_PROFILE_TEST_DEBUG='0', RUST_TEST_THREADS='8')
-        run = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--offline', '--locked', '-j', '2',
+        run = subprocess.run(['cargo', 'test', '--offline', '--locked', '-j', '2',
                               '-p', 'campfire', test, '--', '--nocapture', '--test-threads=8'],
                              cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (scratch / f'{name}.log').write_text(run.stdout)

@@ -13,7 +13,7 @@ for name,file,before,after,test in mutants:
  path=root/file;source=path.read_text();assert source.count(before)==1,name
  try:
   path.write_text(source.replace(before,after))
-  run=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--manifest-path',str(root/'Cargo.toml'),'--locked','-j4','-p','campfire',test,'--','--nocapture'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=300)
+  run=subprocess.run(['cargo','test','--manifest-path',str(root/'Cargo.toml'),'--locked','-j4','-p','campfire',test,'--','--nocapture'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=300)
   (scratch/f'round2-mutation-{name}.log').write_text(run.stdout)
   summary=[l for l in run.stdout.splitlines() if l.startswith('test result:')]
   assert run.returncode and summary and '1 failed;' in summary[-1],run.stdout

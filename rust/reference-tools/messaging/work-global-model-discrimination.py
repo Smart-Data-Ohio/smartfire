@@ -38,7 +38,7 @@ replacement=needle+'''
             assert_eq!(inserted, 1, "foreign-event mutant must insert its row");
 '''
 env=dict(os.environ,CARGO_BUILD_JOBS='2',RUST_TEST_THREADS='8',CAMPFIRE_REFERENCE=str(root),TMPDIR=str(root/'.scratch'))
-command=['mise','exec','rust@1.98.1','--','cargo','test','--locked',
+command=['cargo','test','--locked',
     '--manifest-path',str(generated/'Cargo.toml'),'-p','campfire_db',
     'message_controller_separate_stale_work_changes_match_rails_history','--','--test-threads=8']
 try:

@@ -110,6 +110,12 @@ ENV LIBRARY_PATH=/opt/vips/lib \
     LD_LIBRARY_PATH=/opt/vips/lib:/opt/ffmpeg/lib \
     PATH=/opt/ffmpeg/bin:$PATH
 ARG TARGETARCH
+# Tests, clippy and the CI binary build use the nightly that rust-toolchain.toml pins, for the
+# Cranelift backend (.cargo/config.toml); install it, with its components, from that file so the
+# two never disagree. CI runs cargo as an unprivileged user, who couldn't install it later. The
+# production build stage below copies neither file and stays on the stable RUST_VERSION and LLVM.
+COPY rust-toolchain.toml /usr/src/rust-toolchain.toml
+RUN cd /usr/src && rustup toolchain install && rustc -vV && rm /usr/src/rust-toolchain.toml
 # Pin nextest's prebuilt binaries, including their checksums, so the image never compiles its
 # runner from source. Keep mold in this CI-only stage; developer and production builds use
 # their normal linker unless CI explicitly supplies RUSTFLAGS.
@@ -129,7 +135,9 @@ RUN rustup component add clippy && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 
-# Build the binary against the libvips above.
+# Build the binary against the libvips above, with the image's stable toolchain and LLVM: neither
+# rust-toolchain.toml (the nightly) nor .cargo/config.toml (Cranelift for dev/test builds) is
+# copied in, and .dockerignore leaves the latter out of the context.
 FROM media-base AS build
 COPY --from=vips /opt/vips /opt/vips
 ENV LIBRARY_PATH=/opt/vips/lib

@@ -67,10 +67,10 @@ def pinned_command(command, name):
         result.extend(["-e", f"{key}={value}"])
     return [*result, options.toolchain_image, *cargo]
 commands = [
-    ("metadata", ["mise", "exec", "rust@1.98.1", "--", "cargo", "metadata", "--locked", "--manifest-path", "rust/Cargo.toml", "--format-version", "1"]),
+    ("metadata", ["cargo", "metadata", "--locked", "--manifest-path", "rust/Cargo.toml", "--format-version", "1"]),
     ("seeds", ["bash", "rust/parity/bin/seed", "build", "default", "first_run"]),
-    ("workspace", ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--exclude", "html5ever", "--no-fail-fast"]),
-    ("clippy", ["mise", "exec", "rust@1.98.1", "--", "cargo", "clippy", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--all-targets", "--", "-D", "warnings"]),
+    ("workspace", ["cargo", "test", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--exclude", "html5ever", "--no-fail-fast"]),
+    ("clippy", ["cargo", "clippy", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "--workspace", "--all-targets", "--", "-D", "warnings"]),
 ]
 if options.behavior_files:
     for name, extra in [("behavior", []), ("discrimination", ["--negative"])]:

@@ -1,0 +1,15 @@
+# CI-only Cargo profile settings. cargo.sh and exec.sh install this file as the CI
+# CARGO_HOME's config.toml, so every CI Cargo command (nextest, doctests, clippy, the
+# correctness harnesses' own builds) uses the same profile. Ordinary developer builds
+# never read it.
+#
+# Test time is CPU-bound in dependency code: PBKDF2/HMAC/SHA (instantiated inside
+# rails_compat), bcrypt, SQLite, regex compilation. At opt-level 0 a TestApp boot costs
+# about 1 s of CPU; with optimized dependencies and rails_compat about 0.25 s. The app
+# and other workspace crates stay at opt-level 0, so their per-PR compile is unchanged.
+# debug-assertions and overflow-checks remain enabled for every package.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev.package.rails_compat]
+opt-level = 2

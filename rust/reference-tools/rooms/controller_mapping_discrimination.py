@@ -22,7 +22,7 @@ try:
     changed = re.sub(r'^\s*"' + controllers[args.group] + r'#[^"]+" => arc\([^\n]+\),\n', '', original.decode(), flags=re.M)
     assert changed != original.decode(), 'missing dispatch mutation'
     source.write_text(changed)
-    run = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j4', '--manifest-path', 'rust/Cargo.toml',
+    run = subprocess.run(['cargo', 'test', '--locked', '-j4', '--manifest-path', 'rust/Cargo.toml',
                           '-p', 'campfire', '--bin', 'campfire', f'controllers::rooms::{args.group}_rails_cases', '--', '--test-threads=4'],
                          cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     (scratch/f'{args.group}-case-discrimination.log').write_text(run.stdout)

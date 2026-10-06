@@ -16,7 +16,7 @@ try:
     old='    let (room, join_preview) = set_room_for_show(c, Scope::All).await?;'
     assert originals[rooms].count(old)==1
     rooms.write_text(originals[rooms].replace(old,'    let (room, join_preview) = (set_room(c, Scope::All).await?, false);'))
-    result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire','controllers::rooms::join_tests','--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    result=subprocess.run(['cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire','controllers::rooms::join_tests','--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     (scratch/'join-discrimination.log').write_text(result.stdout)
     summaries=[s for s in result.stdout.splitlines() if s.startswith('test result:')]
     assert result.returncode==101 and len(summaries)==1 and '0 passed; 4 failed;' in summaries[0],result.stdout

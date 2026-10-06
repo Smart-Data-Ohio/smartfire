@@ -22,7 +22,7 @@ for index, (filename, old, new, test, key, case) in enumerate(mutants, 1):
         env[key] = case
     try:
         path.write_text(original.replace(old, new, 1))
-        run = subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','-j','2','-p','campfire',test,'--','--nocapture','--test-threads=8'],cwd=root,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        run = subprocess.run(['cargo','test','-j','2','-p','campfire',test,'--','--nocapture','--test-threads=8'],cwd=root,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         (root.parent / '.scratch' / f'fizzy-write-mutation-{index}.log').write_text(run.stdout)
         assert run.returncode and 'test result: FAILED' in run.stdout, run.stdout[-3000:]
         print(f'{index} {filename} {case}: ' + next(line for line in run.stdout.splitlines() if line.startswith('test result:')),flush=True)

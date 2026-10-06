@@ -33,7 +33,7 @@ for name, relative, before, after, test in mutations:
     try:
         path.write_text(original.replace(before, after, 1))
         for attempt in range(3):
-            result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire", test, "--", "--nocapture"], cwd=root, env=environment, capture_output=True, text=True)
+            result = subprocess.run(["cargo", "test", "--locked", "-j", "4", "-p", "campfire", test, "--", "--nocapture"], cwd=root, env=environment, capture_output=True, text=True)
             output = result.stdout + result.stderr
             if "SIGKILL" not in output or "test result:" in output:
                 break

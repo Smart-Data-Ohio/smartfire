@@ -23,6 +23,13 @@ def junit_results(path):
     return (passed, failed, ignored), failures
 
 
+def skipped_cases(path):
+    """Ignored tests by (binary, name): nextest partitions (CI shards) each report all of them."""
+    return {(suite.attrib["name"], case.attrib["name"])
+            for suite in ET.parse(path).getroot().iter("testsuite")
+            for case in suite.findall("testcase") if case.find("skipped") is not None}
+
+
 def doc_results(path):
     text = re.sub(r"\x1b\[[0-9;]*m", "", Path(path).read_text())
     counts = [0, 0, 0]
@@ -42,12 +49,20 @@ def main():
     args = parser.parse_args()
     counts = [0, 0, 0]
     failures = []
+    rows = []
     for parse, paths in ((junit_results, args.junit), (doc_results, args.doc_log)):
         for path in paths:
             result, details = parse(path)
             counts = [a + b for a, b in zip(counts, result)]
             failures.extend(details)
+            rows.append(f"{Path(path).name}: {result[0]} passed, {result[1]} failed, {result[2]} ignored")
+    # Count each ignored nextest test once, however many shards' receipts list it.
+    skipped = set().union(*map(skipped_cases, args.junit))
+    junit_ignored = sum(junit_results(path)[0][2] for path in args.junit)
+    counts[2] -= junit_ignored - len(skipped)
     passed, failed, ignored = counts
+    print("\n".join(rows))
+    print(f"Total: {passed} passed, {failed} failed, {ignored} ignored (distinct)")
     outcome = "success" if all(
         os.environ[key] == "success" for key in ("TEST_OUTCOME", "DOC_OUTCOME")
     ) else "failure"

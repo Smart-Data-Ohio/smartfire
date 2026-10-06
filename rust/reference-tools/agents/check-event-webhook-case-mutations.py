@@ -13,7 +13,7 @@ for name,file,before,after,test in [
  try:
   p.write_text(original.replace(before,after))
   with log.open('w') as out:
-   run=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire',test,'--','--test-threads=4'],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT)
+   run=subprocess.run(['cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire',test,'--','--test-threads=4'],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT)
   assert run.returncode and 'test result: FAILED. 0 passed; 1 failed;' in log.read_text(),log
   print(f'WS11 event webhook mutation: {name}; 1 test failed; original restored')
  finally:p.write_text(original)

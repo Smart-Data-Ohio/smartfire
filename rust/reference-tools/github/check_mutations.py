@@ -66,7 +66,7 @@ for name, filename, before, after, test_filter, expected_failures in mutations:
         raise SystemExit(f"Mutation target disappeared: {name}")
     try:
         path.write_text(original.replace(before, after))
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire", test_filter, "--", "--nocapture"]
+        command = ["cargo", "test", "--locked", "-j", "4", "-p", "campfire", test_filter, "--", "--nocapture"]
         run = subprocess.run(command, cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=120)
         (scratch / f"mutation-{name}.log").write_text(run.stdout)
         summaries = [line for line in run.stdout.splitlines() if line.startswith("test result:")]

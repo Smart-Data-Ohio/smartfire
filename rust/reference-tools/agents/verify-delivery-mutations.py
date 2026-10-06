@@ -21,7 +21,7 @@ for name,package,relative,before,after,test in mutations:
  if before not in original:raise RuntimeError(f'{name}: missing anchor')
  try:
   path.write_text(original.replace(before,after))
-  result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','-p',package,test,'--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+  result=subprocess.run(['cargo','test','--locked','-j','4','-p',package,test,'--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
   (scratch/f'{name}.log').write_text(result.stdout)
   summary=re.search(r'^test result: FAILED\..*$',result.stdout,re.M)
   if result.returncode!=101 or not summary or f'{test} ... FAILED' not in result.stdout or 'error[E' in result.stdout:raise RuntimeError(f'{name}: no compiled assertion failure')

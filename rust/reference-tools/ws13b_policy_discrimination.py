@@ -24,7 +24,7 @@ for name, relative, before, after, package, test in mutations:
     try:
         assert original.count(before) == 1, (name, original.count(before))
         path.write_text(original.replace(before, after, 1))
-        result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test",
+        result = subprocess.run(["cargo", "test",
                                  "--locked", "--manifest-path", str(ROOT / "rust/Cargo.toml"),
                                  "-p", package, test, "--", "--test-threads=8"],
                                 cwd=ROOT, env=env, capture_output=True, text=True)

@@ -104,7 +104,7 @@ Run from `rust/`, with the worker's own target and named image:
 bash reference-tools/views/core/build_reference.sh
 PARITY_IMAGE=campfire-reference PARITY_OWNER=ws6 STORE=/home/riels/.cache/rust-port/ws6/core-reference bash reference-tools/views/core/run.sh
 PARITY_IMAGE=campfire-reference STORE=/home/riels/.cache/rust-port/ws6/image-reference bash reference-tools/views/core/images.sh
-TMPDIR=/home/riels/.cache/rust-port/ws6/tmp WS6_VIEW_DIFF_DIR=/home/riels/.cache/rust-port/ws6/view-diffs mise exec rust@1.98.1 -- cargo test -j 4 -p campfire_views --test core
+TMPDIR=/home/riels/.cache/rust-port/ws6/tmp WS6_VIEW_DIFF_DIR=/home/riels/.cache/rust-port/ws6/view-diffs cargo test -j 4 -p campfire_views --test core
 ```
 
 `tests/core.rs` compares complete strings and reports the first differing byte. The optional

@@ -14,7 +14,7 @@ for path,old,new,test in mutants:
  source=root/path;original=source.read_text();assert old in original
  try:
   source.write_text(original.replace(old,new,1))
-  run=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path',str(root/'rust/Cargo.toml'),'-p','campfire',test,'--','--test-threads=4'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+  run=subprocess.run(['cargo','test','--locked','-j4','--manifest-path',str(root/'rust/Cargo.toml'),'-p','campfire',test,'--','--test-threads=4'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
   lines=[line for line in run.stdout.splitlines() if line.startswith('test result:')]
   assert run.returncode and any('FAILED' in line for line in lines),run.stdout
   print('\n'.join(lines),flush=True)
