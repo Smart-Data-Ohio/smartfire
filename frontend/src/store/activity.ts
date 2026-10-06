@@ -6,6 +6,8 @@
  * Handled, if that list's loaded window reaches its place), and the unread count is always the
  * server's latest word: every reply and event carries it.
  */
+
+import type { ActivityAction } from "../gen/ActivityAction.ts";
 import type { ActivityEventType } from "../gen/ActivityEventType.ts";
 import type { ActivityItem } from "../gen/ActivityItem.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
@@ -29,7 +31,7 @@ import {
 import type { State } from "./state.ts";
 
 /** What `PATCH /activity/:id` does: "unhandled" clears handled and keeps it read. */
-export type ActivityAction = "read" | "unread" | "handled" | "unhandled";
+export type { ActivityAction };
 
 export interface ActivitySlice {
   /** Every item any list or event brought, by id. */
@@ -173,8 +175,7 @@ export function landActivityPage(
     items[item.id] = item;
   }
 
-  // Until the contract's opaque cursors land, the numeric cursor travels as text.
-  const cursor: Cursor | null = page.nextCursor === null ? null : String(page.nextCursor);
+  const cursor: Cursor | null = page.nextCursor;
   const key = activityListKey(tab, status);
 
   return {
@@ -320,17 +321,11 @@ export type ActivityDestination =
   | { readonly kind: "thread"; readonly roomId: number; readonly threadId: number }
   | { readonly kind: "room"; readonly roomId: number }
   | { readonly kind: "scheduled" }
-  | { readonly kind: "classic"; readonly path: string }
-  | { readonly kind: "none" };
+  | { readonly kind: "classic"; readonly path: string };
 
 /** Where opening `item` should go, from its source's ids (see `ActivityDestination`). */
 export function activityDestination(item: ActivityItem): ActivityDestination {
   const source = item.source;
-
-  if (source === null) {
-    return { kind: "none" };
-  }
-
   const { roomId, threadId, messageId } = source;
 
   switch (source.sourceType) {

@@ -135,8 +135,7 @@ export function landSavedPage(
     saved[item.messageId] = item.id;
   }
 
-  // Until the contract's opaque cursors land, the numeric cursor travels as text.
-  const cursor: Cursor | null = page.nextCursor === null ? null : String(page.nextCursor);
+  const cursor: Cursor | null = page.nextCursor;
 
   const next = mergeConversationNames(mergeMessages(state, page.messages), page.conversations);
 

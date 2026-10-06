@@ -3,12 +3,12 @@
  * `open`. Each validates the reply with its pinned schema (see endpoints.ts).
  */
 import { Effect } from "effect";
+import type { ActivityAction } from "../gen/ActivityAction.ts";
 import type { ActivityItemChanged } from "../gen/ActivityItemChanged.ts";
 import type { ActivityList } from "../gen/ActivityList.ts";
 import type { ActivityState } from "../gen/ActivityState.ts";
 import type { ActivityTab } from "../gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../gen/ActivityUnreadCount.ts";
-import type { ActivityAction } from "../store/activity.ts";
 import { call, get } from "./call.ts";
 import {
   ActivityItemChanged as ActivityItemChangedSchema,
