@@ -128,9 +128,7 @@ export function SavedPage({ filter, onFilterChange }: SavedPageProps) {
             action: {
               label: "Undo",
               onClick: () => {
-                actions.messages
-                  .save(item.messageId, item.remindAt)
-                  .catch(failed("Couldn't save it again"));
+                actions.saved.restore(item).catch(failed("Couldn't restore it"));
               },
             },
           }),

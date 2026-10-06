@@ -3,10 +3,11 @@
  * error); marking done, reopening and removing show at once and roll back if the server refuses.
  * Saving with a reminder goes through `POST /saved` again, as the server wants.
  */
-import { Effect } from "effect";
+import { Clock, Effect } from "effect";
 import { saveMessage, unsave } from "../api/message-endpoints.ts";
 import * as api from "../api/saved-endpoints.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
+import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
 import { savedListOf } from "../store/saved-list.ts";
 import { mutations, store } from "../store/store.ts";
@@ -95,4 +96,28 @@ export const setReminder = Effect.fn("saved.setReminder")(function* (
   mutations.applySavedChange(messageId, item);
 
   return item;
+});
+
+/**
+ * Saves a removed item's message again (Undo): with its reminder, while that's still to come,
+ * and marked done again if it was. The server gives it a new id and `createdAt`, so it returns
+ * at the top of its lists. Answers the restored item.
+ */
+export const restore = Effect.fn("saved.restore")(function* (removed: SavedItem) {
+  const now = yield* Clock.currentTimeMillis;
+
+  const remindAt =
+    removed.remindedAt === null && removed.remindAt !== null && Date.parse(removed.remindAt) > now
+      ? removed.remindAt
+      : null;
+
+  const saved = yield* saveMessage(removed.messageId, remindAt);
+
+  mutations.applySavedChange(removed.messageId, saved);
+
+  if (removed.status === saved.status) {
+    return saved;
+  }
+
+  return yield* setStatus(saved.id, removed.status);
 });

@@ -174,6 +174,8 @@ const saved = {
     runAction(savedActions.setStatus(savedItemId, status)),
   /** Unsave. */
   remove: (savedItemId: number): Promise<void> => runAction(savedActions.remove(savedItemId)),
+  /** Undoes a removal: saves the message again with its status and (still due) reminder. */
+  restore: (removed: SavedItem): Promise<SavedItem> => runAction(savedActions.restore(removed)),
   /** Sets (RFC 3339, future) or clears (`null`) the reminder; saves the message if it wasn't. */
   setReminder: (messageId: number, remindAt: string | null): Promise<SavedItem> =>
     runAction(savedActions.setReminder(messageId, remindAt)),

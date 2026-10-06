@@ -173,6 +173,25 @@ test("removing a saved message offers Undo", async ({ page }) => {
   await expect(rows(page).first().locator(".saved-body")).toHaveText(text);
 });
 
+test("undoing a done message's removal brings it back done", async ({ page }) => {
+  await openApp(page, "saved?status=done");
+  await ready(page, "Saved");
+
+  const text = (await rows(page).first().locator(".saved-body").textContent()) ?? "";
+
+  await rows(page).first().locator(".list-row-open").focus();
+  await page.keyboard.press("Delete");
+  await expect(rows(page).first().locator(".saved-body")).not.toHaveText(text);
+  await page.getByRole("button", { name: "Undo" }).click();
+  // Saved again it's the newest item, and still done.
+  await expect(rows(page).first().locator(".saved-body")).toHaveText(text);
+  await expect(rows(page).first()).toContainText("Done");
+
+  await page.getByRole("tab", { name: "In progress" }).click();
+  await expect(rows(page).first()).toBeVisible();
+  await expect(page.locator(".page .saved-body", { hasText: text })).toHaveCount(0);
+});
+
 test("the sidebar leads to Saved and Scheduled", async ({ page }) => {
   await openApp(page, `r/${ROOM_IDS.general}`);
   await page.getByRole("link", { name: "Saved" }).click();

@@ -347,6 +347,65 @@ describe("saved actions", () => {
   );
 });
 
+describe("saved restore (Undo)", () => {
+  afterEach(() => mutations.reset());
+
+  it.effect("saves a done item again and marks the new item done", () =>
+    Effect.gen(function* () {
+      seedSaved();
+      yield* TestClock.setTime(Date.parse(at(30)));
+
+      // Item 1, done with a reminder still to come, was just removed.
+      const removed = { ...savedItem(1, 101, 10, true), remindAt: at(50) };
+
+      mutations.applySavedChange(101, null);
+
+      const fake = yield* FakeApi;
+      const posted: unknown[] = [];
+
+      yield* fake.route("POST /saved", (request) => {
+        posted.push(request.body);
+
+        return Effect.succeed({ ...savedItem(7, 101, 30), remindAt: at(50) });
+      });
+      yield* fake.reply("PATCH /saved/7", { ...savedItem(7, 101, 30, true), remindAt: at(50) });
+
+      const restored = yield* saved.restore(removed);
+
+      expect(posted).toEqual([{ messageId: 101, remindAt: at(50) }]);
+      expect(restored.status).toBe("done");
+      expect(savedItemForMessage(store.getState(), 101)?.status).toBe("done");
+      expect(savedListOf(store.getState(), "done").ids).toEqual([7]);
+      expect(savedListOf(store.getState(), "in_progress").ids).toEqual([2]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("leaves out a reminder that already went out or is now past, and skips the PATCH", () =>
+    Effect.gen(function* () {
+      seedSaved();
+      yield* TestClock.setTime(Date.parse(at(30)));
+
+      const fake = yield* FakeApi;
+      const posted: unknown[] = [];
+
+      yield* fake.route("POST /saved", (request) => {
+        posted.push(request.body);
+
+        return Effect.succeed(savedItem(8, 104, 30));
+      });
+
+      yield* saved.restore({ ...savedItem(4, 104, 5), remindAt: at(20) });
+      yield* saved.restore({ ...savedItem(4, 104, 5), remindAt: at(50), remindedAt: at(25) });
+
+      expect(posted).toEqual([
+        { messageId: 104, remindAt: null },
+        { messageId: 104, remindAt: null },
+      ]);
+      expect((yield* fake.requests).filter((request) => request.method === "PATCH")).toEqual([]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+});
+
 describe("scheduled actions", () => {
   afterEach(() => mutations.reset());
 
