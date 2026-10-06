@@ -123,6 +123,9 @@ describe("timelineItems", () => {
     const pending: PendingMessage = {
       clientMessageId: "pending-1",
       roomId: 1,
+      threadId: null,
+      attachmentSignedId: null,
+      attachment: null,
       creatorId: 7,
       markdownSource: "hi",
       createdAt: local(6, 9, 2),

@@ -2,7 +2,9 @@ import { Clock, Context, Effect, FiberMap, Layer, Result, Schedule, Stream } fro
 import type { ApiClient } from "../api/client.ts";
 import { createMessage } from "../api/endpoints.ts";
 import { type ApiFailure, NetworkError, ServerError } from "../api/errors.ts";
+import { createThreadMessage } from "../api/thread-endpoints.ts";
 import { uuid7 } from "../lib/uuid7.ts";
+import type { PendingAttachment, PendingMessage } from "../store/model.ts";
 import { mutations, store } from "../store/store.ts";
 import { SyncLink } from "./link.ts";
 
@@ -19,6 +21,16 @@ const resendSchedule = Schedule.min([
   Schedule.spaced("30 seconds"),
 ]);
 
+/** Where a message goes and what it carries besides its Markdown. */
+export interface SendOptions {
+  /** Reply in this thread instead of on the room's root timeline. */
+  readonly threadId?: number | null;
+  /** A finished direct upload, attached as the message's file. */
+  readonly attachmentSignedId?: string | null;
+  /** What the pending row shows for that file. */
+  readonly attachment?: PendingAttachment | null;
+}
+
 /**
  * Optimistic sends. A message shows as pending at once and is posted with a UUID v7
  * `clientMessageId`; transient failures retry with backoff, a 4xx marks it failed (Retry keeps
@@ -29,8 +41,12 @@ const resendSchedule = Schedule.min([
 export class Outbox extends Context.Service<
   Outbox,
   {
-    /** Queues `markdown` for `roomId`; returns its `clientMessageId`. */
-    readonly send: (roomId: number, markdown: string) => Effect.Effect<string>;
+    /** Queues `markdown` for `roomId` (or a thread in it); returns its `clientMessageId`. */
+    readonly send: (
+      roomId: number,
+      markdown: string,
+      options?: SendOptions,
+    ) => Effect.Effect<string>;
     /** Sends a failed message again, with the same `clientMessageId`. */
     readonly retry: (clientMessageId: string) => Effect.Effect<void>;
     /** Drops a pending or failed message (and stops its retries). */
@@ -46,20 +62,21 @@ export class Outbox extends Context.Service<
       const reconnected = Effect.asVoid(Stream.runHead(link.attached));
 
       /** Posts until it lands or fails for good, backing off between transient failures. */
-      const post = Effect.fnUntraced(function* (
-        clientMessageId: string,
-        roomId: number,
-        markdownSource: string,
-      ) {
+      const post = Effect.fnUntraced(function* (pending: PendingMessage) {
         const step = yield* Schedule.toStep(resendSchedule);
 
-        const attempt = createMessage(roomId, {
-          clientMessageId,
-          markdownSource,
+        const body = {
+          clientMessageId: pending.clientMessageId,
+          markdownSource: pending.markdownSource,
           replyToMessageId: null,
           replyNotifyAuthor: null,
-          attachmentSignedId: null,
-        });
+          attachmentSignedId: pending.attachmentSignedId,
+        };
+
+        const attempt =
+          pending.threadId === null
+            ? createMessage(pending.roomId, body)
+            : createThreadMessage(pending.threadId, body);
 
         while (true) {
           const result = yield* Effect.result(attempt);
@@ -78,34 +95,43 @@ export class Outbox extends Context.Service<
         }
       });
 
-      const deliver = (clientMessageId: string, roomId: number, markdownSource: string) =>
-        post(clientMessageId, roomId, markdownSource).pipe(
+      const deliver = (pending: PendingMessage) =>
+        post(pending).pipe(
           Effect.matchEffect({
             onSuccess: (message) => Effect.sync(() => mutations.receiveMessage(message)),
             onFailure: (error) =>
               Effect.sync(() =>
-                mutations.setPendingState(clientMessageId, "failed", error.message),
+                mutations.setPendingState(pending.clientMessageId, "failed", error.message),
               ),
           }),
           Effect.provideContext(context),
         );
 
-      const send = Effect.fnUntraced(function* (roomId: number, markdown: string) {
+      const send = Effect.fnUntraced(function* (
+        roomId: number,
+        markdown: string,
+        options: SendOptions = {},
+      ) {
         const now = yield* Clock.currentTimeMillis;
         const clientMessageId = uuid7(now);
         const state = store.getState();
 
-        mutations.addPending({
+        const pending: PendingMessage = {
           clientMessageId,
           roomId,
+          threadId: options.threadId ?? null,
+          attachmentSignedId: options.attachmentSignedId ?? null,
+          attachment: options.attachment ?? null,
           creatorId: state.me?.user.id ?? state.boot?.user.id ?? 0,
           markdownSource: markdown,
           createdAt: new Date(now).toISOString(),
           state: "sending",
           error: null,
-        });
+        };
 
-        yield* FiberMap.run(inFlight, clientMessageId, deliver(clientMessageId, roomId, markdown));
+        mutations.addPending(pending);
+
+        yield* FiberMap.run(inFlight, clientMessageId, deliver(pending));
 
         return clientMessageId;
       });
@@ -119,11 +145,7 @@ export class Outbox extends Context.Service<
 
         mutations.setPendingState(clientMessageId, "sending", null);
 
-        yield* FiberMap.run(
-          inFlight,
-          clientMessageId,
-          deliver(clientMessageId, pending.roomId, pending.markdownSource),
-        );
+        yield* FiberMap.run(inFlight, clientMessageId, deliver(pending));
       });
 
       const discard = Effect.fnUntraced(function* (clientMessageId: string) {

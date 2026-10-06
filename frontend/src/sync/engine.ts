@@ -1,6 +1,7 @@
 import { Clock, Context, Effect, Layer, Queue, Ref, Schedule, type Scope, Stream } from "effect";
 import type { ApiClient } from "../api/client.ts";
 import { messages, sidebar, users } from "../api/endpoints.ts";
+import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
@@ -52,6 +53,13 @@ function roomIdOf(topic: string): number | null {
   return match === null ? null : Number(match[1]);
 }
 
+/** `88` for `thread:88`, else `null`. */
+function threadIdOf(topic: string): number | null {
+  const match = /^thread:(\d+)$/.exec(topic);
+
+  return match === null ? null : Number(match[1]);
+}
+
 /** Authors of new messages the store has no user record for. */
 function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
   const known = store.getState().users;
@@ -98,6 +106,7 @@ export class Engine extends Context.Service<
       const resync = Effect.fnUntraced(function* (topicList: readonly string[]) {
         for (const topic of topicList) {
           const roomId = roomIdOf(topic);
+          const threadId = threadIdOf(topic);
 
           if (topic === "user") {
             yield* sidebar().pipe(
@@ -110,6 +119,16 @@ export class Engine extends Context.Service<
           } else if (roomId !== null) {
             yield* messages(roomId, null).pipe(
               Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, "replace"))),
+              Effect.catch((error) =>
+                Effect.logWarning(`sync: ${topic} resync failed`, error.message),
+              ),
+              Effect.provideContext(api),
+            );
+          } else if (threadId !== null) {
+            yield* threadMessages(threadId, null).pipe(
+              Effect.tap((page) =>
+                Effect.sync(() => mutations.applyThreadPage(threadId, page, "replace")),
+              ),
               Effect.catch((error) =>
                 Effect.logWarning(`sync: ${topic} resync failed`, error.message),
               ),

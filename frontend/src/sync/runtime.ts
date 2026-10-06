@@ -1,12 +1,25 @@
-import { Layer, ManagedRuntime } from "effect";
+import { type Effect, Layer, ManagedRuntime } from "effect";
 import { ApiClient, ApiConfig, endpointUrl } from "../api/client.ts";
+import type { CreateUpload } from "../gen/CreateUpload.ts";
+import type { DirectUpload } from "../gen/DirectUpload.ts";
+import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
+import type { ForwardTarget } from "../gen/ForwardTarget.ts";
+import type { MessageDTO } from "../gen/MessageDTO.ts";
+import type { PinList } from "../gen/PinList.ts";
+import type { SavedItem } from "../gen/SavedItem.ts";
+import type { ThreadFilter } from "../gen/ThreadFilter.ts";
+import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
+import type { UpdateThread } from "../gen/UpdateThread.ts";
 import { Engine } from "./engine.ts";
 import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
-import { Outbox } from "./outbox.ts";
+import * as messageActions from "./message-actions.ts";
+import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
+import { asAction } from "./run.ts";
 import * as session from "./session.ts";
 import { SyncSocket } from "./socket.ts";
+import * as threadActions from "./thread-actions.ts";
 import { Typing } from "./typing.ts";
 
 const API_BASE = "/api/v1";
@@ -33,8 +46,74 @@ const runEngine = Engine.use((engine) => engine.run);
 
 let started: Promise<void> | null = null;
 
-/** What React calls. Nothing here throws synchronously; failures land in the store. */
+type AppServices = ManagedRuntime.ManagedRuntime.Services<typeof runtime>;
+
+/** Runs an action; failures reject with an `ActionError` whose message is fit to show. */
+export const runAction = <A, E extends { readonly _tag: string; readonly message: string }>(
+  effect: Effect.Effect<A, E, AppServices>,
+): Promise<A> => runtime.runPromise(asAction(effect));
+
+/** Message actions (S2). Each lands the server's reply in the store; failures reject. */
+const messages = {
+  edit: (messageId: number, markdown: string): Promise<MessageDTO> =>
+    runAction(messageActions.edit(messageId, markdown)),
+  source: (messageId: number): Promise<string> => runAction(messageActions.source(messageId)),
+  remove: (messageId: number): Promise<void> => runAction(messageActions.remove(messageId)),
+  toggleReaction: (
+    messageId: number,
+    content: string,
+    shown: { readonly title: string; readonly imageUrl: string | null },
+  ): Promise<void> => runAction(messageActions.toggleReaction(messageId, content, shown)),
+  boost: (messageId: number, text: string): Promise<void> =>
+    runAction(messageActions.boost(messageId, text)),
+  removeBoost: (messageId: number, boostId: number): Promise<void> =>
+    runAction(messageActions.removeBoost(messageId, boostId)),
+  setPinned: (messageId: number, pinned: boolean): Promise<void> =>
+    runAction(messageActions.setPinned(messageId, pinned)),
+  pins: (roomId: number): Promise<PinList> => runAction(messageActions.pins(roomId)),
+  save: (messageId: number, remindAt: string | null = null): Promise<SavedItem> =>
+    runAction(messageActions.save(messageId, remindAt)),
+  unsave: (messageId: number): Promise<void> => runAction(messageActions.unsave(messageId)),
+  forwardDestinations: (): Promise<ForwardDestinationList> =>
+    runAction(messageActions.forwardDestinations()),
+  forward: (
+    messageId: number,
+    note: string | null,
+    destinations: readonly ForwardTarget[],
+  ): Promise<readonly MessageDTO[]> =>
+    runAction(messageActions.forward(messageId, note, destinations)),
+  startUpload: (body: CreateUpload): Promise<DirectUpload> =>
+    runAction(messageActions.startUpload(body)),
+};
+
+/** Thread actions (S2). Loads land in the store (errors too); writes reject on failure. */
+const threads = {
+  open: (threadId: number): Promise<void> => runAction(threadActions.open(threadId)),
+  close(threadId: number): void {
+    runtime.runFork(threadActions.close(threadId));
+  },
+  loadOlder: (threadId: number): Promise<void> => runAction(threadActions.loadOlder(threadId)),
+  loadNewer: (threadId: number): Promise<void> => runAction(threadActions.loadNewer(threadId)),
+  create: (
+    roomId: number,
+    parentMessageId: number,
+    markdown: string,
+    options?: { readonly name?: string | null; readonly attachmentSignedId?: string | null },
+  ): Promise<number> => runAction(threadActions.create(roomId, parentMessageId, markdown, options)),
+  update: (threadId: number, body: UpdateThread): Promise<void> =>
+    runAction(threadActions.update(threadId, body)),
+  follow: (threadId: number, involvement: ThreadInvolvement | null): Promise<void> =>
+    runAction(threadActions.follow(threadId, involvement)),
+  markRead: (threadId: number): Promise<void> => runAction(threadActions.markRead(threadId)),
+  list: (roomId: number, filter: ThreadFilter): Promise<void> =>
+    runAction(threadActions.list(roomId, filter)),
+};
+
+/** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
+  messages,
+  threads,
+
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 
   /**
@@ -72,9 +151,9 @@ export const actions = {
   jumpToPresent: (roomId: number): Promise<void> =>
     runtime.runPromise(session.jumpToPresent(roomId)),
 
-  /** Sends optimistically: the pending row shows at once. */
-  send(roomId: number, markdown: string): void {
-    runtime.runFork(session.send(roomId, markdown));
+  /** Sends optimistically (to a thread with `options.threadId`): the pending row shows at once. */
+  send(roomId: number, markdown: string, options?: SendOptions): void {
+    runtime.runFork(session.send(roomId, markdown, options));
   },
 
   /** Sends a failed message again with the same client id. */
@@ -90,9 +169,14 @@ export const actions = {
   /** Clears the room's unread state here at once, then on the server. */
   markRead: (roomId: number): Promise<void> => runtime.runPromise(session.markRead(roomId)),
 
-  /** Call on each keystroke (`true`) and on blur/clear (`false`); throttled to 1 per 3 s. */
-  setTyping(roomId: number, on: boolean): void {
-    runtime.runFork(Typing.use((typing) => typing.set(roomId, on)));
+  /**
+   * Call on each keystroke (`true`) and on blur/clear (`false`); throttled to 1 per 3 s. In a
+   * thread's composer pass its id: the indicator is per thread.
+   */
+  setTyping(roomId: number, on: boolean, threadId: number | null = null): void {
+    const conv = threadId === null ? `room:${roomId}` : `thread:${threadId}`;
+
+    runtime.runFork(Typing.use((typing) => typing.set(conv, on)));
   },
 
   /** The person did something (typed, clicked, scrolled): the next heartbeat says active. */

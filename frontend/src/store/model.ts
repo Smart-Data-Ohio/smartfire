@@ -6,6 +6,8 @@
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
+import type { ThreadFilter } from "../gen/ThreadFilter.ts";
+import type { ThreadPermissions } from "../gen/ThreadPermissions.ts";
 
 export type { Me } from "../gen/Me.ts";
 
@@ -26,6 +28,14 @@ export type { Sidebar } from "../gen/Sidebar.ts";
 export type { SidebarRow } from "../gen/SidebarRow.ts";
 
 export type { SyncEvent } from "../gen/SyncEvent.ts";
+
+export type { Thread } from "../gen/Thread.ts";
+
+export type { ThreadFilter } from "../gen/ThreadFilter.ts";
+
+export type { ThreadMembership } from "../gen/ThreadMembership.ts";
+
+export type { ThreadPermissions } from "../gen/ThreadPermissions.ts";
 
 export type { User } from "../gen/User.ts";
 
@@ -48,10 +58,24 @@ export interface Boot {
 /** The sync socket's state, for the connection banner. */
 export type ConnectionStatus = "connecting" | "online" | "reconnecting" | "offline";
 
+/** What a pending row shows for the file it's sending (the upload already finished). */
+export interface PendingAttachment {
+  readonly filename: string;
+  readonly contentType: string;
+  readonly byteSize: number;
+  /** A local `blob:` URL for an image's preview, or `null`. */
+  readonly previewUrl: string | null;
+}
+
 /** A message written here and not yet confirmed by the server. */
 export interface PendingMessage {
   readonly clientMessageId: string;
   readonly roomId: number;
+  /** The thread it replies in; `null` on the room's root timeline. */
+  readonly threadId: number | null;
+  /** A finished direct upload's signed id, posted as the message's file. */
+  readonly attachmentSignedId: string | null;
+  readonly attachment: PendingAttachment | null;
   readonly creatorId: number;
   readonly markdownSource: string;
   /** Local clock, RFC 3339: pending rows sort after every confirmed row by this. */
@@ -90,5 +114,20 @@ export interface RoomState {
 }
 
 export type TimelineMessage = MessageDTO;
+
+/** A thread pane's header data: loaded from `GET /threads/:id`, kept fresh by events. */
+export interface ThreadPaneState {
+  readonly status: LoadStatus;
+  readonly error: string | null;
+  readonly permissions: ThreadPermissions | null;
+}
+
+/** One room's thread list (the Threads pane), for one filter. */
+export interface RoomThreadList {
+  readonly filter: ThreadFilter;
+  /** Thread ids, most recently active first. */
+  readonly ids: readonly number[];
+  readonly status: LoadStatus;
+}
 
 export type SidebarRowById = Readonly<Record<number, SidebarRow>>;

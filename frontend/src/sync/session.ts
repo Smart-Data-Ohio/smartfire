@@ -15,7 +15,7 @@ import {
 } from "../api/endpoints.ts";
 import type { Sidebar } from "../gen/Sidebar.ts";
 import { mutations, store } from "../store/store.ts";
-import { Outbox } from "./outbox.ts";
+import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import { Topics } from "./topics.ts";
 import { Typing } from "./typing.ts";
@@ -120,7 +120,7 @@ export const closeRoom = Effect.fn("session.closeRoom")(function* (roomId: numbe
   const presenceService = yield* Presence;
   const typing = yield* Typing;
 
-  yield* typing.set(roomId, false);
+  yield* typing.set(roomTopic(roomId), false);
   yield* topics.release(roomTopic(roomId));
   yield* presenceService.leave(roomId);
   mutations.clearUnreadDivider(roomId);
@@ -166,14 +166,20 @@ export const jumpToPresent = Effect.fn("session.jumpToPresent")(function* (roomI
   );
 });
 
-/** Sends a message (optimistically); typing stops. */
-export const send = Effect.fn("session.send")(function* (roomId: number, markdown: string) {
+/** Sends a message (optimistically), to the room or one of its threads; typing stops. */
+export const send = Effect.fn("session.send")(function* (
+  roomId: number,
+  markdown: string,
+  options: SendOptions = {},
+) {
   const typing = yield* Typing;
   const outbox = yield* Outbox;
 
-  yield* typing.set(roomId, false);
+  const threadId = options.threadId ?? null;
 
-  return yield* outbox.send(roomId, markdown);
+  yield* typing.set(threadId === null ? roomTopic(roomId) : `thread:${threadId}`, false);
+
+  return yield* outbox.send(roomId, markdown, options);
 });
 
 /** Marks the room read here at once, then tells the server. */

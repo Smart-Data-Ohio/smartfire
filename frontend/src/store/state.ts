@@ -7,7 +7,11 @@ import type {
   PendingMessage,
   RoomCategory,
   RoomState,
+  RoomThreadList,
   SidebarRow,
+  Thread,
+  ThreadMembership,
+  ThreadPaneState,
   Timeline,
   User,
   UserPresence,
@@ -30,8 +34,19 @@ export interface State {
   readonly timelines: Readonly<Record<number, Timeline>>;
   /** By client message id. */
   readonly pending: Readonly<Record<string, PendingMessage>>;
-  /** Pending client message ids per room, oldest first. */
+  /** Pending client message ids per room (root timeline only), oldest first. */
   readonly pendingByRoom: Readonly<Record<number, readonly string[]>>;
+  /** Pending client message ids per thread, oldest first. */
+  readonly pendingByThread: Readonly<Record<number, readonly string[]>>;
+  /** The viewer's saved items: message id to saved item id. */
+  readonly saved: Readonly<Record<number, number>>;
+  readonly threads: Readonly<Record<number, Thread>>;
+  /** The viewer's membership per thread: absent until known, `null` when not a member. */
+  readonly threadMemberships: Readonly<Record<number, ThreadMembership | null>>;
+  readonly threadPanes: Readonly<Record<number, ThreadPaneState>>;
+  /** Each open thread's loaded window of replies (the unread fields stay unused). */
+  readonly threadTimelines: Readonly<Record<number, Timeline>>;
+  readonly roomThreads: Readonly<Record<number, RoomThreadList>>;
   /** Typists per topic (`room:12`): user id to the time (ms) their entry expires. */
   readonly typing: Readonly<Record<string, Readonly<Record<number, number>>>>;
   /** Deleted message ids and when (ms) their tombstone lapses: a late update can't revive them. */
@@ -67,6 +82,13 @@ export const initialState: State = {
   timelines: {},
   pending: {},
   pendingByRoom: {},
+  pendingByThread: {},
+  saved: {},
+  threads: {},
+  threadMemberships: {},
+  threadPanes: {},
+  threadTimelines: {},
+  roomThreads: {},
   typing: {},
   tombstones: {},
 };

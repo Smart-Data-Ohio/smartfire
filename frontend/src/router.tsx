@@ -65,11 +65,21 @@ const permalinkRoute = createRoute({
   component: () => null,
 });
 
+/** The new-thread pane's query as the URL has it. */
+interface RawNewThreadSearch {
+  readonly parent?: unknown;
+}
+
+/** The new-thread pane's query: the root message the thread starts on. */
+export interface NewThreadSearch {
+  readonly parent: number;
+}
+
 /** `/app/r/$roomId/t/new?parent=`: the right pane drafting a thread's first reply on `parent`. */
 const newThreadRoute = createRoute({
   getParentRoute: () => roomRoute,
   path: "t/new",
-  validateSearch: (search: Record<string, unknown>): { parent: number } => ({
+  validateSearch: (search: RawNewThreadSearch): NewThreadSearch => ({
     parent: parseId(String(search.parent ?? "")),
   }),
   component: () => null,

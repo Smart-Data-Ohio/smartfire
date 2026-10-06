@@ -1,5 +1,11 @@
 import { useStore as useZustandStore } from "zustand";
 import { createStore } from "zustand/vanilla";
+import type { MessageReactions } from "../gen/MessageReactions.ts";
+import type { PinState } from "../gen/PinState.ts";
+import type { ThreadCreated } from "../gen/ThreadCreated.ts";
+import type { ThreadDetail } from "../gen/ThreadDetail.ts";
+import type { ThreadList } from "../gen/ThreadList.ts";
+import * as extras from "./message-extras.ts";
 import type {
   Boot,
   ConnectionStatus,
@@ -10,11 +16,15 @@ import type {
   RoomDetail,
   Sidebar,
   SyncEvent,
+  Thread,
+  ThreadFilter,
+  ThreadMembership,
   User,
   UserPresence,
 } from "./model.ts";
 import * as reduce from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
+import * as threads from "./threads.ts";
 
 /**
  * The live store. Plain TypeScript, no Effect: the sync engine (src/sync) writes it through
@@ -65,6 +75,43 @@ export const mutations = {
   applyEvents: (events: readonly SyncEvent[], now: number) =>
     apply((state) => (events.length === 0 ? state : reduce.applyEvents(state, events, now))),
   prune: (now: number) => apply((state) => reduce.prune(state, now)),
+  /** An edit's reply (the `message.updated` event may beat it; the newer copy wins). */
+  updateMessage: (message: MessageDTO) => apply((state) => reduce.updateMessage(state, message)),
+  /** A delete went through here; the event may follow (or have come first). */
+  removeMessage: (message: MessageDTO, now: number) =>
+    apply((state) =>
+      reduce.removeMessage(state, message.id, message.roomId, message.threadId, now),
+    ),
+  setReactions: (change: MessageReactions) => apply((state) => extras.setReactions(state, change)),
+  setPinState: (change: PinState) => apply((state) => extras.setPinState(state, change)),
+  setSavedMark: (messageId: number, savedItemId: number | null) =>
+    apply((state) => extras.setSavedMark(state, messageId, savedItemId)),
+  applyThreadPage: (threadId: number, page: MessagePage, mode: reduce.PageMode) =>
+    apply((state) => reduce.applyThreadPage(state, threadId, page, mode)),
+  setThreadPageLoading: (threadId: number, direction: "older" | "newer") =>
+    apply((state) => reduce.setThreadPageLoading(state, threadId, direction)),
+  setThreadPageFailed: (threadId: number) =>
+    apply((state) => reduce.setThreadPageFailed(state, threadId)),
+  setThreadPaneLoading: (threadId: number) =>
+    apply((state) => threads.setThreadPaneLoading(state, threadId)),
+  setThreadPaneError: (threadId: number, error: string) =>
+    apply((state) => threads.setThreadPaneError(state, threadId, error)),
+  loadThreadDetail: (detail: ThreadDetail) =>
+    apply((state) => threads.loadThreadDetail(state, detail)),
+  /** A thread started here: its pane data, and the first reply on its (new) timeline. */
+  threadCreated: (created: ThreadCreated) =>
+    apply((state) =>
+      reduce.receiveMessage(threads.loadThreadDetail(state, created.detail), created.message),
+    ),
+  upsertThread: (thread: Thread) => apply((state) => threads.upsertThread(state, thread)),
+  setThreadMembership: (threadId: number, membership: ThreadMembership | null) =>
+    apply((state) => threads.setThreadMembership(state, threadId, membership)),
+  setThreadListLoading: (roomId: number, filter: ThreadFilter) =>
+    apply((state) => threads.setThreadListLoading(state, roomId, filter)),
+  setThreadListFailed: (roomId: number) =>
+    apply((state) => threads.setThreadListFailed(state, roomId)),
+  loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
+    apply((state) => threads.loadThreadList(state, roomId, filter, list)),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };

@@ -66,6 +66,9 @@ function ids(state: State): readonly number[] {
 const pending: PendingMessage = {
   clientMessageId: "mine-1",
   roomId: ROOM,
+  threadId: null,
+  attachmentSignedId: null,
+  attachment: null,
   creatorId: 1,
   markdownSource: "hello",
   createdAt: "2026-10-06T09:30:00.000Z",
