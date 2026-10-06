@@ -28,7 +28,8 @@ class RestoreCheckWorkflowTest < ActiveSupport::TestCase
   test "builds the Rust image from the checkout without pushing before the check" do
     text = File.read(WORKFLOW)
     assert_includes text, "file: rust/Dockerfile"
-    assert_includes text, "build-contexts: reference=."
+    assert_includes text, "context: rust"
+    refute_includes text, "build-contexts:"
     assert_includes text, "push: false"
     assert_includes text, "load: true"
     refute_includes text, "cache-to:"

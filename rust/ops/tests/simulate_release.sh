@@ -17,7 +17,7 @@
 #                cp -r rust /tmp/mig && cd /tmp/mig   # without target/
 #                $EDITOR crates/db/migrations/<VERSION>_<name>.sql
 #                CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files
-#                docker build --build-context reference=<checkout> -t smartfire:migrating .
+#                docker build -t smartfire:migrating .
 #
 # Needs docker, the registry:2 image, sqlite3, curl and jq, and must run as uid
 # 1000 (the image's user owns the bind-mounted volume). Uses 127.0.0.1:5000 and
