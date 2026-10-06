@@ -87,6 +87,14 @@ class WorkflowTest(unittest.TestCase):
         preflight = steps["preflight"]
         self.assertEqual(preflight["env"]["SHA"], "${{ steps.plan.outputs.sha }}")
         self.assertIn("EXPECTED_GIT_REVISION='${SHA}'", preflight["run"])
+        self.assertLess(preflight["run"].index('[[ "$SHA" =~ ^[0-9a-f]{40}$ ]]'), preflight["run"].index("remote="))
+        recovery = next(step["run"] for step in workflow["jobs"]["deploy"]["steps"]
+                        if "queue_discarded=" in step.get("run", ""))
+        self.assertIn('queue_discarded="$(jq -r \'.job_queue_changes_discarded // false\' rollback.json)"', recovery)
+        discarded = recovery.index('if [ "$queue_discarded" = "true" ]; then')
+        self.assertLess(discarded, recovery.index("job-queue changes were discarded"))
+        reverted = recovery.index('if [ "$action" = "migration-reverted" ]; then')
+        self.assertNotIn("discarded", recovery[reverted:discarded])
         rust = yaml_json((ROOT / ".github/workflows/rust.yml").read_text())
         port = [job for job in rust["jobs"].values() if job.get("name") == "Rust port"]
         self.assertEqual(len(port), 1, "rust.yml must keep exactly one aggregate job named 'Rust port'")

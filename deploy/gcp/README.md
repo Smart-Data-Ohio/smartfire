@@ -171,7 +171,8 @@ moment writes are frozen. Every invocation takes `flock` on
 | `IMAGE_REF` | *(required for `preflight`/`freeze`/`cutover`)* | Must be pinned as `IMAGE@sha256:<64 hex>`. |
 | `RESUME` | `0` | `1` lets `freeze` reuse a release directory that already completed, deliberately pairing a new cutover with an older backup. |
 | `EXPECTED_APP_HOST` | unset | When set, `preflight` refuses to continue if the VM serves a different host. |
-| `EXPECTED_GIT_REVISION` | unset | When set, `preflight` refuses a candidate image whose `GIT_REVISION` differs. `deploy-gcp.yml` passes the full SHA it deploys. |
+| `EXPECTED_GIT_REVISION` | unset | Required. `preflight` refuses a candidate image whose `GIT_REVISION` differs, and refuses an empty value. `deploy-gcp.yml` passes the full SHA it deploys. |
+| `ALLOW_UNVERIFIED_REVISION` | `0` | `1` skips that check for a hand-run release with no requested commit. Preflight records it, and `freeze` and `cutover` refuse an unverified preflight unless it is set again. |
 | `REGISTRY_HOST` | `us-central1-docker.pkg.dev` | Registry to authenticate against. |
 | `TIMER_UNIT` | `campfire-open-roles.timer` | Feed timer to pause and restore. |
 | `SERVICE_UNIT` | `${TIMER_UNIT%.timer}.service` | The oneshot service the timer activates. `freeze` waits for it to go inactive before stopping the app. |

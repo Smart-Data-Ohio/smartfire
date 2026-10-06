@@ -419,6 +419,8 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$GCP_IMAGE_PULLER_SA" || { echo "::error::GCP_IMAGE_PULLER_SA is not set"; exit 1; }
+          # Preflight refuses an empty revision anyway; failing here says why.
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::the resolved commit '${SHA}' is not a full SHA"; exit 1; }
           remote="sudo env RELEASE_LABEL='${LABEL}' IMAGE_REF='${IMAGE_REF}' EXPECTED_APP_HOST='${GCP_APP_HOST}' EXPECTED_GIT_REVISION='${SHA}' /opt/campfire-deploy/campfire-release.sh preflight"
           # The VM receives a read-only Artifact Registry token, not the deployer's
           # own credential, and it arrives only on the SSH session's standard
@@ -738,6 +740,7 @@ jobs:
           app_host="$(jq -r '.app_host // "unknown"' rollback.json)"
           restored_image="$(jq -r '.restored_image // "not restored"' rollback.json)"
           health="$(jq -r '.health // "unknown"' rollback.json)"
+          queue_discarded="$(jq -r '.job_queue_changes_discarded // false' rollback.json)"
           rollback_tag="$(jq -r '.rollback_tag // "unknown"' freeze.json)"
 
           {
@@ -800,10 +803,14 @@ jobs:
               echo
               if [ "$action" = "migration-reverted" ]; then
                 echo "Only this release's migration and the new image's own boot bookkeeping (its"
-                echo "job queue and AUTOINCREMENT counters) had touched the live database; every"
-                echo "other table matched row for row, so its frozen bytes were put back before the"
-                echo "previous image was restored. Any job-queue changes the new image made were"
-                echo "discarded (see the reason below)."
+                echo "job queue and AUTOINCREMENT counters) had touched the live database, so its"
+                echo "frozen bytes were put back before the previous image was restored."
+              fi
+              if [ "$queue_discarded" = "true" ]; then
+                echo
+                echo "**The new image's job-queue changes were discarded.** Every table but"
+                echo "\`background_jobs\` matched row for row. Jobs it enqueued are gone, and jobs it"
+                echo "ran or failed are due again under the previous image."
               fi
               echo "${reason}."
               echo

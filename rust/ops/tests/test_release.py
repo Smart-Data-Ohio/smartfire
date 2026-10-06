@@ -234,7 +234,8 @@ class Host:
             "IMAGE_REF": CANDIDATE, "CANDIDATE": CANDIDATE, "PREVIOUS": PREVIOUS, "ROLLBACK_TAG": ROLLBACK_TAG,
             "RELEASE_LABEL": "fixture", "STATE_ROOT": str(self.work), "LOCK_FILE": str(self.work / "release.lock"),
             "ALLOW_BACKUP_WINDOW": "1", "HEALTH_TIMEOUT": "0", "FEED_DRAIN_TIMEOUT": "0",
-            "OPEN_ROLES_PATHS": str(self.work / "no-feed"), "TRACE": str(self.trace), **env}
+            "OPEN_ROLES_PATHS": str(self.work / "no-feed"), "TRACE": str(self.trace),
+            "EXPECTED_GIT_REVISION": "fixture", **env}
         result = subprocess.run(["bash", str(SCRIPT), phase], env=environment, input="token\n",
                                 text=True, capture_output=True)
         return result, self.commands()[before:]
@@ -340,6 +341,33 @@ class ReleaseTest(unittest.TestCase):
         result, _ = self.host.run("preflight", EXPECTED_GIT_REVISION="fixture")
         self.assertOk(result)
         self.assertIn("GIT_REVISION matches", result.stdout)
+        self.assertTrue(self.host.json("preflight-result.json")["revision_verified"])
+
+    def test_an_unverified_revision_fails_closed(self):
+        # No expected revision is a refusal, not a skipped check.
+        result, _ = self.host.run("preflight", EXPECTED_GIT_REVISION="")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("EXPECTED_GIT_REVISION is empty", result.stderr)
+        self.assertFalse((self.host.state / "preflight-result.json").exists())
+        # An operator may opt out by hand; preflight records that, and freeze and
+        # cutover refuse to act on it without the same opt-out.
+        result, _ = self.host.run("preflight", EXPECTED_GIT_REVISION="", ALLOW_UNVERIFIED_REVISION="1")
+        self.assertOk(result)
+        self.assertFalse(self.host.json("preflight-result.json")["revision_verified"])
+        for phase in ["freeze", "cutover"]:
+            with self.subTest(phase=phase):
+                result, commands = self.host.run(phase)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("did not verify the candidate's GIT_REVISION", result.stderr)
+                self.assertFalse(any(c[:2] == ["once", "stop"] for c in commands))
+        self.assertOk(self.host.run("freeze", ALLOW_UNVERIFIED_REVISION="1")[0])
+        # A record claiming verification without a matching requested commit is not enough.
+        record = self.host.json("preflight-result.json")
+        record.update(revision_verified=True, expected_revision="")
+        (self.host.state / "preflight-result.json").write_text(json.dumps(record))
+        result, _ = self.host.run("cutover")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("did not verify the candidate's GIT_REVISION", result.stderr)
 
     def test_later_phases_require_the_preflight_candidate_and_a_rust_record(self):
         self.assertOk(self.host.run("preflight")[0])

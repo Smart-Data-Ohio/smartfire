@@ -5,7 +5,14 @@ use std::path::Path;
 
 fn main() {
     let dir = Path::new(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("migrations");
+    // Cargo reruns this when the directory's or any entry's mtime is newer than its last run,
+    // which covers adding, removing and renaming files in one checkout. A target directory shared
+    // with another source tree (a Docker cache mount, a shared CARGO_TARGET_DIR) can hold a newer
+    // run, so a file added there with an older mtime would be missed. The image build therefore
+    // also passes a digest of the directory's names and contents, which Cargo compares by value.
+    // `migrations::tests::catalog_matches_the_migrations_directory` catches a stale catalog.
     println!("cargo::rerun-if-changed={}", dir.display());
+    println!("cargo::rerun-if-env-changed=CAMPFIRE_MIGRATIONS_DIGEST");
     let mut entries = Vec::new();
     for entry in std::fs::read_dir(&dir).expect("crates/db/migrations") {
         let entry = entry.unwrap();

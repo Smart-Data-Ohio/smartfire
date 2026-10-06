@@ -204,6 +204,46 @@ mod tests {
     use super::*;
     use crate::{SystemClock, schema};
 
+    /// The compiled-in catalog is exactly `crates/db/migrations/` as it is on disk now: the same
+    /// files, names and SQL. Read at run time, so a build that missed an added, removed, renamed
+    /// or edited migration fails here instead of testing (or shipping) another catalog.
+    #[test]
+    fn catalog_matches_the_migrations_directory() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations");
+        let mut on_disk: Vec<Migration> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap())
+            .filter(|entry| !entry.file_name().to_string_lossy().starts_with('.'))
+            .map(|entry| {
+                let file = entry.file_name().into_string().unwrap();
+                let (version, name) = file.strip_suffix(".sql").unwrap().split_once('_').unwrap();
+                Migration::new(version, name, &std::fs::read_to_string(entry.path()).unwrap())
+            })
+            .collect();
+        on_disk.sort_by(|a, b| version_order(&a.version, &b.version));
+        assert_eq!(
+            catalog(),
+            on_disk,
+            "the compiled-in migration catalog is stale: run `cargo clean -p campfire_db` and rebuild"
+        );
+    }
+
+    /// The image build passes the directory's digest to `build.rs`, which reruns when it changes.
+    #[test]
+    fn the_image_build_tracks_the_migrations_by_content() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let build = std::fs::read_to_string(root.join("build.rs")).unwrap();
+        assert!(build.contains("cargo::rerun-if-env-changed=CAMPFIRE_MIGRATIONS_DIGEST"));
+        assert!(build.contains("cargo::rerun-if-changed={}\", dir.display()"));
+        let dockerfile = std::fs::read_to_string(root.join("../../Dockerfile")).unwrap();
+        let build_step = dockerfile.split("RUN --mount=type=cache").nth(1).unwrap();
+        assert!(
+            build_step.contains("export CAMPFIRE_MIGRATIONS_DIGEST=") && build_step.contains("crates/db/migrations"),
+            "rust/Dockerfile's cargo build must export CAMPFIRE_MIGRATIONS_DIGEST from crates/db/migrations"
+        );
+        assert!(build_step.find("CAMPFIRE_MIGRATIONS_DIGEST") < build_step.find("cargo build"));
+    }
+
     fn prepared() -> Connection {
         let mut conn = Connection::open_in_memory().unwrap();
         schema::prepare(&mut conn, "production", &SystemClock).unwrap();

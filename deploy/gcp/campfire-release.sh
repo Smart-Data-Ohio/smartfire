@@ -61,8 +61,11 @@ set -euo pipefail
 #                 that already completed. Off by default so a retry cannot
 #                 silently pair a new cutover with a stale backup.
 # EXPECTED_APP_HOST  when set, preflight refuses a VM serving a different host.
-# EXPECTED_GIT_REVISION  when set (deploy-gcp.yml passes the full commit SHA it
-#                    resolved), preflight refuses a candidate whose GIT_REVISION differs.
+# EXPECTED_GIT_REVISION  the full commit SHA the candidate must have been built from
+#                    (deploy-gcp.yml passes the one it resolved). Preflight refuses a
+#                    candidate whose GIT_REVISION differs, and refuses an empty value.
+# ALLOW_UNVERIFIED_REVISION  1 lets an operator skip that check by hand; preflight
+#                    records it, and freeze and cutover then need it set again.
 # REGISTRY_HOST   registry to authenticate against.
 # TIMER_UNIT      feed timer to pause and restore.
 # SERVICE_UNIT    the oneshot service the timer activates; derived from
@@ -102,6 +105,7 @@ TIMER_UNIT="${TIMER_UNIT:-campfire-open-roles.timer}"
 SERVICE_UNIT="${SERVICE_UNIT:-${TIMER_UNIT%.timer}.service}"
 EXPECTED_APP_HOST="${EXPECTED_APP_HOST:-}"
 EXPECTED_GIT_REVISION="${EXPECTED_GIT_REVISION:-}"
+ALLOW_UNVERIFIED_REVISION="${ALLOW_UNVERIFIED_REVISION:-0}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-300}"
 FEED_DRAIN_TIMEOUT="${FEED_DRAIN_TIMEOUT:-300}"
 MIN_FREE_DISK_MB="${MIN_FREE_DISK_MB:-3072}"
@@ -283,6 +287,14 @@ require_preflight_target() {
     || die "preflight target image '$target_image' does not match IMAGE_REF '$IMAGE_REF' (run preflight for this candidate)"
   [ "$(read_json_field "$preflight" '[.current_runtime, .target_runtime] | map(. // "unrecorded") | join("-")')" = rust-rust ] \
     || die "preflight did not record a Rust-to-Rust release in $preflight (run preflight again with this script)"
+  # Verified means preflight compared a non-empty requested commit with the
+  # candidate's GIT_REVISION and recorded them equal.
+  if [ "$(jq -r '(.revision_verified == true) and ((.expected_revision // "") != "")
+                 and (.expected_revision == .target_revision)' "$preflight" 2>/dev/null || echo false)" != true ]; then
+    [ "$ALLOW_UNVERIFIED_REVISION" = 1 ] \
+      || die "preflight did not verify the candidate's GIT_REVISION against a requested commit (run preflight with EXPECTED_GIT_REVISION, or set ALLOW_UNVERIFIED_REVISION=1 by hand)"
+    warn "the candidate's commit was not verified in preflight; continuing because ALLOW_UNVERIFIED_REVISION=1"
+  fi
 }
 
 # --------------------------------------------------------------- state I/O ---
@@ -1072,13 +1084,19 @@ phase_preflight() {
   require_rust_image "$IMAGE_REF" target
   require_rust_image "$current_image" current
   # The tag names a commit, but only the image's own GIT_REVISION (baked in by
-  # publish-rust-image.yml) proves which commit was built into it.
+  # publish-rust-image.yml) proves which commit was built into it. Fails closed:
+  # no expected revision is a refusal, unless an operator explicitly opts out.
+  local built_revision revision_verified=false
+  built_revision="$(image_git_revision "$IMAGE_REF")"
   if [ -n "$EXPECTED_GIT_REVISION" ]; then
-    local built_revision
-    built_revision="$(image_git_revision "$IMAGE_REF")"
     [ "$built_revision" = "$EXPECTED_GIT_REVISION" ] \
       || die "the candidate image was built from '${built_revision:-an unrecorded revision}', not the requested ${EXPECTED_GIT_REVISION}"
+    revision_verified=true
     log "candidate image GIT_REVISION matches the requested ${EXPECTED_GIT_REVISION}"
+  elif [ "$ALLOW_UNVERIFIED_REVISION" = 1 ]; then
+    warn "EXPECTED_GIT_REVISION is empty and ALLOW_UNVERIFIED_REVISION=1: not checking which commit the candidate (GIT_REVISION '${built_revision:-unrecorded}') was built from"
+  else
+    die "EXPECTED_GIT_REVISION is empty: refusing a candidate whose commit nobody asked for (set ALLOW_UNVERIFIED_REVISION=1 to skip this check by hand)"
   fi
   target_runtime=rust
   current_runtime=rust
@@ -1139,7 +1157,9 @@ phase_preflight() {
     --arg current_revision "$(image_git_revision "$current_image")" \
     --arg current_runtime "$current_runtime" \
     --arg target_image "$IMAGE_REF" \
-    --arg target_revision "$(image_git_revision "$IMAGE_REF")" \
+    --arg target_revision "$built_revision" \
+    --arg expected_revision "$EXPECTED_GIT_REVISION" \
+    --argjson revision_verified "$revision_verified" \
     --arg target_runtime "$target_runtime" \
     --arg once_version "$(once version 2>/dev/null || echo unknown)" \
     --argjson free_mb "$free_mb" \
@@ -1149,7 +1169,8 @@ phase_preflight() {
     '{phase:$phase, at:$at, release_label:$label, container:$container, app_host:$app_host,
       volume:$volume, volume_mountpoint:$mountpoint, current_image:$current_image,
       current_revision:$current_revision, current_runtime:$current_runtime, target_image:$target_image,
-      target_revision:$target_revision, target_runtime:$target_runtime, once_version:$once_version, free_disk_mb:$free_mb,
+      target_revision:$target_revision, expected_revision:$expected_revision,
+      revision_verified:$revision_verified, target_runtime:$target_runtime, once_version:$once_version, free_disk_mb:$free_mb,
       volume_mb:$volume_mb, image_mb:$image_mb, env_keys:$env_keys}' \
     | write_state preflight-result.json
 

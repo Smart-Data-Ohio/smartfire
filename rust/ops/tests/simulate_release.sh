@@ -126,10 +126,13 @@ publish() {
   "$REAL_DOCKER" image inspect "$repo" --format '{{range .RepoDigests}}{{println .}}{{end}}' \
     | grep '^127.0.0.1:5000/campfire/app@' | head -n1
 }
+revision_of() { "$REAL_DOCKER" image inspect "$1" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^GIT_REVISION=//p'; }
 phases() { # label image phase... -> exit status of the first failing phase
-  local label="$1" image="$2" phase; shift 2
+  local label="$1" image="$2" phase revision; shift 2
+  # As deploy-gcp.yml does: the commit the image claims, unless a scenario sets one.
+  revision="${EXPECTED_GIT_REVISION-$(revision_of "$image")}"
   for phase in "$@"; do
-    RELEASE_LABEL="$label" IMAGE_REF="$image" bash "$SCRIPT" "$phase" <<<"token" \
+    RELEASE_LABEL="$label" IMAGE_REF="$image" EXPECTED_GIT_REVISION="$revision" bash "$SCRIPT" "$phase" <<<"token" \
       >>"$SIM/$label.log" 2>&1 || return $?
   done
 }
@@ -172,9 +175,10 @@ echo kept > "$SIM/volume/files/sim-upload"
 say "A: release CANDIDATE over PREVIOUS (no migrations); a wrong GIT_REVISION is refused first"
 EXPECTED_GIT_REVISION=0000000000000000000000000000000000000000 expect a0 1 "$CANDIDATE" preflight
 grep -q 'not the requested 0000000000000000000000000000000000000000' "$SIM/a0.log" || fail "A0 refused for another reason"
-candidate_revision="$("$REAL_DOCKER" image inspect "$CANDIDATE_TAG" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^GIT_REVISION=//p')"
-EXPECTED_GIT_REVISION="$candidate_revision" expect a 0 "$CANDIDATE" preflight
-expect a 0 "$CANDIDATE" freeze cutover finish
+EXPECTED_GIT_REVISION="" expect a0 1 "$CANDIDATE" preflight
+grep -q 'EXPECTED_GIT_REVISION is empty' "$SIM/a0.log" || fail "A0 accepted an empty expected revision"
+expect a 0 "$CANDIDATE" preflight freeze cutover finish
+[ "$(result a .revision_verified preflight-result.json)" = true ] || fail "A did not verify the revision"
 [ "$(result a '.applied | length' live-migration-result.json)" = 0 ] || fail "A applied migrations"
 serving "$CANDIDATE" "A is not serving the candidate"
 
