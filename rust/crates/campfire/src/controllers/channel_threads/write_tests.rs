@@ -147,3 +147,59 @@ async fn initial_thread_upload_is_processed_and_downloadable() {
     assert_eq!(app.booted.app.storage.service.download(&blob.key).unwrap(), b"Thread upload\n");
     assert_eq!(response.json()["thread"]["id"], thread);
 }
+
+/// test/controllers/channel_threads_controller_test.rb:331, "work owner must be an eligible
+/// parent-room member and a revoked owner stays visible as unavailable", on the Rails fixtures
+/// with the declaration's setup: jz's "Design discussion" thread in Designers.
+#[tokio::test]
+async fn work_owner_must_be_an_eligible_parent_room_member_and_a_revoked_owner_stays_visible_as_unavailable() {
+    const DESIGNERS: i64 = 654632876;
+    const JZ: i64 = 773523953;
+    let app = TestApp::boot_frozen().await.expect("default seed required").without_job_runner().await;
+    let thread = app.db().write(|tx| {
+        tx.conn().execute_batch("PRAGMA defer_foreign_keys=ON")?;
+        let tables = tx.conn().prepare("SELECT name FROM pragma_table_list WHERE schema='main' AND type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('schema_migrations','ar_internal_metadata')")?
+            .query_map([], |row| row.get::<_, String>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+        for table in tables {
+            tx.conn().execute(&format!("DELETE FROM \"{}\"", table.replace('"', "\"\"")), [])?;
+        }
+        campfire_db::fixtures::load(tx.conn(), &campfire_db::fixtures::reference_dir(), &campfire_db::fixtures::Options { now: tx.now(), bcrypt_cost: 4 })?;
+        let thread = ChannelThread::create(tx, NewChannelThread {
+            room_id: DESIGNERS, creator_id: JZ, name: Some("Design discussion".into()), ..Default::default()
+        })?;
+        ThreadMembership::join(tx, thread.id, JZ)?;
+        Ok(thread.id)
+    }).await.unwrap();
+    let path = format!("/rooms/{DESIGNERS}/threads/{thread}.json");
+    let patch = |input: Value| Req::new(Method::PATCH, &path).header("content-type", "application/json").body(json!({"thread": input}).to_string());
+    let owner = || async { app.db().read(move |c| ChannelThread::find(c, thread)).await.unwrap().work_owner_id };
+    let events = || async {
+        app.db().read(|c| Ok(c.query_row("SELECT COUNT(*) FROM work_thread_events", [], |r| r.get::<_, i64>(0))?)).await.unwrap()
+    };
+    let mut jz = app.sign_in(JZ).await;
+
+    let assigned = jz.write(patch(json!({"work_status": "planned", "work_owner_id": KEVIN}))).await;
+    assert_eq!(assigned.status, StatusCode::OK, "{}", assigned.text());
+
+    let before = events().await;
+    let refused = jz.write(patch(json!({"work_owner_id": BENDER}))).await;
+    assert_eq!(events().await, before, "a refused owner records no work event");
+    assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", refused.text());
+    assert!(refused.json()["error"].as_str().unwrap().contains("active agent member"), "{}", refused.text());
+    assert_eq!(owner().await, Some(KEVIN));
+
+    // users(:kevin).deactivate
+    app.db().write(|tx| campfire_db::User::find(tx.conn(), KEVIN)?.deactivate(tx)).await.unwrap();
+
+    let shown = jz.get(&path).await;
+    assert_eq!(shown.status, StatusCode::OK, "{}", shown.text());
+    // assert_not @thread.reload.work_owner_active?, as the thread JSON reports it.
+    assert_eq!(shown.json()["thread"]["work_owner_active"], json!(false), "{}", shown.text());
+    assert_eq!(shown.json()["thread"]["work_owner_id"], json!(KEVIN), "{}", shown.text());
+    assert_eq!(shown.json()["thread"]["work_owner"]["active"], json!(false), "{}", shown.text());
+    assert_eq!(shown.json()["thread"]["work_owner"]["name"], json!("Kevin"), "{}", shown.text());
+
+    let cleared = jz.write(patch(json!({"work_owner_id": ""}))).await;
+    assert_eq!(cleared.status, StatusCode::OK, "{}", cleared.text());
+    assert_eq!(owner().await, None);
+}
