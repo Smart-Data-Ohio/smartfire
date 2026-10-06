@@ -51,8 +51,12 @@ jobs:
     permissions:
       contents: read
     steps:
+      # test_workflows.py compares deploy-gcp.yml with an older revision of itself, so it needs
+      # the history; blobs are fetched only when read.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
 
       - name: Test the release contract and workflows (rust/ops)
