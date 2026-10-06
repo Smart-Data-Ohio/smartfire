@@ -114,7 +114,7 @@ async fn ws15e_rails_opengraph_explicit_timeouts_bound_open() {
     let net = Network {
         resolver: Arc::new(FakeResolver::default()),
         dialer: Arc::new(Stalled),
-        tls: crate::integrations::net::tls_config(rustls::RootCertStore::empty()),
+        tls: crate::net::tls_config(rustls::RootCertStore::empty()),
     };
     let started = std::time::Instant::now();
     let result = tokio::time::timeout(

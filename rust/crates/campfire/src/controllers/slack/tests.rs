@@ -1,5 +1,5 @@
 use crate::{
-    app::{self, App},
+    app::App,
     config::Config,
     integrations::{
         net::Network,
@@ -43,7 +43,7 @@ impl Fresh {
             }),
         })
         .unwrap();
-        let boot = app::boot_with_network(
+        let boot = crate::server::boot_with_network(
             config,
             Arc::new(campfire_kit::FrozenClock::new(
                 "2026-01-01T12:00:00Z".parse().unwrap(),

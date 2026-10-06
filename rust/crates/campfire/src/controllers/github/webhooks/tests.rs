@@ -7,7 +7,7 @@ use sha2::Sha256;
 use tower::ServiceExt;
 
 use crate::{
-    app::{self, App},
+    app::App,
     config::Config,
 };
 
@@ -31,8 +31,8 @@ impl Fresh {
             _ => None,
         })
         .unwrap();
-        let booted = app::boot(config).await.unwrap();
-        let app::Booted { app, router, jobs, .. } = booted;
+        let booted = crate::server::boot(config).await.unwrap();
+        let crate::server::Booted { app, router, jobs, .. } = booted;
         jobs.shutdown(std::time::Duration::from_secs(1)).await;
         Self {
             app,

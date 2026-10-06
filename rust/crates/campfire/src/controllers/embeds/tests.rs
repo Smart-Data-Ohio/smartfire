@@ -5,7 +5,7 @@ use campfire_kit::{ActionFn, Ctx, Kit, KitConfig, RailsCrypto};
 use futures_util::future::BoxFuture;
 
 use crate::controllers::presenters::test_support::*;
-use crate::integrations::net::Network;
+use crate::net::Network;
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 
 #[derive(Clone)]

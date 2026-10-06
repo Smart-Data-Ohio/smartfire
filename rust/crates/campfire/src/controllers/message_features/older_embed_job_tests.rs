@@ -101,7 +101,7 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                 dialed: Default::default(),
             });
             let mut net = network(resolver, dialer);
-            net.tls = crate::integrations::net::tls_config(roots);
+            net.tls = crate::net::tls_config(roots);
             let (completed, completion) = tokio::sync::oneshot::channel();
             let completed = Arc::new(Mutex::new(Some(completed)));
             let release = Arc::new(tokio::sync::Notify::new());
@@ -128,7 +128,7 @@ async fn older_generic_and_linkedin_network_jobs_match_rails_and_flat_reads() {
                     // Stop the runner before allowing this parent to finish. Children remain
                     // durable; their execution is a separate permutation, as Rails' test adapter does.
                     barrier.notified().await;
-                    result.map_err(crate::jobs::discard_missing)?;
+                    result.map_err(crate::queue::discard_missing)?;
                     Ok(Outcome::Done)
                 }
             });

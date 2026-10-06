@@ -269,7 +269,7 @@ async fn older_calendar_meet_jobs_match_rails_frames_and_retry_or_noop_outcomes(
                 ))
                 .await;
             let mut drain = QueueDrain::install(&app).await;
-            let mut registry = crate::jobs::Registry::new();
+            let mut registry = crate::queue::Registry::new();
             crate::integrations::google::calendar_sync::register(&mut registry);
             let config = RunnerConfig::new(vec![QueueConfig::new("default", 1)]);
             let queue = JobQueue::new(&registry, &config).unwrap();

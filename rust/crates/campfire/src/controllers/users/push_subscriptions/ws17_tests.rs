@@ -1,5 +1,5 @@
 use crate::controllers::presenters::test_support::{DAVID, JASON, Req, TestApp};
-use crate::integrations::net::{BoxFuture, Network, Resolver};
+use crate::net::{BoxFuture, Network, Resolver};
 struct FixedDns(std::net::IpAddr);
 impl Resolver for FixedDns {
     fn lookup<'a>(&'a self, _: &'a str) -> BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {

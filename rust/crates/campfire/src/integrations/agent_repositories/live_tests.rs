@@ -115,7 +115,7 @@ async fn ws11_live_repository_adapter_matches_rails_allow_denial_disconnect_and_
                 to: server.addr,
                 dialed: Default::default(),
             }),
-            tls: crate::integrations::net::tls_config(roots),
+            tls: crate::net::tls_config(roots),
         };
         let (app, _dir) = TestApp::boot_with_github_network(net)
             .await

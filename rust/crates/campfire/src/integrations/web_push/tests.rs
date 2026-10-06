@@ -260,7 +260,7 @@ async fn invalidation_matches_the_rails_openssl_rescue() {
     assert_eq!((error.class_name(), error.invalidates_subscription()), ("OpenSSL::PKey::EC::Point::Error", true));
 
     // A certificate that doesn't verify may be our fault (an empty CA store, a skewed clock).
-    let untrusted = Network { tls: crate::integrations::net::tls_config(rustls::RootCertStore::empty()), ..service.net.clone() };
+    let untrusted = Network { tls: crate::net::tls_config(rustls::RootCertStore::empty()), ..service.net.clone() };
     let receiver = Receiver::new();
     let error = notification(receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc")).deliver(&untrusted, &vapid()).await.unwrap_err();
     assert_eq!((error.class_name(), error.invalidates_subscription()), ("OpenSSL::SSL::SSLError", true));
@@ -442,7 +442,7 @@ async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() 
         db.read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('ChannelThread::PushMessageJob','SavedItem::ReminderPushJob')",[],|r|r.get::<_,i64>(0))?)).await.unwrap()
     };
     assert_eq!(count_jobs(db.clone()).await,2);
-    let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::jobs::runner_config(&app.config));
+    let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::queue::runner_config(&app.config));
     let wait = || wait_for_jobs_and_deliveries(&db, &pool, &["ChannelThread::PushMessageJob", "SavedItem::ReminderPushJob"]);
     wait().await;
     assert!(service.server.received().is_empty(),"DND must suppress both jobs");
@@ -465,7 +465,7 @@ async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() 
 #[tokio::test]
 async fn the_pool_invalidates_tls_failures_like_rails() {
     let service = push_service(201, "Created").await;
-    let untrusted = Network { tls: crate::integrations::net::tls_config(rustls::RootCertStore::empty()), ..service.net.clone() };
+    let untrusted = Network { tls: crate::net::tls_config(rustls::RootCertStore::empty()), ..service.net.clone() };
     let destroyed = Arc::new(Mutex::new(Vec::new()));
     let log = destroyed.clone();
     let pool = Pool::new(untrusted, vapid(), move |id| -> Result<(), String> {
@@ -516,7 +516,7 @@ async fn ws17_durable_test_notification_decrypts_with_the_rails_payload_even_in_
         db:db.clone(),storage:original.storage.clone(),cable:original.cable.clone(),broadcasts:original.broadcasts.clone(),
         jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),fragment_cache:original.fragment_cache.clone(),
     });
-    let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::jobs::runner_config(&app.config));
+    let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::queue::runner_config(&app.config));
     wait_for_jobs_and_deliveries(&db, &pool, &["Push::Subscription::TestNotificationJob"]).await;
     runner.shutdown(Duration::from_secs(5)).await;pool.shutdown().await;
     let requests=service.server.received();assert_eq!(requests.len(),1);
@@ -640,7 +640,7 @@ async fn named_endpoint_validation(addresses: Vec<std::net::IpAddr>) {
     let sub = Receiver::new().subscription(1, "https://fcm.googleapis.com/fcm/send/abc123");
     // Compose the exact real private-network guard/model seam used by registration.
     let host = sub.resolved_endpoint_ip(&|host| Some(host.into())).unwrap();
-    let resolved = crate::integrations::net::guard::resolve(service.net.resolver.as_ref(), &host)
+    let resolved = crate::net::guard::resolve(service.net.resolver.as_ref(), &host)
         .await
         .ok()
         .map(|ip| ip.to_string());

@@ -20,13 +20,15 @@ use campfire_views::{
     helpers::IconSource,
     rooms::{
         FormRoom,
-        calls::{CallForm, CallRow, StagesEdit, StagesNew, VoicesEdit, VoicesNew},
+        calls::{CallForm, StagesEdit, StagesNew, VoicesEdit, VoicesNew},
     },
 };
 use serde_json::json;
 
+use crate::controllers::presenters::calls::row;
+
 fn stage(c: &Ctx) -> bool {
-    c.current::<crate::controllers::MatchedRoute>()
+    c.current::<crate::concerns::MatchedRoute>()
         .unwrap()
         .endpoint
         .starts_with("rooms/stages#")
@@ -286,64 +288,7 @@ async fn render(c: &mut Ctx, form: CallForm, status: StatusCode) -> Result {
         (true, true) => page::framed_page!(c, status, |ctx| StagesEdit { ctx, form: &form }).await,
     }
 }
-pub(crate) fn row(
-    app: &crate::app::App,
-    conn: &campfire_db::Connection,
-    room: &Room,
-) -> campfire_db::Result<CallRow> {
-    let participants = if app.config.huddle.configured() {
-        campfire_db::models::huddle_grant::HuddleGrant::participants_for(
-            conn,
-            room.id,
-            app.db.env().now(),
-        )?
-        .iter()
-        .map(|u| campfire_views::huddle::Participant {
-            id: u.id,
-            name: u.name.clone(),
-            avatar_path: crate::controllers::presenters::avatar_path(&app.secrets, u),
-        })
-        .collect()
-    } else {
-        Vec::new()
-    };
-    let live = campfire_db::models::stream::Stream::live_for_room(conn, room.id)?;
-    let live_name = live
-        .as_ref()
-        .map(|s| User::find(conn, s.user_id).map(|u| u.name))
-        .transpose()?
-        .unwrap_or_default();
-    Ok(row_with_call_facts(app, conn, room, participants, live.is_some(), live_name))
-}
 
-pub(crate) fn row_with_call_facts(
-    app: &crate::app::App,
-    conn: &campfire_db::Connection,
-    room: &Room,
-    participants: Vec<campfire_views::huddle::Participant>,
-    live: bool,
-    live_name: String,
-) -> CallRow {
-    CallRow {
-        id: room.id,
-        name: room.name.clone().unwrap_or_default(),
-        stage: room.stage(),
-        icon: room
-            .icon_name
-            .as_deref()
-            .and_then(|n| Presenter::new(conn, app, None).resolve_avatar_icon(n)),
-        participants,
-        live,
-        live_name,
-        unread: false,
-        muted: false,
-        membership: false,
-        favorited: false,
-        favorite_position: None,
-        category_id: None,
-        can_delete: false,
-    }
-}
 async fn broadcast(c: &Ctx, room: &Room, update: bool) -> Result<()> {
     let app = c.app().clone();
     let room = room.clone();

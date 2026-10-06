@@ -9,7 +9,7 @@ use campfire_richtext::uri::{self, Uri};
 use regex::Regex;
 
 use super::fetch;
-use crate::integrations::net::{Network, guard};
+use crate::net::{Network, guard};
 
 /// `FILES_AND_MEDIA_URL_REGEX`
 static FILES_AND_MEDIA_URL: LazyLock<Regex> = LazyLock::new(|| {

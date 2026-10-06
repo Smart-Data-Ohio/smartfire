@@ -15,8 +15,8 @@ mod review_tests;
 pub mod pins;
 pub mod by_bots;
 pub mod rendered;
-pub(crate) mod payload;
-pub(crate) mod freshness;
+pub(crate) use crate::controllers::presenters::message_payload as payload;
+pub(crate) use crate::controllers::presenters::message_freshness as freshness;
 #[cfg(test)]
 mod root_tests;
 #[cfg(test)]
@@ -46,17 +46,16 @@ use askama::Template;
 use campfire_db::{Job as _, Message, NewMessage, Room, Timeline};
 use campfire_kit::format;
 use campfire_kit::{Ctx, Error, Freshness, Param, Result, StatusCode, halt, permit_keys};
-use campfire_richtext::Content;
-use campfire_storage::{Blob, Staged, Variation};
+use campfire_storage::{Blob, Staged};
 use campfire_views::messages as views;
 
-use crate::active_storage::{self, keep_after_commit};
-use crate::app::{App, AppCtx};
+use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::attachments::{self, Assignment};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
-use crate::controllers::presenters::{DbResolver, Presenter, room_kind, storage_error};
-use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
+use crate::controllers::presenters::{DbResolver, Presenter, room_kind};
+use crate::queue::{WEBHOOK_HOLD, WebhookJob};
+pub(crate) use crate::messaging::{canonicalize_body, process_attachment, save_staged};
 
 // --- Actions ------------------------------------------------------------------------------------
 
@@ -590,13 +589,6 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
     }
 }
 
-/// Inserts a staged blob's row, keeping its file once the transaction commits.
-pub(crate) fn save_staged(tx: &mut campfire_db::Tx<'_>, staged: Staged) -> campfire_db::Result<Blob> {
-    let blob = staged.insert(tx.conn(), tx.now().jiff()).map_err(storage_error)?;
-    keep_after_commit(tx, staged);
-    Ok(blob)
-}
-
 /// Resolve a staged upload or an existing direct-upload blob inside the writer transaction.
 pub(crate) fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
     match assignment {
@@ -607,76 +599,9 @@ pub(crate) fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignme
     }
 }
 
-/// [`canonical_body`] on a reader, ahead of the write that stores it.
-pub(crate) async fn canonicalize_body(app: &App, body: String, request_host: Option<String>) -> Result<String> {
-    let app2 = app.clone();
-    app.db.read(move |conn| Ok(canonical_body(conn, &app2, &body, request_host))).await.map_err(db_error)
-}
-
-/// Assigning a String to a rich text attribute stores the canonicalized content
-/// (`ActionText::Content.new(body, canonicalize: true).to_html`).
-pub(crate) fn canonical_body(conn: &campfire_db::Connection, app: &App, body: &str, request_host: Option<String>) -> String {
-    let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
-    let ctx = resolver.render_context(request_host);
-    Content::load(body, &ctx).map(|content| content.to_html()).unwrap_or_else(|_| body.to_string())
-}
-
 /// Assigning something that isn't an upload, a signed blob id, nil or "".
 fn invalid_attachment() -> Error {
     Error::internal(anyhow::anyhow!("Could not find or build blob: expected attachable"))
-}
-
-/// `Message#process_attachment`: analyze the blob now (its `after_update` touches the message),
-/// then generate the video preview or the `:thumb` representation.
-pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
-    use campfire_db::models::message_attachment_processing as processing;
-    let blob_id = blob.id;
-    let token = uuid::Uuid::new_v4().to_string();
-    let claimed = app.db.write({ let token = token.clone(); move |tx| processing::claim(tx, blob_id, &token) }).await;
-    match claimed {
-        Ok(true) => {
-            if let Err(error) = process_attachment_now(app, blob).await {
-                tracing::warn!(blob_id, %error, "Committed attachment processing failed");
-            }
-            if let Err(error) = app.db.write(move |tx| processing::release(tx, blob_id, &token)).await {
-                tracing::warn!(blob_id, %error, "Attachment processing release failed");
-            }
-        }
-        Err(error) => tracing::warn!(blob_id, %error, "Committed attachment processing claim failed"),
-        Ok(false) => (),
-    }
-    Ok(())
-}
-
-pub(crate) async fn process_attachment_now(app: &App, blob: Blob) -> Result<()> {
-    let blob = analyze_attachment(app, blob).await?;
-    if blob.is_video() {
-        // attachment.preview(format: :webp).processed
-        active_storage::processed_preview(app, blob, Variation::format_only("webp")).await?;
-    } else if blob.is_representable() {
-        // attachment.representation(:thumb).processed
-        let thumb = Variation::resize_to_limit(1200, 800, None);
-        if blob.content_type() == "image/jpeg" {
-            // Rails `.processed?` reuses the record. Serving endpoints handle a
-            // missing final file without regenerating an already recorded variant.
-            let storage = app.storage.clone();
-            let source = blob.clone();
-            let variation = storage.variation_for(&source, &thumb).map_err(Error::internal)?;
-            let processed = app.db.read(move |conn| {
-                storage.existing_variant(conn, &source, &variation)
-                    .map(|image| image.is_some()).map_err(storage_error)
-            }).await.map_err(db_error)?;
-            if processed { return Ok(()); }
-        }
-        active_storage::processed_representation(app, blob, thumb).await?;
-    }
-    Ok(())
-}
-
-/// `blob.analyze`: its `after_update` touches the attached records. The file is analyzed off the
-/// writer.
-async fn analyze_attachment(app: &App, blob: Blob) -> Result<Blob> {
-    active_storage::analyze_explicit(app, blob.id).await.map_err(Error::internal)?.ok_or(Error::NotFound)
 }
 
 /// `@message.update!(message_params)`. A new attachment replaces the old one (whose blob is purged

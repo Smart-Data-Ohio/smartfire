@@ -22,7 +22,7 @@ use std::time::Duration;
 pub use metadata::Metadata;
 use tokio::sync::Semaphore;
 
-use crate::integrations::net::Network;
+use crate::net::Network;
 
 /// The most one unfurl may take, redirects and the image check included.
 pub const UNFURL_DEADLINE: Duration = Duration::from_secs(10);

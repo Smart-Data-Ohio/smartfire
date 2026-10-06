@@ -4,42 +4,7 @@ use crate::app::App;
 use campfire_db::models::huddle_grant::HuddleGrant;
 use campfire_db::{Membership, Room};
 
-pub(crate) fn stage_model(
-    app: &crate::app::AppState,
-    conn: &campfire_db::Connection,
-    room_id: i64,
-    viewer_id: i64,
-) -> campfire_db::Result<campfire_views::huddle_stage::Stage> {
-    use campfire_db::CachedStatements;
-    use rusqlite::OptionalExtension;
-    let members = Membership::for_room(conn, room_id)?
-        .into_iter()
-        .map(|m| {
-            let user = campfire_db::User::find(conn, m.user_id)?;
-            Ok(campfire_views::huddle_stage::Member {
-                id: m.id,
-                user_id: user.id,
-                name: user.name.clone(),
-                avatar_path: crate::controllers::presenters::avatar_path(&app.secrets, &user),
-                administrator: user.is_administrator(),
-                role: m.stage_role.map_or(String::new(), |r| r.name().into()),
-                hand: m.hand_raised_at.map(|at| at.as_microsecond()),
-                muted: m.server_muted_at.is_some(),
-            })
-        })
-        .collect::<campfire_db::Result<Vec<_>>>()?;
-    let live=campfire_db::models::stream::Stream::live_for_room(conn,room_id)?.map(|stream| {
-        let user=campfire_db::User::find(conn,stream.user_id)?;
-        let identity=conn.query_row_cached("SELECT identity FROM huddle_grants WHERE room_id=? AND membership_id=? AND revoked_at IS NULL ORDER BY last_issued_at DESC LIMIT 1",rusqlite::params![room_id,stream.membership_id],|r|r.get(0)).optional()?;
-        Ok::<_,campfire_db::Error>(campfire_views::huddle_stage::Live {id:stream.id,membership_id:stream.membership_id,name:user.name,identity})
-    }).transpose()?;
-    Ok(campfire_views::huddle_stage::Stage {
-        room_id,
-        viewer_id,
-        members,
-        live,
-    })
-}
+pub(crate) use crate::controllers::presenters::calls::stage_model;
 
 pub(crate) fn stream_changed(app: &App, room_id: i64) -> anyhow::Result<()> {
     let data = app.db.read_blocking(|conn| {

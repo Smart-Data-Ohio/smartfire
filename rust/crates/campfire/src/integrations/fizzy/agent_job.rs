@@ -38,7 +38,7 @@ pub async fn perform(app: App, job: PerformJob, _: Execution) -> JobResult {
         job.approval_id,
     )
     .await
-    .map_err(crate::jobs::discard_missing)?;
+    .map_err(crate::queue::discard_missing)?;
     Ok(Outcome::Done)
 }
 /// WS11 calls inside its approval-decision transaction, after writing the human decision.

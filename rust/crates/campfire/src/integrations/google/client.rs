@@ -1,5 +1,5 @@
 //! Injectable transport for fixed Google hosts, matching `Google::Client#request`.
-use crate::integrations::net::{
+use crate::net::{
     BoxFuture, Network,
     http::{self, Body, Endpoint, Request, Timeouts},
 };

@@ -1,5 +1,5 @@
 //! A tools-only clock/fixture bridge. Production has no control file or route.
-use crate::{app::{App, boot_with_services}, config::Config};
+use crate::{app::App, config::Config, server::boot_with_services};
 use campfire_db::{Message, NewMessage, Room, Timestamp};
 use campfire_kit::{Clock, FrozenClock};
 use serde_json::{Value, json};
@@ -47,7 +47,7 @@ async fn original_ledger_injected_clock_host() {
     config.fragment_cache_bytes = 0;
     let root = config.storage.database.parent().unwrap().to_path_buf();
     let clock = Arc::new(FrozenClock::new(std::env::var("CAMPFIRE_FROZEN_TIME").unwrap().parse().unwrap()));
-    let mut booted = boot_with_services(config, clock.clone(), crate::integrations::net::Network::system(),
+    let mut booted = boot_with_services(config, clock.clone(), crate::net::Network::system(),
         crate::jobs::periodic::Intervals { periodic: None, huddle: None }).await.unwrap();
     booted.jobs.stop(Duration::from_secs(1)).await;
     // Same busy and transparent items as the original, fetched only after UI opt-in.
@@ -127,7 +127,7 @@ async fn original_ledger_injected_clock_host() {
                             }
                             let next = app.fixture_huddle_config(|name| environment.get(name).cloned().flatten());
                             let kit = fixtures.read().unwrap_or_else(|p| p.into_inner()).1.clone();
-                            let (kit, router) = crate::app::fixture_router(&next, &kit);
+                            let (kit, router) = crate::server::fixture_router(&next, &kit);
                             let configured = next.config.huddle.configured();
                             // The DB sink and every active websocket retain their original
                             // services. Model broadcasts now render using this actual config.

@@ -1,7 +1,7 @@
 //! HTML adapter only. Shared containers contain no viewer data; payload frames are private.
 use crate::{
     app::App,
-    channels::broadcasts::{Stream, message_dom_id},
+    cable::broadcasts::{Stream, message_dom_id},
     integrations::fizzy::cards::Card,
 };
 use campfire_db::{Message, Room};

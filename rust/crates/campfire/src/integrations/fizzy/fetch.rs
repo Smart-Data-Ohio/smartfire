@@ -4,7 +4,7 @@ use super::{
     cards::{Cache, Card, NOT_FOUND},
     client::{Client, ErrorKind},
 };
-use crate::{app::App, integrations::net::Network};
+use crate::{app::App, net::Network};
 use campfire_db::{Job, User};
 use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
 use rails_compat::ar_encryption::ArEncryption;
@@ -32,7 +32,7 @@ pub async fn perform(app: App, job: FetchJob, _: Execution) -> JobResult {
         job.user_id,
     )
     .await
-    .map_err(crate::jobs::discard_missing)?;
+    .map_err(crate::queue::discard_missing)?;
     Ok(Outcome::Done)
 }
 pub async fn fetch(

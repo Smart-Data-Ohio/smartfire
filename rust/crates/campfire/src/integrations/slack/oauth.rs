@@ -1,5 +1,5 @@
 //! `app/models/slack/oauth.rb`: OAuth v2 with user scopes and fixed Slack endpoints.
-use crate::integrations::net::{
+use crate::net::{
     Network,
     http::{self, Body, Endpoint, HttpError, Request, Timeouts},
 };

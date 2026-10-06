@@ -12,7 +12,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
 
-use crate::integrations::net::{Network, http};
+use crate::net::{Network, http};
 
 pub const FLOW_SESSION_KEY: &str = "google_sign_in_request";
 pub const FLOW_TTL: i64 = 600;

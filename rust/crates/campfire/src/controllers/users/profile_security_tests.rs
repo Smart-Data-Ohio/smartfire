@@ -94,7 +94,7 @@ async fn every_sensitive_profile_2fa_action_contains_ws9_reauthentication_field(
     }
 }
 struct ConfiguredGoogle;
-impl crate::concerns::two_factor::GoogleReauthentication for ConfiguredGoogle {
+impl crate::state::two_factor::GoogleReauthentication for ConfiguredGoogle {
     fn configured(&self) -> bool {
         true
     }

@@ -8,7 +8,7 @@ use campfire_richtext::uri::{self, UriError};
 use super::document::{self, is_blank};
 use super::location::Location;
 use super::{UnfurlError, off_the_runtime};
-use crate::integrations::net::Network;
+use crate::net::Network;
 
 const TWITTER_HOSTS: [&str; 4] = ["twitter.com", "www.twitter.com", "x.com", "www.x.com"];
 const FX_TWITTER_HOST: &str = "fxtwitter.com";

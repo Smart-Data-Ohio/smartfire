@@ -32,7 +32,7 @@ impl CacheFacts {
             })
             .collect::<Vec<_>>();
         facts.validators =
-            crate::controllers::messages::freshness::etags_for_pages(p.conn, &pages)?;
+            crate::controllers::presenters::message_freshness::etags_for_pages(p.conn, &pages)?;
         Ok(facts)
     }
 
@@ -148,7 +148,7 @@ impl CacheFacts {
             .bodies
             .values()
             .flatten()
-            .flat_map(|body| crate::controllers::searches::preloads::mention_ids(body, 0))
+            .flat_map(|body| crate::controllers::presenters::search_preloads::mention_ids(body, 0))
             .collect::<Vec<_>>();
         let user_ids = messages
             .iter()

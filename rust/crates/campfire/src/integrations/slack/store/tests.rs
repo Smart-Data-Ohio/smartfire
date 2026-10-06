@@ -165,7 +165,7 @@ pub(crate) async fn import(
     db: &Database,
     crypto: std::sync::Arc<rails_compat::ar_encryption::ArEncryption>,
     id: i64,
-    network: crate::integrations::net::Network,
+    network: crate::net::Network,
 ) -> SlackImport {
     for _ in 0..100 {
         let store_db = db.clone();

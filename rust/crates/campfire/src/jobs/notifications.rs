@@ -28,7 +28,7 @@ impl campfire_db::Job for TestNotification {
     const CLASS: &'static str = "Push::Subscription::TestNotificationJob";
 }
 impl JobKind for TestNotification {
-    const QUEUE: &'static str = super::PUSH_QUEUE;
+    const QUEUE: &'static str = crate::queue::PUSH_QUEUE;
 }
 
 pub(super) fn register(registry: &mut Registry) {

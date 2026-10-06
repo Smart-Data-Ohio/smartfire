@@ -97,7 +97,7 @@ async fn queued_stale_generic_and_linkedin_children_execute_after_parent_with_fl
                 dialed: Default::default(),
             });
             let mut net = network(resolver, dialer);
-            net.tls = crate::integrations::net::tls_config(roots);
+            net.tls = crate::net::tls_config(roots);
             let (completed, mut completion) = tokio::sync::mpsc::unbounded_channel();
             let mut registry = Registry::new();
             registry.register(move |app: crate::app::App, job: FetchJob, _: Execution| {
@@ -114,7 +114,7 @@ async fn queued_stale_generic_and_linkedin_children_execute_after_parent_with_fl
                             reads(&queries.lock().unwrap()),
                         ))
                         .unwrap();
-                    result.map_err(crate::jobs::discard_missing)?;
+                    result.map_err(crate::queue::discard_missing)?;
                     Ok(Outcome::Done)
                 }
             });

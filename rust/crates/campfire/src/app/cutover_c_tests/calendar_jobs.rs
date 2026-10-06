@@ -65,7 +65,7 @@ async fn attempt(a: &TestApp, class: &'static str, count: u32) -> Option<Timesta
         a.booted.app.jobs.queue.clone(),
         crate::jobs::registry(),
         a.booted.app.clone(),
-        crate::jobs::runner_config(&a.booted.app.config),
+        crate::queue::runner_config(&a.booted.app.config),
     );
     let outcome = tokio::time::timeout(Duration::from_secs(5), drain.job_attempt(a, class, count))
         .await
@@ -576,7 +576,7 @@ async fn cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_g
         a.booted.app.jobs.queue.clone(),
         crate::jobs::registry(),
         a.booted.app.clone(),
-        crate::jobs::runner_config(&a.booted.app.config),
+        crate::queue::runner_config(&a.booted.app.config),
     );
     tokio::time::timeout(Duration::from_secs(5), drain.calendar(&a))
         .await
@@ -603,7 +603,7 @@ async fn cutover_c_series_head_rsvp_commits_three_sync_jobs_and_three_distinct_g
         a.booted.app.jobs.queue.clone(),
         crate::jobs::registry(),
         a.booted.app.clone(),
-        crate::jobs::runner_config(&a.booted.app.config),
+        crate::queue::runner_config(&a.booted.app.config),
     );
     tokio::time::timeout(Duration::from_secs(5), drain.calendar(&a))
         .await

@@ -61,7 +61,7 @@ impl Recorded {
         self.fail_for_error(
             method,
             target,
-            crate::integrations::net::http::HttpError::OpenTimeout.into(),
+            crate::net::http::HttpError::OpenTimeout.into(),
         );
     }
     pub fn fail_for_error(&self, method: Method, target: &str, error: Unavailable) {
@@ -110,7 +110,7 @@ impl Client for Recorded {
                 )
                 .is_ok()
             {
-                return Err(crate::integrations::net::http::HttpError::OpenTimeout.into());
+                return Err(crate::net::http::HttpError::OpenTimeout.into());
             }
             if let Some(answer) = self
                 .targeted_answers

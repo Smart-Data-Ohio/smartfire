@@ -11,7 +11,7 @@ use campfire_views::layouts::{Application, FrameLayout};
 use campfire_views::{Platform, ViewContext};
 
 use crate::app::AppState;
-use crate::channels::Partials;
+use crate::cable::Partials;
 use crate::controllers::presenters::view_context::{Layout, account_summary, find_template};
 
 thread_local! {

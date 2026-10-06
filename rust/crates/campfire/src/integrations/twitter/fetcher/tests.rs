@@ -25,7 +25,7 @@ async fn tls_server(route: Route) -> (FakeServer, Network, Arc<FakeResolver>, Ar
     let net = Network {
         resolver: resolver.clone(),
         dialer: dialer.clone(),
-        tls: crate::integrations::net::tls_config(roots),
+        tls: crate::net::tls_config(roots),
     };
     (server, net, resolver, dialer)
 }
@@ -306,7 +306,7 @@ async fn ws15e_x_claims_are_transactional_and_durable_missing_jobs_discard() {
 
 #[tokio::test]
 async fn ws15e_review_x_dns_and_tcp_share_one_open_budget() {
-    use crate::integrations::net::{BoxFuture, Dialer, Resolver};
+    use crate::net::{BoxFuture, Dialer, Resolver};
     struct SlowDns(Arc<dyn Resolver>);
     impl Resolver for SlowDns {
         fn lookup<'a>(&'a self, host: &'a str) -> BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {

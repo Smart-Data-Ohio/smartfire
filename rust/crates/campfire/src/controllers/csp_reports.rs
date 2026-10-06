@@ -5,7 +5,7 @@
 //!
 //! An `ActionController::API`: no session, cookies, forgery protection or `ApplicationController`
 //! chain, so nothing authenticated to forge. It's reached without the Rails route table
-//! (`app::router` mounts it), and it's rate-limited per IP in a store of its own, so a report
+//! (`server::router` mounts it), and it's rate-limited per IP in a store of its own, so a report
 //! flood never touches the shared one. Its body is its own to read (`unparsed_action`): Rails
 //! parses a JSON body only when something asks for `params`, which nothing here does, so a
 //! malformed or oversized report is logged as nothing rather than refused.

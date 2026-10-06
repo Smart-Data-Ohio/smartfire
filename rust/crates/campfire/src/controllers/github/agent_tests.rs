@@ -290,8 +290,8 @@ async fn github_agent_http_races_committed_fanout_expiry_and_real_approved_job()
     }).await.unwrap();
     fresh.app.db.write(move|tx|{let mut approval=AgentApproval::find(tx.conn(),approval_id)?.unwrap();let by=User::find(tx.conn(),811)?;assert!(approval.decide_authorized(tx,"approved",&by,None)?.eq(&campfire_db::models::agent_approval::ApprovalDecision::Applied));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::PerformAgentActionJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
     let registry = crate::jobs::registry();
-    let config = crate::jobs::runner_config(&fresh.app.config);
-    let (_, adhoc) = crate::jobs::Jobs::new(&registry, &config).unwrap();
+    let config = crate::queue::runner_config(&fresh.app.config);
+    let (_, adhoc) = crate::queue::Jobs::new(&registry, &config).unwrap();
     let runner = crate::jobs::start(
         fresh.app.clone(),
         registry,

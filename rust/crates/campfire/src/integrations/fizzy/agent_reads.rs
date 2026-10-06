@@ -3,7 +3,7 @@ use super::{
     accounts::{Account, REJECTED_TOKEN_REASON},
     client::{Client, ErrorKind},
 };
-use crate::{app::App, integrations::net::Network};
+use crate::{app::App, net::Network};
 use campfire_richtext::ruby::json_value_to_s;
 use rails_compat::ar_encryption::ArEncryption;
 use rusqlite::OptionalExtension;

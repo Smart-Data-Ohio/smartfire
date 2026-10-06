@@ -284,7 +284,7 @@ fn leaves(
             &name
         };
         let candidate = format!(":{base}:");
-        let icon = crate::rich_text::icons(tx.conn())
+        let icon = crate::icons::icons(tx.conn())
             .map_err(campfire_db::Error::Other)?
             .find(base);
         let (content, valid) = match icon {

@@ -50,7 +50,7 @@ async fn step(
     db: &Database,
     crypto: std::sync::Arc<rails_compat::ar_encryption::ArEncryption>,
     id: i64,
-    network: crate::integrations::net::Network,
+    network: crate::net::Network,
 ) {
     let worker_db = db.clone();
     perform_import(

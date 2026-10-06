@@ -10,7 +10,7 @@ async fn fake(
     routes: Vec<Route>,
 ) -> (
     FakeServer,
-    crate::integrations::net::Network,
+    crate::net::Network,
     Arc<FakeResolver>,
     Arc<MappingDialer>,
 ) {
@@ -437,7 +437,7 @@ async fn ws15e_fizzy_transport_retries_match_real_pinned_rails() {
 
 #[tokio::test]
 async fn ws15e_review_fizzy_dns_is_inside_open_timeout() {
-    use crate::integrations::net::{Resolver,BoxFuture};
+    use crate::net::{Resolver,BoxFuture};
     struct SlowDns;
     impl Resolver for SlowDns {
         fn lookup<'a>(&'a self,_host:&'a str)->BoxFuture<'a,std::io::Result<Vec<std::net::IpAddr>>> {

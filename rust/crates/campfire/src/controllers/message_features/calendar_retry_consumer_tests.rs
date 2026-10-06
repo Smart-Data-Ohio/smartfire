@@ -108,7 +108,7 @@ async fn calendar_retry_recovery_and_exhaustion_match_real_rails_jobs_with_flat_
                 let method = r["method"].as_str().unwrap().parse().unwrap();
                 let path = r["path"].as_str().unwrap();
                 if let Some(failure) = r["failure"].as_str() {
-                    use crate::integrations::net::http::HttpError;
+                    use crate::net::http::HttpError;
                     recorded.fail_for_error(
                         method,
                         path,

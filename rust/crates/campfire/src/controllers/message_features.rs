@@ -31,6 +31,8 @@ use crate::concerns::{self, cast_integer, require_current_user};
 use crate::controllers::presenters::page::db_error;
 use campfire_db::{Message, Role, Room, Timestamp};
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, halt};
+pub(crate) use crate::controllers::presenters::message_parts::poll_view;
+pub(crate) use crate::controllers::presenters::params::param_string;
 
 pub(crate) async fn room(c: &mut Ctx) -> Result<Room> {
     c.rescue_not_found();
@@ -108,24 +110,6 @@ pub(crate) fn sentence(errors: &campfire_db::Errors) -> String {
     campfire_views::helpers::to_sentence(&errors.full_messages(), " and ")
 }
 
-/// Explicit request `to_s` sites, including Ruby Array/Parameters coercion. This does
-/// not change the kit-wide parameter API or ActiveRecord lookup casting.
-pub(crate) fn param_string(value:&Param)->String {
-    use campfire_richtext::ruby::{json_value_to_s,json_value_inspect};
-    fn inspect(value:&Param)->String {
-        match value {
-            Param::Hash(_)=>format!("#<ActionController::Parameters {} permitted: false>",param_string(value)),
-            Param::Array(_)=>param_string(value),
-            value=>json_value_inspect(&value.to_json()),
-        }
-    }
-    match value {
-        Param::Array(values)=>format!("[{}]",values.iter().map(inspect).collect::<Vec<_>>().join(", ")),
-        Param::Hash(map)=>format!("{{{}}}",map.iter().map(|(k,v)|format!("{} => {}",json_value_inspect(&serde_json::Value::String(k.clone())),inspect(v))).collect::<Vec<_>>().join(", ")),
-        value=>json_value_to_s(&value.to_json()),
-    }
-}
-
 pub(crate) fn boolean(value: Option<&Param>) -> bool {
     !matches!(value, None | Some(Param::Null | Param::Bool(false)))
         && !matches!(
@@ -163,46 +147,6 @@ pub(crate) fn parse_time(
 
 pub(crate) fn parse_time_checked(raw: &str, zone: &campfire_views::time::Zone, now: jiff::Timestamp) -> campfire_db::Result<Option<Timestamp>> {
     campfire_db::slash_commands::time_parser::parse_calendar(raw, zone.tz(), Timestamp::from_jiff(now))
-}
-
-pub(crate) fn poll_view(
-    conn: &campfire_db::Connection,
-    app: &crate::app::App,
-    id: i64,
-    error: Option<String>,
-) -> campfire_db::Result<campfire_views::messages::parts::Poll> {
-    let poll = campfire_db::Poll::find(conn, id)?;
-    let message = Message::find(conn, poll.message_id)?;
-    let options = poll
-        .options(conn)?
-        .into_iter()
-        .map(|option| campfire_views::messages::parts::PollOption {
-            id: option.id,
-            label: option.label,
-        })
-        .collect();
-    let votes = poll
-        .votes_with_names(conn)?
-        .into_iter()
-        .map(|(vote,name)| {
-            campfire_views::messages::parts::PollVote {
-                option_id: vote.poll_option_id,
-                user_id: vote.user_id,
-                user_name: name,
-            }
-        })
-        .collect();
-    Ok(campfire_views::messages::parts::Poll {
-        id,
-        room_id: message.room_id,
-        anonymous: poll.anonymous,
-        multiple: poll.multiple,
-        closed: poll.closed(app.db.env().now()),
-        closes_at: poll.closes_at.map(|time| time.jiff()),
-        options,
-        votes,
-        vote_error: error,
-    })
 }
 
 /// Rails JSON encodes Time in UTC with millisecond precision.

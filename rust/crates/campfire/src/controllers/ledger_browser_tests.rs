@@ -29,8 +29,7 @@ fn original_ledger_surface_assertions() { replay("surfaces"); }
 #[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
 fn original_ledger_lifecycle_assertions() { replay("lifecycle"); }
 
-static FORGERY_DISABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-pub(crate) fn forgery_disabled() -> bool { FORGERY_DISABLED.load(std::sync::atomic::Ordering::SeqCst) }
+use crate::test_support::FORGERY_DISABLED;
 mod lifecycle_host;
 
 /// Exact pinned TestSessionController#create, available only in the private

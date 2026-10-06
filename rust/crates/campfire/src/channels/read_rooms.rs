@@ -6,9 +6,7 @@ use super::CableUser;
 pub struct ReadRoomsChannel;
 
 /// The user's own stream of rooms read in another window.
-pub fn stream_name_for(user_id: i64) -> String {
-    format!("user_{user_id}_reads")
-}
+pub use crate::cable::read_rooms_stream_name as stream_name_for;
 
 #[async_trait::async_trait]
 impl Channel<CableUser> for ReadRoomsChannel {

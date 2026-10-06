@@ -47,7 +47,7 @@ async fn fake(routes: Vec<Route>) -> (SignIn, FakeServer) {
     let network = Network {
         resolver,
         dialer,
-        tls: crate::integrations::net::tls_config(roots),
+        tls: crate::net::tls_config(roots),
     };
     (SignIn::new(config(), network), server)
 }

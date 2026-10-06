@@ -38,7 +38,7 @@ async fn setup_at(
                     "Slack test captured an unintended broadcast".into(),
                 ));
             }
-            if let Some(request) = crate::jobs::request_for(event)
+            if let Some(request) = crate::queue::request_for(event)
                 && !self.1
             {
                 self.0.enqueue(tx, &request)?;
@@ -377,7 +377,7 @@ async fn slack_registered_serial_worker_imports_undoes_and_registers_30_second_s
     ));
     let (_server, network) =
         super::super::client::tests::fake(super::super::store::tests::routes(false)).await;
-    let booted = crate::app::boot_with_services(
+    let booted = crate::server::boot_with_services(
         config,
         clock,
         network,
