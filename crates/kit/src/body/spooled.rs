@@ -149,8 +149,8 @@ struct MultipartPosition {
 
 /// Rack reads 1 MiB at a time and bounds unfinished preambles/headers. Multer
 /// otherwise buffers an unterminated header indefinitely, so check before it parses.
-fn validate_multipart_buffers(
-    file: &mut std::fs::File,
+fn validate_multipart_buffers<R: Read + Seek>(
+    file: &mut R,
     boundary: &str,
 ) -> Result<MultipartPosition, BodyError> {
     enum State {
@@ -166,7 +166,7 @@ fn validate_multipart_buffers(
     let mut chunk = vec![0; 1024 * 1024];
     let mut buffered = Vec::new();
     loop {
-        let count = file.read(&mut chunk)?;
+        let count = read_full(file, &mut chunk)?;
         if count == 0 {
             // Rack's FAST_FORWARD keeps reading if it has not accepted an opening;
             // its EmptyContentError maps to 400, even if Multer accepts the close.
@@ -239,6 +239,21 @@ fn validate_multipart_buffers(
             }
         }
     }
+}
+
+/// Ruby's `IO#read(length)`: fills `buffer` unless the input ends first. A bare `read` may
+/// return a short count, which would move the closing boundary into a later Rack buffer.
+fn read_full<R: Read>(input: &mut R, buffer: &mut [u8]) -> std::io::Result<usize> {
+    let mut filled = 0;
+    while filled < buffer.len() {
+        match input.read(&mut buffer[filled..]) {
+            Ok(0) => break,
+            Ok(count) => filled += count,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => {}
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(filled)
 }
 
 // Rack's strscan uses fixed_anchor: false: \A matches its current cursor, including
@@ -530,6 +545,46 @@ mod tests {
         let parsed = parse_spooled(&headers, Some(&mut file)).await?;
         assert_eq!(file.stream_position().await.unwrap(), body.len() as u64);
         Ok(parsed)
+    }
+
+    /// Returns at most `limit` bytes per read, like a file read that comes back short.
+    struct ShortReads<R> {
+        inner: R,
+        limit: usize,
+    }
+
+    impl<R: Read> Read for ShortReads<R> {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            let limit = buffer.len().min(self.limit);
+            self.inner.read(&mut buffer[..limit])
+        }
+    }
+
+    impl<R: Seek> Seek for ShortReads<R> {
+        fn seek(&mut self, position: std::io::SeekFrom) -> std::io::Result<u64> {
+            self.inner.seek(position)
+        }
+    }
+
+    #[test]
+    fn multipart_positions_follow_rack_buffers_despite_short_reads() {
+        // The closing boundary ends inside Rack's first 1 MiB buffer, one byte before the
+        // epilogue that follows it; Rack's position is the end of that first buffer.
+        let head = "--B\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\n";
+        let tail = "\r\n--B--\r\n";
+        let mut body = head.as_bytes().to_vec();
+        body.resize(1024 * 1024 - tail.len(), b'x');
+        body.extend_from_slice(tail.as_bytes());
+        body.push(b'z');
+        for limit in [usize::MAX, 64 * 1024, 4096, 7] {
+            let mut input = ShortReads {
+                inner: std::io::Cursor::new(&body),
+                limit,
+            };
+            let position = validate_multipart_buffers(&mut input, "B").unwrap();
+            assert_eq!(position.start, 0, "{limit}");
+            assert_eq!(position.consumed, 1024 * 1024, "{limit}");
+        }
     }
 
     #[tokio::test]
