@@ -9,6 +9,8 @@ mod dto;
 pub mod endpoints;
 mod error;
 pub mod sync;
+#[cfg(feature = "test-support")]
+pub mod test_hooks;
 
 use std::sync::Arc;
 
