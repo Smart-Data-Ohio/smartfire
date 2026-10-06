@@ -153,7 +153,7 @@ function PaneBody({ roomId, view }: { readonly roomId: number; readonly view: Ri
     case "thread":
       return <ThreadPane roomId={roomId} threadId={view.threadId} />;
     case "new-thread":
-      return <NewThreadPane roomId={roomId} parentId={view.parentId} />;
+      return <NewThreadPane key={view.parentId} roomId={roomId} parentId={view.parentId} />;
     case "pane":
       switch (view.pane) {
         case "members":

@@ -36,9 +36,14 @@ function pane(page: Page) {
   return page.locator("aside.right-pane");
 }
 
-matrix("a reply indicator opens its thread", async ({ page, theme }) => {
-  // The thread's root is among the room's latest messages, in view when the room opens.
+matrix("a reply indicator opens its thread", async ({ page, theme, phone }) => {
+  // The thread's root is among the room's latest messages. The room opens at its first unread;
+  // a phone's short screen has to jump down to them.
   await open(page, `r/${GENERAL}`, theme);
+
+  if (phone) {
+    await page.getByRole("button", { name: /^Jump to present$|new messages?$/ }).click();
+  }
 
   const indicator = page.getByRole("button", { name: /^\d+ replies, unread\./ }).first();
 

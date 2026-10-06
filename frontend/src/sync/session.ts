@@ -148,6 +148,20 @@ const loadPage = Effect.fnUntraced(function* (roomId: number, direction: "older"
   );
 });
 
+/**
+ * Loads the window around `messageId` into an open room, for views that need a message the loaded
+ * window doesn't hold (the new-thread pane opened from a link). A failed load leaves the window.
+ */
+export const loadAround = Effect.fn("session.loadAround")(function* (
+  roomId: number,
+  messageId: number,
+) {
+  yield* messages(roomId, { around: messageId }).pipe(
+    Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, "replace"))),
+    Effect.catch((error) => Effect.logWarning("message lookup failed", error.message)),
+  );
+});
+
 /** The page before the loaded window; a no-op at the start of the room or while one loads. */
 export const loadOlder = Effect.fn("session.loadOlder")(function* (roomId: number) {
   yield* loadPage(roomId, "older");

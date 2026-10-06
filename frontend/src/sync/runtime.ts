@@ -148,6 +148,10 @@ export const actions = {
 
   loadNewer: (roomId: number): Promise<void> => runtime.runPromise(session.loadNewer(roomId)),
 
+  /** Loads the window around a message the open room hasn't loaded. */
+  loadAround: (roomId: number, messageId: number): Promise<void> =>
+    runtime.runPromise(session.loadAround(roomId, messageId)),
+
   jumpToPresent: (roomId: number): Promise<void> =>
     runtime.runPromise(session.jumpToPresent(roomId)),
 

@@ -41,7 +41,24 @@ export function NewThreadPane({
   const timelineReady = useStore((state) => state.timelines[roomId]?.status === "ready");
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const [name, setName] = useState("");
+  // A link can name a message outside the loaded window: look it up once before giving up.
+  const [lookedUp, setLookedUp] = useState(false);
+  const missing = timelineReady && parent === undefined;
   const existing = parent?.thread?.threadId ?? null;
+
+  useEffect(() => {
+    if (!missing || lookedUp) return;
+
+    let live = true;
+
+    void actions.loadAround(roomId, parentId).finally(() => {
+      if (live) setLookedUp(true);
+    });
+
+    return () => {
+      live = false;
+    };
+  }, [missing, lookedUp, roomId, parentId]);
 
   useEffect(() => {
     if (existing !== null) {
@@ -94,7 +111,7 @@ export function NewThreadPane({
       }
     >
       {parent === undefined ? (
-        timelineReady ? (
+        missing && lookedUp ? (
           <PaneEmpty
             icon="thread"
             title="Message not found"
