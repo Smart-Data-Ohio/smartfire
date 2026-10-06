@@ -1,6 +1,6 @@
 // Pinned threads_test.rb:159-489. No screenshots; native focus, menus and read state.
 import assert from 'node:assert/strict';
-import {actOnVisible,waitForVisibility,filterVisibleText,waitForVisibleCount,waitForCondition,visibleCount,visibleMatch} from './behavior-visibility.mjs';
+import {actOnVisible,waitForVisibility,filterVisibleText,waitForVisibleCount,waitForCondition,visibleCount,visibleMatch,waitForVisibleProperty} from './behavior-visibility.mjs';
 export const continuationCases=[
   'tracks work, assigns an owner, completes and reopens it without losing the conversation',
   'shows work-thread guidance in the new-thread form and on the work page',
@@ -89,7 +89,10 @@ export async function threadContinuation({author,recipient,base,caseName,fixture
     const item=filterVisibleText(target('browserList').locator('.thread-panel__thread-item'),'Mobile thread');await waitForVisibility(item,{timeout:10000});await click(item);
     await waitForVisibility(target('conversation'),{timeout:10000});await click(panel.getByRole('button',{name:'Back to thread list',exact:true,includeHidden:true}));await waitForVisibility(target('browser'));
     await click(panel.getByRole('button',{name:'New thread',exact:true,includeHidden:true}));await waitForVisibility(target('create'));
-    await actOnVisible(target('createName'),'fill',{},['Mobile second thread']);await actOnVisible(target('createMessage'),'fill',{},['A second mobile thread.']);await finishCreate('Mobile second thread');
+    // fill_in_thread_name: wait for beginCreate's animation-frame focus, then fill and check the name.
+    await waitForCondition(()=>author.evaluate(()=>document.activeElement?.matches('[data-thread-panel-target="createMessage"]')),{timeout:10000});
+    await actOnVisible(target('createName'),'fill',{},['Mobile second thread']);await waitForVisibleProperty(target('createName'),'value','Mobile second thread');
+    await actOnVisible(target('createMessage'),'fill',{},['A second mobile thread.']);await finishCreate('Mobile second thread');
     await threadMenu('A second mobile thread.');assert.ok(await author.locator('#message-actions-menu:not([hidden])').evaluate(menu=>{const r=menu.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;}));
     await author.keyboard.press('Escape');await waitForVisibility(panel.locator(':scope[aria-hidden="false"]'));await close(author);
     await waitForCondition(()=>author.locator('#header-overflow-button').evaluate(node=>node===document.activeElement));await text(author.locator('.room-header__name'),'Designers');await overflow();
