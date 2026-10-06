@@ -1,0 +1,181 @@
+/* The split send button, its schedule menu, and the scheduled list. */
+@layer app {
+  .composer-send-group {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Split: one pill, a hairline between send and the chevron. */
+  .composer-send-group[data-split] .composer-send {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  .composer-send-more {
+    --button-height: 28px;
+
+    width: 22px;
+    padding: 0;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+    box-shadow: inset 1px 0 0 color-mix(in oklch, var(--on-accent), transparent 72%);
+  }
+
+  .composer-send-more .icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* With nothing to send the chevron folds away; the send button stays put. */
+  .composer-send-group:not([data-split]) .composer-send-more {
+    display: none;
+  }
+
+  .schedule-menu-head {
+    padding: var(--space-1-5) var(--space-2) var(--space-1);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  .composer-scheduled.button {
+    --button-height: 28px;
+
+    flex-shrink: 0;
+    margin-right: var(--space-1);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  .composer-scheduled-short {
+    display: none;
+  }
+
+  /* Bleeds to the popover's edges (the popover pads its content, the list pads its own). */
+  .scheduled-list {
+    display: flex;
+    flex-direction: column;
+    width: min(360px, calc(100vw - var(--space-8)));
+    max-height: min(420px, 60vh);
+    margin: calc(var(--space-3) * -1);
+  }
+
+  .scheduled-list-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .scheduled-list-title {
+    flex: 1;
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .scheduled-list-count {
+    min-width: 20px;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    text-align: center;
+  }
+
+  .scheduled-list-empty {
+    margin: 0;
+    padding: var(--space-4) var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+  }
+
+  .scheduled-items {
+    margin: 0;
+    padding: var(--space-1);
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  /* Opening lands focus on the list itself; Tab then walks the row actions. */
+  .scheduled-items:focus-visible {
+    outline: none;
+  }
+
+  .scheduled-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1-5) var(--space-1-5) var(--space-1-5) var(--space-2);
+    border-radius: var(--radius-md);
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      opacity var(--duration-small) var(--ease-enter);
+  }
+
+  .scheduled-item:hover,
+  .scheduled-item:focus-within {
+    background: var(--bg-hover);
+  }
+
+  .scheduled-item[aria-busy] {
+    opacity: 0.55;
+  }
+
+  .scheduled-item-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .scheduled-item-when {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  .scheduled-item-body {
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .scheduled-item-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--space-0-5);
+    opacity: 0.6;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .scheduled-item:hover .scheduled-item-actions,
+  .scheduled-item:focus-within .scheduled-item-actions {
+    opacity: 1;
+  }
+
+  .scheduled-cancel:hover {
+    color: var(--danger-text);
+  }
+
+  @media (width < 720px) {
+    .composer-scheduled-long {
+      display: none;
+    }
+
+    .composer-scheduled-short {
+      display: inline;
+    }
+
+    .scheduled-item-actions {
+      opacity: 1;
+    }
+  }
+}

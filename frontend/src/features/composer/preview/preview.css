@@ -1,0 +1,86 @@
+/* The draft preview above the input: it unfolds (grid rows 0fr -> 1fr) and fades in. */
+@layer app {
+  .composer-preview {
+    display: grid;
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transition:
+      grid-template-rows var(--duration-medium) var(--ease-move),
+      opacity var(--duration-small) var(--ease-enter);
+  }
+
+  @starting-style {
+    .composer-preview[data-state="open"] {
+      grid-template-rows: 0fr;
+      opacity: 0;
+    }
+  }
+
+  .composer-preview[data-state="closing"] {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition-duration: var(--duration-medium-exit), var(--duration-small-exit);
+    transition-timing-function: var(--ease-exit);
+  }
+
+  .composer-preview-inner {
+    min-height: 0;
+    overflow: hidden;
+    margin: var(--space-1-5) var(--space-1-5) 0;
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+  }
+
+  .composer-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-1) var(--space-1) 0 var(--space-3);
+  }
+
+  .composer-preview-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .composer-preview-body,
+  .composer-preview-empty,
+  .composer-preview-error,
+  .composer-preview-loading {
+    max-height: 30vh;
+    margin: 0;
+    padding: var(--space-1) var(--space-3) var(--space-3);
+    overflow-y: auto;
+  }
+
+  .composer-preview-body {
+    transition: opacity var(--duration-small) var(--ease-enter);
+  }
+
+  .composer-preview-body[data-stale] {
+    opacity: 0.6;
+  }
+
+  .composer-preview-empty {
+    color: var(--text-faint);
+    font-size: var(--text-ui);
+  }
+
+  .composer-preview-error {
+    color: var(--danger-text);
+    font-size: var(--text-ui);
+  }
+
+  .composer-preview-loading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+  }
+}

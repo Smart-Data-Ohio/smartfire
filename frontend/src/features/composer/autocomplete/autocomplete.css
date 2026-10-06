@@ -1,0 +1,171 @@
+/* The autocomplete menu: a raised list that rises from the composer's top-left corner. */
+@layer app {
+  .autocomplete {
+    position: absolute;
+    bottom: calc(100% + var(--space-1-5));
+    left: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    width: min(440px, 100%);
+    max-height: min(340px, 50vh);
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    color: var(--text);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .autocomplete-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3) var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .autocomplete-title {
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.01em;
+  }
+
+  .autocomplete-keys {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+
+  .autocomplete-keys .kbd-key {
+    min-width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .autocomplete-list {
+    padding: 0 var(--space-1) var(--space-1);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .autocomplete-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-md);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    cursor: default;
+    user-select: none;
+    transition: background-color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .autocomplete-option[aria-selected="true"] {
+    background: var(--bg-selected);
+    transition-duration: 0s;
+  }
+
+  .autocomplete-option[aria-disabled="true"] {
+    color: var(--text-faint);
+  }
+
+  .autocomplete-option[aria-disabled="true"] .avatar {
+    opacity: 0.5;
+  }
+
+  .autocomplete-label {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .autocomplete-detail {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .autocomplete-option > .autocomplete-detail {
+    margin-left: auto;
+    padding-left: var(--space-2);
+  }
+
+  .autocomplete-glyph {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: var(--text-muted);
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .autocomplete-glyph img {
+    object-fit: contain;
+  }
+
+  .autocomplete-tag {
+    flex-shrink: 0;
+    padding: 1px var(--space-1-5);
+    border-radius: var(--radius-xs);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: var(--weight-medium);
+    line-height: 16px;
+  }
+
+  .autocomplete-tag[data-tone="agent"] {
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+
+  /* Commands read on two lines: usage, then what it does. */
+  .autocomplete[data-kind="command"] .autocomplete-option {
+    padding-block: var(--space-1-5);
+  }
+
+  .autocomplete-command {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .autocomplete-command-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .autocomplete-command .autocomplete-label {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  @media (width < 720px) {
+    .autocomplete {
+      width: 100%;
+    }
+
+    .autocomplete-keys {
+      display: none;
+    }
+
+    .autocomplete-option {
+      min-height: 40px;
+    }
+  }
+}

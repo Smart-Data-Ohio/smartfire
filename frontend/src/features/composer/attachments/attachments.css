@@ -1,0 +1,321 @@
+/* The composer's attachment tray (thumbnails and file cards with progress) and the drop overlay. */
+@layer app {
+  .tray {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: var(--space-3) var(--space-3) 0;
+    list-style: none;
+  }
+
+  .tray-chip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow:
+      inset 0 0 0 1px var(--border),
+      var(--shadow-control);
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      scale var(--duration-spring) var(--ease-spring),
+      box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  @starting-style {
+    .tray-chip {
+      opacity: 0;
+      scale: var(--scale-chip);
+    }
+  }
+
+  .tray-chip[data-kind="file"] {
+    width: 236px;
+    height: 56px;
+    padding: 0 var(--space-2) 0 var(--space-2);
+  }
+
+  .tray-chip[data-kind="image"] {
+    width: 64px;
+    height: 64px;
+    padding: 0;
+  }
+
+  .tray-chip[data-phase="failed"] {
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--danger), transparent 40%);
+  }
+
+  .tray-thumb {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: inherit;
+  }
+
+  .tray-thumb img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .tray-thumb-veil {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: var(--scrim);
+    color: var(--on-accent);
+  }
+
+  .tray-chip[data-phase="failed"] .tray-thumb img {
+    filter: grayscale(0.6);
+    opacity: 0.6;
+  }
+
+  .tray-file-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .tray-chip[data-phase="failed"] .tray-file-icon {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .tray-file-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    padding-right: var(--space-5);
+    line-height: 18px;
+  }
+
+  .tray-file-name {
+    overflow: hidden;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tray-file-status {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tray-chip[data-phase="failed"] .tray-file-status {
+    color: var(--danger-text);
+  }
+
+  /* Remove sits on the corner, like Slack's; always there on touch, on hover or focus otherwise. */
+  .tray-remove.button {
+    --button-height: 20px;
+
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    padding: 0;
+    border-radius: var(--radius-pill);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+    color: var(--text-muted);
+    opacity: 0;
+    transition:
+      opacity var(--duration-micro) var(--ease-enter),
+      background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .tray-remove.button:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  .tray-chip:hover .tray-remove,
+  .tray-chip:focus-within .tray-remove,
+  .tray-chip[data-phase="failed"] .tray-remove {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .tray-remove.button {
+      opacity: 1;
+    }
+  }
+
+  .tray-failed {
+    display: contents;
+  }
+
+  .tray-chip[data-kind="file"] .tray-retry.button {
+    margin-left: auto;
+    color: var(--danger-text);
+  }
+
+  .tray-chip[data-kind="image"] .tray-retry.button {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    border-radius: inherit;
+    color: var(--danger-text);
+  }
+
+  .tray-failed-badge {
+    position: absolute;
+    bottom: 3px;
+    left: 3px;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-pill);
+    background: var(--danger-solid);
+    color: var(--on-danger);
+    pointer-events: none;
+  }
+
+  .tray-ring {
+    display: block;
+    rotate: -90deg;
+  }
+
+  .tray-ring circle {
+    fill: none;
+    stroke-width: 2.5;
+  }
+
+  .tray-ring-track {
+    stroke: color-mix(in oklch, var(--accent), transparent 70%);
+  }
+
+  .tray-ring-value {
+    stroke: var(--accent);
+    stroke-linecap: round;
+    transition: stroke-dashoffset var(--duration-small) var(--ease-move);
+  }
+
+  /* Over a picture the ring is white on a scrim, so it reads on any image. */
+  .tray-thumb-veil .tray-ring-track {
+    stroke: color-mix(in oklch, var(--on-accent), transparent 62%);
+  }
+
+  .tray-thumb-veil .tray-ring-value {
+    stroke: var(--on-accent);
+  }
+
+  /* Before bytes move: a quarter arc on the spinner's clock (it keeps turning when reduced). */
+  .tray-ring[data-waiting] {
+    animation: tray-spin var(--duration-spin) linear infinite;
+  }
+
+  @keyframes tray-spin {
+    from {
+      rotate: -90deg;
+    }
+
+    to {
+      rotate: 270deg;
+    }
+  }
+
+  /* The drop overlay: fixed over the pane, so the pane's own layout is untouched. */
+  .drop-overlay {
+    position: fixed;
+    z-index: 40;
+    padding: var(--space-3);
+    background: color-mix(in oklch, var(--bg-pane), transparent 12%);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity var(--duration-small) var(--ease-enter);
+  }
+
+  @starting-style {
+    .drop-overlay[data-state="open"] {
+      opacity: 0;
+    }
+  }
+
+  .drop-overlay[data-state="closing"] {
+    opacity: 0;
+    transition-duration: var(--duration-small-exit);
+    transition-timing-function: var(--ease-exit);
+  }
+
+  .drop-overlay-frame {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    border: 2px dashed color-mix(in oklch, var(--accent), transparent 35%);
+    border-radius: var(--radius-lg);
+    background: color-mix(in oklch, var(--accent-soft), transparent 40%);
+  }
+
+  .drop-overlay-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-6) var(--space-8);
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    text-align: center;
+    transition:
+      translate var(--duration-medium) var(--ease-spring-soft),
+      scale var(--duration-medium) var(--ease-spring-soft);
+  }
+
+  @starting-style {
+    .drop-overlay[data-state="open"] .drop-overlay-card {
+      translate: 0 var(--distance-rise);
+      scale: var(--scale-surface);
+    }
+  }
+
+  .drop-overlay[data-state="closing"] .drop-overlay-card {
+    scale: var(--scale-menu-exit);
+  }
+
+  .drop-overlay-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .drop-overlay-title {
+    color: var(--text);
+    font-size: var(--text-title);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-title);
+  }
+
+  .drop-overlay-label {
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+  }
+}
