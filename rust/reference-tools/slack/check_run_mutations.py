@@ -14,7 +14,7 @@ try:
             source=source.replace(before,after)
         path.write_text(source)
     for case,test in [('admin-member-index','slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails'),('personal-foreign-show','slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails'),(None,'slack_run_views_match_every_rails_body_byte')]:
-        command=os.environ.get('WS16_CARGO','mise exec rust@1.98.1 -- cargo').split()+['test','--offline','--locked','--manifest-path',str(root/'Cargo.toml'),'-p','campfire',test,'--','--test-threads=8']
+        command=os.environ.get('WS16_CARGO','cargo').split()+['test','--offline','--locked','--manifest-path',str(root/'Cargo.toml'),'-p','campfire',test,'--','--test-threads=8']
         env=dict(os.environ,CARGO_BUILD_JOBS='2',CABLE_TEST_PORT_RANGE='53300-53399',INTEGRATION_TEST_PORT_RANGE='53300-53399')
         if case:env['WS16_RUN_HTTP_CASE']=case
         result=subprocess.run(command,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)

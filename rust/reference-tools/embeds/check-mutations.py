@@ -38,7 +38,7 @@ for name, old, new, test in mutations:
     assert source.count(old) == 1, (name, old)
     try:
         path.write_text(source.replace(old, new))
-        result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "-j", "4", "-p", "campfire", test, "--", "--nocapture"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(["cargo", "test", "-j", "4", "-p", "campfire", test, "--", "--nocapture"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         log = root.parent / ".scratch" / f"mutation-{test}.log"
         log.write_text(result.stdout)
         assert result.returncode != 0 and "test result: FAILED" in result.stdout, f"mutation survived or did not compile: {test}\n{result.stdout[-4000:]}"

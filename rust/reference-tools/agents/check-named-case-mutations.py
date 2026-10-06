@@ -14,7 +14,7 @@ for name,file,before,after,package,test in cases:
  try:
   path.write_text(original.replace(before,after,1))
   with log.open('w') as out:
-   result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p',package,test,'--','--test-threads=4'],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT)
+   result=subprocess.run(['cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p',package,test,'--','--test-threads=4'],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT)
   assert result.returncode and 'test result: FAILED. 0 passed; 1 failed;' in log.read_text(),log
   print(f'WS11 named mutation: {name}; 1 test failed; original restored')
  finally:path.write_text(original)

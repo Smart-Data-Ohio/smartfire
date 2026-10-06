@@ -18,7 +18,7 @@ def check(name, old, new, test, source=SOURCE):
     assert old in original, f"missing mutation anchor: {name}"
     try:
         source.write_text(original.replace(old, new))
-        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+        run = subprocess.run(["cargo", "test", "--locked", "-j", "4",
                               "-p", "campfire", "--bin", "campfire", f"controllers::messages::http_tests::{test}",
                               "--", "--exact", "--nocapture"], cwd=ROOT / "rust", env=ENV, capture_output=True, text=True)
         output = run.stdout + run.stderr

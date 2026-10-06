@@ -22,7 +22,7 @@ def check(name, path, old, new, test, package="campfire_db"):
     try:
         path.write_text(original.replace(old, new))
         run = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "-j", "4", "-p", package, test],
+            ["cargo", "test", "-j", "4", "-p", package, test],
             cwd=ROOT / "rust", env=ENV, capture_output=True, text=True,
         )
         output = run.stdout + run.stderr

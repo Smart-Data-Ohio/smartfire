@@ -25,7 +25,7 @@ for path, old, new, test in mutations:
     assert source.count(old) == 1, f"mutation target drifted: {test}"
     try:
         path.write_text(source.replace(old, new))
-        result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire_db", test], cwd=root, capture_output=True, text=True)
+        result = subprocess.run(["cargo", "test", "--locked", "-j", "4", "-p", "campfire_db", test], cwd=root, capture_output=True, text=True)
         output = result.stdout + result.stderr
         lines = [line for line in output.splitlines() if line.startswith("test result:")]
         assert result.returncode != 0 and any("FAILED." in line for line in lines), output

@@ -18,7 +18,7 @@ try:
     for name,path,target,replacement in changes:
         source=path.read_text();assert target in source,name
         path.write_text(source.replace(target,replacement))
-        run=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j2',
+        run=subprocess.run(['cargo','test','--locked','-j2',
             '--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire',
             'native_component_capture_matches_rails_root_selection','--','--test-threads=4','--nocapture'],
             cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)

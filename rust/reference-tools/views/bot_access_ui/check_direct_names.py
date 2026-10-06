@@ -14,7 +14,7 @@ try:
         assert original.count(needle) == 1, f"{name}: source changed; review injection"
         source.write_text(original.replace(needle, replacement))
         result = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
+            ["cargo", "test", "--locked",
              "-p", "campfire_views", "--test", "core",
              "bot_access_pages_match_pinned_rails_bytes", "--", "--nocapture", "--test-threads=8"],
             cwd=root, env=os.environ.copy(), capture_output=True, text=True)

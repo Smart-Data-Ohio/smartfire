@@ -15,7 +15,7 @@ parity/bin/reference up --seed first_run --port 52240
 parity/bin/reference runner --port 52240 crates/campfire/src/channels/tests/golden/fixtures.rb > "$TMPDIR/cable/channels-fixtures.json"
 parity/bin/reference runner --port 52240 crates/cable/tests/golden/fixtures.rb > "$TMPDIR/cable/cable-fixtures.json"
 CHANNELS_REFERENCE_PORT=52240 CHANNELS_REFERENCE_CONTAINER=ws11-reference-52240 CHANNELS_REFERENCE_FIXTURES="$TMPDIR/cable/channels-fixtures.json" \
-  mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire channels::tests::golden::record_reference -- --ignored --nocapture
+  cargo test --locked -j 4 -p campfire channels::tests::golden::record_reference -- --ignored --nocapture
 CABLE_REFERENCE_URL=ws://127.0.0.1:52240/cable CABLE_REFERENCE_FIXTURES="$TMPDIR/cable/cable-fixtures.json" \
-  mise exec rust@1.98.1 -- cargo test --locked -j 4 -p campfire_cable --test golden record_reference -- --ignored --nocapture
+  cargo test --locked -j 4 -p campfire_cable --test golden record_reference -- --ignored --nocapture
 printf 'WS11 cable recording: both Rails goldens regenerated (%s)\n' "$(cat parity/reference.sha)"

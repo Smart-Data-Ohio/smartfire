@@ -21,7 +21,7 @@ for name, relative, old, new, package, test in mutations:
     assert source.count(old) == 1, f"mutation anchor moved: {name}"
     try:
         path.write_text(source.replace(old, new))
-        result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--manifest-path", str(root / "Cargo.toml"),
+        result = subprocess.run(["cargo", "test", "--manifest-path", str(root / "Cargo.toml"),
             "--locked", "-p", package, test, "--", "--test-threads=8"], env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (scratch / "logs" / f"boards-mutation-{name}.log").write_text(result.stdout)
         summaries = [line for line in result.stdout.splitlines() if line.startswith("test result:")]

@@ -26,7 +26,7 @@ env = dict(os.environ, CI='1', TMPDIR=str(clone / '.scratch'), CARGO_TARGET_DIR=
 env.pop('RUST_TEST_THREADS', None)
 print(f'WS8bm failing-first production revision: {BASE}; only regression module/vectors added; {clone}', flush=True)
 commands = [('seeds', ['bash', 'rust/parity/bin/seed', 'build', 'default', 'first_run']),
-            ('tests', ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j4', '--manifest-path', 'rust/Cargo.toml',
+            ('tests', ['cargo', 'test', '--locked', '-j4', '--manifest-path', 'rust/Cargo.toml',
                        '-p', 'campfire', '--bin', 'campfire', 'controllers::messages::review_tests::review_', '--', '--nocapture'])]
 for name, command in commands:
     with (clone / '.scratch' / f'{name}.log').open('w') as log:

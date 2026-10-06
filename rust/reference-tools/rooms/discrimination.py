@@ -19,7 +19,7 @@ paths = [
 saved = {path: (rust / path).read_bytes() for path in paths}
 env = dict(os.environ, TMPDIR=str(scratch), CARGO_TARGET_DIR=str(rust / "target"),
            CABLE_TEST_PORT_RANGE="52100-52149", MAIL_TEST_PORT_RANGE="52100-52149")
-command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+command = ["cargo", "test", "--locked", "-j", "4",
            "-p", "campfire", "--bin", "campfire", "rooms::parity_tests", "--", "--nocapture"]
 try:
     for path in paths:

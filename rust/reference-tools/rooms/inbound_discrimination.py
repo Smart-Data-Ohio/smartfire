@@ -12,7 +12,7 @@ env = os.environ.copy()
 env.update({'CI':'1', 'TMPDIR':str(root / '.scratch'), 'CARGO_TARGET_DIR':str(root / 'rust/target')})
 try:
     source.write_text(original.replace(needle, '    // injected missing authorization'))
-    result = subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4',
+    result = subprocess.run(['cargo','test','--locked','-j','4',
         '--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire',
         'controllers::rooms::inbound_rails_cases::a_plain_member_is_forbidden','--','--test-threads=1'],
         cwd=root, env=env, capture_output=True, text=True)

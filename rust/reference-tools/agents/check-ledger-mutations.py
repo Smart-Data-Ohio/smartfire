@@ -16,7 +16,7 @@ for name,file,before,after,test in cases:
  try:
   p.write_text(original.replace(before,after))
   with log.open('w') as out:
-   run=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j2','--manifest-path','rust/Cargo.toml','-p','campfire_db',test,'--','--test-threads=4'],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT)
+   run=subprocess.run(['cargo','test','--locked','-j2','--manifest-path','rust/Cargo.toml','-p','campfire_db',test,'--','--test-threads=4'],cwd=root,env=env,stdout=out,stderr=subprocess.STDOUT)
   summaries=[s for s in log.read_text().splitlines() if s.startswith('test result:')]
   assert run.returncode==101 and any('FAILED. 0 passed; 1 failed;' in s for s in summaries),(name,log)
   print(f'WS11 ledger mutation: {name}; exit={run.returncode}; '+summaries[-1],flush=True)

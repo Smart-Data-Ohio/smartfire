@@ -14,7 +14,7 @@ try:
         source=subprocess.check_output(['git','show',f'8bdb43ec:{relative}'],cwd=root.parent)
         if path.name=='rooms.rs':source+=b'\n#[cfg(test)]\nmod coercions_tests;\n'
         path.write_bytes(source)
-    result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire','controllers::rooms::coercions_tests','--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    result=subprocess.run(['cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire','controllers::rooms::coercions_tests','--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     (scratch/'coercions-discrimination.log').write_text(result.stdout)
     summaries=[s for s in result.stdout.splitlines() if s.startswith('test result:')]
     assert result.returncode==101 and len(summaries)==1 and '0 passed; 5 failed;' in summaries[0],result.stdout

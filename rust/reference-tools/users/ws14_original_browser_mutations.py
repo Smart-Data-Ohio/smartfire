@@ -35,7 +35,7 @@ env = dict(os.environ, CI='true', CARGO_BUILD_JOBS='2')
 env['PATH'] = str(rust / 'target/ledger-d-tools') + ':' + env.get('PATH', '')
 for rid, original, line, mutation in cases:
     function = 'controllers::ws14_original_browser_tests::original_browser_' + rid.lower().replace('-', '_')
-    command = shlex.split(env.get('CAMPFIRE_CARGO', 'mise exec rust@1.98.1 -- cargo')) + [
+    command = shlex.split(env.get('CAMPFIRE_CARGO', 'cargo')) + [
         'nextest', 'run', '--locked', '-p', 'campfire', '-j', '4', '-E', f'test(={function})',
         '--run-ignored', 'only', '--no-fail-fast', '--failure-output', 'immediate',
     ]

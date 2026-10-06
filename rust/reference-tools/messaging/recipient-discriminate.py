@@ -12,7 +12,7 @@ original=source.read_text()
 old='Room::find_for_user(conn, user_id, room_id)'
 new='let _ = user_id; Room::find_by_id(conn, room_id)'
 assert original.count(old)==1
-command=['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire','channels::tests::hub_test::message_parity::positive_forward_message_and_unread_frames_match_rails_for_every_recipient','--','--exact','--nocapture']
+command=['cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire','channels::tests::hub_test::message_parity::positive_forward_message_and_unread_frames_match_rails_for_every_recipient','--','--exact','--nocapture']
 env=dict(os.environ,CI='1',TMPDIR=str(ROOT/'.scratch'),CARGO_TARGET_DIR=str(ROOT/'rust/target'),CABLE_TEST_PORT_RANGE='52000-52049',MAIL_TEST_PORT_RANGE='52000-52049')
 env.pop('RUST_TEST_THREADS',None)
 try:

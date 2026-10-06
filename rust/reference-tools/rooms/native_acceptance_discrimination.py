@@ -10,7 +10,7 @@ for name,file,before,after,test in changes:
  path=root/file; original=path.read_bytes(); source=original.decode();assert source.count(before)==1,name
  try:
   path.write_text(source.replace(before,after))
-  run=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire',test,'--','--test-threads=4','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+  run=subprocess.run(['cargo','test','--locked','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire',test,'--','--test-threads=4','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
   (scratch/(name+'.log')).write_text(run.stdout)
   summaries=[line for line in run.stdout.splitlines() if line.startswith('test result:')]
   assert run.returncode==101 and len(summaries)==1 and '0 passed; 1 failed;' in summaries[0],run.stdout[-6000:]

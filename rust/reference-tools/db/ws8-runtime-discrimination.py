@@ -35,7 +35,7 @@ def check(name, changes, test_filter, must_fail, package="campfire_db"):
             assert broken != original[path], f"mutation did not change {path}"
             path.write_text(broken)
         run = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "-j", "4", "-p", package, test_filter],
+            ["cargo", "test", "-j", "4", "-p", package, test_filter],
             cwd=ROOT / "rust", env=ENV, capture_output=True, text=True,
         )
         output = run.stdout + run.stderr

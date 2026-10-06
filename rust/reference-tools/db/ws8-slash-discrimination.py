@@ -15,7 +15,7 @@ def run(label, relative, before, after, package, test, required):
     assert before in source, (label, 'mutation anchor changed')
     try:
         path.write_text(source.replace(before, after, 1))
-        command = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '-j', '4', '--manifest-path', str(root / 'rust/Cargo.toml'), '-p', package, test, '--', '--test-threads=4']
+        command = ['cargo', 'test', '-j', '4', '--manifest-path', str(root / 'rust/Cargo.toml'), '-p', package, test, '--', '--test-threads=4']
         result = subprocess.run(command, cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (scratch / f'discrimination-{label}.log').write_text(result.stdout)
         assert result.returncode != 0 and 'test result: FAILED.' in result.stdout, (label, result.stdout[-3000:])

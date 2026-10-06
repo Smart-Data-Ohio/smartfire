@@ -60,7 +60,7 @@ env = dict(os.environ, CI="1", TMPDIR=str(clone / ".scratch"),
 env.pop("RUST_TEST_THREADS", None)
 print(f"WS8bm owner integration: worker {worker}; shell {OWNER}; isolated merge {clone}; main unmerged", flush=True)
 commands = [
-    ("metadata", ["mise", "exec", "rust@1.98.1", "--", "cargo", "metadata", "--locked", "--manifest-path", "rust/Cargo.toml", "--format-version", "1"]),
+    ("metadata", ["cargo", "metadata", "--locked", "--manifest-path", "rust/Cargo.toml", "--format-version", "1"]),
     ("seeds", ["bash", "rust/parity/bin/seed", "build", "default", "first_run"]),
 ]
 for name, command in commands:
@@ -76,7 +76,7 @@ failures = []
 for name, selector in [("native", "controllers::rooms::native_integration_tests"),
                        ("pane", "controllers::channel_threads::content_tests"),
                        ("show", "controllers::channel_threads::page_tests")]:
-    command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", "rust/Cargo.toml",
+    command = ["cargo", "test", "--locked", "-j4", "--manifest-path", "rust/Cargo.toml",
                "-p", "campfire", "--bin", "campfire", selector, "--", "--nocapture"]
     path = clone / ".scratch" / f"{name}.log"
     with path.open("w") as log:

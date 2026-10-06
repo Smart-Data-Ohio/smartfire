@@ -22,7 +22,7 @@ oracle.write_text(json.dumps(corpus)+'\n')
 env = dict(os.environ, CARGO_BUILD_JOBS='2', CI='1',
            CABLE_TEST_PORT_RANGE='53000-53049', MAIL_TEST_PORT_RANGE='53050-53099',
            WS13B_OBSERVED_ORACLE=str(oracle), WS13B_DIFFERENTIAL_OUTPUT=str(directory))
-command = ['mise','exec','rust@1.98.1','--','cargo','test','--locked',
+command = ['cargo','test','--locked',
            '--manifest-path','rust/Cargo.toml','--workspace','--exclude','html5ever',
            'observed_rails_differential_','--','--test-threads=8','--nocapture']
 

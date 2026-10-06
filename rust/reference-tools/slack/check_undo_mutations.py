@@ -25,7 +25,7 @@ try:
         broken = broken.replace(old, new)
     source.write_text(broken)
     result = subprocess.run(
-        ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked',
+        ['cargo', 'test', '--locked',
          '--manifest-path', str(root / 'Cargo.toml'), '-p', 'campfire',
          'integrations::slack::undoer::tests', '--', '--test-threads=8'],
         cwd=root.parent, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)

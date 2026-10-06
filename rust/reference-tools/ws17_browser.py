@@ -3,7 +3,7 @@
 import os, shutil, subprocess, tempfile, time, urllib.request
 from pathlib import Path
 root=Path(__file__).resolve().parents[2]; scratch=root/'.scratch'; scratch.mkdir(exist_ok=True)
-subprocess.run(['mise','exec','rust@1.98.1','--','cargo','build','--locked','-j','4','--manifest-path','rust/Cargo.toml','-p','campfire'],cwd=root,check=True)
+subprocess.run(['cargo','build','--locked','-j','4','--manifest-path','rust/Cargo.toml','-p','campfire'],cwd=root,check=True)
 if not (root/'rust/parity/node_modules/playwright').is_dir(): subprocess.run(['npm','ci','--prefix','rust/parity'],cwd=root,check=True)
 with tempfile.TemporaryDirectory(prefix='browser-',dir=scratch) as tmp:
  storage=Path(tmp); (storage/'db').mkdir(); shutil.copy2(root/'rust/parity/.seed/default/db/production.sqlite3',storage/'db/production.sqlite3'); shutil.copytree(root/'rust/parity/.seed/default/storage',storage/'files')

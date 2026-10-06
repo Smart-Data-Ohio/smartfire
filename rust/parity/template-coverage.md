@@ -111,14 +111,14 @@ discovery banner to stderr, honours `RUST_TEST_THREADS=4` and accepts
 different bytes from the recorded 8.16.1 runtime; the goldens are kept unchanged.
 
 ```sh
-mise exec rust@1.98.1 -- python3 parity/coverage/test-templates.py
-mise exec rust@1.98.1 -- python3 parity/coverage/verify-rendering.py
-mise exec rust@1.98.1 -- cargo nextest run --locked -p campfire_views --test template_coverage -j 4
+python3 parity/coverage/test-templates.py
+python3 parity/coverage/verify-rendering.py
+cargo nextest run --locked -p campfire_views --test template_coverage -j 4
 PARITY_IMAGE=review236-reference:78b9b1546 RUST_TEST_THREADS=4 \
   PINNED_MEDIA_SCRATCH="$PWD/target/template-coverage/pinned-media" \
   CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER="$PWD/reference-tools/agents/pinned-media-runner.py" \
-  mise exec rust@1.98.1 -- cargo nextest run --locked --workspace --exclude html5ever -j 4 --profile ci
-mise exec rust@1.98.1 -- cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+  cargo nextest run --locked --workspace --exclude html5ever -j 4 --profile ci
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
 ruby parity/coverage/check-templates
 ```
 

@@ -38,7 +38,7 @@ for name, before, after, test in mutations:
     try:
         GRANT.write_text(replace_once(original, before, after))
         module = "huddle_revocation_test" if name in {entry[0] for entry in mutations[:5]} else "huddle_grant_sequences_test"
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", f"tests::{module}::{test}", "--", "--exact", "--nocapture"]
+        command = ["cargo", "test", "--locked", "-j4", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", f"tests::{module}::{test}", "--", "--exact", "--nocapture"]
         result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
         output = result.stdout + result.stderr
         (SCRATCH / f"{name}.log").write_text(output)

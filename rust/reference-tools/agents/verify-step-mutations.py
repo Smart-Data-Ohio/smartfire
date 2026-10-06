@@ -28,7 +28,7 @@ for name, before, after, test in mutations:
         raise RuntimeError(f'{name}: missing anchor')
     try:
         path.write_text(re.sub(pattern, lambda _: after, original))
-        result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo',
+        result = subprocess.run(['cargo',
                                  'test', '--locked', '-j4', '-p', 'campfire_db',
                                  test, '--', '--nocapture'], cwd=root, env=env,
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

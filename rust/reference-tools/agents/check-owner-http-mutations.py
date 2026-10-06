@@ -7,7 +7,7 @@ p=root/'crates/db/src/models/agent_access.rs'
 scratch=root.parent/'.scratch/owner-http-mutations'
 scratch.mkdir(parents=True,exist_ok=True)
 original=p.read_text()
-baseline=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','-p','campfire','agent_owner_lifecycle_','--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),capture_output=True,text=True)
+baseline=subprocess.run(['cargo','test','--locked','-j','4','-p','campfire','agent_owner_lifecycle_','--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),capture_output=True,text=True)
 output=baseline.stdout+baseline.stderr
 (scratch/'baseline.log').write_text(output)
 summary=re.search(r'^test result: ok\..*$',output,re.M)
@@ -18,7 +18,7 @@ for name,before,after,test in mutations:
     assert before in original,name
     try:
         p.write_text(original.replace(before,after,1))
-        result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','-p','campfire',test,'--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),capture_output=True,text=True)
+        result=subprocess.run(['cargo','test','--locked','-j','4','-p','campfire',test,'--','--nocapture'],cwd=root,env=dict(os.environ,CI='1',TMPDIR=str(scratch)),capture_output=True,text=True)
         output=result.stdout+result.stderr
         (scratch/(name+'.log')).write_text(output)
         summary=re.search(r'^test result: FAILED\..*$',output,re.M)

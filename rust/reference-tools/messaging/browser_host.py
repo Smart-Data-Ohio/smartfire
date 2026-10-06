@@ -236,7 +236,7 @@ def build_host(root, env):
     # binary, despite different source roots. Keep this cache under target/.
     host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
     host_env = dict(env, CAMPFIRE_REFERENCE=str(root), CARGO_TARGET_DIR=str(host_target))
-    command = shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["test", "--locked", "-j2",
+    command = shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["test", "--locked", "-j2",
                "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
                "--no-run", "--message-format=json"]
     result = subprocess.run(command, cwd=root, env=host_env, stdout=subprocess.PIPE, text=True)

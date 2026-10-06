@@ -16,7 +16,7 @@ def check(name, path, broken, package, test, assertion):
     assert broken != original, f"{name}: mutation did not change the source"
     try:
         path.write_text(broken)
-        result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", package, test, "--", "--nocapture"],
+        result = subprocess.run(["cargo", "test", "--locked", "-j", "4", "-p", package, test, "--", "--nocapture"],
             cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (scratch / f"{name}.log").write_text(result.stdout)
         lines = [line for line in result.stdout.splitlines() if line.startswith("test result:")]

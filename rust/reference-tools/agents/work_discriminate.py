@@ -59,7 +59,7 @@ for name, relative, original, broken, package, test in mutations:
         changed = changed.replace(commit, 'if let Err(error) = if conn.is_autocommit() { Ok(()) } else { conn.execute_batch("COMMIT TRANSACTION") } {', 1)
     try:
         path.write_text(changed)
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-p", package, test, "--", "--test-threads=4"]
+        command = ["cargo", "test", "--locked", "-p", package, test, "--", "--test-threads=4"]
         result = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         (logs / f"agent-work-mutant-{name}.log").write_text(result.stdout)
         assert result.returncode != 0 and "test result: FAILED." in result.stdout and "panicked at" in result.stdout and "assertion" in result.stdout, result.stdout[-4000:]

@@ -9,7 +9,7 @@ OUT=ROOT/'.scratch/upload-discrimination'
 OUT.mkdir(parents=True,exist_ok=True)
 source=ROOT/'rust/crates/campfire/src/controllers/messages.rs'
 original=source.read_text()
-command=['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire','controllers::messages::upload_tests::signed_root_and_thread_attachments_match_rails_response_and_blob_rows','--','--exact']
+command=['cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire','controllers::messages::upload_tests::signed_root_and_thread_attachments_match_rails_response_and_blob_rows','--','--exact']
 env=dict(os.environ,CI='1',TMPDIR=str(ROOT/'.scratch'),CARGO_TARGET_DIR=str(ROOT/'rust/target'),CABLE_TEST_PORT_RANGE='52000-52049',MAIL_TEST_PORT_RANGE='52000-52049')
 env.pop('RUST_TEST_THREADS',None)
 mutations=[

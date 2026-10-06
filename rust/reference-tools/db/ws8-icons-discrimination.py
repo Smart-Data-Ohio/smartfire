@@ -16,7 +16,7 @@ def check(name, path, mutate, test):
     try:
         path.write_bytes(mutate(original))
         result = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+            ["cargo", "test", "--locked", "-j", "4",
              "-p", "campfire", "--bin", "campfire", test, "--", "--nocapture"],
             cwd=ROOT / "rust", env=ENV, capture_output=True, text=True,
         )

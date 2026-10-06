@@ -25,7 +25,7 @@ for name, file, before, after in mutations:
     try:
         assert original.count(before) == 1, (name, original.count(before))
         path.write_text(original.replace(before, after, 1))
-        result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire", "huddle_render_tests", "--", "--test-threads=4"], cwd=ROOT, env=environment, capture_output=True, text=True)
+        result = subprocess.run(["cargo", "test", "--locked", "-j4", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire", "huddle_render_tests", "--", "--test-threads=4"], cwd=ROOT, env=environment, capture_output=True, text=True)
         output = result.stdout + result.stderr
         (SCRATCH / f"{name}.log").write_text(output)
         summaries = re.findall(r"^test result: FAILED\..*$", output, re.M)

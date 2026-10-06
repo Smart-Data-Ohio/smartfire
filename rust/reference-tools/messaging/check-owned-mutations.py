@@ -62,7 +62,7 @@ for name, file, before, after, test in mutations:
     assert source.count(before) == 1, name
     try:
         path.write_text(source.replace(before, after))
-        run = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j2',
+        run = subprocess.run(['cargo', 'test', '--locked', '-j2',
                               '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire', test, '--', '--nocapture'],
                              cwd=ROOT, env=env, capture_output=True, text=True)
         output = run.stdout + run.stderr

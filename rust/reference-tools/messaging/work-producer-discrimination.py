@@ -141,7 +141,7 @@ def main():
     try:
         source.write_text(mutated_work(original))
         with (output / 'build.log').open('w') as log:
-            build = subprocess.run(['mise','exec','rust@1.98.1','--','cargo','build','--locked',
+            build = subprocess.run(['cargo','build','--locked',
                                     '--manifest-path',str(generated / 'Cargo.toml'),'-p','campfire','--bin','campfire'],
                                    cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT)
         assert build.returncode == 0, 'producer build failed; see ' + str(output / 'build.log')

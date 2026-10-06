@@ -24,7 +24,7 @@ try:
         assert old in broken, f'mutation target missing: {name}'
         broken = broken.replace(old, new)
     source.write_text(broken)
-    command = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '--manifest-path', str(root / 'Cargo.toml'), '-p', 'campfire', 'integrations::slack::jobs::tests', '--', '--test-threads=8']
+    command = ['cargo', 'test', '--locked', '--manifest-path', str(root / 'Cargo.toml'), '-p', 'campfire', 'integrations::slack::jobs::tests', '--', '--test-threads=8']
     result = subprocess.run(command, env=env, cwd=root.parent, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     (scratch / 'broken.log').write_text(result.stdout)
     assert result.returncode != 0 and 'test result: FAILED.' in result.stdout, result.stdout[-3000:]
