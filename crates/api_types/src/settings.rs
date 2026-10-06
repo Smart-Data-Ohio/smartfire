@@ -57,7 +57,8 @@ pub struct ProfileSettings {
 pub struct UpdateProfile {
     pub name: Option<String>,
     pub email_address: Option<String>,
-    /// Required with a password to change `emailAddress` or `password`.
+    /// Needed to change `emailAddress` when the person has a password (`hasPassword`). A new
+    /// `password` doesn't need it, as on the classic page.
     pub current_password: Option<String>,
     /// A new password; blank keeps the current one.
     pub password: Option<String>,
@@ -256,15 +257,16 @@ pub struct UpdateCalls {
     pub push_to_talk_key: Option<String>,
 }
 
-/// The connected services. Connecting and disconnecting are OAuth round trips on the classic
-/// pages (`connectPath`), so these are read-only here.
+/// The connected services. Connecting and disconnecting are OAuth or token round trips on the
+/// classic page (`managePath`), so these are read-only here.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct IntegrationSettings {
     pub google: GoogleIntegration,
     pub github: Connection,
-    /// The workspace has a GitHub App (repository links), beside the personal connection.
+    /// The workspace has a GitHub App, so connecting can go through it ("Connect with GitHub")
+    /// as well as a pasted personal token.
     pub github_app_configured: bool,
     pub fizzy: Connection,
     /// Where the classic page manages these (`/users/me/profile`).
@@ -287,7 +289,8 @@ pub struct GoogleIntegration {
     /// The connection's grants.
     pub calendar: bool,
     pub drive: bool,
-    /// The connected account; `null` when not connected.
+    /// The linked Google account's address; `null` when none is linked. A linked account can be
+    /// disconnected (`connected: false`) and still have an address: it needs reconnecting.
     pub email: Option<String>,
 }
 

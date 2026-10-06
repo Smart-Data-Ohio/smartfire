@@ -18,6 +18,7 @@ calendarConfigured: boolean, connected: boolean,
  */
 calendar: boolean, drive: boolean, 
 /**
- * The connected account; `null` when not connected.
+ * The linked Google account's address; `null` when none is linked. A linked account can be
+ * disconnected (`connected: false`) and still have an address: it needs reconnecting.
  */
 email: string | null, };

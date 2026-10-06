@@ -3,12 +3,13 @@ import type { Connection } from "./Connection";
 import type { GoogleIntegration } from "./GoogleIntegration";
 
 /**
- * The connected services. Connecting and disconnecting are OAuth round trips on the classic
- * pages (`connectPath`), so these are read-only here.
+ * The connected services. Connecting and disconnecting are OAuth or token round trips on the
+ * classic page (`managePath`), so these are read-only here.
  */
 export type IntegrationSettings = { google: GoogleIntegration, github: Connection, 
 /**
- * The workspace has a GitHub App (repository links), beside the personal connection.
+ * The workspace has a GitHub App, so connecting can go through it ("Connect with GitHub")
+ * as well as a pasted personal token.
  */
 githubAppConfigured: boolean, fizzy: Connection, 
 /**

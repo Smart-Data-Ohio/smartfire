@@ -5,7 +5,8 @@
  */
 export type UpdateProfile = { name: string | null, emailAddress: string | null, 
 /**
- * Required with a password to change `emailAddress` or `password`.
+ * Needed to change `emailAddress` when the person has a password (`hasPassword`). A new
+ * `password` doesn't need it, as on the classic page.
  */
 currentPassword: string | null, 
 /**
