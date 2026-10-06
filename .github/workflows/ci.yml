@@ -165,13 +165,14 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
+      # npm rejects the script/livekit-gateway symlink as a prefix; use the real directory.
       - name: Install gateway dependencies
         if: needs.changes.outputs.rails == 'true'
-        run: npm ci --ignore-scripts --prefix script/livekit-gateway
+        run: npm ci --ignore-scripts --prefix rust/web/script/livekit-gateway
 
       - name: Test authorization and connection races
         if: needs.changes.outputs.rails == 'true'
-        run: npm test --prefix script/livekit-gateway
+        run: npm test --prefix rust/web/script/livekit-gateway
 
   test:
     needs: changes
@@ -270,7 +271,7 @@ jobs:
 
       - name: Install gateway dependencies
         if: ${{ !startsWith(matrix.shard, 'browser') && steps.coverage.outputs.scope != 'google' }}
-        run: npm ci --ignore-scripts --prefix script/livekit-gateway
+        run: npm ci --ignore-scripts --prefix rust/web/script/livekit-gateway
 
       - name: Run browser tests
         if: ${{ startsWith(matrix.shard, 'browser') && steps.coverage.outputs.scope != 'google' }}
