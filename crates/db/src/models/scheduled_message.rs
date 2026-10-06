@@ -101,6 +101,42 @@ impl ScheduledMessage {
         )
     }
 
+    /// A page of [`owned_by`](Self::owned_by), optionally one room's: up to `limit` rows strictly
+    /// after the `(send_at, id)` key `after` in the same order (later ones for pending, earlier
+    /// ones for past).
+    pub fn owned_page(
+        conn: &Connection,
+        user_id: i64,
+        past: bool,
+        room_id: Option<i64>,
+        after: Option<(Timestamp, i64)>,
+        limit: i64,
+    ) -> Result<Vec<Self>> {
+        let (condition, order, beyond) = if past {
+            (
+                "(sent_at IS NOT NULL OR dropped_at IS NOT NULL)",
+                "send_at DESC, id DESC",
+                "(send_at, id) < (?3, ?4)",
+            )
+        } else {
+            (
+                "sent_at IS NULL AND dropped_at IS NULL",
+                "send_at ASC, id ASC",
+                "(send_at, id) > (?3, ?4)",
+            )
+        };
+        let beyond = if after.is_some() { beyond } else { "TRUE" };
+        let (at, id) = after.unzip();
+        query_all(
+            conn,
+            &format!(
+                "SELECT * FROM scheduled_messages WHERE user_id = ?1 AND {condition} AND (?2 IS NULL OR room_id = ?2) AND {beyond} ORDER BY {order} LIMIT ?5"
+            ),
+            params![user_id, room_id, at, id, limit],
+            Self::from_row,
+        )
+    }
+
     pub fn pending(&self) -> bool {
         self.sent_at.is_none() && self.dropped_at.is_none()
     }

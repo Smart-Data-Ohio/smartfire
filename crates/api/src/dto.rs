@@ -79,17 +79,67 @@ pub fn users(
         .collect())
 }
 
+pub fn room_kind(kind: RoomType) -> api::RoomKind {
+    match kind {
+        RoomType::Open => api::RoomKind::Open,
+        RoomType::Closed => api::RoomKind::Closed,
+        RoomType::Direct => api::RoomKind::Direct,
+        RoomType::Voice => api::RoomKind::Voice,
+        RoomType::Stage => api::RoomKind::Stage,
+        RoomType::Board => api::RoomKind::Board,
+    }
+}
+
+/// The names a cross-room list's rows refer to, one per distinct `(room, thread)` pair, as the
+/// classic pages name them: `Room::display_names_for` for the room and the thread's name. A
+/// room or thread that no longer exists is left out.
+pub fn conversation_names(
+    conn: &Connection,
+    viewer: &User,
+    pairs: impl IntoIterator<Item = (i64, Option<i64>)>,
+) -> Result<Vec<api::ConversationName>> {
+    let pairs = pairs.into_iter().collect::<BTreeSet<_>>();
+    let mut rooms = Vec::new();
+    for room_id in pairs
+        .iter()
+        .map(|(room_id, _)| *room_id)
+        .collect::<BTreeSet<_>>()
+    {
+        rooms.extend(Room::find_by_id(conn, room_id)?);
+    }
+    let names = Room::display_names_for(conn, &rooms, Some(viewer))?;
+    let rooms = rooms
+        .into_iter()
+        .map(|room| (room.id, room))
+        .collect::<HashMap<_, _>>();
+    let mut out = Vec::with_capacity(pairs.len());
+    for (room_id, thread_id) in pairs {
+        let Some(room) = rooms.get(&room_id) else {
+            continue;
+        };
+        let thread_name = match thread_id {
+            Some(id) => match campfire_db::ChannelThread::find_by_id(conn, id)? {
+                Some(thread) if thread.room_id == room_id => Some(thread.name),
+                _ => continue,
+            },
+            None => None,
+        };
+        out.push(api::ConversationName {
+            room_id,
+            thread_id,
+            room_kind: room_kind(room.room_type),
+            room_name: names.get(&room_id).cloned().unwrap_or_default(),
+            room_icon_name: room.icon_name.clone(),
+            thread_name,
+        });
+    }
+    Ok(out)
+}
+
 pub fn room(room: &Room) -> api::Room {
     api::Room {
         id: room.id,
-        kind: match room.room_type {
-            RoomType::Open => api::RoomKind::Open,
-            RoomType::Closed => api::RoomKind::Closed,
-            RoomType::Direct => api::RoomKind::Direct,
-            RoomType::Voice => api::RoomKind::Voice,
-            RoomType::Stage => api::RoomKind::Stage,
-            RoomType::Board => api::RoomKind::Board,
-        },
+        kind: room_kind(room.room_type),
         name: if room.direct() {
             None
         } else {
@@ -303,7 +353,7 @@ fn sentence_case(title: &str) -> String {
 /// The body with each mention's `<div class="mention …">` wrapper as a `<span>`: inside a `<p>`,
 /// an HTML parser closes the paragraph at a `<div>`, splitting the sentence. Only the JSON copy
 /// changes; the classic pages render the body as before.
-fn inline_mentions(html: &str) -> String {
+pub(crate) fn inline_mentions(html: &str) -> String {
     const OPEN: &str = r#"<div class="mention"#;
     if !html.contains(OPEN) {
         return html.to_owned();

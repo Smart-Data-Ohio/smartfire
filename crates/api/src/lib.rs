@@ -17,6 +17,7 @@ macro_rules! endpoint {
     };
 }
 
+pub mod composer;
 mod dto;
 pub mod endpoints;
 mod error;
@@ -122,6 +123,42 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         .route(
             "/api/v1/threads/{thread_id}/read",
             post(action(threads::read)),
+        )
+        .route("/api/v1/uploads", post(unparsed_action(composer::upload)))
+        .route(
+            "/api/v1/autocomplete/users",
+            get(action(composer::autocomplete_users)),
+        )
+        .route(
+            "/api/v1/autocomplete/icons",
+            get(action(composer::autocomplete_icons)),
+        )
+        .route("/api/v1/icons", get(action(composer::icons)))
+        .route(
+            "/api/v1/rooms/{room_id}/slash_commands",
+            get(action(composer::slash_commands))
+                .post(unparsed_action(composer::run_slash_command)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/messages/preview",
+            post(unparsed_action(composer::preview)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/scheduled_messages",
+            post(unparsed_action(composer::schedule)),
+        )
+        .route(
+            "/api/v1/scheduled_messages",
+            get(action(composer::scheduled_messages)),
+        )
+        .route(
+            "/api/v1/scheduled_messages/{id}",
+            patch(unparsed_action(composer::update_scheduled))
+                .delete(action(composer::cancel_scheduled)),
+        )
+        .route(
+            "/api/v1/scheduled_messages/{id}/send_now",
+            post(action(composer::send_scheduled_now)),
         )
         .route("/api/v1/users", get(action(endpoints::users)))
         .route("/api/v1/presence", get(action(endpoints::presence)))

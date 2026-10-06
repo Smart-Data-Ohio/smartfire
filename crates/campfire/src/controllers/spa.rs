@@ -18,3 +18,6 @@ mod api_s2_tests;
 #[cfg(test)]
 #[path = "spa_api_threads_tests.rs"]
 mod api_threads_tests;
+#[cfg(test)]
+#[path = "spa_api_composer_tests.rs"]
+mod api_composer_tests;

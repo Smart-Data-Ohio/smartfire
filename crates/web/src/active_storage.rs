@@ -597,6 +597,29 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
         None => Json::object(),
     };
 
+    let upload = create_direct_upload(c, filename, byte_size, checksum, content_type.clone(), metadata).await?;
+    let url = c.url_for(&upload.path);
+    let json = direct_upload_json(&upload.blob, &upload.signed_id, &url, content_type.as_deref());
+    Ok(c.render_as(StatusCode::OK, campfire_kit::response::JSON_UTF8, json))
+}
+
+/// A blob [`create_direct_upload`] made, waiting for its bytes.
+pub struct DirectUpload {
+    pub blob: Blob,
+    pub signed_id: String,
+    /// Where to `PUT` the bytes, for `SERVICE_URLS_EXPIRE_IN`.
+    pub path: String,
+}
+
+/// `ActiveStorage::Blob.create_before_direct_upload!` and the blob's direct upload URL.
+pub async fn create_direct_upload(
+    c: &Ctx,
+    filename: String,
+    byte_size: i64,
+    checksum: String,
+    content_type: Option<String>,
+    metadata: Json,
+) -> Result<DirectUpload> {
     let storage = c.app().storage.clone();
     let now = c.now();
     let new_blob = campfire_storage::NewBlob {
@@ -616,17 +639,16 @@ pub async fn direct_uploads_create(c: &mut Ctx) -> Result {
         .map_err(Error::internal)?;
 
     let expires_at = now + jiff::SignedDuration::from_secs(SERVICE_URLS_EXPIRE_IN);
-    let url = c.url_for(&storage.service.url_path_for_direct_upload(
+    let path = storage.service.url_path_for_direct_upload(
         &*storage.verifier,
         &blob.key,
         expires_at,
         content_type.as_deref(),
         byte_size,
         &checksum,
-    ));
+    );
     let signed_id = paths::signed_blob_id(&*storage.verifier, blob.id, None);
-    let json = direct_upload_json(&blob, &signed_id, &url, content_type.as_deref());
-    Ok(c.render_as(StatusCode::OK, campfire_kit::response::JSON_UTF8, json))
+    Ok(DirectUpload { blob, signed_id, path })
 }
 
 /// `blob.as_json(root: false, methods: :signed_id).merge(direct_upload: { url:, headers: })`

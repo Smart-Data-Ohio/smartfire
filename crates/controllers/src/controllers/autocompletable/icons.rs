@@ -10,15 +10,15 @@ use std::{
     sync::LazyLock,
 };
 #[derive(Clone, Serialize)]
-struct Suggestion {
-    name: String,
-    title: String,
-    kind: &'static str,
-    value: String,
+pub struct Suggestion {
+    pub name: String,
+    pub title: String,
+    pub kind: &'static str,
+    pub value: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    image: Option<String>,
+    pub image: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    character: Option<String>,
+    pub character: Option<String>,
 }
 fn normalize(raw: &str) -> String {
     campfire_richtext::ruby::strip(raw).to_lowercase()
@@ -44,7 +44,8 @@ fn image(name: &str, title: &str, kind: &'static str, url: Option<String>) -> Su
         character: None,
     }
 }
-fn suggestions(
+/// `Icons.search`: at most 8 for `query`, or (`custom`) every workspace icon.
+pub fn suggestions(
     conn: &campfire_db::Connection,
     query: &str,
     custom: bool,
@@ -116,6 +117,19 @@ fn suggestions(
             .then_with(|| a.name.cmp(&b.name))
     });
     Ok(matches.into_iter().take(8).map(|(_, s)| s).collect())
+}
+/// Every brand icon (once per name, whatever its aliases) and workspace icon, by kind then name.
+pub fn catalog(conn: &campfire_db::Connection) -> campfire_db::Result<Vec<Suggestion>> {
+    let catalog = crate::rich_text::icons(conn).map_err(campfire_db::Error::Other)?;
+    let mut brands: BTreeMap<String, Suggestion> = BTreeMap::new();
+    for record in catalog.brands.into_values() {
+        if let Icon::Brand { name, title, url } = record {
+            brands.entry(name.clone()).or_insert_with(|| image(&name, &title, "brand", url));
+        }
+    }
+    let mut icons = brands.into_values().collect::<Vec<_>>();
+    icons.extend(suggestions(conn, "", true)?);
+    Ok(icons)
 }
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
