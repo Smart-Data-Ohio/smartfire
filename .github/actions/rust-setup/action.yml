@@ -165,16 +165,26 @@ runs:
         cache-from: type=gha,scope=rust-toolchain
         cache-to: ${{ inputs.save-caches == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,scope=rust-toolchain,mode=max' || '' }}
 
-    # One cache per kind of build: the nextest harnesses' dependencies, or clippy's check-mode
-    # dependencies plus the binaries' and doctests'. Workspace crates are pruned before saving
-    # (rust/ci/prune-target.py): a fresh checkout's mtimes make Cargo rebuild them anyway.
+    # One cache per kind of build: the nextest harnesses' dependencies, clippy's check-mode
+    # dependencies plus the binaries' and doctests', or the correctness suites' stable-toolchain
+    # builds. Workspace crates are pruned before saving (rust/ci/prune-target.py): a fresh
+    # checkout's mtimes make Cargo rebuild them anyway. Every key, including the fallbacks, is
+    # scoped to the toolchains (rust-toolchain.toml's nightly, the Dockerfile's stable release
+    # and toolchain image), so an entry built by another compiler is never restored.
     - name: Name the Cargo cache
       id: cargo-key
       if: ${{ inputs.cargo-cache != 'none' }}
       shell: bash
       env:
-        PREFIX: rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-${{ hashFiles('rust/Cargo.lock') }}-
-      run: echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+        TOOLCHAIN: rust-cargo-v4-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/rust-toolchain.toml', 'rust/Dockerfile') }}-
+        INPUTS: ${{ hashFiles('rust/Cargo.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
+        LOCK: ${{ hashFiles('rust/Cargo.lock') }}-
+      run: |
+        {
+          echo "toolchain=$TOOLCHAIN"
+          echo "inputs=$TOOLCHAIN$INPUTS"
+          echo "prefix=$TOOLCHAIN$INPUTS$LOCK"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Restore cargo registry and target
       id: cargo-cache
@@ -188,5 +198,5 @@ runs:
         key: ${{ steps.cargo-key.outputs.prefix }}${{ github.sha }}
         restore-keys: |
           ${{ steps.cargo-key.outputs.prefix }}
-          rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
-          rust-cargo-v3-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-
+          ${{ steps.cargo-key.outputs.inputs }}
+          ${{ steps.cargo-key.outputs.toolchain }}

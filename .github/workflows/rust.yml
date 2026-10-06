@@ -380,12 +380,18 @@ jobs:
         with:
           parity: none
 
+      # The release the Dockerfile's production stages build with (its RUST_VERSION).
       - name: Check with the production toolchain
         env:
-          RUSTUP_TOOLCHAIN: "1.98.1"
           RUST_CI_WORKDIR: /src
           CARGO_TARGET_DIR: /ci-tmp/stable-target
-        run: bash rust/ci/cargo.sh check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever
+        shell: bash
+        run: |
+          RUSTUP_TOOLCHAIN=$(sed -nE 's/^ARG RUST_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' rust/Dockerfile)
+          [[ -n "$RUSTUP_TOOLCHAIN" ]] || { echo "::error::RUST_VERSION not found in rust/Dockerfile"; exit 1; }
+          echo "Production toolchain: $RUSTUP_TOOLCHAIN"
+          export RUSTUP_TOOLCHAIN
+          bash rust/ci/cargo.sh check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever
 
   rust:
     # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.
