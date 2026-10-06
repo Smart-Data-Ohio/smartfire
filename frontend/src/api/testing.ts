@@ -216,6 +216,7 @@ export class FakeApi extends Context.Service<
             ),
           ),
         setCsrfToken: () => Effect.void,
+        csrfToken: Effect.succeed("test-csrf-token"),
       }),
     ),
   ).pipe(Layer.provideMerge(FakeApi.layer));

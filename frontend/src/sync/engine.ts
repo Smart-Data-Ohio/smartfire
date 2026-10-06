@@ -24,6 +24,7 @@ import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import { SyncLink } from "./link.ts";
 import { Presence } from "./presence.ts";
+import { emitSyncEvents } from "./signals.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
 
@@ -283,6 +284,7 @@ export class Engine extends Context.Service<
         const now = yield* Clock.currentTimeMillis;
 
         mutations.applyEvents(fresh, now);
+        emitSyncEvents(fresh);
 
         yield* cursor.set({ epoch: point?.epoch ?? "", seq });
 
