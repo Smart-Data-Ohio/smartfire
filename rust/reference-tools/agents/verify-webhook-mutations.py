@@ -83,7 +83,7 @@ for name, package, relative, before, after, test in mutations:
         raise RuntimeError(f'{name}: mutation anchor missing')
     try:
         path.write_text(original.replace(before, after))
-        cmd = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j', '4', '-p', package, test, '--', '--nocapture']
+        cmd = ['cargo', 'test', '--locked', '-j', '4', '-p', package, test, '--', '--nocapture']
         result = subprocess.run(cmd, cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         (scratch / f'{name}.log').write_text(result.stdout)
         summary = re.search(r'^test result: FAILED\..*$', result.stdout, re.M)

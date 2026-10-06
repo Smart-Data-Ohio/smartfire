@@ -19,7 +19,7 @@ for name,filename,before,after in mutations:
     if not re.search(pattern,original):raise RuntimeError(f'{name}: missing anchor')
     try:
         path.write_text(re.sub(pattern,lambda _:after,original))
-        result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','-p','campfire_db','ws11_presence_service_set','--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        result=subprocess.run(['cargo','test','--locked','-j4','-p','campfire_db','ws11_presence_service_set','--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
         (scratch/f'{name}.log').write_text(result.stdout)
         summary=re.search(r'^test result: FAILED\..*$',result.stdout,re.M)
         if result.returncode!=101 or not summary or 'error[E' in result.stdout:raise RuntimeError(f'{name}: no compiled assertion failure')

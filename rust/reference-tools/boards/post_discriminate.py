@@ -17,7 +17,7 @@ for name,relative,old,new,test in mutations:
  path=root/relative;source=path.read_text();assert source.count(old)==1,name
  try:
   path.write_text(source.replace(old,new))
-  result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--manifest-path',str(root/'Cargo.toml'),'--locked','-p','campfire_db',test,'--','--test-threads=4'],env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+  result=subprocess.run(['cargo','test','--manifest-path',str(root/'Cargo.toml'),'--locked','-p','campfire_db',test,'--','--test-threads=4'],env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
   (scratch/'logs'/f'posts-mutation-{name}.log').write_text(result.stdout)
   summaries=[line for line in result.stdout.splitlines() if line.startswith('test result:')]
   assert result.returncode and any('1 failed' in line for line in summaries),f'mutation did not reach an assertion: {name}\n{result.stdout[-3000:]}'

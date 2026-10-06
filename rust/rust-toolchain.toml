@@ -1,0 +1,8 @@
+# Development, tests and CI build on this nightly for the Cranelift codegen backend
+# (.cargo/config.toml, plans/build-speed-report.md). rust/Dockerfile's toolchain stage (CI) installs
+# it from this file. Production keeps the stable RUST_VERSION in rust/Dockerfile and LLVM; clippy's
+# `msrv` (clippy.toml) flags standard library APIs newer than that release.
+[toolchain]
+channel = "nightly-2026-08-21"
+components = ["rustc-codegen-cranelift-preview", "clippy", "rustfmt"]
+profile = "minimal"

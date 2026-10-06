@@ -24,7 +24,7 @@ for name, filename, before, after, test in MUTATIONS:
     assert count == 1, name
     try:
         path.write_text(changed)
-        output = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j4', '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire_db', test, '--', '--nocapture'], cwd=ROOT, env=ENV, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        output = subprocess.run(['cargo', 'test', '--locked', '-j4', '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire_db', test, '--', '--nocapture'], cwd=ROOT, env=ENV, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (SCRATCH / f'{name}.log').write_text(output.stdout)
         assert output.returncode != 0 and 'test result: FAILED.' in output.stdout and 'could not compile' not in output.stdout, name
         print(name + ': ' + next(line for line in output.stdout.splitlines() if line.startswith('test result: FAILED.')), flush=True)

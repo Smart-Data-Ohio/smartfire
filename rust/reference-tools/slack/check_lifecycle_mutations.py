@@ -5,7 +5,7 @@ import os
 import subprocess
 
 root = Path(__file__).resolve().parents[2]
-cargo = os.environ.get('WS16_CARGO', 'mise exec rust@1.98.1 -- cargo').split()
+cargo = os.environ.get('WS16_CARGO', 'cargo').split()
 env = dict(os.environ, CARGO_BUILD_JOBS='2', CABLE_TEST_PORT_RANGE='53300-53399',
            INTEGRATION_TEST_PORT_RANGE='53300-53399')
 groups = [

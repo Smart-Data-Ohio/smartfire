@@ -100,3 +100,9 @@ tikv-jemalloc-sys = "0.6"
 [profile.release]
 lto = "fat"
 codegen-units = 1
+
+# SQLite (the bundled C amalgamation) at -O1 in dev/test builds: database-heavy tests use about a
+# third less CPU (campfire_db's suite 67s -> 55s), for about 19s more on a build from scratch.
+# CI restores this from its cache. See plans/build-speed-report.md.
+[profile.dev.package.libsqlite3-sys]
+opt-level = 1

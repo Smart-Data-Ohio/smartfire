@@ -18,7 +18,7 @@ for name,file,before,after in mutations:
   changed=re.sub(pattern,lambda _:after,original)
   if name=='thread-savepoint':changed=changed.replace('}) {\n        Ok(message)', '})(tx) {\n        Ok(message)',1)
   p.write_text(changed)
-  r=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','-p','campfire_db','agent_direct_messages_test','--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+  r=subprocess.run(['cargo','test','--locked','-j4','-p','campfire_db','agent_direct_messages_test','--','--nocapture'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
   (scratch/f'{name}.log').write_text(r.stdout);summary=re.search(r'^test result: FAILED\..*$',r.stdout,re.M)
   if r.returncode!=101 or not summary or 'error[E' in r.stdout:raise RuntimeError(f'{name}: no compiled assertion failure')
   print(f'{name}: {summary.group()}',flush=True)

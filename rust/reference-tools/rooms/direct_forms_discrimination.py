@@ -12,7 +12,7 @@ try:
  for old,new,test in mutants:
   assert original.count(old)==1,old
   source.write_text(original.replace(old,new))
-  run=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path',str(root/'rust/Cargo.toml'),'-p','campfire',test,'--','--test-threads=4'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+  run=subprocess.run(['cargo','test','--locked','-j4','--manifest-path',str(root/'rust/Cargo.toml'),'-p','campfire',test,'--','--test-threads=4'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
   lines=run.stdout.splitlines(); summaries=[line for line in lines if line.startswith('test result:')]
   assert run.returncode and any('FAILED' in line for line in summaries),run.stdout
   print('\n'.join(summaries),flush=True)

@@ -25,7 +25,7 @@ try:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
     log = logs / 'budget-reader-negative.log'
     with log.open('w') as output:
-        result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j2', '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire_db', 'ws11_next3_budget_notice_typed_reader_matches_rails', '--', '--test-threads=8'], cwd=root, stdout=output, stderr=subprocess.STDOUT)
+        result = subprocess.run(['cargo', 'test', '--locked', '-j2', '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire_db', 'ws11_next3_budget_notice_typed_reader_matches_rails', '--', '--test-threads=8'], cwd=root, stdout=output, stderr=subprocess.STDOUT)
     summaries = re.findall(r'^test result:.*$', log.read_text(), re.M)
     assert result.returncode == 101 and summaries, result.returncode
     assert '0 passed; 1 failed;' in summaries[-1], summaries

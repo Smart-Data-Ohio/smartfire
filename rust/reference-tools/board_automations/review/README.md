@@ -45,7 +45,7 @@ fresh SLA claim check. Concurrent sweeps verify exactly-once claims and repeat n
 From `rust/`, run the review tests with the pinned toolchain and seeds:
 
 ```bash
-CI=1 mise exec rust@1.98.1 -- cargo test --locked -p campfire -p campfire_db review_pr206 -- --test-threads=4 --nocapture
+CI=1 cargo test --locked -p campfire -p campfire_db review_pr206 -- --test-threads=4 --nocapture
 ```
 
 The workstream report records the original failing runs, final full-app counts, workspace,

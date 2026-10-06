@@ -29,7 +29,7 @@ for name, file, before, after, test, expected_failures in mutations:
     try:
         assert original.count(before) == 1, (name, original.count(before))
         path.write_text(original.replace(before, after, 1))
-        command = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", f"tests::{test}", "--", "--nocapture", "--test-threads=4"]
+        command = ["cargo", "test", "--locked", "-j4", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", f"tests::{test}", "--", "--nocapture", "--test-threads=4"]
         result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
         output = result.stdout + result.stderr
         (SCRATCH / f"{name}.log").write_text(output)

@@ -236,7 +236,7 @@ needs_paused_jobs=not args.slice and any(name in paused_job_cases for name in se
 needs_test_environment=motion_default in selected_names
 needs_drive=any(name in drive_cases for name in selected_names)
 if args.slice or any(name not in paused_job_cases for name in selected_names):
-    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "mise exec rust@1.98.1 -- cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 test_host=build_host(ROOT,env) if needs_paused_jobs or needs_drive or needs_test_environment else None
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 # CI supplies Chromium and the matching ChromeDriver from pinned inputs.

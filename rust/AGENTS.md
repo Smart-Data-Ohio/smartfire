@@ -65,6 +65,12 @@ required; the app and workspace steps report all failures before explicit outcom
 their normal linker. Shared pinned Rails seed build/restore/validation lives in
 `.github/actions/rust-setup`.
 
+Dev, test and CI builds use the nightly in `rust-toolchain.toml`, and `.cargo/config.toml` builds
+the `campfire` crate with the Cranelift backend (everything else, and every release build, uses
+LLVM; the production image stays on the Dockerfile's stable toolchain). Cranelift can't unwind:
+tests of panic recovery need `--config 'profile.dev.package.campfire.codegen-backend="llvm"'`.
+Measurements and rejected options: `plans/build-speed-report.md`.
+
 Separate required correctness jobs run Rails differential/rollback, Pebble ACME,
 WS12/WS13 browsers and the gateway Node suite, project-local LiveKit, paired messaging,
 and WS11 agent UI. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
@@ -85,8 +91,9 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
 
 ## Working rules
 
-- Work from `rust/`. Rust comes from mise if it isn't on the PATH:
-  `mise exec rust@1.98.1 -- cargo ...` (the version in `Dockerfile`).
+- Work from `rust/`, with rustup's `cargo` (`~/.cargo/bin`): `rust-toolchain.toml` selects the
+  nightly. Stable cargo, including `mise exec rust@1.98.1` (it sets `RUSTUP_TOOLCHAIN`), rejects
+  `.cargo/config.toml`'s Cranelift settings.
 - `cargo test --workspace --exclude html5ever` runs everything. The app's integration tests need
   the `default`, `first_run` and `agents_ui` seeds (`parity/bin/seed build default first_run agents_ui`, which runs the
   reference). Missing seeds fail whenever `CI` is set; locally they skip with a message, so say

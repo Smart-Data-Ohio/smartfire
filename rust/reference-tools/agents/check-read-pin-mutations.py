@@ -25,7 +25,7 @@ for name, file, before, after, test in mutations:
     try:
         path.write_text(source.replace(before, after, 1))
         result = subprocess.run(
-            ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j2',
+            ['cargo', 'test', '--locked', '-j2',
              '-p', 'campfire', '--bin', 'campfire', test, '--', '--nocapture'],
             cwd=root, env=dict(os.environ, CI='1', CARGO_BUILD_JOBS='2', TMPDIR=str(scratch),
                               INTEGRATION_TEST_PORT_RANGE='52920-52949'),

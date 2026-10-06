@@ -196,7 +196,7 @@ for name, filename, original, broken, test, package in cases:
         source.write_text(text.replace(original, broken, 1))
         with log.open("w") as output:
             result = subprocess.run([
-                "mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+                "cargo", "test", "--locked", "-j", "4",
                 "--manifest-path", "rust/Cargo.toml", "-p", package, test, "--", "--test-threads=4",
             ], cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT, check=False)
     finally:

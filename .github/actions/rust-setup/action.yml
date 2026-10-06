@@ -119,8 +119,8 @@ runs:
         path: |
           rust/.cargo-home/registry
           rust/target
-        key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+        key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
         restore-keys: |
-          rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-
-          rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh') }}-
+          rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-
+          rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh') }}-
           rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-

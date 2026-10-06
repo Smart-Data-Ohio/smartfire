@@ -20,7 +20,7 @@ for filename, old, replacement, test in mutations:
     assert source.count(old) == 1, (filename, old)
     try:
         path.write_text(source.replace(old, replacement))
-        result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '-j', '4', '-p', 'campfire', test, '--', '--nocapture'], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(['cargo', 'test', '-j', '4', '-p', 'campfire', test, '--', '--nocapture'], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         (root.parent / '.scratch' / f'fizzy-mutation-{test}-{filename}.log').write_text(result.stdout)
         assert result.returncode != 0 and 'test result: FAILED' in result.stdout, f'Undetected or uncompiled mutation: {test}\n{result.stdout[-2500:]}'
         print(f'{filename} {test}: ' + next(line for line in result.stdout.splitlines() if line.startswith('test result:')), flush=True)

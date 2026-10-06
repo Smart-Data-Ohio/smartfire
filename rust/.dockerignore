@@ -4,6 +4,8 @@
 
 /.git
 /.gitignore
+# Cargo config: Cranelift for dev/test builds. The production build stays on LLVM.
+/.cargo
 /.claude
 /target
 /parity

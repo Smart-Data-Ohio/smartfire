@@ -30,7 +30,7 @@ try:
    if before not in mutated: raise RuntimeError('missing mutation anchor: '+before)
    mutated=mutated.replace(before,after)
   paths[key].write_text(mutated)
- result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--offline','--locked','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','slack_','--','--test-threads=8'],env=dict(os.environ,CARGO_BUILD_JOBS='2',RUST_TEST_THREADS='8',INTEGRATION_TEST_PORT_RANGE='53300-53399'),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+ result=subprocess.run(['cargo','test','--offline','--locked','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','slack_','--','--test-threads=8'],env=dict(os.environ,CARGO_BUILD_JOBS='2',RUST_TEST_THREADS='8',INTEGRATION_TEST_PORT_RANGE='53300-53399'),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
  for name in required:
   line=next((line for line in result.stdout.splitlines() if line.startswith('test ') and name+' ... FAILED' in line),None)
   if line is None:

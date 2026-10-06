@@ -9,7 +9,7 @@ paths=[root/f'crates/campfire/src/controllers/rooms/{name}.rs' for name in ['ope
 originals={p:p.read_bytes() for p in paths}
 env=dict(os.environ,CI='1',TMPDIR=str(scratch),CARGO_TARGET_DIR=str(root/'target'),CABLE_TEST_PORT_RANGE='52100-52149',MAIL_TEST_PORT_RANGE='52100-52149')
 def reject(name,test,count):
-    result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire',test,'--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+    result=subprocess.run(['cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire',test,'--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     (scratch/f'channel-audits-{name}-discrimination.log').write_text(result.stdout)
     summaries=[s for s in result.stdout.splitlines() if s.startswith('test result:')]
     assert result.returncode==101 and len(summaries)==1 and f'0 passed; {count} failed;' in summaries[0],result.stdout

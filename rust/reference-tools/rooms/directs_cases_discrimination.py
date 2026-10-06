@@ -18,7 +18,7 @@ try:
     for old, new, test in mutants:
         assert original.count(old) == 1, old
         source.write_text(original.replace(old, new))
-        result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j4',
+        result = subprocess.run(['cargo', 'test', '--locked', '-j4',
             '--manifest-path', str(root / 'rust/Cargo.toml'), '-p', 'campfire', test, '--', '--exact'],
             cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         summaries = [line for line in result.stdout.splitlines() if line.startswith('test result:')]

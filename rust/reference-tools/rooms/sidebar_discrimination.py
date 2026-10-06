@@ -9,7 +9,7 @@ source = root / "crates/views/src/users/sidebar.rs"
 scratch = root.parent / ".scratch"
 original = source.read_text()
 env = dict(os.environ, CI="1", TMPDIR=str(scratch), CARGO_TARGET_DIR=str(root / "target"))
-base = ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+base = ["cargo", "test", "--locked", "-j", "4",
         "--manifest-path", str(root / "Cargo.toml"), "-p", "campfire_views", "--test", "sidebar"]
 
 def reject(name, changed, test):

@@ -19,7 +19,7 @@ for index, (file, old, new, package, test, label) in enumerate(mutants, 1):
     try:
         mutated = re.sub(old, lambda _: new, original)
         path.write_text(mutated)
-        run = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '-j', '4', '-p', package, test, '--', '--nocapture'], cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        run = subprocess.run(['cargo', 'test', '-j', '4', '-p', package, test, '--', '--nocapture'], cwd=root, env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         (root.parent/'.scratch'/f'twitter-card-mutation-{index}.log').write_text(run.stdout)
         assert run.returncode and 'test result: FAILED' in run.stdout, run.stdout[-2500:]
         print(f'{index} {label}: '+next(line for line in run.stdout.splitlines() if line.startswith('test result:')), flush=True)

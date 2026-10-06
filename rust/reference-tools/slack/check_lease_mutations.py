@@ -21,7 +21,7 @@ try:
         if before not in original:
             raise RuntimeError(f'mutation anchor missing: {label}')
         source.write_text(original.replace(before, after))
-        result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--manifest-path', str(root / 'Cargo.toml'), '-p', 'campfire_db', '--lib', test, '--', '--test-threads=8'], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        result = subprocess.run(['cargo', 'test', '--manifest-path', str(root / 'Cargo.toml'), '-p', 'campfire_db', '--lib', test, '--', '--test-threads=8'], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         summaries = [line for line in result.stdout.splitlines() if line.startswith('test result:')]
         if result.returncode == 0 or not summaries or '1 failed' not in summaries[-1]:
             print(result.stdout)
@@ -34,7 +34,7 @@ try:
     if before not in credential_original:
         raise RuntimeError('credential mutation anchor missing')
     credential_source.write_text(credential_original.replace(before, 'let ciphertext = secret.to_owned();'))
-    result = subprocess.run(['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--manifest-path', str(root / 'Cargo.toml'), '-p', 'campfire_db', '--lib', 'slack_credentials_create_encrypts_rows_and_exports_for_rails_readback', '--', '--test-threads=8'], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    result = subprocess.run(['cargo', 'test', '--manifest-path', str(root / 'Cargo.toml'), '-p', 'campfire_db', '--lib', 'slack_credentials_create_encrypts_rows_and_exports_for_rails_readback', '--', '--test-threads=8'], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     summaries = [line for line in result.stdout.splitlines() if line.startswith('test result:')]
     if result.returncode == 0 or not summaries or '1 failed' not in summaries[-1]:
         print(result.stdout)

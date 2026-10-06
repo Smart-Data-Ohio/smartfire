@@ -18,7 +18,7 @@ def run_tests(test, extra_env=None):
     env.pop("WS11UI_INBOX_LIFECYCLE_DEFECT", None)
     env.update(extra_env or {})
     return subprocess.run(
-        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
+        ["cargo", "test", "--locked",
          "-p", "campfire", "--bin", "campfire", test,
          "--", "--test-threads=8", "--nocapture"],
         cwd=ROOT, env=env, capture_output=True, text=True,

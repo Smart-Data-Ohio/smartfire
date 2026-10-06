@@ -18,7 +18,7 @@ try:
         ('Direct selection','controllers::rooms::direct_selection_tests::direct_selection_queries_match_rails_and_commit_notes_audits_and_flash'),
         ('Array predicate','controllers::rooms::coercions_tests::closed_grantees_cast_numbers_and_nested_arrays_without_flattening_hashes')
     ]:
-        result=subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire',test,'--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+        result=subprocess.run(['cargo','test','--locked','-j','4','--manifest-path',str(root/'Cargo.toml'),'-p','campfire','--bin','campfire',test,'--','--test-threads=4'],cwd=root.parent,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
         (scratch/f'{label.lower().replace(" ","-")}-discrimination.log').write_text(result.stdout)
         summaries=[line for line in result.stdout.splitlines() if line.startswith('test result:')]
         assert result.returncode==101 and len(summaries)==1 and '0 passed; 1 failed;' in summaries[0],result.stdout

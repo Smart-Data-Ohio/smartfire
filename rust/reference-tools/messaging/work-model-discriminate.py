@@ -21,7 +21,7 @@ try:
         assert original.count(needle) == 1, (name, original.count(needle))
         source.write_text(original.replace(needle, replacement, 1))
         result = subprocess.run([
-            'mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked',
+            'cargo', 'test', '--locked',
             '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire_db', test, '--', '--test-threads=8',
         ], cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         (output / f'model-mutant-{name}.log').write_text(result.stdout)

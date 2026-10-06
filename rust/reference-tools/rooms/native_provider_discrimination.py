@@ -18,7 +18,7 @@ try:
     for field in ['fizzy_cards', 'link_embed_cards', 'linkedin_cards']:
         source.write_text(original.decode().replace(needle, f'{needle}\n                components.{field}.clear();'))
         run = subprocess.run([
-            'mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j2',
+            'cargo', 'test', '--locked', '-j2',
             '--manifest-path', 'rust/Cargo.toml', '-p', 'campfire', '--bin', 'campfire',
             'native_room_page_provider_cards_match_rails_bytes', '--', '--test-threads=4', '--nocapture',
         ], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
