@@ -1,0 +1,53 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**", "!tools/oxlint-anti-slop", "!src/gen"]
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**", "!src/api/**", "!src/sync/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "effect": "Effect stays in src/api and src/sync. Call the plain async functions in src/sync/runtime.ts (actions) instead."
+                },
+                "patterns": [
+                  {
+                    "group": ["effect/**", "@effect/**"],
+                    "message": "Effect stays in src/api and src/sync. Call the plain async functions in src/sync/runtime.ts (actions) instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

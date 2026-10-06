@@ -1,0 +1,132 @@
+name: Frontend
+
+# The React SPA in frontend/: Biome, the vendored anti-slop Oxlint rules, tsc, Vitest and a
+# production build, with the entry chunks' gzip sizes in the job summary.
+#
+# "Frontend" reports on every pull request so it can be a required check: a PR that touches
+# neither frontend/ nor this workflow passes after the scope step, without installing anything.
+# Pushes to main always run everything, and so does a PR whose diff can't be read.
+#
+# This workflow only checks: read-only contents permission, no secrets, nothing published.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions: {}
+
+# A new push to a pull request supersedes the run for its previous commit.
+# Pushes to main are never cancelled, so every main commit keeps a full run.
+concurrency:
+  group: frontend-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      # The history is for the PR diff; blobs are fetched only for the sparse paths checked out.
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          filter: blob:none
+          persist-credentials: false
+          sparse-checkout: |
+            frontend
+            .github/workflows/frontend.yml
+
+      - name: Decide whether the frontend checks are needed
+        id: scope
+        working-directory: .
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          run=true
+          if [ "$EVENT" = pull_request ]; then
+            if paths="$(git diff --no-renames --name-only "$BASE...$HEAD" --)"; then
+              if [ -n "$paths" ] && ! grep -qE '^(frontend/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
+                run=false
+              fi
+            else
+              echo "::warning::PR diff unavailable; running the frontend checks."
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          if [ "$run" = true ]; then
+            echo "Run the frontend checks"
+          else
+            echo "No frontend inputs changed: nothing to check" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Node
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # The pnpm version comes from frontend/package.json's packageManager field.
+      - name: Set up pnpm
+        if: steps.scope.outputs.run == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: frontend/package.json
+          cache: true
+          cache_dependency_path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm exec biome ci
+
+      - name: Anti-slop (Oxlint)
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm lint:anti-slop
+
+      - name: Type-check (tsc)
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm typecheck
+
+      - name: Unit tests (Vitest)
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm test
+
+      - name: Build (vite build)
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm build
+
+      # Vite's manifest names the entry chunks; each one's size is reported with its CSS.
+      - name: Report bundle sizes
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          {
+            echo "### Frontend bundle (entry chunks)"
+            echo
+            echo "| File | Size | gzip -9 |"
+            echo "| --- | ---: | ---: |"
+            total=0
+            while IFS= read -r file; do
+              raw=$(wc -c < "dist/$file")
+              gz=$(gzip -9 -c "dist/$file" | wc -c)
+              total=$((total + gz))
+              printf '| <code>%s</code> | %s B | %s B |\n' "$file" "$raw" "$gz"
+            done < <(jq -r '[.[] | select(.isEntry) | .file, (.css // [])[]] | unique[]' dist/.vite/manifest.json)
+            printf '| **Total** | | **%s B** |\n' "$total"
+          } | tee -a "$GITHUB_STEP_SUMMARY"

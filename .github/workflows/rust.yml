@@ -60,9 +60,10 @@ env:
     test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
-  # Rust-relevant inputs: everything but docs/, deploy/, the other workflows and the root's prose
-  # files; the setup action and this workflow count. A PR touching only those skips the build, and
-  # "Rust port" passes on that intentional skip. Pushes, the nightly run, manual runs, empty
+  # Rust-relevant inputs: everything but docs/, deploy/, frontend/ (the SPA, checked by
+  # frontend.yml), the other workflows and the root's prose files; the setup action and this
+  # workflow count. A PR touching only those skips the build, and "Rust port" passes on that
+  # intentional skip. Pushes, the nightly run, manual runs, empty
   # diffs and unavailable history all keep the full run.
   changes:
     name: Rust changes
@@ -93,9 +94,10 @@ jobs:
           import subprocess
 
           # The workspace is the repository root, and the app reads only its own tree: docs,
-          # deploy scripts, other workflows and the root's prose files can't affect it. Any other
-          # path, including a new top-level one, runs the gates.
-          OUTSIDE = (b"docs/", b"deploy/", b".github/")
+          # deploy scripts, the SPA's sources (frontend/, which no crate reads yet), other
+          # workflows and the root's prose files can't affect it. Any other path, including a new
+          # top-level one, runs the gates.
+          OUTSIDE = (b"docs/", b"deploy/", b"frontend/", b".github/")
           PROSE = (b"README.md", b"ROADMAP.md", b"CONTRIBUTING.md", b"SECURITY.md",
                    b"THIRD_PARTY_NOTICES.md", b"MIT-LICENSE")
           SETUP = (b".github/actions/rust-setup/",)

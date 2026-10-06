@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -136,6 +137,36 @@ class WorkflowTest(unittest.TestCase):
         for workflow in [image, yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())]:
             self.assertGreater(audit_actions(workflow), 0)
         print("WORKFLOW ACTIONS: all third-party actions pinned; rust-git-<sha> comes from the amd64 job alone, on main")
+
+    def test_frontend_check_reports_on_every_pull_request(self):
+        frontend = yaml_json((ROOT / ".github/workflows/frontend.yml").read_text())
+        on = frontend.get("on", frontend.get("true"))
+        self.assertEqual(set(on), {"push", "pull_request"})
+        for event, trigger in on.items():
+            self.assertFalse({"paths", "paths-ignore"} & set(trigger), f"frontend.yml filters {event} by path")
+        # One job, always run: the scope step, not a job condition, skips the work when the PR
+        # leaves frontend/ alone, so the required "Frontend" result never goes missing.
+        [job] = frontend["jobs"].values()
+        self.assertEqual(job["name"], "Frontend")
+        self.assertNotIn("if", job)
+        self.assertEqual(frontend["permissions"], {})
+        self.assertGreater(audit_actions(frontend), 0)
+        print("WORKFLOW FRONTEND: one always-run 'Frontend' job, no path filter, pinned actions")
+
+    def test_rust_gates_skip_frontend_only_changes(self):
+        rust = yaml_json((ROOT / ".github/workflows/rust.yml").read_text())
+        script = next(step["run"] for step in rust["jobs"]["changes"]["steps"] if step.get("id") == "scope")
+        source = script[script.index("OUTSIDE ="):script.index("rust = True")]
+        scope = {}
+        exec(textwrap.dedent(source), scope)
+        rust_input = scope["rust_input"]
+        for path in [b"frontend/src/main.tsx", b"frontend/pnpm-lock.yaml", b"docs/development.md",
+                     b".github/workflows/frontend.yml"]:
+            self.assertFalse(rust_input(path), path)
+        for path in [b"crates/kit/src/lib.rs", b"Cargo.lock", b"web/app/javascript/application.js",
+                     b".github/workflows/rust.yml", b"frontendish/x"]:
+            self.assertTrue(rust_input(path), path)
+        print("WORKFLOW RUST SCOPE: frontend/-only pull requests skip the Rust gates")
 
     def test_action_audit_rejects_unpinned_references(self):
         with self.assertRaises(ValueError):

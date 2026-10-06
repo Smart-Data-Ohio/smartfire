@@ -147,9 +147,14 @@ for a normal release; see [`ops/README.md`](../ops/README.md#writing-a-migration
 - **Rust** ([`rust.yml`](../.github/workflows/rust.yml)): on every pull request, the required
   `Rust port` check aggregates the frozen-seed check, twelve nextest shards, clippy with the binary
   build and doctests, the LLVM panic-recovery tests, and a stable-toolchain check. A pull request
-  that touches only `docs/`, `deploy/`, other workflows or the root prose files skips the build
-  and passes. Pushes to `main`, the nightly schedule and manual runs also run the correctness suites
+  that touches only `docs/`, `deploy/`, `frontend/`, other workflows or the root prose files skips
+  the build and passes. Pushes to `main`, the nightly schedule and manual runs also run the correctness suites
   behind `Rust correctness`.
+- **Frontend** ([`frontend.yml`](../.github/workflows/frontend.yml)): the `Frontend` check runs
+  Biome, the anti-slop Oxlint rules, `tsc`, Vitest and `vite build` for the SPA in `frontend/`,
+  and puts the entry chunks' gzip sizes in the job summary. It reports on every pull request; one
+  that touches neither `frontend/` nor the workflow passes without installing anything. See
+  [`frontend/README.md`](../frontend/README.md).
 - **Repository checks** ([`repo.yml`](../.github/workflows/repo.yml)): `GitHub Actions audit`
   (actionlint, zizmor and the Google deployment configuration tests),
   `Huddle authorization gateway` (the Node gateway's tests) and `Dependency audit`

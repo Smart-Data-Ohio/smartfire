@@ -34,6 +34,16 @@ In the tests, `campfire_db::fixtures::reference_root()` is `web`, `reference_dir
 `fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")`
 maps a Rails-relative path to its copy here.
 
+## The new front end (`frontend/`)
+
+`frontend/` is the React 19 + Effect 4 single-page app that replaces the Hotwire UI in `web/`
+screen by screen, served under `/app/`. It's a pnpm project of its own (Vite 8, typescript@7,
+Biome, the vendored anti-slop Oxlint rules, Vitest, Playwright). No crate reads it yet, and the
+production image runs no Node. `effect` is imported only in `src/api` and `src/sync`; Biome
+rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing frontend work. CI is
+`.github/workflows/frontend.yml` (the `Frontend` check). Commands and rules:
+`frontend/README.md`.
+
 ## Layout
 
 | Path | Package | What |
@@ -48,6 +58,7 @@ maps a Rails-relative path to its copy here.
 | `crates/assets` | `campfire_assets` | Propshaft-compatible digesting, importmap, vendored JS/CSS, port-owned overrides |
 | `crates/views` | `campfire_views` | Askama templates (at the ERB file's relative path) and view helpers |
 | `crates/campfire` | `campfire` (bin) | Controllers, router wiring, channels, jobs, integrations |
+| `frontend/` | — | The React SPA replacing the Hotwire UI (`frontend/README.md`) |
 | `parity/` | — | Frozen test seeds (`parity/seeds`), the pinned Playwright image the browser suites run in, template coverage |
 | `reference-tools/` | — | The browser and behaviour harnesses the correctness suites run against Rust |
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
@@ -58,7 +69,7 @@ maps a Rails-relative path to its copy here.
 | `docs/` | — | User, operator and developer documentation |
 
 CI for this tree is `.github/workflows/rust.yml`. It runs on every pull request, building unless
-only `docs/`, `deploy/`, other workflows or the root prose files changed, and never runs Ruby,
+only `docs/`, `deploy/`, `frontend/`, other workflows or the root prose files changed, and never runs Ruby,
 Rails or a reference image. Every ordinary nextest group and runnable doctest is required; tests run as twelve nextest partitions beside the frozen-seed check, clippy/doctest,
 LLVM panic-recovery and stable-toolchain jobs, and the `Rust port` job fails unless all of
 them succeeded.

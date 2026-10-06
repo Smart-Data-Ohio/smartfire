@@ -9,7 +9,7 @@ the tests `cargo nextest list` selects for their filter, each passed once, with 
 account for every doctest they ran. Both gates run `check_gate_needs.py`, which fails if
 any job in `rust.yml` is missing from their `needs`. It reports on every pull request:
 `Rust changes` checks the PR's diff, and when it touches no Rust input (anything outside `docs/`,
-`deploy/`, other workflows and the root prose files) the jobs
+`deploy/`, `frontend/`, other workflows and the root prose files) the jobs
 below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
 nightly and manual runs, empty diffs and unavailable history always run everything:
 
