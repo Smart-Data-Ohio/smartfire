@@ -10,6 +10,9 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[3]
+# test/fixtures links to ../rust/fixtures (rails_link_mounts.sh): mount the target where it resolves.
+LINK_MOUNTS = [arg for d in ('web', 'fixtures') if (root / 'rust' / d).is_dir()
+               for arg in ('-v', f'{root / "rust" / d}:/rails/rust/{d}:ro')]
 files = sys.argv[1:] or sorted(str(p.relative_to(root)) for p in (root / 'test/controllers/agents').rglob('*_test.rb')) + [
     'test/controllers/agents_controller_test.rb', 'test/controllers/concerns/agent_authentication_test.rb',
     'test/controllers/messages/by_bots_controller_test.rb', 'test/controllers/messages/boosts/by_bots_controller_test.rb',
@@ -30,7 +33,7 @@ def run(file):
         'docker', 'run', '--rm', '--init', '--name', 'ws11api-test-' + name, '--network', 'none',
         '--user', f'{os.getuid()}:{os.getgid()}', '--env-file', str(root / 'rust/parity/.env.reference'),
         '-e', 'RAILS_ENV=test', '-e', 'PARITY_REDIS=1', '-e', 'BUNDLE_WITHOUT=development',
-        '-v', f'{root / "test"}:/rails/test:ro', '-v', f'{storage / "db"}:/rails/storage/db',
+        '-v', f'{root / "test"}:/rails/test:ro', *LINK_MOUNTS, '-v', f'{storage / "db"}:/rails/storage/db',
         '-v', f'{storage / "files"}:/rails/storage/files', PIN_IMAGE, 'bin/rails', 'test', file,
     ], capture_output=True, text=True)
     output = result.stdout + result.stderr
