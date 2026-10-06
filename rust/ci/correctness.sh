@@ -74,12 +74,12 @@ run_suite() {
       # Start the private media server after the cold compile so its lifetime
       # and logs cover the browser run rather than several minutes of rustc.
       cargo test --manifest-path rust/Cargo.toml --locked -p campfire --no-run -j 4
-      bin/livekit-local setup
+      rust/web/bin/livekit-local setup
       # Only this job's private signaling server is needed; the test owns its gateway.
-      bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
+      rust/web/bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
       local livekit_pid=$!
       trap "kill $livekit_pid 2>/dev/null || true; wait $livekit_pid 2>/dev/null || true" EXIT
-      source .bundle/livekit/env
+      source rust/web/.bundle/livekit/env
       local ready=0
       for _ in $(seq 1 100); do
         if curl -fsS http://127.0.0.1:7880/ >/dev/null 2>&1; then ready=1; break; fi

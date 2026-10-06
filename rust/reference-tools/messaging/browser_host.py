@@ -139,7 +139,7 @@ def prepare_source(root):
     paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root, text=True).split("\0")
     tracked = {Path(path) for path in paths if path}
     wanted = [Path(path) for path in paths
-              if path.startswith(("rust/crates/", "rust/vectors/", "rust/test-support/", "rust/reference-tools/views/agents_ui/")) or
+              if path.startswith(("rust/crates/", "rust/vectors/", "rust/test-support/", "rust/web/", "rust/fixtures/")) or
               path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference", "rust/parity/reference.sha")]
     contents = {}
     for relative in wanted:
@@ -235,7 +235,9 @@ def build_host(root, env):
     # Sharing its test executable with nextest replaces a running suite's
     # binary, despite different source roots. Keep this cache under target/.
     host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
-    host_env = dict(env, CAMPFIRE_REFERENCE=str(root), CARGO_TARGET_DIR=str(host_target))
+    # The generated tree carries rust/web and rust/fixtures, the port's own reference inputs.
+    host_env = {key: value for key, value in env.items() if key != "CAMPFIRE_REFERENCE"}
+    host_env["CARGO_TARGET_DIR"] = str(host_target)
     command = shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["test", "--locked", "-j2",
                "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
                "--no-run", "--message-format=json"]

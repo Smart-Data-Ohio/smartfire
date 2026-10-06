@@ -1,5 +1,5 @@
 require 'zlib'
-input=JSON.parse(Zlib::GzipReader.open(File.join(__dir__, 'extreme_cast_inputs.json.gz'), &:read))
+input=JSON.parse(Zlib::GzipReader.open(File.join(__dir__, '../../../test-support/agents_ui/extreme_cast_inputs.json.gz'), &:read))
 rows=[]
 input['zones'].each do |zone|
  Time.use_zone(zone) do

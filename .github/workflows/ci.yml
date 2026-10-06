@@ -56,8 +56,11 @@ jobs:
                           f'{pr["base"]["sha"]}...{pr["head"]["sha"]}', "--",
                       ])
                       paths = [path for path in diff.split(b"\0") if path]
+                      # rust/web and rust/fixtures are the Rails app's own
+                      # assets, public/, LiveKit scripts and test fixtures (symlinked).
                       rails = not paths or any(
                           not (path.startswith((b"rust/", b".claude/")) or path.endswith(b".md"))
+                          or path.startswith((b"rust/web/", b"rust/fixtures/"))
                           for path in paths
                       )
           except (OSError, KeyError, ValueError, TypeError, subprocess.CalledProcessError) as error:

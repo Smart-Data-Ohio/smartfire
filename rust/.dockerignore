@@ -1,6 +1,5 @@
 # The Rust app image (Dockerfile) builds from Cargo.toml, Cargo.lock and crates/ in this context,
-# plus the parts of the reference Rails app that crates/assets/build.rs embeds, which come in
-# through the named build context `reference` (the repository root). Everything else stays out.
+# plus the parts of web/ that crates/assets/build.rs embeds. Everything else stays out.
 
 /.git
 /.gitignore
@@ -16,6 +15,12 @@
 /AGENTS.md
 /CLAUDE.md
 /ops/tests
+/fixtures
+/test-support
+/web/bin
+/web/script
+/web/.bundle
+/web/public/assets
 /ops/README.md
 /.scratch
 /Dockerfile

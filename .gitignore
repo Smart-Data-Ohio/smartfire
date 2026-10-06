@@ -29,12 +29,7 @@
 !/tmp/storage/
 !/tmp/storage/.keep
 
-/public/assets
-
-# Ignore dependencies for the vendored LiveKit browser SDK build.
-/script/livekit-client/node_modules/
-/script/livekit-gateway/node_modules/
-/script/code-highlighter/node_modules/
+# public/ and script/livekit-* are symlinks into rust/web/ (see rust/.gitignore).
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
