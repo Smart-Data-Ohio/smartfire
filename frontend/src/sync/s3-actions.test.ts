@@ -461,9 +461,27 @@ describe("scheduled actions", () => {
 
       const failure = yield* Effect.flip(scheduled.sendNow(1));
 
+      expect(failure).toBeInstanceOf(scheduled.ScheduledDropped);
       expect(failure.message).toBe("its thread was deleted");
       expect(scheduledListOf(store.getState(), "pending").stale).toBe(true);
       expect(scheduledListOf(store.getState(), "past").stale).toBe(true);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("send one now: another failure stays itself and leaves the lists alone", () =>
+    Effect.gen(function* () {
+      seedScheduled();
+
+      const fake = yield* FakeApi;
+
+      yield* fake.route("POST /scheduled_messages/1/send_now", () =>
+        Effect.fail(new ServerError({ status: 500, message: "Something went wrong" })),
+      );
+
+      const failure = yield* Effect.flip(scheduled.sendNow(1));
+
+      expect(failure).toBeInstanceOf(ServerError);
+      expect(scheduledListOf(store.getState(), "pending").stale).toBe(false);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

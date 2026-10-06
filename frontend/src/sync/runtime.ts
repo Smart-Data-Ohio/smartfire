@@ -29,7 +29,7 @@ import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
-import { asAction } from "./run.ts";
+import { ActionError, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
 import * as session from "./session.ts";
@@ -191,11 +191,19 @@ const scheduled = {
   /** New text and/or time. */
   update: (id: number, body: UpdateScheduledMessage): Promise<ScheduledMessage> =>
     runAction(scheduledActions.update(id, body)),
-  /** `"sent"`, or `"held"` (202: it stays scheduled); rejects when it was dropped instead. */
+  /**
+   * `"sent"`, or `"held"` (202: it stays scheduled). Rejects when it was dropped instead, with an
+   * error `isScheduledDropped` recognises (its message is the reason).
+   */
   sendNow: (id: number): Promise<"sent" | "held"> => runAction(scheduledActions.sendNow(id)),
   /** Cancels it at once; it comes back if refused (409 while sending). */
   cancel: (id: number): Promise<void> => runAction(scheduledActions.cancel(id)),
 };
+
+/** True for `actions.scheduled.sendNow`'s rejection when the message was dropped, not sent. */
+export function isScheduledDropped(error: Error): boolean {
+  return error instanceof ActionError && error.tag === "ScheduledDropped";
+}
 
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {

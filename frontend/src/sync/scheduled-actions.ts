@@ -4,7 +4,7 @@
  * (the `scheduled.*` event that follows is then a no-op). Cancelling shows at once and comes back
  * if the server refuses (409 while it's sending).
  */
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import * as api from "../api/composer-endpoints.ts";
 import type { CreateScheduledMessage } from "../gen/CreateScheduledMessage.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
@@ -69,15 +69,27 @@ export const update = Effect.fn("scheduled.update")(function* (
 });
 
 /**
+ * `send_now` dropped the message instead of sending it (its 422): `message` is the drop reason,
+ * fit to show. Apart from other failures, so the page can say it won't go out at all.
+ */
+export class ScheduledDropped extends Schema.TaggedError<ScheduledDropped>()("ScheduledDropped", {
+  message: Schema.String,
+}) {}
+
+/**
  * Posts it at once. Answers `"sent"` (it moved to Past) or `"held"` (202: another runner holds it
- * or its thread is locked; it stays scheduled). A drop instead rejects with the reason; the lists
- * reload, since the dropped copy isn't in the reply.
+ * or its thread is locked; it stays scheduled). A drop instead fails with `ScheduledDropped`; the
+ * lists reload, since the dropped copy isn't in the reply.
  */
 export const sendNow = Effect.fn("scheduled.sendNow")(function* (scheduledMessageId: number) {
   const message = yield* api
     .sendScheduledNow(scheduledMessageId)
     .pipe(
-      Effect.tapErrorTag("Validation", () => Effect.sync(() => mutations.markScheduledStale())),
+      Effect.catchTag("Validation", (error) =>
+        Effect.sync(() => mutations.markScheduledStale()).pipe(
+          Effect.andThen(Effect.fail(new ScheduledDropped({ message: error.message }))),
+        ),
+      ),
     );
 
   mutations.applyScheduled(message);

@@ -802,7 +802,13 @@ export function createComposer(
     const after = send(current);
 
     if (after.droppedAt !== null) {
-      throw validation("base", after.dropReason ?? "You no longer have access to this room");
+      // The server's words (`scheduled_messages#send_now`).
+      throw validation(
+        "base",
+        after.dropReason === null
+          ? "You no longer have access to that room, so the message was not sent."
+          : `The scheduled message was not sent (${after.dropReason}).`,
+      );
     }
 
     if (after.sentAt === null) {

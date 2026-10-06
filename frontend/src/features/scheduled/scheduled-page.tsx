@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { lazy, type ReactElement, Suspense, useState } from "react";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
 import { type ScheduledRow as ScheduledEntry, useScheduledList } from "../../store/inbox-hooks.ts";
-import { actions } from "../../sync/runtime.ts";
+import { actions, isScheduledDropped } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { useOpenedOnce } from "../../ui/opened-once.ts";
@@ -146,7 +146,11 @@ export function ScheduledPage() {
                     "It's already on its way, or its thread is locked. It stays scheduled and goes out as soon as it can.",
                 }),
           (error: Error) =>
-            toast({ title: "The message wasn't sent", description: error.message, tone: "danger" }),
+            toast(
+              isScheduledDropped(error)
+                ? { title: "Message dropped", description: error.message, tone: "danger" }
+                : { title: "The message wasn't sent", description: error.message, tone: "danger" },
+            ),
         )
         .finally(() => settle(item.id));
     },
