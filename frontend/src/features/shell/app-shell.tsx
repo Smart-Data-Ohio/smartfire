@@ -5,6 +5,7 @@ import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
+import { GlobalOverlays } from "../switcher/global-overlays.tsx";
 import { ConnectionBanner } from "./connection-banner.tsx";
 import { Rail } from "./rail.tsx";
 import "./app-shell.css";
@@ -55,6 +56,7 @@ export function AppShell() {
         <ConnectionBanner />
         <Outlet />
       </main>
+      <GlobalOverlays />
       <Toaster />
     </div>
   );

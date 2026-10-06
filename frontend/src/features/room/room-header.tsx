@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
+import { DirectHeaderActions } from "../directs/direct-header-actions.tsx";
+import { PaneButtons } from "../panes/pane-buttons.tsx";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "./room-icon.ts";
@@ -82,6 +84,8 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         {detail === null || kind === "direct" ? null : (
           <MemberStack ids={detail.memberPreviewIds} count={detail.memberCount} />
         )}
+        {kind === "direct" ? <DirectHeaderActions roomId={roomId} /> : null}
+        <PaneButtons roomId={roomId} />
       </div>
     </header>
   );

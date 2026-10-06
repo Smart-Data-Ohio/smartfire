@@ -5,8 +5,17 @@ import { UNKNOWN_NAME } from "../people/people.ts";
 
 const NO_TYPISTS: readonly number[] = [];
 
-function typistIds(state: State, roomId: number): readonly number[] {
-  const entries = state.typing[`room:${roomId}`];
+/** `room:12`, or `thread:88` for a thread's composer. */
+function conversation(roomId: number, threadId: number | null): string {
+  return threadId === null ? `room:${roomId}` : `thread:${threadId}`;
+}
+
+function typistIds(
+  state: State,
+  roomId: number,
+  threadId: number | null = null,
+): readonly number[] {
+  const entries = state.typing[conversation(roomId, threadId)];
 
   if (entries === undefined) {
     return NO_TYPISTS;
@@ -55,9 +64,15 @@ export function typingSentence(names: readonly string[]): string {
  * The line under the composer. It always holds its height, so the composer never jumps; the text
  * fades in. Three dots pulse by opacity alone; an agent typing shows its thinking orb instead.
  */
-export function TypingIndicator({ roomId }: { readonly roomId: number }) {
+export function TypingIndicator({
+  roomId,
+  threadId = null,
+}: {
+  readonly roomId: number;
+  readonly threadId?: number | null;
+}) {
   const sentence = useStore((state) => {
-    const ids = typistIds(state, roomId);
+    const ids = typistIds(state, roomId, threadId);
 
     return ids.length === 0
       ? null
@@ -65,7 +80,7 @@ export function TypingIndicator({ roomId }: { readonly roomId: number }) {
   });
 
   const agent = useStore((state) =>
-    typistIds(state, roomId).some((id) => state.users[id]?.role === "bot"),
+    typistIds(state, roomId, threadId).some((id) => state.users[id]?.role === "bot"),
   );
 
   return (

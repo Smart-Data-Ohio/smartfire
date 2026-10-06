@@ -8,6 +8,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { isAgent, UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { ThreadIndicator } from "../threads/thread-indicator.tsx";
 import { InlineMarkdown } from "./inline-markdown.tsx";
 
 interface HeaderProps {
@@ -85,6 +86,8 @@ interface MessageRowProps {
   readonly mentionsMe: boolean;
   readonly focused: boolean;
   readonly live: boolean;
+  /** Set when the row renders inside a thread pane: no thread indicator, no "reply in thread". */
+  readonly inThread?: boolean;
 }
 
 /**
@@ -92,7 +95,14 @@ interface MessageRowProps {
  * sanitized HTML. Mentions of you get the amber bar; a permalinked row flashes; a message that
  * arrived live rises in (history never animates).
  */
-export function MessageRow({ message, groupStart, mentionsMe, focused, live }: MessageRowProps) {
+export function MessageRow({
+  message,
+  groupStart,
+  mentionsMe,
+  focused,
+  live,
+  inThread = false,
+}: MessageRowProps) {
   const creator = useUser(message.creatorId);
   const streaming = message.streaming && isAgent(creator);
 
@@ -133,6 +143,7 @@ export function MessageRow({ message, groupStart, mentionsMe, focused, live }: M
             <span className="message-edited">(edited)</span>
           ) : null}
         </div>
+        {inThread || message.thread === null ? null : <ThreadIndicator message={message} />}
       </div>
       <ActionBar message={message} />
     </article>

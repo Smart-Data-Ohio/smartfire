@@ -12,24 +12,49 @@ import "./composer.css";
 
 const DRAFT_PREFIX = "smartfire.draft.";
 
-function readDraft(roomId: number): string {
+/** `12` for a room's composer, `12.t88` for a thread's: each keeps its own draft. */
+function draftKey(roomId: number, threadId: number | null): string {
+  return `${DRAFT_PREFIX}${roomId}${threadId === null ? "" : `.t${threadId}`}`;
+}
+
+function readDraft(key: string): string {
   try {
-    return sessionStorage.getItem(`${DRAFT_PREFIX}${roomId}`) ?? "";
+    return sessionStorage.getItem(key) ?? "";
   } catch {
     return "";
   }
 }
 
-function writeDraft(roomId: number, text: string): void {
+function writeDraft(key: string, text: string): void {
   try {
     if (text === "") {
-      sessionStorage.removeItem(`${DRAFT_PREFIX}${roomId}`);
+      sessionStorage.removeItem(key);
     } else {
-      sessionStorage.setItem(`${DRAFT_PREFIX}${roomId}`, text);
+      sessionStorage.setItem(key, text);
     }
   } catch {
     // Without storage a draft only lives while the room is open.
   }
+}
+
+/** What the composer hands over when it sends. */
+export interface ComposerDraft {
+  readonly markdown: string;
+  /** A finished direct upload's signed id, or `null`. */
+  readonly attachmentSignedId: string | null;
+}
+
+export interface ComposerProps {
+  readonly roomId: number;
+  /** Reply in this thread: drafts, typing and sends are per thread. */
+  readonly threadId?: number | null;
+  /**
+   * Replaces the normal send (the outbox), e.g. the first reply that creates a thread. The
+   * composer clears once it resolves and keeps the text if it rejects.
+   */
+  readonly onSubmit?: (draft: ComposerDraft) => Promise<void>;
+  /** Overrides "Message #general". */
+  readonly placeholder?: string;
 }
 
 const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform);
@@ -72,11 +97,18 @@ function usePlaceholder(roomId: number): string {
  * (Shift+Enter for a new line), formats with the toolbar or the chords, keeps a per-room draft,
  * and tells the room you're typing. While an agent replies here, its border carries the beam.
  */
-export function Composer({ roomId }: { readonly roomId: number }) {
-  const [text, setText] = useState(() => readDraft(roomId));
+export function Composer({
+  roomId,
+  threadId = null,
+  onSubmit,
+  placeholder: placeholderOverride,
+}: ComposerProps) {
+  const key = draftKey(roomId, threadId);
+  const [text, setText] = useState(() => readDraft(key));
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const placeholder = usePlaceholder(roomId);
+  const roomPlaceholder = usePlaceholder(roomId);
+  const placeholder = placeholderOverride ?? roomPlaceholder;
   const agentReplying = useAgentReplying(roomId);
   const canSend = text.trim() !== "";
 
@@ -99,9 +131,9 @@ export function Composer({ roomId }: { readonly roomId: number }) {
 
   const update = (next: string) => {
     setText(next);
-    writeDraft(roomId, next);
+    writeDraft(key, next);
     actions.noteActivity();
-    actions.setTyping(roomId, next.trim() !== "");
+    actions.setTyping(roomId, next.trim() !== "", threadId);
   };
 
   const apply = (edit: TextEdit) => {
@@ -122,20 +154,33 @@ export function Composer({ roomId }: { readonly roomId: number }) {
     apply(marker === "link" ? insertLink(current) : toggleWrap(current, marker));
   };
 
+  const clear = () => {
+    setText("");
+    writeDraft(key, "");
+    textareaRef.current?.focus();
+  };
+
   const send = () => {
     if (!canSend) {
       return;
     }
 
-    if (store.getState().timelines[roomId]?.after != null) {
+    const markdown = text.trimEnd();
+
+    actions.setTyping(roomId, false, threadId);
+
+    if (onSubmit !== undefined) {
+      void onSubmit({ markdown, attachmentSignedId: null }).then(clear, () => undefined);
+
+      return;
+    }
+
+    if (threadId === null && store.getState().timelines[roomId]?.after != null) {
       void actions.jumpToPresent(roomId);
     }
 
-    actions.send(roomId, text.trimEnd());
-    actions.setTyping(roomId, false);
-    setText("");
-    writeDraft(roomId, "");
-    textareaRef.current?.focus();
+    actions.send(roomId, markdown, { threadId });
+    clear();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -173,7 +218,7 @@ export function Composer({ roomId }: { readonly roomId: number }) {
             rows={1}
             onChange={(event) => update(event.target.value)}
             onKeyDown={onKeyDown}
-            onBlur={() => actions.setTyping(roomId, false)}
+            onBlur={() => actions.setTyping(roomId, false, threadId)}
           />
           <div className="composer-toolbar">
             <div className="composer-formats">
@@ -206,7 +251,7 @@ export function Composer({ roomId }: { readonly roomId: number }) {
           </div>
         </div>
       </Beam>
-      <TypingIndicator roomId={roomId} />
+      <TypingIndicator roomId={roomId} threadId={threadId} />
     </div>
   );
 }

@@ -1,10 +1,19 @@
 /* A conversation: header, timeline and composer. */
 @layer app {
+  /* The conversation and, beside it, the right pane (thread or side pane). */
+  .room-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+  }
+
   .room {
     display: flex;
     flex: 1;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
   }
 
   .room-error,

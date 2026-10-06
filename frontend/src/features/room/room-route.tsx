@@ -4,6 +4,7 @@ import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Composer } from "../composer/composer.tsx";
+import { RightPane } from "../panes/right-pane.tsx";
 import { RoomHeader } from "./room-header.tsx";
 import { Timeline } from "./timeline.tsx";
 import "./room.css";
@@ -51,10 +52,13 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
   }
 
   return (
-    <section className="room" aria-label="Conversation">
-      <RoomHeader roomId={roomId} />
-      <Timeline roomId={roomId} focusMessageId={focusMessageId} />
-      <Composer roomId={roomId} />
-    </section>
+    <div className="room-layout">
+      <section className="room" aria-label="Conversation">
+        <RoomHeader roomId={roomId} />
+        <Timeline roomId={roomId} focusMessageId={focusMessageId} />
+        <Composer roomId={roomId} />
+      </section>
+      <RightPane roomId={roomId} />
+    </div>
   );
 }
