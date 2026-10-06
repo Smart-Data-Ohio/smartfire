@@ -4,9 +4,9 @@
 //! `GET /api/v1/settings` returns every section. Each write names every key of its body, `null`
 //! for those it leaves as they are (a blank string clears a clearable text), and answers with the
 //! whole [`Settings`] again, as the classic forms redirect back to the profile. A rejected change is
-//! `ApiError::Validation`, its `fields` keyed by the classic attribute names (`name`,
-//! `email_address`, `custom_status_text`, `ooo_until`, ...), so the messages are the classic
-//! page's. Sessions and push subscriptions have their own lists, never cached.
+//! `ApiError::Validation` with the classic page's messages, its `fields` keyed by the wire names
+//! (`currentPassword`, `customStatusText`, `oooUntil`, ...). Sessions and push subscriptions have
+//! their own lists, never cached.
 
 use std::collections::BTreeMap;
 
@@ -122,7 +122,9 @@ pub struct NotificationSettings {
     pub quiet_hours_end: Option<String>,
     pub meeting_dnd_enabled: bool,
     pub ooo_notify_enabled: bool,
-    /// People whose messages still get through DND (starred), by name.
+    /// People whose messages still get through DND (starred), by name. Starring is
+    /// `POST /api/v1/settings/dnd_allowances/:user_id` and unstarring `DELETE` (active people
+    /// other than you); both answer with the settings.
     pub allowed_people: Vec<DndAllowedPerson>,
     /// One word or phrase each, up to 20.
     pub keyword_alerts: Vec<String>,
@@ -336,7 +338,8 @@ pub struct SessionList {
     pub sessions: Vec<SessionInfo>,
     /// What the last revocation did, as the classic notice words it ("Signed out 2 other
     /// sessions."); `null` on a plain read. Revoking the current session signs out instead: the
-    /// answer is `Unauthorized`, and the client loads `/`.
+    /// answer is `Unauthorized`, and the client loads `/`. Pass `?push_subscription_endpoint=` to
+    /// drop this browser's push subscription with it, as the classic sign-out does.
     pub notice: Option<String>,
 }
 

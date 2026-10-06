@@ -16,7 +16,9 @@ dndEnabled: boolean, quietHoursEnabled: boolean,
  */
 quietHoursStart: string | null, quietHoursEnd: string | null, meetingDndEnabled: boolean, oooNotifyEnabled: boolean, 
 /**
- * People whose messages still get through DND (starred), by name.
+ * People whose messages still get through DND (starred), by name. Starring is
+ * `POST /api/v1/settings/dnd_allowances/:user_id` and unstarring `DELETE` (active people
+ * other than you); both answer with the settings.
  */
 allowedPeople: Array<DndAllowedPerson>, 
 /**

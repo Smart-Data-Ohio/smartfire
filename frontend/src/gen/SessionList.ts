@@ -9,6 +9,7 @@ export type SessionList = { sessions: Array<SessionInfo>,
 /**
  * What the last revocation did, as the classic notice words it ("Signed out 2 other
  * sessions."); `null` on a plain read. Revoking the current session signs out instead: the
- * answer is `Unauthorized`, and the client loads `/`.
+ * answer is `Unauthorized`, and the client loads `/`. Pass `?push_subscription_endpoint=` to
+ * drop this browser's push subscription with it, as the classic sign-out does.
  */
 notice: string | null, };
