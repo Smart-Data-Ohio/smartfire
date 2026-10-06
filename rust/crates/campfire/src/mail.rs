@@ -11,52 +11,15 @@ use campfire_db::{Account, Attachment, Message, Room, Timestamp, User};
 use campfire_jobs::{JobError, JobResult, Outcome};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode};
 use campfire_mail::{
-    config::{Config, RelayAuth},
-    inbound::{self, Renderer, Throttle},
+    config::RelayAuth,
+    inbound,
     jobs::{DeliveryJob, IncinerationJob, MessageCreated, Notification, RoutingJob},
     outbound::{self, SignIn},
 };
 use rusqlite::OptionalExtension;
-use std::sync::{Arc, RwLock};
 
-type Fanout =
-    Arc<dyn Fn(&mut campfire_db::Tx<'_>, &Message) -> campfire_db::Result<()> + Send + Sync>;
-pub struct State {
-    pub config: Config,
-    throttle: Throttle,
-    renderer: RwLock<Option<Arc<dyn Renderer>>>,
-    fanout: RwLock<Option<Fanout>>,
-}
-impl State {
-    #[cfg(test)]
-    pub(crate) fn fixture_snapshot(&self) -> Self {
-        Self {
-            config: self.config.clone(),
-            throttle: self.throttle.clone(),
-            renderer: RwLock::new(self.renderer.read().unwrap_or_else(|p| p.into_inner()).clone()),
-            fanout: RwLock::new(self.fanout.read().unwrap_or_else(|p| p.into_inner()).clone()),
-        }
-    }
-
-    pub fn new(config: Config) -> Self {
-        Self {
-            config,
-            throttle: Throttle::default(),
-            renderer: RwLock::new(None),
-            fanout: RwLock::new(None),
-        }
-    }
-    /// Called at boot by WS5/WS8 after the shared Markdown/mention renderer has landed.
-    pub fn install_renderer(&self, renderer: Arc<dyn Renderer>) {
-        *self.renderer.write().unwrap_or_else(|e| e.into_inner()) = Some(renderer);
-    }
-    /// WS11's Message::BotWebhookFanout hook, called inside a write after the broadcast.
-    #[allow(dead_code)]
-    pub fn install_fanout(&self, fanout: Fanout) {
-        *self.fanout.write().unwrap_or_else(|e| e.into_inner()) = Some(fanout);
-    }
-}
-pub fn register(registry: &mut crate::jobs::Registry) {
+pub use crate::state::mail::State;
+pub fn register(registry: &mut crate::queue::Registry) {
     registry.register(delivery);
     registry.register(routing);
     registry.register(incineration);
@@ -107,7 +70,7 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
                 .db
                 .read(move |conn| User::find(conn, user_id))
                 .await
-                .map_err(crate::jobs::discard_missing)?;
+                .map_err(crate::queue::discard_missing)?;
             outbound::lockout_notice(&outbound::User {
                 name: user.name,
                 email: user.email_address.unwrap_or_default(),
@@ -123,7 +86,7 @@ async fn delivery(app: App, job: DeliveryJob, _: campfire_jobs::Execution) -> Jo
                 let platform = crate::concerns::platform::ApplicationPlatform::new(ua.as_deref());
                 let browser = if ua.as_deref().is_some_and(|s| s.contains("Edg/")) {"Edge"} else if platform.chrome() {"Chrome"} else if platform.firefox() {"Firefox"} else if platform.safari() {"Safari"} else {"Unknown browser"};
                 Ok(Some(SignIn {user: outbound::User {name: user.name, email: user.email_address.unwrap_or_default()}, device: format!("{browser} on {}", platform.operating_system().filter(|s| !s.is_empty()).unwrap_or_else(|| "Unknown device".into())), created_at: row.3.jiff()}))
-            }).await.map_err(crate::jobs::discard_missing)?;
+            }).await.map_err(crate::queue::discard_missing)?;
             let Some(message) = outbound::new_sign_in_alert(&app.mail.config, item.as_ref()) else {
                 return Ok(Outcome::Done);
             };
@@ -176,7 +139,7 @@ async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execut
         .db
         .read(move |conn| Message::find(conn, job.message_id))
         .await
-        .map_err(crate::jobs::discard_missing)?;
+        .map_err(crate::queue::discard_missing)?;
     if let Some(attachment) = app
         .db
         .read({
@@ -193,7 +156,7 @@ async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execut
             })
             .await?
             .ok_or_else(|| JobError::discard(anyhow::anyhow!("attachment blob was removed")))?;
-        crate::controllers::messages::process_attachment(&app, blob)
+        crate::messaging::process_attachment(&app, blob)
             .await
             .map_err(|e| JobError::from(anyhow::anyhow!(e.to_string())))?;
     }
@@ -260,7 +223,7 @@ mod tests {
     }
     const PATH: &str = "/rails/action_mailbox/relay/inbound_emails";
     const RAW: &str = "Message-ID: <ws10-http@example.com>\r\nFrom: person@example.com\r\nTo: room-token@mail.test\r\n\r\nHello";
-    async fn boot(domain: bool, password: bool) -> (crate::app::Booted, tempfile::TempDir) {
+    async fn boot(domain: bool, password: bool) -> (crate::server::Booted, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
         let cfg = crate::config::Config::from_lookup(|key| match key {
             "SECRET_KEY_BASE" => Some("ws10-isolated-http-reference-secret".repeat(4)),
@@ -271,10 +234,10 @@ mod tests {
             _ => None,
         })
         .unwrap();
-        (crate::app::boot(cfg).await.unwrap(), dir)
+        (crate::server::boot(cfg).await.unwrap(), dir)
     }
     async fn send(
-        b: &crate::app::Booted,
+        b: &crate::server::Booted,
         auth: Option<&str>,
         mime: &str,
     ) -> axum::response::Response {

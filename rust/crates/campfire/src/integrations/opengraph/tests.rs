@@ -117,7 +117,7 @@ async fn unfurls_over_https() {
     assert_eq!(dialed, ["93.184.216.34:443", "93.184.216.35:443"]);
 
     // A certificate that doesn't verify is a failed fetch.
-    let untrusted = Network { tls: crate::integrations::net::tls_config(rustls::RootCertStore::empty()), ..net };
+    let untrusted = Network { tls: crate::net::tls_config(rustls::RootCertStore::empty()), ..net };
     assert_eq!(unfurl(&untrusted, "https://www.example.com").await, Ok(Unfurl::NoContent));
 }
 

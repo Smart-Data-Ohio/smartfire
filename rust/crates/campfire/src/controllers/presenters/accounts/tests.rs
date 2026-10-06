@@ -1,5 +1,5 @@
 //! Request-level tests for the session, account and user controllers (controllers A), through the
-//! whole stack (`app::boot`, the Rails route table, kit) over a private copy of the reference-built
+//! whole stack (`crate::server::boot`, the Rails route table, kit) over a private copy of the reference-built
 //! `default` parity seed. Missing seeds fail in CI and skip locally with a note
 //! (`parity/bin/seed build default`). Parity against the running reference lives in
 //! `reference-tools/campfire/controllers_a/replay.py`.
@@ -11,7 +11,7 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::Booted;
+use crate::server::Booted;
 use crate::config::Config;
 use crate::controllers::presenters::test_support::{masked_session_token, seed_clock, seed_dir};
 
@@ -95,10 +95,10 @@ async fn boot_seed(name: &str) -> Option<Test> {
 }
 
 async fn boot_seed_with_clock(name: &str, clock: campfire_kit::SharedClock) -> Option<Test> {
-    boot_seed_with_network(name, clock, crate::integrations::net::Network::system()).await
+    boot_seed_with_network(name, clock, crate::net::Network::system()).await
 }
 
-async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, network: crate::integrations::net::Network) -> Option<Test> {
+async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, network: crate::net::Network) -> Option<Test> {
     let seed = seed_dir(name)?;
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -125,7 +125,7 @@ async fn boot_seed_with_network(name: &str, clock: campfire_kit::SharedClock, ne
     })
     .unwrap();
     Some(Test {
-        booted: crate::app::boot_with_network(config, clock, network).await.unwrap(),
+        booted: crate::server::boot_with_network(config, clock, network).await.unwrap(),
         labels,
         _dir: dir,
     })

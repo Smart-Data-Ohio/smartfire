@@ -44,7 +44,7 @@ async fn metadata(
     let net = Network {
         resolver,
         dialer,
-        tls: crate::integrations::net::tls_config(roots),
+        tls: crate::net::tls_config(roots),
     };
     let metadata = Metadata::from_url(&net, "https://www.example.com")
         .await

@@ -7,7 +7,7 @@
 //!   and pinned, every redirect re-checked, 10 responses and 5MB at most.
 //! - [`webhook`]: `Webhook#deliver` for bots: public addresses pinned, signed payloads and 7-second timeouts.
 //! - [`search`]: the query sanitizing in `SearchesController#query`.
-//! - [`register_jobs`]: `Room::PushMessageJob` and `Bot::WebhookJob` for the job runner.
+//! - [`web_push_pool`]: the Web Push pool the app boots with.
 //!
 //! The three HTTP clients share only plumbing ([`net`]); each keeps its own policy (see
 //! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
@@ -19,10 +19,8 @@ pub mod fizzy;
 pub mod slack;
 pub mod twitter;
 pub mod image_proxy;
-mod jobs;
 pub mod agent_repositories;
-mod agent_jobs;
-mod agent_streaming;
+pub(crate) mod agent_streaming;
 pub mod action_claims;
 // WS15g installs the GitHub account, fetcher, notifier and approved-action consumers.
 #[allow(dead_code)]
@@ -31,7 +29,7 @@ pub mod health;
 pub mod link_embed;
 #[allow(dead_code)]
 pub mod linkedin;
-pub mod net;
+pub(crate) use crate::net;
 pub mod opengraph;
 pub mod web_push;
 pub mod webhook;
@@ -39,8 +37,33 @@ pub mod webhook;
 #[cfg(test)]
 pub(crate) mod test_support;
 
-pub use jobs::{register_jobs, web_push_pool};
 
+
+/// config/initializers/web_push.rb (`config.x.web_push_pool`): the pool, whose invalid
+/// subscription handler destroys the subscription (`Push::Subscription.find_by(id:)&.destroy`).
+/// `None`, and Web Push is off, when the VAPID keys are missing or invalid. Call from inside the
+/// runtime.
+pub fn web_push_pool(config: &crate::config::Config, db: &campfire_db::Database) -> Option<web_push::Pool> {
+    let vapid = match web_push::VapidConfig::from_config(config) {
+        Ok(vapid) => vapid,
+        Err(error @ web_push::VapidError::Missing) => {
+            tracing::warn!("Web Push is off: {error}");
+            return None;
+        }
+        Err(error) => {
+            tracing::error!("Web Push is off: {error}");
+            return None;
+        }
+    };
+    let db = db.clone();
+    Some(web_push::Pool::new(crate::net::Network::system(), vapid, move |id| {
+        db.write_blocking(move |tx| match campfire_db::PushSubscription::find(tx.conn(), id) {
+            Ok(subscription) => subscription.destroy(tx),
+            Err(campfire_db::Error::RecordNotFound(_)) => Ok(()),
+            Err(error) => Err(error),
+        })
+    }))
+}
 
 /// SQL-only reference callbacks invoked from WS8's message transaction.
 pub fn sync_message_references(tx: &mut campfire_db::Tx<'_>, message: &campfire_db::Message, enqueue: bool, crypto: Option<&rails_compat::ar_encryption::ArEncryption>) -> campfire_db::Result<()> {
@@ -67,5 +90,3 @@ pub(crate) mod message_batches;
 #[cfg(test)]
 pub(crate) use agent_streaming::run_trailing_fixture;
 
-#[cfg(test)]
-pub(crate) use agent_jobs::Next6Delivery;

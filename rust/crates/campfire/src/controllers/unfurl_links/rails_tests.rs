@@ -69,7 +69,7 @@ async fn setup(
         Network {
             resolver: resolver.clone(),
             dialer,
-            tls: crate::integrations::net::tls_config(roots),
+            tls: crate::net::tls_config(roots),
         },
         missing.clone(),
     );

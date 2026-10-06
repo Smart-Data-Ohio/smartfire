@@ -55,7 +55,7 @@ async fn old_embed_deleted_during_fetch_and_failed_writes_match_rails_durable_jo
                 dialed: Default::default(),
             });
             let mut net = network(resolver, dialer);
-            net.tls = crate::integrations::net::tls_config(roots);
+            net.tls = crate::net::tls_config(roots);
             if name == "write_failed" {
                 app.db().write(move|tx|{tx.conn().execute_batch(&format!("CREATE TRIGGER ws8_failure BEFORE UPDATE ON link_embeds WHEN OLD.id={id} BEGIN SELECT RAISE(ABORT,'fixture embed writer failure'); END"))?;Ok(())}).await.unwrap();
             }
@@ -73,7 +73,7 @@ async fn old_embed_deleted_during_fetch_and_failed_writes_match_rails_durable_jo
                         .unwrap()
                         .send(result.as_ref().map(|_| ()).map_err(ToString::to_string))
                         .unwrap();
-                    result.map_err(crate::jobs::discard_missing)?;
+                    result.map_err(crate::queue::discard_missing)?;
                     Ok(Outcome::Done)
                 }
             });

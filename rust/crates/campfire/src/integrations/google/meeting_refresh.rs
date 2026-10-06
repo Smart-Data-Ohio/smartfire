@@ -1,6 +1,6 @@
 //! Fetch/cache side of Calendar::MeetingRefresh; WS17 dispatches completed interval sets.
 use super::{api, calendar};
-use crate::{app::App, jobs::Registry};
+use crate::{app::App, queue::Registry};
 use campfire_db::{
     Timestamp,
     models::{google_calendar::MeetingRefreshJob, google_meeting_cache as cache},
@@ -46,7 +46,7 @@ pub trait EventLister: Send + Sync {
         start: Timestamp,
         end: Timestamp,
         now: Timestamp,
-    ) -> crate::integrations::net::BoxFuture<'a, api::Result<serde_json::Value>>;
+    ) -> crate::net::BoxFuture<'a, api::Result<serde_json::Value>>;
 }
 impl EventLister for api::Api {
     fn list<'a>(
@@ -56,7 +56,7 @@ impl EventLister for api::Api {
         start: Timestamp,
         end: Timestamp,
         now: Timestamp,
-    ) -> crate::integrations::net::BoxFuture<'a, api::Result<serde_json::Value>> {
+    ) -> crate::net::BoxFuture<'a, api::Result<serde_json::Value>> {
         Box::pin(self.list_events(&app.db, &app.secrets, user_id, start, end, now))
     }
 }

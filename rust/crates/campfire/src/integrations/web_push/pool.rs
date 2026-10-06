@@ -12,7 +12,7 @@ use campfire_db::{Connection, PushPayload, PushSubscription};
 use tokio::sync::{Notify, Semaphore};
 
 use super::{Notification, VapidConfig};
-use crate::integrations::net::Network;
+use crate::net::Network;
 
 /// `Concurrent::ThreadPoolExecutor.new(max_threads: 50, max_queue: 10000)`
 const MAX_THREADS: usize = 50;

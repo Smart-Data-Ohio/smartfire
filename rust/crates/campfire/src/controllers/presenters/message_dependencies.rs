@@ -77,7 +77,7 @@ impl Presenter<'_> {
             .bodies
             .values()
             .flatten()
-            .flat_map(|body| crate::controllers::searches::preloads::mention_ids(body, 0))
+            .flat_map(|body| crate::controllers::presenters::search_preloads::mention_ids(body, 0))
             .collect::<Vec<_>>();
         let users = records.users(self.conn, std::slice::from_ref(message), &mentions)?;
         let catalog = crate::rich_text::icons(self.conn).map_err(campfire_db::Error::Other)?;
@@ -105,7 +105,7 @@ impl Presenter<'_> {
                 .chain(records.votes.values().flatten().map(|(v, _)| v.user_id))
                 .chain(
                     records.bodies.values().flatten().flat_map(|body| {
-                        crate::controllers::searches::preloads::mention_ids(body, 0)
+                        crate::controllers::presenters::search_preloads::mention_ids(body, 0)
                     }),
                 )
                 .collect::<BTreeSet<_>>();

@@ -20,7 +20,7 @@ use campfire_kit::{Error, Param, Result, UploadedFile};
 use campfire_storage::{Blob, Filename, Staged, Variation};
 
 use crate::active_storage::{keep_after_commit, stage_file};
-use crate::jobs::AnalyzeJob;
+use crate::queue::AnalyzeJob;
 use crate::app::App;
 
 /// An uploaded file (`ActionDispatch::Http::UploadedFile`), still in its multipart tempfile.

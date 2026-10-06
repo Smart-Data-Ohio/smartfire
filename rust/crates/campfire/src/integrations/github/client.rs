@@ -7,7 +7,7 @@ use hyper::Method;
 use serde_json::{Value, json};
 
 use super::blank;
-use crate::integrations::net::{
+use crate::net::{
     Network,
     http::{self, Body, Endpoint, HttpError, Request, Timeouts},
 };

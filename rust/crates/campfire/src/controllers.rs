@@ -151,12 +151,7 @@ impl Route {
     }
 }
 
-/// The route that matched the current request (`request.path_parameters` plus the endpoint),
-/// available to actions as `c.current::<MatchedRoute>()`.
-#[derive(Debug, Clone)]
-pub struct MatchedRoute {
-    pub endpoint: &'static str,
-}
+pub use crate::concerns::MatchedRoute;
 
 /// Every route, in `config/routes.rb` order.
 pub fn routes() -> &'static [Route] {

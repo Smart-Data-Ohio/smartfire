@@ -60,7 +60,7 @@ async fn perform_owned(app: App, job: AttachmentProcessingJob) -> JobResult {
     let Some(blob) = work else {
         return Ok(Outcome::Done);
     };
-    if let Err(error) = crate::controllers::messages::process_attachment_now(&app, blob).await {
+    if let Err(error) = crate::messaging::process_attachment_now(&app, blob).await {
         let missing = match &error {
             campfire_kit::Error::NotFound => true,
             campfire_kit::Error::Internal(error) => error.chain().any(|cause| {

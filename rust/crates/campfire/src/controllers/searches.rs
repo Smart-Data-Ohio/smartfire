@@ -1,5 +1,5 @@
 //! `app/controllers/searches_controller.rb`.
-pub(crate) mod preloads;
+pub use crate::controllers::presenters::params::display_query;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::messages::present;
@@ -9,11 +9,6 @@ use campfire_db::{Search, search_query::SearchQuery};
 use campfire_kit::{Ctx, Error, Param, Result, StatusCode, format};
 use campfire_views::searches::{Index, IndexView, search_path};
 
-pub fn display_query(c: &Ctx) -> Option<String> {
-    let raw = c.param("q").map(super::message_features::param_string).unwrap_or_default();
-    let q = raw.split_whitespace().collect::<Vec<_>>().join(" ");
-    (!q.is_empty()).then_some(q)
-}
 fn parsed(c: &Ctx) -> SearchQuery {
     SearchQuery::parse(&c.param("q").map(super::message_features::param_string).unwrap_or_default())
 }

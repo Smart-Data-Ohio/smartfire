@@ -2,7 +2,7 @@
 use crate::integrations::link_embed::Reference;
 use crate::{
     app::App,
-    channels::broadcasts::{Stream, message_dom_id},
+    cable::broadcasts::{Stream, message_dom_id},
 };
 use campfire_db::{Connection, Message, Room};
 use campfire_views::messages::{self, MessageComponents};

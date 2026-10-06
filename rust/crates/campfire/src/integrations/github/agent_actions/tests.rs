@@ -338,7 +338,7 @@ async fn github_agent_runtime_performs_discards_and_leaves_terminal_claim_on_wri
         let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
             "2026-01-01T12:00:00Z".parse().unwrap(),
         ));
-        let booted = crate::app::boot_with_github_network(
+        let booted = crate::server::boot_with_github_network(
             config,
             clock,
             ReadClient::with_network(None, network.clone()),

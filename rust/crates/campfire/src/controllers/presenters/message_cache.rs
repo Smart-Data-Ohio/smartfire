@@ -31,7 +31,7 @@ impl Presenter<'_> {
         {
             dependencies.push(source);
         }
-        let validator = crate::controllers::messages::freshness::etag(self.conn, &dependencies)?;
+        let validator = crate::controllers::presenters::message_freshness::etag(self.conn, &dependencies)?;
         let rendered = self.message_rendered_cache_key(message)?;
         Ok(campfire_views::messages::collection_fragment_key(
             &format!("{collection}/{validator}/{rendered}"),

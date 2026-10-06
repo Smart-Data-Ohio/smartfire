@@ -102,7 +102,7 @@ async fn google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_ret
                 if answer[0] == "timeout" {
                     r.fail_for(method, path);
                 } else if answer[0] == "transport" {
-                    use crate::integrations::net::http::HttpError;
+                    use crate::net::http::HttpError;
                     let error = match answer[1].as_str().unwrap() {
                         "Net::ReadTimeout" => HttpError::ReadTimeout,
                         "Net::WriteTimeout" => HttpError::WriteTimeout,
@@ -155,7 +155,7 @@ async fn google_calendar_sync_consumers_match_pinned_rails_rows_requests_and_ret
                     a.booted.app.jobs.queue.clone(),
                     crate::jobs::registry(),
                     a.booted.app.clone(),
-                    crate::jobs::runner_config(&a.booted.app.config),
+                    crate::queue::runner_config(&a.booted.app.config),
                 );
                 let scheduled = tokio::time::timeout(
                     std::time::Duration::from_secs(5),

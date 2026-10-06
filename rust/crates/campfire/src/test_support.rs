@@ -8,6 +8,11 @@ use futures_util::FutureExt;
 
 pub const WAIT: Duration = Duration::from_secs(30);
 
+/// The original timezone system test's switch for Rails' verifier and token renderer
+/// (`controllers::ledger_browser_tests`).
+pub(crate) static FORGERY_DISABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub(crate) fn forgery_disabled() -> bool { FORGERY_DISABLED.load(std::sync::atomic::Ordering::SeqCst) }
+
 pub async fn wait<T>(what: &str, future: impl Future<Output = T>) -> T {
     tokio::time::timeout(WAIT, future)
         .await
@@ -163,6 +168,20 @@ pub async fn with_auth_inputs<T>(inputs: campfire_db::FixtureAuthInputs, future:
 }
 pub fn auth_inputs() -> Option<Arc<campfire_db::FixtureAuthInputs>> {
     AUTH_INPUTS.try_with(Arc::clone).ok()
+}
+
+// Fixture-only: the depth of each cable stream's ring for an app booted in this scope. A
+// subscriber that falls a full ring behind is disconnected, so a test that has one callback
+// broadcast tens of thousands of frames sizes the ring for all of them rather than racing the
+// runner's scheduler. Production keeps campfire_cable's default.
+tokio::task_local! {
+    static CABLE_STREAM_CAPACITY: usize;
+}
+pub async fn with_cable_stream_capacity<T>(capacity: usize, future: impl Future<Output = T>) -> T {
+    CABLE_STREAM_CAPACITY.scope(capacity, future).await
+}
+pub fn cable_stream_capacity() -> Option<usize> {
+    CABLE_STREAM_CAPACITY.try_with(|capacity| *capacity).ok()
 }
 
 // Supplied before boot and copied into this database's existing fixture provider.

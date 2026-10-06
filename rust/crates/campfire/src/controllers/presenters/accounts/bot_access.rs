@@ -18,7 +18,7 @@ pub fn credentials(
                 expires_at: r.get::<_, Option<campfire_db::Timestamp>>(5)?.map(|t| {
                     CredentialExpiry::Extended {
                         datetime:
-                            crate::controllers::accounts::bots::input_casts::extended_datetime(
+                            crate::controllers::presenters::bot_input_casts::extended_datetime(
                                 t, zone, true,
                             ),
                         microseconds: t.as_wide_microsecond(),

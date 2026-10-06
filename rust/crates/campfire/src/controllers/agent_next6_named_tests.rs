@@ -16,7 +16,7 @@ const BOT: i64 = 394959859;
 async fn action(
     app: &TestApp,
     step: &Value,
-    delivery: Option<&crate::integrations::Next6Delivery>,
+    delivery: Option<&crate::jobs::agent_jobs::next6_named::Next6Delivery>,
 ) -> Option<Value> {
     if step["action"] == "deliver" {
         return Some(
@@ -188,7 +188,7 @@ async fn run_case(case: &Value) -> Vec<usize> {
         .iter()
         .any(|s| s["action"] == "deliver")
     {
-        Some(crate::integrations::Next6Delivery::start(&app).await)
+        Some(crate::jobs::agent_jobs::next6_named::Next6Delivery::start(&app).await)
     } else {
         None
     };

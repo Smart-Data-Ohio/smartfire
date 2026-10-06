@@ -4,10 +4,10 @@
 struct Ws8bmDriveClient(u16);
 impl crate::integrations::google::client::Client for Ws8bmDriveClient {
     fn request<'a>(&'a self, host: &'a str, method: hyper::Method, target: &'a str,
-        headers: Vec<(String, String)>, body: Vec<u8>) -> crate::integrations::net::BoxFuture<'a,
+        headers: Vec<(String, String)>, body: Vec<u8>) -> crate::net::BoxFuture<'a,
         Result<(u16, Vec<u8>), crate::integrations::google::client::Unavailable>> {
         Box::pin(async move {
-            use crate::integrations::net::{Network, http::{self, Body, Endpoint, Request, Timeouts}};
+            use crate::net::{Network, http::{self, Body, Endpoint, Request, Timeouts}};
             assert_eq!(host, "www.googleapis.com", "only pinned Drive requests are stubbed");
             assert!(target.starts_with("/drive/v3/files"));
             let endpoint = Endpoint { https: false, host: "127.0.0.1".into(), port: self.0, pinned_ip: None };

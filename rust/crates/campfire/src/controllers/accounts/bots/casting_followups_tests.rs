@@ -1,5 +1,5 @@
 //! PR196 Casting follow-ups boundaries, captured from pinned Rails by render_replay.sh.
-use super::{github_connections, input_casts};
+use super::input_casts;
 use crate::controllers::presenters::test_support::{
     BENDER, DAVID, Req, TestApp, with_fixed_render_secrets,
 };
@@ -204,7 +204,7 @@ fn ws11ui_casting_followups_integer_replay_size_counts_digits_without_quotes() {
     for case in oracle()["size"].as_array().unwrap() {
         let digits = case["digits"].as_u64().unwrap() as usize;
         let raw = "1".repeat(digits);
-        let params = github_connections::json_body_params(
+        let params = crate::server::json_params::json_body_params(
             &Method::POST,
             "/account/bots/1/github_connection",
             format!("{{\"unused\":{raw}}}").as_bytes(),
@@ -220,7 +220,7 @@ fn ws11ui_casting_followups_integer_replay_size_counts_digits_without_quotes() {
     }
     // A quoted numeric string still pays its JSON quotes; only exact Integers omit them.
     let raw = "1".repeat(2036);
-    let params = github_connections::json_body_params(
+    let params = crate::server::json_params::json_body_params(
         &Method::POST,
         "/account/bots/1/github_connection",
         format!("{{\"unused\":\"{raw}\"}}").as_bytes(),

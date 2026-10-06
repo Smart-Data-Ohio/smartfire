@@ -1,7 +1,7 @@
 //! OAuth, refresh and Calendar/Drive API semantics from `app/models/google/client.rb`.
 //! HTTP uses an injectable transport, outside the database writer.
 use super::client::{Client, HttpClient};
-use crate::integrations::net::Network;
+use crate::net::Network;
 use base64::{Engine, engine::general_purpose::URL_SAFE};
 use campfire_db::{
     Database, Timestamp,

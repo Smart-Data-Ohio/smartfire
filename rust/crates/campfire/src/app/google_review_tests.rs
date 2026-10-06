@@ -4,7 +4,7 @@ use crate::integrations::google::{
     api::{self, Api, ApiRequest},
     client::{Client, Unavailable},
 };
-use crate::integrations::net::BoxFuture;
+use crate::net::BoxFuture;
 use campfire_db::{Timestamp, models::google_account::GoogleAccount};
 use hyper::{Method, StatusCode};
 use rails_compat::ar_encryption::ArEncryption;

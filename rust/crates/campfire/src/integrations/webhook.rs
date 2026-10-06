@@ -12,8 +12,8 @@ use campfire_storage::filename::Filename;
 use campfire_storage::{Staged, Storage};
 use regex::Regex;
 
-use crate::integrations::net::Network;
-use crate::integrations::net::http::{self, Body, Endpoint, HttpError, Timeouts};
+use crate::net::Network;
+use crate::net::http::{self, Body, Endpoint, HttpError, Timeouts};
 
 /// `Webhook::ENDPOINT_TIMEOUT`
 pub const ENDPOINT_TIMEOUT: Duration = Duration::from_secs(campfire_db::models::webhook::ENDPOINT_TIMEOUT_SECONDS);
@@ -67,7 +67,7 @@ pub enum WebhookError {
     #[error("{0:?} is not a valid MIME type")]
     InvalidMimeType(String),
     #[error(transparent)]
-    Guard(#[from] crate::integrations::net::guard::GuardError),
+    Guard(#[from] crate::net::guard::GuardError),
 }
 
 /// An unsigned legacy delivery, with the system clock. App jobs use `deliver_signed`.
@@ -106,7 +106,7 @@ pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Networ
     let host = uri.host.clone().filter(|h| !h.is_empty()).ok_or_else(|| WebhookError::InvalidUrl("no host component for URI".into()))?;
     let https = uri.scheme.as_deref().is_some_and(|s| s.eq_ignore_ascii_case("https"));
     let port = uri.port.and_then(|p| u16::try_from(p).ok()).ok_or_else(|| WebhookError::InvalidUrl("invalid port".into()))?;
-    let address = crate::integrations::net::guard::resolve_webhook(&*net.resolver, &host).await?;
+    let address = crate::net::guard::resolve_webhook(&*net.resolver, &host).await?;
     let endpoint = Endpoint { https, host: host.clone(), port, pinned_ip: Some(address) };
 
     let hostname = host.strip_prefix('[').and_then(|h| h.strip_suffix(']')).unwrap_or(&host);
@@ -129,7 +129,7 @@ pub async fn post_payload<F: Fn() -> jiff::Timestamp + Send + Sync>(net: &Networ
 }
 
 /// `extract_text_from`, else `extract_attachment_from`.
-pub(super) fn reply(status: u16, content_type: Option<String>, body: Vec<u8>) -> Result<WebhookReply, WebhookError> {
+pub(crate) fn reply(status: u16, content_type: Option<String>, body: Vec<u8>) -> Result<WebhookReply, WebhookError> {
     if !(200..300).contains(&status) { return Ok(WebhookReply::None); }
     let Some(content_type) = content_type else { return Ok(WebhookReply::None) };
     if status == 200 && (content_type == "text/html" || content_type == "text/plain") {
@@ -281,7 +281,7 @@ mod tests {
                     };
                     serde_json::json!({ "status": delivery.status, "reply": reply })
                 }
-                Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Violation(_))) => serde_json::json!({ "error": "RestrictedHTTP::Violation", "reply": null }),
+                Err(WebhookError::Guard(crate::net::guard::GuardError::Violation(_))) => serde_json::json!({ "error": "RestrictedHTTP::Violation", "reply": null }),
                 Err(WebhookError::InvalidMimeType(_)) => serde_json::json!({ "error": "Mime::Type::InvalidMimeType", "reply": null }),
                 Err(WebhookError::Http(HttpError::Io(e))) if e.kind() == std::io::ErrorKind::ConnectionRefused => {
                     serde_json::json!({ "error": "Errno::ECONNREFUSED", "reply": null })
@@ -384,7 +384,7 @@ mod tests {
 
     #[tokio::test]
     async fn ws11_guard_matches_rails_vectors() {
-        use crate::integrations::net::guard::{resolve_webhook, GuardError};
+        use crate::net::guard::{resolve_webhook, GuardError};
         let vectors: Value = serde_json::from_str(include_str!("../../../../vectors/agents_webhook_contract.json")).unwrap();
         let resolver = FakeResolver::default();
         for case in vectors["guards"].as_array().unwrap().iter().chain(vectors["dns"].as_array().unwrap()) {
@@ -404,7 +404,7 @@ mod tests {
 
     #[tokio::test]
     async fn ws11_timestamp_is_sampled_after_resolution() {
-        use crate::integrations::net::{BoxFuture, Resolver};
+        use crate::net::{BoxFuture, Resolver};
         use std::sync::atomic::{AtomicI64, Ordering};
         struct SlowResolver(Arc<AtomicI64>);
         impl Resolver for SlowResolver {
@@ -418,7 +418,7 @@ mod tests {
         }
         let server = FakeServer::start(vec![Route::new("POST", "*", "/hook", 204)]).await;
         let resolved_at = Arc::new(AtomicI64::new(0));
-        let net = Network { resolver: Arc::new(SlowResolver(resolved_at.clone())), dialer: Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) }), tls: crate::integrations::net::tls_config(crate::integrations::test_support::test_tls_roots()) };
+        let net = Network { resolver: Arc::new(SlowResolver(resolved_at.clone())), dialer: Arc::new(MappingDialer { public: HashSet::from(["93.184.216.34".parse().unwrap()]), to: server.addr, dialed: Mutex::new(Vec::new()) }), tls: crate::net::tls_config(crate::integrations::test_support::test_tls_roots()) };
         deliver(&net, "http://bots.example:8080/hook", "{}".into()).await.unwrap();
         let timestamp: i64 = server.received()[0].header("X-Smartfire-Timestamp").unwrap().parse().unwrap();
         assert!(timestamp >= resolved_at.load(Ordering::SeqCst), "timestamp was sampled before DNS resolution");
@@ -441,8 +441,8 @@ mod tests {
             let uri_host = if host.contains(':') && !host.starts_with('[') { format!("[{host}]") } else { host.to_string() };
             let response = deliver(&net, &format!("http://{uri_host}:8080/hook"), "{}".into()).await;
             match case["error"].as_str() {
-                Some("RestrictedHTTP::Violation") => assert!(matches!(response, Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Violation(_)))), "{host}: {response:?}"),
-                Some("Surfguard::Unresolvable") => assert!(matches!(response, Err(WebhookError::Guard(crate::integrations::net::guard::GuardError::Unresolvable))), "{host}: {response:?}"),
+                Some("RestrictedHTTP::Violation") => assert!(matches!(response, Err(WebhookError::Guard(crate::net::guard::GuardError::Violation(_)))), "{host}: {response:?}"),
+                Some("Surfguard::Unresolvable") => assert!(matches!(response, Err(WebhookError::Guard(crate::net::guard::GuardError::Unresolvable))), "{host}: {response:?}"),
                 None => assert_eq!(response.unwrap().status, Some(204), "{host}"),
                 other => panic!("unknown Rails error: {other:?}"),
             }

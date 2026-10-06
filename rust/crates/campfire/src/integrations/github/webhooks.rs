@@ -256,7 +256,7 @@ pub(super) fn integer_for_query(value: &Value) -> Option<i64> {
         Value::Number(number) => number
             .as_i64()
             .or_else(|| number.as_f64().map(|number| number as i64)),
-        Value::String(number) if !blank(number) => Some(crate::concerns::ruby_to_i(number)),
+        Value::String(number) if !blank(number) => Some(crate::ruby::ruby_to_i(number)),
         Value::Bool(value) => Some(i64::from(*value)),
         _ => None,
     }

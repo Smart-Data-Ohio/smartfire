@@ -6,8 +6,8 @@ use campfire_richtext::uri::{self, Uri};
 use rails_compat::jwt::livekit;
 use serde_json::{Map, Value};
 
-use crate::integrations::net::Network;
-use crate::integrations::net::http::{self, Endpoint, HttpError, Timeouts};
+use crate::net::Network;
+use crate::net::http::{self, Endpoint, HttpError, Timeouts};
 
 fn blank(value: &str) -> bool {
     value.chars().all(char::is_whitespace)

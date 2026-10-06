@@ -9,9 +9,9 @@ use std::time::Duration;
 use campfire_richtext::uri::Uri;
 use hyper::Method;
 
-use crate::integrations::net::Network;
-use crate::integrations::net::guard::{self, GuardError};
-use crate::integrations::net::http::{self, Body, Endpoint, HttpError, Timeouts};
+use crate::net::Network;
+use crate::net::guard::{self, GuardError};
+use crate::net::http::{self, Body, Endpoint, HttpError, Timeouts};
 
 pub const ALLOWED_DOCUMENT_CONTENT_TYPE: &str = "text/html";
 pub const MAX_BODY_SIZE: usize = 5 * 1024 * 1024;
@@ -134,7 +134,7 @@ fn retryable(error: &HttpError) -> bool {
 }
 
 async fn resolve_redirect(net: &Network, location: Option<String>, base: &Uri) -> Result<(Uri, IpAddr), FetchError> {
-    let url = crate::integrations::net::redirect::resolve(base, location.as_deref()).ok_or(FetchError::RedirectDenied)?;
+    let url = crate::net::redirect::resolve(base, location.as_deref()).ok_or(FetchError::RedirectDenied)?;
     let ip = guard::resolve(net.resolver.as_ref(), url.host.as_deref().unwrap_or("")).await?;
     Ok((url, ip))
 }

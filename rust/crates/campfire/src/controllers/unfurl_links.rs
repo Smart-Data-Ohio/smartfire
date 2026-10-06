@@ -4,7 +4,7 @@
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 
 use crate::concerns::{Before, before_actions};
-use crate::integrations::net::Network;
+use crate::net::Network;
 use crate::integrations::opengraph::{self, Unfurl};
 
 pub async fn create(c: &mut Ctx) -> Result {

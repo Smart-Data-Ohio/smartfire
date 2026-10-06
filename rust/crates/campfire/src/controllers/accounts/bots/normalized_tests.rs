@@ -1,5 +1,6 @@
 //! Pinned Rails JSON and timestamp boundaries from normalized_casts.sh.
-use super::{github_connections, input_casts};
+use super::input_casts;
+use crate::server::json_params;
 use campfire_db::Timestamp;
 use campfire_kit::{Method, Param};
 use campfire_views::time::Zone;
@@ -34,7 +35,7 @@ fn token_cases(nested: bool) {
         if raw.starts_with("[[[[") != nested {
             continue;
         }
-        let actual = match github_connections::json_body_params(
+        let actual = match json_params::json_body_params(
             &Method::POST,
             "/account/bots/1/github_connection",
             format!("{{\"access_token\":{raw}}}").as_bytes(),
@@ -150,7 +151,7 @@ fn pr196_r3_non_token_routes_keep_ordinary_parser() {
                 raw.as_str().unwrap()
             );
             assert!(
-                github_connections::scoped_json_body_params(&method, path, body.as_bytes())
+                json_params::scoped_json_body_params(&method, path, body.as_bytes())
                     .is_none()
             );
             checked += 1;
@@ -198,7 +199,7 @@ fn pr196_r3_further_exponent_boundaries_match_rails() {
     let mut failures = Vec::new();
     for case in oracle["tokens"].as_array().unwrap() {
         let raw = case["raw"].as_str().unwrap();
-        let params = github_connections::json_body_params(
+        let params = json_params::json_body_params(
             &Method::POST,
             "/account/bots/1/github_connection",
             format!("{{\"access_token\":{raw}}}").as_bytes(),

@@ -279,7 +279,7 @@ async fn run(name: &str) {
                     app.jobs.queue.clone(),
                     registry,
                     app.clone(),
-                    super::runner_config(&app.config),
+                    crate::queue::runner_config(&app.config),
                 ));
                 Value::Null
             }

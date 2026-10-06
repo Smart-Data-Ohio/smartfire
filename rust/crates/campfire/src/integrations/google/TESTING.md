@@ -7,7 +7,7 @@ those hosts, port 443, and normal TLS hostname verification; a mapping dialer se
 the connection to a local socket in WS14g's `53100–53199` range, and only the test
 CA is trusted there.
 
-The shared `../testdata/tls/server.pem` fixture covers `fcm.googleapis.com`,
+The shared `../../net/testdata/tls/server.pem` fixture covers `fcm.googleapis.com`,
 `www.example.com`, `example.com`, and `bots.example`; it does not cover either
 Google OAuth/API hostname above. These tests therefore retain their disposable
 Google certificate and key, preserving TLS hostname verification with the actual

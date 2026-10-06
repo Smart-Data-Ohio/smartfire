@@ -2,7 +2,7 @@
 //! Personal rows are rendered for the named membership, never for the sender.
 use crate::{
     app::App,
-    controllers::{presenters::page, users::sidebars::composition},
+    controllers::presenters::{page, sidebar_composition as composition},
 };
 use askama::Template;
 use campfire_cable::turbo::{Action, Target};
@@ -66,14 +66,14 @@ pub(super) fn deliver(app: &App, broadcast: &Broadcast) -> anyhow::Result<bool> 
                 let room = Room::find(conn, room_id)?;
                 let viewer = User::find(conn, for_user_id)?;
                 let nav =
-                    crate::controllers::rooms::call_navigation::model(&copy, conn, &room, &viewer)?;
+                    crate::controllers::presenters::call_navigation::model(&copy, conn, &room, &viewer)?;
                 Ok(page::render_detached(&copy, account.as_ref(), |ctx| {
                     nav.identity(ctx)
                 }))
             }
             Partial::OooNotice { user_id } => {
                 let notice =
-                    crate::controllers::rooms::shell::notice(conn, user_id, copy.db.env().now())?;
+                    crate::controllers::presenters::room_shell::notice(conn, user_id, copy.db.env().now())?;
                 Ok(campfire_views::rooms::shell::NoticeLine { user: &notice }
                     .render()
                     .expect("OOO notice line"))

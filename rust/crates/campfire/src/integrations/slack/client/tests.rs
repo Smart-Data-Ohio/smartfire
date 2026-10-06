@@ -5,7 +5,7 @@ use std::sync::{
 };
 
 use super::*;
-use crate::integrations::net::tls_config;
+use crate::net::tls_config;
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route};
 
 pub(crate) async fn fake(routes: Vec<Route>) -> (FakeServer, Network) {
@@ -52,11 +52,11 @@ async fn fake_responses(responses: Vec<Vec<Route>>) -> (Vec<FakeServer>, Network
         addresses: Vec<std::net::SocketAddr>,
         next: AtomicUsize,
     }
-    impl crate::integrations::net::Dialer for Responses {
+    impl crate::net::Dialer for Responses {
         fn connect(
             &self,
             addr: std::net::SocketAddr,
-        ) -> crate::integrations::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
+        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
         {
             assert_eq!(
                 addr.ip(),
@@ -121,7 +121,7 @@ async fn slack_client_malformed_http_bodies_and_json_comments_match_rails() {
 
 #[test]
 fn slack_client_transport_classes_messages_and_retryability_match_rails() {
-    use crate::integrations::net::http::HttpError;
+    use crate::net::http::HttpError;
     let oracle: Value = serde_json::from_str(include_str!(
         "../../../../../../vectors/slack/payloads.json"
     ))
@@ -163,11 +163,11 @@ fn slack_client_transport_classes_messages_and_retryability_match_rails() {
 #[tokio::test]
 async fn slack_client_network_final_message_matches_rails_through_actual_dialer() {
     struct Fail(AtomicUsize);
-    impl crate::integrations::net::Dialer for Fail {
+    impl crate::net::Dialer for Fail {
         fn connect(
             &self,
             _: std::net::SocketAddr,
-        ) -> crate::integrations::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
+        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
         {
             self.0.fetch_add(1, Ordering::SeqCst);
             Box::pin(async { Err(std::io::Error::other("fixture io")) })
@@ -474,14 +474,14 @@ async fn slack_client_recovering_5xx_counts_each_attempt_and_returns_payload() {
 #[tokio::test]
 async fn slack_client_recovering_network_counts_failed_dials_and_success_once() {
     struct RetryDialer {
-        inner: Arc<dyn crate::integrations::net::Dialer>,
+        inner: Arc<dyn crate::net::Dialer>,
         count: AtomicUsize,
     }
-    impl crate::integrations::net::Dialer for RetryDialer {
+    impl crate::net::Dialer for RetryDialer {
         fn connect(
             &self,
             addr: std::net::SocketAddr,
-        ) -> crate::integrations::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
+        ) -> crate::net::BoxFuture<'_, std::io::Result<tokio::net::TcpStream>>
         {
             if self.count.fetch_add(1, Ordering::SeqCst) < 2 {
                 Box::pin(async {

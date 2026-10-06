@@ -100,7 +100,7 @@ pub(crate) fn deliver(
                     Partial::Poll { poll_id } => {
                         campfire_views::messages::parts::poll(
                             ctx,
-                            &crate::controllers::message_features::poll_view(
+                            &crate::controllers::presenters::message_parts::poll_view(
                                 conn, app, *poll_id, None,
                             )?,
                         )
@@ -131,7 +131,7 @@ pub(crate) fn deliver(
                     }
                     Partial::PinsList { room_id } => {
                         let room = campfire_db::Room::find(conn, *room_id)?;
-                        let list = crate::controllers::rooms::pins::list(conn, app, &room)?;
+                        let list = crate::controllers::presenters::pins::list(conn, app, &room)?;
                         campfire_views::pins::ListPartial { ctx, list: &list }
                             .render()
                             .map_err(|error| campfire_db::Error::Other(error.to_string()))?

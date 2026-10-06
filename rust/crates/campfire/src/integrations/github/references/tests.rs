@@ -19,7 +19,7 @@ pub(crate) async fn application() -> (app::App, tempfile::TempDir) {
         _ => None,
     })
     .unwrap();
-    let booted = app::boot_with_github_read(
+    let booted = crate::server::boot_with_github_read(
         config,
         std::sync::Arc::new(campfire_kit::FrozenClock::new(
             "2026-01-01T12:00:00Z".parse().unwrap(),

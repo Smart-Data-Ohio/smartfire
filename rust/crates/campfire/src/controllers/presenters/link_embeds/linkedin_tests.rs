@@ -71,10 +71,10 @@ async fn ws15e_linkedin_real_fetches_and_room_html_use_each_reference() {
         to: server.addr,
         dialed: Default::default(),
     });
-    let net = crate::integrations::net::Network {
+    let net = crate::net::Network {
         resolver: resolver.clone(),
         dialer,
-        tls: crate::integrations::net::tls_config(roots),
+        tls: crate::net::tls_config(roots),
     };
     for (index, url) in [
         "https://www.linkedin.com/feed/update/urn:li:activity:4242",

@@ -219,7 +219,7 @@ async fn base_board_destroy_durable_worker_cleans_board_rows_and_purges_attachme
     super::directs_rails_cases::pending_destroy(&app, id).await;
     // Start a new real durable runner after the request, consuming the committed job.
     let registry = crate::jobs::registry();
-    let config = crate::jobs::runner_config(&app.booted.app.config);
+    let config = crate::queue::runner_config(&app.booted.app.config);
     let queue = campfire_jobs::JobQueue::new(&registry, &config).unwrap();
     let runner = campfire_jobs::start(
         app.db().clone(),

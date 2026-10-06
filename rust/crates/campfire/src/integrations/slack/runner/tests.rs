@@ -188,7 +188,7 @@ async fn slack_runner_users_cursor_defaults_and_explicit_transition() {
         "fixture-token".into(),
         None,
         false,
-        crate::integrations::net::Network::system(),
+        crate::net::Network::system(),
     );
     assert_eq!(
         Runner::new(Recorder(db.clone()), client, row)

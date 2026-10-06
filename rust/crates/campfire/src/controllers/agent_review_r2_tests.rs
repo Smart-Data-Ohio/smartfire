@@ -1,6 +1,6 @@
 use crate::controllers::presenters::test_support::{Req, TestApp};
 use crate::integrations::agent_repositories::{RepositoryReader, RepositoryRequest};
-use crate::integrations::net::BoxFuture;
+use crate::net::BoxFuture;
 use campfire_db::{AgentCredential, NewCredential};
 use campfire_kit::Method;
 use serde_json::{Value, json};

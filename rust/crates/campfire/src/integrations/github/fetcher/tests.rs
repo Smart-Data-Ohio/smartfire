@@ -232,7 +232,7 @@ async fn github_fetch_runtime_performs_discards_missing_and_does_not_retry_failu
         let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
             "2026-01-01T12:00:00Z".parse().unwrap(),
         ));
-        let booted = crate::app::boot_with_github_read(
+        let booted = crate::server::boot_with_github_read(
             config,
             clock,
             ReadClient::with_network(Some("fixture-workspace-token".into()), network),
@@ -303,7 +303,7 @@ fn github_fetch_declares_one_attempt_and_inherited_missing_record_discard() {
     assert_eq!(policy.attempts, 1);
     assert_eq!(policy.retry_delay(1, None, 0.5), None);
     assert!(matches!(
-        crate::jobs::discard_missing(campfire_db::Error::RecordNotFound("Github::PullRequest")),
+        crate::queue::discard_missing(campfire_db::Error::RecordNotFound("Github::PullRequest")),
         JobError::Discard(_)
     ));
 }
