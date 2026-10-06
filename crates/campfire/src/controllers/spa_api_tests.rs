@@ -13,7 +13,7 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest as _;
 
 use crate::controllers::presenters::test_support::{
-    ALL_TALK, Browser, DAVID, HQ, KEVIN, Reply, Req, TestApp, seed_clock,
+    ALL_TALK, Browser, DAVID, HQ, JASON, KEVIN, Reply, Req, TestApp, seed_clock,
 };
 
 /// Rooms in the seed: HQ holds David and Kevin (and no messages); All Talk holds David and 131
@@ -374,6 +374,85 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
     }))).await;
     assert_eq!(tag(&elsewhere), "Validation");
     cable.abort();
+}
+
+/// A message in All Talk with reactions: Jason's 💯.
+const BOOSTED: i64 = 136976342;
+
+#[tokio::test]
+async fn messages_carry_reactions_boosts_pins_saves_threads_and_forwards() {
+    let Some(a) = app(true).await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let page: api::MessagePage = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages?around={BOOSTED}"))).await);
+    let at = page.messages.iter().position(|message| message.id == BOOSTED).unwrap();
+    let (next, other) = (page.messages[at - 1].id, page.messages[at - 2].id);
+    a.db()
+        .write(move |tx| {
+            // After the seed's own boosts, so they come first.
+            let now = "2026-03-03 00:00:00.000000";
+            let sql = format!(
+                "INSERT INTO boosts (booster_id, content, message_id, created_at, updated_at) VALUES ({KEVIN}, 'nice work', {BOOSTED}, '{now}', '{now}'), ({DAVID}, '💯', {BOOSTED}, '{now}', '{now}'), ({JASON}, '💯', {BOOSTED}, '{now}', '{now}');
+                 INSERT INTO message_pins (message_id, pinner_id, room_id, created_at, updated_at) VALUES ({next}, {DAVID}, {ALL_TALK}, '{now}', '{now}');
+                 INSERT INTO saved_items (message_id, user_id, created_at, updated_at) VALUES ({next}, {DAVID}, '{now}', '{now}'), ({other}, {KEVIN}, '{now}', '{now}');
+                 UPDATE messages SET forwarded_at = '{now}', forward_note = 'FYI' WHERE id = {other};
+                 INSERT INTO channel_threads (creator_id, last_activity_at, messages_count, name, parent_message_id, room_id, created_at, updated_at) VALUES ({JASON}, '{now}', 3, 'Side', {next}, {ALL_TALK}, '{now}', '{now}');
+                 INSERT INTO messages (client_message_id, creator_id, room_id, thread_id, created_at, updated_at) SELECT 'r' || n, creator, {ALL_TALK}, (SELECT id FROM channel_threads WHERE parent_message_id = {next}), '{now}', '{now}' FROM (SELECT 1 AS n, {JASON} AS creator UNION ALL SELECT 2, {KEVIN} UNION ALL SELECT 3, {JASON});"
+            );
+            tx.conn().execute_batch(&sql)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+    let page: api::MessagePage = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages?around={BOOSTED}"))).await);
+    let find = |id: i64| page.messages.iter().find(|message| message.id == id).unwrap();
+    let boosted = find(BOOSTED);
+    assert_eq!(boosted.reactions.len(), 1, "{:?}", boosted.reactions);
+    assert_eq!(boosted.reactions[0].content, "💯");
+    assert_eq!(boosted.reactions[0].reactor_ids, [JASON, DAVID], "distinct reactors in order of reaction");
+    assert_eq!(boosted.reactions[0].image_url, None);
+    assert_eq!(boosted.boosts.iter().map(|boost| (boost.booster_id, boost.content.as_str())).collect::<Vec<_>>(), [(KEVIN, "nice work")]);
+    assert!(!boosted.pinned && boosted.thread.is_none() && boosted.attachment.is_none());
+
+    let pinned = find(next);
+    assert!(pinned.pinned);
+    let thread = pinned.thread.as_ref().expect("the reply indicator");
+    assert_eq!((thread.reply_count, thread.replier_ids.as_slice()), (3, &[JASON, KEVIN][..]));
+    assert!(page.messages.iter().all(|message| message.thread_id.is_none()), "replies stay off the room's timeline");
+
+    let forwarded = find(other);
+    assert!(forwarded.forwarded_at.is_some());
+    assert_eq!(forwarded.forward_note.as_deref(), Some("FYI"));
+
+    let saved_item_id = a.db().read(move |conn| Ok(conn.query_row("SELECT id FROM saved_items WHERE user_id = ? AND message_id = ?", [DAVID, next], |row| row.get::<_, i64>(0))?)).await.unwrap();
+    assert_eq!(page.saved, [api::SavedMark { message_id: next, saved_item_id }], "David's saves only");
+}
+
+#[tokio::test]
+async fn posting_attaches_a_direct_upload() {
+    let Some(a) = app(true).await else { return };
+    let mut b = a.sign_in(DAVID).await;
+    let staged = a.booted.app.storage.stage_bytes(b"meeting notes", campfire_storage::Filename::new("notes.txt"), Some("text/plain")).unwrap();
+    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
+    let signed_id = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let body = |client_message_id: &str, signed_id: Option<&str>| {
+        json!({"clientMessageId": client_message_id, "markdownSource": "", "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id})
+    };
+    let path = format!("/api/v1/rooms/{ALL_TALK}/messages");
+
+    let bare = b.write(json_body(Method::POST, &path, &body("bare", None))).await;
+    assert_eq!((bare.status, tag(&bare)), (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into()));
+    let forged = b.write(json_body(Method::POST, &path, &body("forged-upload", Some("not-a-signed-id")))).await;
+    assert_eq!((forged.status, tag(&forged)), (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into()));
+
+    let posted = b.write(json_body(Method::POST, &path, &body("upload-1", Some(&signed_id)))).await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let message: api::MessageDTO = parse(&posted);
+    let attachment = message.attachment.expect("the attachment");
+    assert_eq!((attachment.filename.as_str(), attachment.byte_size, attachment.preview), ("notes.txt", 13, api::AttachmentPreview::File));
+    assert_eq!(attachment.content_type, "text/plain");
+    assert!(attachment.url.starts_with("/rails/active_storage/blobs/redirect/"), "{}", attachment.url);
+    assert!(attachment.download_url.ends_with("disposition=attachment"), "{}", attachment.download_url);
 }
 
 #[tokio::test]

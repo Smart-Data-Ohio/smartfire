@@ -1111,7 +1111,7 @@ impl<'a> Presenter<'a> {
     }
 
     /// `message.attachment` as `Messages::AttachmentPresentation` needs it.
-    fn attachment(&self, message: &Message) -> Result<Option<AttachmentView>> {
+    pub fn attachment(&self, message: &Message) -> Result<Option<AttachmentView>> {
         let blob = if let Some(data) = &self.search_preloads {
             data.attachments.get(&message.id).cloned()
         } else {

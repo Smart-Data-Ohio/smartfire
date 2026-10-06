@@ -452,6 +452,8 @@ dependencies = [
  "campfire_db",
  "campfire_kit",
  "campfire_messages",
+ "campfire_storage",
+ "campfire_views",
  "campfire_web",
  "rails_compat",
  "rusqlite",

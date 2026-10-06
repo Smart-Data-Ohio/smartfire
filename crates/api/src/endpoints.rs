@@ -7,6 +7,7 @@ use campfire_app::app::AppCtx;
 use campfire_db::{Account, Message, Timeline};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_web::concerns::{self, Authentication, Before};
+use campfire_web::controllers::presenters::attachments::Assignment;
 use campfire_web::controllers::presenters::page::db_error;
 use campfire_messages::controllers::messages::{self as posting, MessageParams};
 use serde::de::DeserializeOwned;
@@ -197,6 +198,7 @@ async fn index_messages(c: &mut Ctx) -> Result {
         }
     };
     let (app, now, room_id) = (c.app().clone(), now(c), room.id);
+    let viewer_id = concerns::require_current_user(c)?.id;
     let page = c
         .app()
         .db
@@ -225,6 +227,7 @@ async fn index_messages(c: &mut Ctx) -> Result {
                     now,
                 )?,
                 messages: dto::messages(conn, &app, &messages)?,
+                saved: dto::saved(conn, viewer_id, &messages)?,
                 before,
                 after,
             })
@@ -250,6 +253,10 @@ async fn post_message(c: &mut Ctx) -> Result {
                 "is too long (maximum is 50000 characters)",
             ),
         ));
+    }
+    let signed_id = input.attachment_signed_id.filter(|signed_id| !signed_id.is_empty());
+    if signed_id.is_none() && input.markdown_source.trim().is_empty() {
+        return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     let (room_id, creator_id) = (room.id, concerns::require_current_user(c)?.id);
     // `Message.find_duplicate`: a retry gets the message the first attempt created.
@@ -283,8 +290,20 @@ async fn post_message(c: &mut Ctx) -> Result {
                     ));
                 }
             }
+            if let Some(signed_id) = &signed_id
+                && !blob_exists(c, signed_id).await?
+            {
+                return Err(fail(
+                    c,
+                    validation("attachmentSignedId", "isn't a finished upload"),
+                ));
+            }
+            let markdown_source =
+                Some(input.markdown_source).filter(|source| !source.trim().is_empty());
             let attributes = MessageParams {
-                markdown_source: Some(input.markdown_source),
+                markdown_source,
+                // `message[attachment]` given a direct upload's signed blob id.
+                attachment: signed_id.map(Assignment::Signed),
                 client_message_id: Some(client_message_id),
                 reply_to_message_id: input.reply_to_message_id,
                 reply_notify_author: input.reply_notify_author,
@@ -304,6 +323,26 @@ async fn post_message(c: &mut Ctx) -> Result {
         .await
         .map_err(db_error)?;
     c.json(status, &dto)
+}
+
+/// The blob a direct upload's signed id names exists (`ActiveStorage::Blob.find_signed`).
+async fn blob_exists(c: &Ctx, signed_id: &str) -> Result<bool> {
+    let app = c.app();
+    let now = app.clock.now();
+    let Some(id) = campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, signed_id, now)
+    else {
+        return Ok(false);
+    };
+    app.db
+        .read(move |conn| {
+            Ok(conn.query_row(
+                r#"SELECT EXISTS(SELECT 1 FROM "active_storage_blobs" WHERE "active_storage_blobs"."id" = ?)"#,
+                [id],
+                |row| row.get(0),
+            )?)
+        })
+        .await
+        .map_err(db_error)
 }
 
 async fn create_read(c: &mut Ctx) -> Result {

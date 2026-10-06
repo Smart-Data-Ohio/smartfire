@@ -123,6 +123,21 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "agent_step::StepParentChange",
 ];
 
+/// Sync events the contract defines that no broadcast point publishes yet (the S2 events: their
+/// endpoints and twins come with the S2 server work). The coverage test fails when an event is
+/// in neither this list nor [`TWINS`], or in both.
+pub const NOT_YET_EMITTED: &[&str] = &[
+    "message.reactions",
+    "message.pinned",
+    "thread.indicator",
+    "thread.created",
+    "thread.updated",
+    "thread.removed",
+    "thread.unread",
+    "thread.read",
+    "saved.changed",
+];
+
 /// The conversation topic a message's events go to: its thread's, or its room's.
 pub fn message_topic(message: &Message) -> String {
     match message.thread_id {

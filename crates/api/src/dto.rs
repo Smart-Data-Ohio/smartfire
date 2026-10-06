@@ -126,16 +126,44 @@ pub fn membership(membership: &Membership) -> api::Membership {
     }
 }
 
-/// Messages with their bodies rendered by one presenter.
+/// Messages with their bodies rendered by one presenter, and what the timeline shows with them:
+/// the attachment (`Presenter#attachment` and its blob row), reactions and boosts
+/// (`message.boosts.ordered`, grouped as `MessageView#reaction_groups` does), the pin, the
+/// forward and the thread indicator.
 pub fn messages(
     conn: &Connection,
     app: &AppState,
     messages: &[Message],
 ) -> Result<Vec<api::MessageDTO>> {
     let presenter = Presenter::new(conn, app, None);
+    let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
+    let pinned: BTreeSet<i64> = ids_query(
+        conn,
+        r#"SELECT "message_pins"."message_id" FROM "message_pins" WHERE "message_pins"."message_id" IN ({})"#,
+        &ids,
+        |row| row.get(0),
+    )?
+    .into_iter()
+    .collect();
+    let blobs: HashMap<i64, (Option<String>, i64)> = ids_query(
+        conn,
+        r#"SELECT "active_storage_attachments"."record_id", "active_storage_blobs"."content_type", "active_storage_blobs"."byte_size" FROM "active_storage_attachments" INNER JOIN "active_storage_blobs" ON "active_storage_blobs"."id" = "active_storage_attachments"."blob_id" WHERE "active_storage_attachments"."record_type" = 'Message' AND "active_storage_attachments"."name" = 'attachment' AND "active_storage_attachments"."record_id" IN ({})"#,
+        &ids,
+        |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))),
+    )?
+    .into_iter()
+    .collect();
+    let threads = thread_indicators(conn, messages)?;
     messages
         .iter()
         .map(|message| {
+            let attachment = match blobs.get(&message.id) {
+                Some((content_type, byte_size)) => presenter
+                    .attachment(message)?
+                    .map(|view| attachment(view, content_type.as_deref(), *byte_size)),
+                None => None,
+            };
+            let (reactions, boosts) = reactions_and_boosts(conn, &presenter, message.id)?;
             Ok(api::MessageDTO {
                 id: message.id,
                 room_id: message.room_id,
@@ -150,12 +178,169 @@ pub fn messages(
                 embeds_suppressed: message.embeds_suppressed,
                 reply_to_message_id: message.reply_to_message_id,
                 forwarded_from_message_id: message.forwarded_from_message_id,
+                forwarded_at: message.forwarded_at.map(time),
+                forward_note: present(message.forward_note.as_deref()),
                 edited_at: message.edited_at.map(time),
+                attachment,
+                reactions,
+                boosts,
+                pinned: pinned.contains(&message.id),
+                thread: threads.get(&message.id).cloned(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
             })
         })
         .collect()
+}
+
+/// Runs `sql`, whose one `IN ({})` takes `ids`; nothing for no ids.
+fn ids_query<T>(
+    conn: &Connection,
+    sql: &str,
+    ids: &[i64],
+    row: impl FnMut(&rusqlite::Row<'_>) -> rusqlite::Result<T>,
+) -> Result<Vec<T>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let sql = sql.replace("{}", &vec!["?"; ids.len()].join(", "));
+    let mut statement = conn.prepare(&sql)?;
+    let rows = statement.query_map(rusqlite::params_from_iter(ids), row)?;
+    Ok(rows.collect::<rusqlite::Result<_>>()?)
+}
+
+/// `AttachmentView` with its blob's type and size.
+fn attachment(
+    view: campfire_views::messages::AttachmentView,
+    content_type: Option<&str>,
+    byte_size: i64,
+) -> api::Attachment {
+    use campfire_views::messages::AttachmentPreview;
+    use campfire_views::messages::support::RubyNumber;
+    let pixels = |number: Option<RubyNumber>| {
+        number.map(|number| match number {
+            RubyNumber::Int(value) => value,
+            RubyNumber::Float(value) => value.round() as i64,
+        })
+    };
+    let (preview, thumbnail_url) = match view.preview {
+        AttachmentPreview::Image { thumb_url } => (api::AttachmentPreview::Image, Some(thumb_url)),
+        AttachmentPreview::Video { poster_url } => (api::AttachmentPreview::Video, poster_url),
+        AttachmentPreview::File => (api::AttachmentPreview::File, None),
+    };
+    api::Attachment {
+        filename: view.filename,
+        content_type: present(content_type)
+            .unwrap_or_else(|| "application/octet-stream".to_string()),
+        byte_size,
+        width: pixels(view.width),
+        height: pixels(view.height),
+        preview,
+        url: view.blob_path,
+        download_url: view.download_path,
+        thumbnail_url,
+    }
+}
+
+/// `message.boosts.ordered`: the reactions grouped by content, in order of first reaction, with
+/// each group's distinct reactors (`MessageView#reaction_groups`), and the free-text boosts.
+fn reactions_and_boosts(
+    conn: &Connection,
+    presenter: &Presenter<'_>,
+    message_id: i64,
+) -> Result<(Vec<api::Reaction>, Vec<api::Boost>)> {
+    use campfire_views::helpers::AvatarIcon;
+    let (mut reactions, mut boosts) = (Vec::<api::Reaction>::new(), Vec::new());
+    for boost in campfire_db::Boost::for_message_ordered(conn, message_id)? {
+        let Some(reaction) = campfire_views::messages::reactions::resolve(&boost.content, presenter)
+        else {
+            boosts.push(api::Boost {
+                id: boost.id,
+                booster_id: boost.booster_id,
+                content: boost.content,
+                created_at: time(boost.created_at),
+            });
+            continue;
+        };
+        match reactions.iter_mut().find(|group| group.content == boost.content) {
+            Some(group) => {
+                if !group.reactor_ids.contains(&boost.booster_id) {
+                    group.reactor_ids.push(boost.booster_id);
+                }
+            }
+            None => reactions.push(api::Reaction {
+                content: boost.content,
+                title: reaction.title,
+                image_url: match reaction.icon {
+                    Some(AvatarIcon::Image { url, .. }) => Some(url),
+                    _ => None,
+                },
+                reactor_ids: vec![boost.booster_id],
+            }),
+        }
+    }
+    Ok((reactions, boosts))
+}
+
+/// The reply indicators of the root messages that started a thread: `channel_threads`'
+/// `messages_count` and `last_activity_at`, and the latest three distinct repliers (replies as
+/// `messages_count` counts them: no system notes, nothing still streaming).
+fn thread_indicators(
+    conn: &Connection,
+    messages: &[Message],
+) -> Result<HashMap<i64, api::ThreadIndicator>> {
+    let roots: Vec<i64> = messages
+        .iter()
+        .filter(|message| message.thread_id.is_none())
+        .map(|message| message.id)
+        .collect();
+    let threads: Vec<(i64, i64, i64, Timestamp)> = ids_query(
+        conn,
+        r#"SELECT "channel_threads"."parent_message_id", "channel_threads"."id", "channel_threads"."messages_count", "channel_threads"."last_activity_at" FROM "channel_threads" WHERE "channel_threads"."parent_message_id" IN ({})"#,
+        &roots,
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+    )?;
+    let mut repliers = conn.prepare_cached(
+        r#"SELECT "messages"."creator_id" FROM "messages" WHERE "messages"."thread_id" = ? AND "messages"."system_note" = 0 AND "messages"."streaming" = 0 GROUP BY "messages"."creator_id" ORDER BY MAX("messages"."created_at") DESC, MAX("messages"."id") DESC LIMIT 3"#,
+    )?;
+    let mut indicators = HashMap::new();
+    for (parent_id, thread_id, reply_count, last_activity_at) in threads {
+        let replier_ids = repliers
+            .query_map([thread_id], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        indicators.insert(
+            parent_id,
+            api::ThreadIndicator {
+                thread_id,
+                reply_count,
+                last_reply_at: time(last_activity_at),
+                replier_ids,
+            },
+        );
+    }
+    Ok(indicators)
+}
+
+/// The viewer's `saved_items` among `messages`, in page order.
+pub fn saved(conn: &Connection, viewer_id: i64, messages: &[Message]) -> Result<Vec<api::SavedMark>> {
+    if messages.is_empty() {
+        return Ok(Vec::new());
+    }
+    let sql = format!(
+        r#"SELECT "saved_items"."message_id", "saved_items"."id" FROM "saved_items" WHERE "saved_items"."user_id" = ? AND "saved_items"."message_id" IN ({})"#,
+        vec!["?"; messages.len()].join(", ")
+    );
+    let values: Vec<i64> = std::iter::once(viewer_id).chain(messages.iter().map(|message| message.id)).collect();
+    let mut statement = conn.prepare(&sql)?;
+    let mut marks: HashMap<i64, i64> = statement
+        .query_map(rusqlite::params_from_iter(&values), |row| Ok((row.get(0)?, row.get(1)?)))?
+        .collect::<rusqlite::Result<_>>()?;
+    Ok(messages
+        .iter()
+        .filter_map(|message| {
+            marks.remove(&message.id).map(|saved_item_id| api::SavedMark { message_id: message.id, saved_item_id })
+        })
+        .collect())
 }
 
 pub fn message(conn: &Connection, app: &AppState, message: &Message) -> Result<api::MessageDTO> {
