@@ -238,10 +238,7 @@ export function ScheduledPage() {
         initial={rescheduling === null ? null : new Date(rescheduling.sendAt)}
         onConfirm={async (at) => {
           if (rescheduling !== null) {
-            await actions.scheduled.update(rescheduling.id, {
-              markdownSource: null,
-              sendAt: at.toISOString(),
-            });
+            await actions.scheduled.update(rescheduling.id, { sendAt: at.toISOString() });
             toast({ title: `Rescheduled for ${inlineWhen(at.toISOString(), Date.now())}` });
           }
         }}

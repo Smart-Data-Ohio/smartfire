@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivitySource } from "../../gen/ActivitySource.ts";
-import { activityTarget, emptyCopy, targetFromPath } from "./activity-format.ts";
+import { activityTarget, emptyCopy, statusChip, targetFromPath } from "./activity-format.ts";
 import { parseActivitySearch } from "./activity-search.ts";
 
 function source(overrides: Partial<ActivitySource>): ActivitySource {
@@ -16,7 +16,8 @@ function source(overrides: Partial<ActivitySource>): ActivitySource {
     title: "general",
     body: "Hello",
     occurredAt: "2026-10-06T12:00:00.000Z",
-    status: null,
+    approvalStatus: null,
+    budgetCap: null,
     path: "/rooms/12/@9001",
     ...overrides,
   };
@@ -127,5 +128,19 @@ describe("parseActivitySearch", () => {
       tab: undefined,
       status: undefined,
     });
+  });
+});
+
+describe("statusChip", () => {
+  it("names an approval's state or the budget that ran out", () => {
+    expect(statusChip(item({ sourceType: "agent_approval", approvalStatus: "pending" }))).toEqual({
+      status: "pending",
+      label: "Waiting for you",
+    });
+    expect(statusChip(item({ sourceType: "agent_budget_notice", budgetCap: "messages" }))).toEqual({
+      status: "budget",
+      label: "Message cap",
+    });
+    expect(statusChip(item({}))).toBeNull();
   });
 });

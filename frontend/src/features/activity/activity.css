@@ -194,7 +194,8 @@
     color: var(--success-text);
   }
 
-  .activity-chip[data-status="pending"] {
+  .activity-chip[data-status="pending"],
+  .activity-chip[data-status="budget"] {
     background: var(--agent-soft);
     color: var(--agent-text);
   }

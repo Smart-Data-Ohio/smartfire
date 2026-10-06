@@ -1,5 +1,6 @@
 import { type FormEvent, useId, useState } from "react";
 import type { ScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import type { UpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
 import { Button } from "../../ui/button.tsx";
 import { Dialog } from "../../ui/dialog.tsx";
 import { TextField } from "../../ui/text-field.tsx";
@@ -11,11 +12,8 @@ import {
   toLocalInput,
 } from "../composer/schedule/presets.ts";
 
-/** What the dialog saves: only the fields that changed (`null` keeps the server's value). */
-export interface ScheduledEdit {
-  readonly markdownSource: string | null;
-  readonly sendAt: string | null;
-}
+/** What the dialog saves: only the fields that changed (a missing one keeps its value). */
+export type ScheduledEdit = UpdateScheduledMessage;
 
 interface EditScheduledDialogProps {
   /** The message being edited; `null` closes the dialog. */
@@ -98,11 +96,17 @@ function EditForm({ item, onClose, onSave }: EditFormProps) {
       return;
     }
 
+    const sendAt = at.toISOString();
+
+    const edit: ScheduledEdit =
+      textChanged && timeChanged
+        ? { markdownSource: text, sendAt }
+        : textChanged
+          ? { markdownSource: text }
+          : { sendAt };
+
     setBusy(true);
-    onSave(item, {
-      markdownSource: textChanged ? text : null,
-      sendAt: timeChanged ? at.toISOString() : null,
-    }).then(onClose, (failure: Error) => {
+    onSave(item, edit).then(onClose, (failure: Error) => {
       setBusy(false);
       setError(failure.message);
     });

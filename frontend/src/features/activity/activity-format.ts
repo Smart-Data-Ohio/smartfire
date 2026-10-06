@@ -6,6 +6,8 @@
 import type { ActivityEventType } from "../../gen/ActivityEventType.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
+import type { AgentApprovalStatus } from "../../gen/AgentApprovalStatus.ts";
+import type { AgentBudgetCap } from "../../gen/AgentBudgetCap.ts";
 import { activityDestination } from "../../store/activity.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
 
@@ -148,13 +150,33 @@ export function emptyCopy(tab: ActivityTab, unreadOnly: boolean): EmptyCopy {
 }
 
 /** Agent approval statuses as a chip reads them. */
-export const APPROVAL_STATUS_LABEL = new Map([
-  ["pending", "Waiting for you"],
-  ["approved", "Approved"],
-  ["denied", "Denied"],
-  ["cancelled", "Cancelled"],
-  ["expired", "Expired"],
-]);
+export const APPROVAL_STATUS_LABEL = {
+  pending: "Waiting for you",
+  approved: "Approved",
+  denied: "Denied",
+  cancelled: "Cancelled",
+  expired: "Expired",
+} as const satisfies Record<AgentApprovalStatus, string>;
+
+/** Which agent budget ran out, as a chip reads it. */
+export const BUDGET_CAP_LABEL = {
+  messages: "Message cap",
+  board_posts: "Board post cap",
+  external_actions: "External action cap",
+} as const satisfies Record<AgentBudgetCap, string>;
+
+/** An item's status chip: an approval's state or the budget that ran out; `null` for others. */
+export function statusChip(
+  item: ActivityItem,
+): { readonly status: AgentApprovalStatus | "budget"; readonly label: string } | null {
+  const { approvalStatus, budgetCap } = item.source;
+
+  if (approvalStatus !== null) {
+    return { status: approvalStatus, label: APPROVAL_STATUS_LABEL[approvalStatus] };
+  }
+
+  return budgetCap === null ? null : { status: "budget", label: BUDGET_CAP_LABEL[budgetCap] };
+}
 
 /** Where opening an item goes. */
 export type ActivityTarget =

@@ -12,7 +12,7 @@ import { focusSiblingRow, ListRow } from "../destinations/list-row.tsx";
 import { useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { timeAgo } from "../threads/thread-format.ts";
-import { APPROVAL_STATUS_LABEL, EVENT_ICON, EVENT_LABEL, EVENT_TONE } from "./activity-format.ts";
+import { EVENT_ICON, EVENT_LABEL, EVENT_TONE, statusChip } from "./activity-format.ts";
 
 /** A state change an item can take (`PATCH /api/v1/activity/:id`). */
 export type ActivityAction = "read" | "unread" | "handled" | "unhandled";
@@ -58,7 +58,7 @@ export function ActivityMenuItems({ item, onOpen, onAction }: ActivityMenuItemsP
 
 /** The person behind the item with its kind as a badge, or the kind alone as a tile. */
 function ActivityGlyph({ item }: { readonly item: ActivityItem }) {
-  const creatorId = item.source?.creatorId ?? null;
+  const creatorId = item.source.creatorId;
   const icon = EVENT_ICON[item.eventType];
   const tone = EVENT_TONE[item.eventType];
 
@@ -113,14 +113,12 @@ export function ActivityRow({
   onMenu,
 }: ActivityRowProps) {
   const source = item.source;
-  const creator = useUser(source?.creatorId ?? undefined);
+  const creator = useUser(source.creatorId ?? undefined);
   const unread = item.state === "unread";
   const handled = item.state === "handled";
   const label = EVENT_LABEL[item.eventType];
-  const title = source?.title ?? "Unavailable source";
-  const occurredAt = source?.occurredAt ?? item.createdAt;
-  const approval = source?.sourceType === "agent_approval" ? (source.status ?? null) : null;
-  const approvalLabel = approval === null ? undefined : APPROVAL_STATUS_LABEL.get(approval);
+  const { title, occurredAt } = source;
+  const chip = statusChip(item);
   const readAction: ActivityAction = unread ? "read" : "unread";
   const handledAction: ActivityAction = handled ? "unhandled" : "handled";
 
@@ -214,13 +212,13 @@ export function ActivityRow({
           </span>
           <span className="activity-body">
             {creator === undefined ? null : <span className="activity-author">{creator.name}</span>}
-            {source?.body ?? "This item's source is no longer available."}
+            {source.body}
           </span>
-          {approvalLabel === undefined && !handled ? null : (
+          {chip === null && !handled ? null : (
             <span className="activity-chips">
-              {approvalLabel === undefined ? null : (
-                <span className="activity-chip" data-status={approval}>
-                  {approvalLabel}
+              {chip === null ? null : (
+                <span className="activity-chip" data-status={chip.status}>
+                  {chip.label}
                 </span>
               )}
               {handled ? (
