@@ -144,11 +144,17 @@ class WorkflowTest(unittest.TestCase):
         self.assertEqual(set(on), {"push", "pull_request"})
         for event, trigger in on.items():
             self.assertFalse({"paths", "paths-ignore"} & set(trigger), f"frontend.yml filters {event} by path")
-        # One job, always run: the scope step, not a job condition, skips the work when the PR
-        # leaves frontend/ alone, so the required "Frontend" result never goes missing.
-        [job] = frontend["jobs"].values()
+        # The required "Frontend" job always runs: the scope step, not a job condition, skips the
+        # work when the PR leaves frontend/ alone, so its result never goes missing. The mock
+        # Playwright shards beside it are advisory: named apart from it, and nothing needs them.
+        self.assertEqual(set(frontend["jobs"]), {"frontend", "e2e"})
+        job = frontend["jobs"]["frontend"]
         self.assertEqual(job["name"], "Frontend")
         self.assertNotIn("if", job)
+        self.assertNotIn("needs", job)
+        e2e = frontend["jobs"]["e2e"]
+        self.assertTrue(e2e["name"].startswith("Frontend e2e ("), e2e["name"])
+        self.assertNotIn("if", e2e)
         self.assertEqual(frontend["permissions"], {})
         self.assertGreater(audit_actions(frontend), 0)
         # The only CI build of crates/spa against a real dist: the job builds one and embeds it.
@@ -157,7 +163,7 @@ class WorkflowTest(unittest.TestCase):
         embed = next(i for i, step in enumerate(job["steps"]) if "-p campfire_spa" in step.get("run", ""))
         self.assertGreater(embed, build)
         self.assertEqual(job["steps"][embed]["env"]["SPA_DIST"], "frontend/dist")
-        print("WORKFLOW FRONTEND: one always-run 'Frontend' job, no path filter, pinned actions, real-dist crates/spa tests")
+        print("WORKFLOW FRONTEND: an always-run 'Frontend' job gating nothing on e2e, no path filter, pinned actions, real-dist crates/spa tests")
 
     def test_rust_gates_skip_frontend_only_changes(self):
         rust = yaml_json((ROOT / ".github/workflows/rust.yml").read_text())

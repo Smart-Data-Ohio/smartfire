@@ -163,3 +163,132 @@ jobs:
           SPA_DIST: frontend/dist
           CARGO_TERM_COLOR: always
         run: cargo test -p campfire_spa --locked -j 4
+
+  # The mock Playwright suite (frontend/e2e/mock, playwright.mock.config.ts): the SPA on Vite's dev
+  # server with the in-memory mock backend, in Chromium. The config runs one worker against one
+  # mock server, so the suite is split across jobs, each with its own server, by test
+  # (--fully-parallel only changes how --shard splits it; each job still runs one test at a time).
+  #
+  # Not a required check, and "Frontend" doesn't need it: each shard reports as
+  # "Frontend e2e (i/n)". It runs when frontend/ or this workflow changes (a crates/api_types
+  # change the SPA sees comes with its regenerated frontend/src/gen), on every push to main, and
+  # when the PR diff can't be read. The browser is cached per Playwright version, saved from main.
+  e2e:
+    name: Frontend e2e (${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3 ]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          filter: blob:none
+          persist-credentials: false
+          sparse-checkout: |
+            frontend
+            .github/workflows/frontend.yml
+
+      - name: Decide whether the e2e suite is needed
+        id: scope
+        working-directory: .
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          run=true
+          if [ "$EVENT" = pull_request ]; then
+            if paths="$(git diff --no-renames --name-only "$BASE...$HEAD" --)"; then
+              if [ -n "$paths" ] && ! grep -qE '^(frontend/|\.github/workflows/frontend\.yml$)' <<< "$paths"; then
+                run=false
+              fi
+            else
+              echo "::warning::PR diff unavailable; running the e2e suite."
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          if [ "$run" = true ]; then
+            echo "Run the e2e suite"
+          else
+            echo "No frontend changes: no e2e run" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Set up Node
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # The pnpm version comes from frontend/package.json's packageManager field.
+      - name: Set up pnpm
+        if: steps.scope.outputs.run == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: frontend/package.json
+          cache: true
+          cache_dependency_path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      # The installed @playwright/test, as the lockfile resolved it, names the browser build.
+      - name: Resolve the Playwright version
+        id: playwright
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          version="$(pnpm exec playwright --version | awk '{ print $2 }')"
+          echo "Playwright $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the Playwright browser
+        id: browser-cache
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium-headless-shell
+
+      # The specs run headless, so Chromium's headless shell is the only browser they launch. The
+      # system libraries it needs aren't cached: --with-deps installs them on every run.
+      - name: Install the Playwright browser
+        if: steps.scope.outputs.run == 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Save the Playwright browser
+        if: ${{ steps.scope.outputs.run == 'true' && matrix.shard == 1 && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.browser-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browser-cache.outputs.cache-primary-key }}
+
+      - name: Playwright (mock backend)
+        if: steps.scope.outputs.run == 'true'
+        env:
+          SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
+          PLAYWRIGHT_HTML_OPEN: never
+        run: pnpm exec playwright test -c playwright.mock.config.ts --fully-parallel --shard="$SHARD" --reporter=line,html
+
+      # The HTML report carries each failed test's trace (trace: retain-on-failure).
+      - name: Keep the report of a failed run
+        if: ${{ failure() && steps.scope.outputs.run == 'true' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-report-${{ matrix.shard }}
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
