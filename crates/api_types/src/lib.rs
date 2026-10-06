@@ -16,17 +16,23 @@
 //! - enums are lowercase string literals.
 
 mod actions;
+mod activity;
 mod attachment;
+mod cards;
 mod composer;
+mod conversation;
 mod direct;
 mod error;
 mod me;
 mod message;
+mod organize;
 mod panes;
 mod presence;
 mod reaction;
 mod read;
 mod room;
+mod saved;
+mod search;
 mod sidebar;
 mod switcher;
 mod sync;
@@ -38,12 +44,27 @@ pub use actions::{
     ForwardThread, Pin, PinList, PinState, SaveMessage, SavedChanged, SavedItem, SavedMark,
     SavedStatus,
 };
+pub use activity::{
+    ActivityAction, ActivityEventType, ActivityItem, ActivityItemChanged, ActivityItemRemoved,
+    ActivityList, ActivitySource, ActivitySourceType, ActivityState, ActivityTab,
+    ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
+};
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
+pub use cards::{
+    AttendanceResponse, CardFetch, CreatePoll, DriveFileCard, EventAttendance, EventCard,
+    FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef,
+    GithubChangedFile, GithubChangedFiles, GithubChecks, GithubPullRequest, GithubPullRequestCard,
+    GithubPullRequestStatus, GithubReview, LinkCard, LinkedinCard, MessageCard, MessageCards, Poll,
+    PollBallot, PollOption, PollResults, PollUpdated, QuoteCard, QuotePreview, QuotePreviewResult,
+    RespondToEvent, VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
+};
 pub use composer::{
     CreateScheduledMessage, Icon, IconKind, IconList, MessagePreview, PreviewMessage,
-    RunSlashCommand, ScheduledMessage, ScheduledMessageList, SlashCommand, SlashCommandList,
+    RunSlashCommand, ScheduledMessage, ScheduledMessageFilter, ScheduledMessageList,
+    ScheduledMessageRemoved, ScheduledMessageState, SlashCommand, SlashCommandList,
     SlashCommandResult, UpdateScheduledMessage, UserSuggestion, UserSuggestionList,
 };
+pub use conversation::ConversationName;
 pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
 };
@@ -55,11 +76,20 @@ pub use me::{
 pub use message::{
     CreateMessage, MessageDTO, MessagePage, MessageRemoved, MessageSource, UpdateMessage,
 };
+pub use organize::{
+    AssignRoomCategory, CreateRoomCategory, FavoriteList, MoveFavorite, ReorderRoomCategories,
+    RoomCategoryList, RoomCategoryRemoved, UpdateInvolvement, UpdateRoomCategory,
+};
 pub use panes::{FileList, FileType, Member, MemberList, RoomFile, StarState};
 pub use presence::{Presence, PresenceList, UserPresence};
 pub use reaction::{Boost, CreateBoost, MessageReactions, Reaction};
 pub use read::{MarkUnread, ReadState, RoomRead, RoomUnread};
 pub use room::{Involvement, Membership, Room, RoomDetail, RoomKind, StageRole, UnreadDivider};
+pub use saved::{SavedFilter, SavedItemList, UpdateSavedItem};
+pub use search::{
+    RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,
+    SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
+};
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
 pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
@@ -79,3 +109,5 @@ pub type Timestamp = String;
 mod tests;
 #[cfg(test)]
 mod tests_s2;
+#[cfg(test)]
+mod tests_s3;

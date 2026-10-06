@@ -83,6 +83,9 @@ const messageJson = {
   boosts: [boostJson],
   pinned: true,
   thread: indicatorJson,
+  poll: null,
+  cards: [],
+  cardsAsOf: "2026-10-06T09:15:00.200Z",
   createdAt: "2026-10-06T09:15:00.123Z",
   updatedAt: "2026-10-06T09:15:00.123Z",
 } as const;
@@ -215,11 +218,26 @@ describe("S2 DTO schemas", () => {
           replyToMessageId: null,
           markdownSource: "Standup in 5",
           sendAt: "2026-10-07T13:55:00.000Z",
+          state: "pending",
+          sendable: true,
           sentAt: null,
+          sentMessageId: null,
           droppedAt: null,
+          dropReason: null,
           createdAt: "2026-10-06T11:00:00.000Z",
         },
       ],
+      conversations: [
+        {
+          roomId: 12,
+          threadId: 88,
+          roomKind: "open",
+          roomName: "general",
+          roomIconName: null,
+          threadName: "Hello there",
+        },
+      ],
+      nextCursor: null,
     });
   });
 
@@ -332,7 +350,7 @@ describe("S2 sync events", () => {
           seq: 9,
           topic: "user",
           type: "saved.changed",
-          data: { messageId: 9001, savedItemId: null },
+          data: { messageId: 9001, item: null },
         },
       ],
     });

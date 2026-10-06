@@ -481,10 +481,10 @@ fn preview_and_scheduled_messages_round_trip() {
     );
     assert_wire(
         &UpdateScheduledMessage {
-            markdown_source: "Standup in 10".into(),
-            send_at: "2026-10-07T13:50:00.000Z".into(),
+            markdown_source: Some("Standup in 10".into()),
+            send_at: None,
         },
-        json!({"markdownSource": "Standup in 10", "sendAt": "2026-10-07T13:50:00.000Z"}),
+        json!({"markdownSource": "Standup in 10"}),
     );
     assert_wire(
         &ScheduledMessageList {
@@ -495,10 +495,16 @@ fn preview_and_scheduled_messages_round_trip() {
                 reply_to_message_id: None,
                 markdown_source: "Standup in 5".into(),
                 send_at: "2026-10-07T13:55:00.000Z".into(),
+                state: ScheduledMessageState::Pending,
+                sendable: true,
                 sent_at: None,
+                sent_message_id: None,
                 dropped_at: None,
+                drop_reason: None,
                 created_at: "2026-10-06T11:00:00.000Z".into(),
             }],
+            conversations: vec![],
+            next_cursor: None,
         },
         json!({"scheduledMessages": [{
             "id": 4,
@@ -507,10 +513,14 @@ fn preview_and_scheduled_messages_round_trip() {
             "replyToMessageId": null,
             "markdownSource": "Standup in 5",
             "sendAt": "2026-10-07T13:55:00.000Z",
+            "state": "pending",
+            "sendable": true,
             "sentAt": null,
+            "sentMessageId": null,
             "droppedAt": null,
+            "dropReason": null,
             "createdAt": "2026-10-06T11:00:00.000Z",
-        }]}),
+        }], "conversations": [], "nextCursor": null}),
     );
 }
 
@@ -868,9 +878,9 @@ fn s2_events_match_the_protocol() {
             "user",
             SyncPayload::SavedChanged(SavedChanged {
                 message_id: 9001,
-                saved_item_id: None,
+                item: None,
             }),
-            json!({"type": "saved.changed", "data": {"messageId": 9001, "savedItemId": null}}),
+            json!({"type": "saved.changed", "data": {"messageId": 9001, "item": null}}),
         ),
     ];
     for (topic, payload, wire) in cases {

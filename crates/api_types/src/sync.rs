@@ -4,9 +4,11 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::{
-    MessageDTO, MessageReactions, MessageRemoved, PinState, RoomRead, RoomUnread, SavedChanged,
-    SidebarRow, SidebarRowRemoved, Thread, ThreadIndicatorChanged, ThreadRead, ThreadRemoved,
-    ThreadUnread, UserPresence,
+    ActivityItemChanged, ActivityItemRemoved, MessageCards, MessageDTO, MessageReactions,
+    MessageRemoved, PinState, PollBallot, PollUpdated, RoomCategory, RoomCategoryRemoved, RoomRead,
+    RoomUnread, SavedChanged, ScheduledMessage, ScheduledMessageRemoved, SidebarRow,
+    SidebarRowRemoved, Thread, ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread,
+    UserPresence,
 };
 
 /// A frame the client sends.
@@ -165,6 +167,38 @@ pub enum SyncPayload {
     /// On the person's `user` topic: they saved or unsaved a message elsewhere.
     #[serde(rename = "saved.changed")]
     SavedChanged(SavedChanged),
+    /// On the owner's `user` topic: an activity item was recorded or changed state. The JSON twin
+    /// of `ActivityChannel`'s `{activityItemId}` frame, carrying the item.
+    #[serde(rename = "activity.item")]
+    ActivityItem(ActivityItemChanged),
+    /// On the owner's `user` topic: an activity item was deleted with its source. New.
+    #[serde(rename = "activity.removed")]
+    ActivityRemoved(ActivityItemRemoved),
+    /// On the author's `user` topic: a scheduled message was created, edited, sent or dropped.
+    /// New: the classic app has no scheduled-message broadcast.
+    #[serde(rename = "scheduled.changed")]
+    ScheduledChanged(ScheduledMessage),
+    /// On the author's `user` topic: a scheduled message was cancelled. New.
+    #[serde(rename = "scheduled.removed")]
+    ScheduledRemoved(ScheduledMessageRemoved),
+    /// On the owner's `user` topic: a sidebar category was created, renamed, folded or moved.
+    /// New: the classic app has no category broadcast.
+    #[serde(rename = "sidebar.category.upserted")]
+    SidebarCategoryUpserted(RoomCategory),
+    /// On the owner's `user` topic: a sidebar category was deleted (its rooms arrive first as
+    /// `sidebar.row.upserted` with no category). New.
+    #[serde(rename = "sidebar.category.removed")]
+    SidebarCategoryRemoved(RoomCategoryRemoved),
+    /// On the question's conversation topic: a poll's votes changed or it closed. The JSON twin
+    /// of the classic `card_poll_<id>` replace (`Poll#broadcast_card`).
+    #[serde(rename = "poll.updated")]
+    PollUpdated(PollUpdated),
+    /// On the voter's `user` topic: their own ballot changed (see [`PollBallot`]). New.
+    #[serde(rename = "poll.ballot")]
+    PollBallot(PollBallot),
+    /// On the message's conversation topic: its cards changed (see [`MessageCards`]).
+    #[serde(rename = "message.cards")]
+    MessageCards(MessageCards),
 }
 
 /// Someone started or stopped typing in the event's topic. Never echoed to the typist.

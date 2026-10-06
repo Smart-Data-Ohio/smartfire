@@ -337,7 +337,16 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
 
     let again = post(&mut b, ALL_TALK, "0199b3c4-api-1", "Hello **there**").await;
     assert_eq!(again.status, StatusCode::OK);
-    assert_eq!(parse::<api::MessageDTO>(&again), created);
+    // The same message; only `cardsAsOf`, the read time, moves on.
+    let again = parse::<api::MessageDTO>(&again);
+    assert!(again.cards_as_of >= created.cards_as_of);
+    assert_eq!(
+        api::MessageDTO {
+            cards_as_of: created.cards_as_of.clone(),
+            ..again
+        },
+        created
+    );
     let count = a
         .db()
         .read(|conn| {
@@ -763,7 +772,17 @@ async fn a_classic_post_reaches_the_sync_socket_and_an_api_post_too() {
     let posted = post(&mut david, HQ, "api-1", "From the API").await;
     let posted: api::MessageDTO = parse(&posted);
     let event = sync.until(created_in(HQ), |_| false).await;
-    assert_eq!(event.payload, api::SyncPayload::MessageCreated(posted));
+    let api::SyncPayload::MessageCreated(published) = event.payload else {
+        unreachable!("created_in matches message.created only")
+    };
+    // The same message; `cardsAsOf` is each read's own time.
+    assert_eq!(
+        api::MessageDTO {
+            cards_as_of: posted.cards_as_of.clone(),
+            ..published
+        },
+        posted
+    );
     server.abort();
 }
 

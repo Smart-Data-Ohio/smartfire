@@ -135,6 +135,8 @@ pub fn messages(
     app: &AppState,
     messages: &[Message],
 ) -> Result<Vec<api::MessageDTO>> {
+    // When the read began: orders these cards against `message.cards` (`MessageDTO::cards_as_of`).
+    let as_of = time(app.db.env().now());
     let presenter = Presenter::new(conn, app, None);
     let ids: Vec<i64> = messages.iter().map(|message| message.id).collect();
     let pinned: BTreeSet<i64> = ids_query(
@@ -186,6 +188,10 @@ pub fn messages(
                 boosts,
                 pinned: pinned.contains(&message.id),
                 thread: threads.get(&message.id).cloned(),
+                // Polls and cards still render in the HTML only; the S3 backend fills them.
+                poll: None,
+                cards: Vec::new(),
+                cards_as_of: as_of.clone(),
                 created_at: time(message.created_at),
                 updated_at: time(message.updated_at),
             })

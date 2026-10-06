@@ -298,7 +298,7 @@ describe("saved items", () => {
     });
     expect(events.at(-1)).toMatchObject({
       type: "saved.changed",
-      data: { messageId: messages.generalChart, savedItemId: item.id },
+      data: { messageId: messages.generalChart, item },
     });
 
     const again = await expectStatus<SavedItem>(
@@ -311,7 +311,7 @@ describe("saved items", () => {
 
     expect(again).toMatchObject({ id: item.id, remindAt: null });
     expect((await send(server, "DELETE", `/api/v1/saved/${item.id}`)).status).toBe(204);
-    expect(events.at(-1)?.data).toEqual({ messageId: messages.generalChart, savedItemId: null });
+    expect(events.at(-1)?.data).toEqual({ messageId: messages.generalChart, item: null });
     expect((await send(server, "DELETE", `/api/v1/saved/${item.id}`)).status).toBe(404);
   });
 

@@ -162,7 +162,7 @@ export function createMessages(ctx: S2Context, threads: Threads): Messages {
       events.push({
         topic: "user",
         type: "saved.changed",
-        data: { messageId: message.id, savedItemId: null },
+        data: { messageId: message.id, item: null },
       });
     }
 
@@ -391,9 +391,7 @@ export function createMessages(ctx: S2Context, threads: Threads): Messages {
         : { ...current, remindAt: at, remindedAt: null };
 
     world.saved.set(messageId, item);
-    ctx.publish([
-      { topic: "user", type: "saved.changed", data: { messageId, savedItemId: item.id } },
-    ]);
+    ctx.publish([{ topic: "user", type: "saved.changed", data: { messageId, item } }]);
 
     return item;
   };
@@ -409,7 +407,7 @@ export function createMessages(ctx: S2Context, threads: Threads): Messages {
         {
           topic: "user",
           type: "saved.changed",
-          data: { messageId: item.messageId, savedItemId: null },
+          data: { messageId: item.messageId, item: null },
         },
       ]);
 

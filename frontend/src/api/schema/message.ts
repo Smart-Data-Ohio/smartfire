@@ -7,6 +7,7 @@ import type { MessageSource as GeneratedMessageSource } from "../../gen/MessageS
 import type { SavedMark as GeneratedSavedMark } from "../../gen/SavedMark.ts";
 import type { UpdateMessage as GeneratedUpdateMessage } from "../../gen/UpdateMessage.ts";
 import { Attachment } from "./attachment.ts";
+import { MessageCard, Poll } from "./cards.ts";
 import { MessageId, RoomId, SavedItemId, ThreadId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Boost, Reaction } from "./reaction.ts";
@@ -41,6 +42,9 @@ export const MessageDTO = Schema.Struct({
   boosts: Schema.Array(Boost),
   pinned: Schema.Boolean,
   thread: Schema.NullOr(ThreadIndicator),
+  poll: Schema.NullOr(Poll),
+  cards: Schema.Array(MessageCard),
+  cardsAsOf: Timestamp,
   createdAt: Timestamp,
   updatedAt: Timestamp,
 });

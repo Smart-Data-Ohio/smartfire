@@ -729,6 +729,9 @@ export function seedWorld(now: number, random: Random): World {
       boosts: [],
       pinned: false,
       thread: null,
+      poll: null,
+      cards: [],
+      cardsAsOf: createdAt,
       createdAt,
       updatedAt: editedAt ?? createdAt,
     });

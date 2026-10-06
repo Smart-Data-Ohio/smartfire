@@ -215,6 +215,9 @@ export function buildMessage(
     boosts: [],
     pinned: false,
     thread: null,
+    poll: null,
+    cards: [],
+    cardsAsOf: createdAt,
     createdAt,
     updatedAt: createdAt,
   };

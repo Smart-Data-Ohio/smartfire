@@ -7,13 +7,17 @@ import type { MessagePreview as GeneratedMessagePreview } from "../../gen/Messag
 import type { PreviewMessage as GeneratedPreviewMessage } from "../../gen/PreviewMessage.ts";
 import type { RunSlashCommand as GeneratedRunSlashCommand } from "../../gen/RunSlashCommand.ts";
 import type { ScheduledMessage as GeneratedScheduledMessage } from "../../gen/ScheduledMessage.ts";
+import type { ScheduledMessageFilter as GeneratedScheduledMessageFilter } from "../../gen/ScheduledMessageFilter.ts";
 import type { ScheduledMessageList as GeneratedScheduledMessageList } from "../../gen/ScheduledMessageList.ts";
+import type { ScheduledMessageRemoved as GeneratedScheduledMessageRemoved } from "../../gen/ScheduledMessageRemoved.ts";
+import type { ScheduledMessageState as GeneratedScheduledMessageState } from "../../gen/ScheduledMessageState.ts";
 import type { SlashCommand as GeneratedSlashCommand } from "../../gen/SlashCommand.ts";
 import type { SlashCommandList as GeneratedSlashCommandList } from "../../gen/SlashCommandList.ts";
 import type { SlashCommandResult as GeneratedSlashCommandResult } from "../../gen/SlashCommandResult.ts";
 import type { UpdateScheduledMessage as GeneratedUpdateScheduledMessage } from "../../gen/UpdateScheduledMessage.ts";
 import type { UserSuggestion as GeneratedUserSuggestion } from "../../gen/UserSuggestion.ts";
 import type { UserSuggestionList as GeneratedUserSuggestionList } from "../../gen/UserSuggestionList.ts";
+import { ConversationName } from "./conversation.ts";
 import { MessageId, RoomId, ScheduledMessageId, ThreadId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
@@ -130,7 +134,18 @@ export type MessagePreview = typeof MessagePreview.Type;
 
 export type MessagePreviewPin = Assert<Pinned<typeof MessagePreview, GeneratedMessagePreview>>;
 
-/** A message to send later; text only. */
+export const ScheduledMessageState = Schema.Literals(["pending", "sending", "sent", "dropped"]);
+
+export type ScheduledMessageState = typeof ScheduledMessageState.Type;
+
+export type ScheduledMessageStatePin = Assert<
+  Pinned<typeof ScheduledMessageState, GeneratedScheduledMessageState>
+>;
+
+/**
+ * A message to send later; text only. A pending one that isn't `sendable` is stranded: it will
+ * be dropped when due unless access comes back.
+ */
 export const ScheduledMessage = Schema.Struct({
   id: ScheduledMessageId,
   roomId: RoomId,
@@ -138,8 +153,12 @@ export const ScheduledMessage = Schema.Struct({
   replyToMessageId: Schema.NullOr(MessageId),
   markdownSource: Schema.String,
   sendAt: Timestamp,
+  state: ScheduledMessageState,
+  sendable: Schema.Boolean,
   sentAt: Schema.NullOr(Timestamp),
+  sentMessageId: Schema.NullOr(MessageId),
   droppedAt: Schema.NullOr(Timestamp),
+  dropReason: Schema.NullOr(Schema.String),
   createdAt: Timestamp,
 });
 
@@ -163,10 +182,10 @@ export type CreateScheduledMessagePin = Assert<
   Pinned<typeof CreateScheduledMessage, GeneratedCreateScheduledMessage>
 >;
 
-/** The body of `PATCH /api/v1/scheduled_messages/:id`. */
+/** The body of `PATCH /api/v1/scheduled_messages/:id`; a field left out keeps its value. */
 export const UpdateScheduledMessage = Schema.Struct({
-  markdownSource: Schema.String,
-  sendAt: Timestamp,
+  markdownSource: Schema.optionalKey(Schema.String),
+  sendAt: Schema.optionalKey(Timestamp),
 });
 
 export type UpdateScheduledMessage = typeof UpdateScheduledMessage.Type;
@@ -175,13 +194,36 @@ export type UpdateScheduledMessagePin = Assert<
   Pinned<typeof UpdateScheduledMessage, GeneratedUpdateScheduledMessage>
 >;
 
-/** `GET /api/v1/scheduled_messages?roomId=`: the viewer's pending ones, soonest first. */
+export const ScheduledMessageFilter = Schema.Literals(["pending", "past"]);
+
+export type ScheduledMessageFilter = typeof ScheduledMessageFilter.Type;
+
+export type ScheduledMessageFilterPin = Assert<
+  Pinned<typeof ScheduledMessageFilter, GeneratedScheduledMessageFilter>
+>;
+
+/**
+ * `GET /api/v1/scheduled_messages?status=&roomId=&before=`: pending soonest first, or past most
+ * recent first; 50 a page. `nextCursor` is opaque (it encodes `sendAt` and `id`); pass it back
+ * as `before`.
+ */
 export const ScheduledMessageList = Schema.Struct({
   scheduledMessages: Schema.Array(ScheduledMessage),
+  conversations: Schema.Array(ConversationName),
+  nextCursor: Schema.NullOr(Schema.String),
 });
 
 export type ScheduledMessageList = typeof ScheduledMessageList.Type;
 
 export type ScheduledMessageListPin = Assert<
   Pinned<typeof ScheduledMessageList, GeneratedScheduledMessageList>
+>;
+
+/** The `scheduled.removed` event: cancelled in another tab. */
+export const ScheduledMessageRemoved = Schema.Struct({ id: ScheduledMessageId, roomId: RoomId });
+
+export type ScheduledMessageRemoved = typeof ScheduledMessageRemoved.Type;
+
+export type ScheduledMessageRemovedPin = Assert<
+  Pinned<typeof ScheduledMessageRemoved, GeneratedScheduledMessageRemoved>
 >;

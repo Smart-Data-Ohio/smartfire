@@ -36,3 +36,31 @@ export type SavedItemId = typeof SavedItemId.Type;
 export const ScheduledMessageId = Schema.Int.pipe(Schema.brand("ScheduledMessageId"));
 
 export type ScheduledMessageId = typeof ScheduledMessageId.Type;
+
+export const ActivityItemId = Schema.Int.pipe(Schema.brand("ActivityItemId"));
+
+export type ActivityItemId = typeof ActivityItemId.Type;
+
+export const RecentSearchId = Schema.Int.pipe(Schema.brand("RecentSearchId"));
+
+export type RecentSearchId = typeof RecentSearchId.Type;
+
+export const PollId = Schema.Int.pipe(Schema.brand("PollId"));
+
+export type PollId = typeof PollId.Type;
+
+export const PollOptionId = Schema.Int.pipe(Schema.brand("PollOptionId"));
+
+export type PollOptionId = typeof PollOptionId.Type;
+
+export const EventId = Schema.Int.pipe(Schema.brand("EventId"));
+
+export type EventId = typeof EventId.Type;
+
+export const GithubPullRequestId = Schema.Int.pipe(Schema.brand("GithubPullRequestId"));
+
+export type GithubPullRequestId = typeof GithubPullRequestId.Type;
+
+export const FizzyCardId = Schema.Int.pipe(Schema.brand("FizzyCardId"));
+
+export type FizzyCardId = typeof FizzyCardId.Type;

@@ -6,13 +6,17 @@ import type { SyncEvent as GeneratedSyncEvent } from "../../gen/SyncEvent.ts";
 import type { SyncPayload as GeneratedSyncPayload } from "../../gen/SyncPayload.ts";
 import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
 import { PinState, SavedChanged } from "./actions.ts";
+import { ActivityItemChanged, ActivityItemRemoved } from "./activity.ts";
+import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
+import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
+import { RoomCategoryRemoved } from "./organize.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { UserPresence } from "./presence.ts";
 import { MessageReactions } from "./reaction.ts";
 import { RoomRead, RoomUnread } from "./read.ts";
-import { SidebarRow, SidebarRowRemoved } from "./sidebar.ts";
+import { RoomCategory, SidebarRow, SidebarRowRemoved } from "./sidebar.ts";
 import {
   Thread,
   ThreadIndicatorChanged,
@@ -74,6 +78,15 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("thread.unread"), data: ThreadUnread }),
   Schema.Struct({ type: Schema.Literal("thread.read"), data: ThreadRead }),
   Schema.Struct({ type: Schema.Literal("saved.changed"), data: SavedChanged }),
+  Schema.Struct({ type: Schema.Literal("activity.item"), data: ActivityItemChanged }),
+  Schema.Struct({ type: Schema.Literal("activity.removed"), data: ActivityItemRemoved }),
+  Schema.Struct({ type: Schema.Literal("scheduled.changed"), data: ScheduledMessage }),
+  Schema.Struct({ type: Schema.Literal("scheduled.removed"), data: ScheduledMessageRemoved }),
+  Schema.Struct({ type: Schema.Literal("sidebar.category.upserted"), data: RoomCategory }),
+  Schema.Struct({ type: Schema.Literal("sidebar.category.removed"), data: RoomCategoryRemoved }),
+  Schema.Struct({ type: Schema.Literal("poll.updated"), data: PollUpdated }),
+  Schema.Struct({ type: Schema.Literal("poll.ballot"), data: PollBallot }),
+  Schema.Struct({ type: Schema.Literal("message.cards"), data: MessageCards }),
 ]);
 
 export type SyncPayload = typeof SyncPayload.Type;
@@ -117,6 +130,39 @@ export const SyncEvent = Schema.Union([
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.unread"), data: ThreadUnread }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("thread.read"), data: ThreadRead }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("saved.changed"), data: SavedChanged }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("activity.item"),
+    data: ActivityItemChanged,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("activity.removed"),
+    data: ActivityItemRemoved,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("scheduled.changed"),
+    data: ScheduledMessage,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("scheduled.removed"),
+    data: ScheduledMessageRemoved,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("sidebar.category.upserted"),
+    data: RoomCategory,
+  }),
+  Schema.Struct({
+    ...eventFields,
+    type: Schema.Literal("sidebar.category.removed"),
+    data: RoomCategoryRemoved,
+  }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("poll.updated"), data: PollUpdated }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("poll.ballot"), data: PollBallot }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("message.cards"), data: MessageCards }),
 ]);
 
 export type SyncEvent = typeof SyncEvent.Type;

@@ -3,6 +3,7 @@
  * slash commands (listed and run, mirroring the Rust registry), Markdown preview and scheduled
  * messages, which a timer on the scheduler posts when they fall due.
  */
+import type { ConversationName } from "../../src/gen/ConversationName.ts";
 import type { IconList } from "../../src/gen/IconList.ts";
 import type { MessageDTO } from "../../src/gen/MessageDTO.ts";
 import type { MessagePreview } from "../../src/gen/MessagePreview.ts";
@@ -13,7 +14,6 @@ import type { SlashCommandList } from "../../src/gen/SlashCommandList.ts";
 import type { SlashCommandResult } from "../../src/gen/SlashCommandResult.ts";
 import type { UserSuggestionList } from "../../src/gen/UserSuggestionList.ts";
 import {
-  conflict,
   forbidden,
   HttpError,
   type MockResponse,
@@ -565,17 +565,26 @@ export function createComposer(
         replyToMessageId: message.replyToMessageId,
       };
 
-      if (thread === null) {
-        ctx.postToRoom(record, draft);
-      } else {
-        threads.postReply(thread, draft);
-      }
+      const posted =
+        thread === null ? ctx.postToRoom(record, draft) : threads.postReply(thread, draft);
 
-      next = { ...message, sentAt: stamp };
+      next = {
+        ...message,
+        state: "sent",
+        sendable: false,
+        sentAt: stamp,
+        sentMessageId: posted.id,
+      };
     } catch (error) {
       if (!(error instanceof HttpError)) throw error;
 
-      next = { ...message, droppedAt: stamp };
+      next = {
+        ...message,
+        state: "dropped",
+        sendable: false,
+        droppedAt: stamp,
+        dropReason: error.message,
+      };
     }
 
     world.scheduled.set(message.id, next);
@@ -612,7 +621,36 @@ export function createComposer(
       .filter((message) => pending(message) && (roomId === null || message.roomId === roomId))
       .sort((a, b) => Date.parse(a.sendAt) - Date.parse(b.sendAt) || a.id - b.id);
 
-    return { scheduledMessages };
+    return {
+      scheduledMessages,
+      conversations: conversationsOf(scheduledMessages),
+      nextCursor: null,
+    };
+  };
+
+  const conversationsOf = (messages: readonly ScheduledMessage[]): ConversationName[] => {
+    const seen = new Map<string, ConversationName>();
+
+    for (const message of messages) {
+      const key = `${message.roomId}:${message.threadId ?? ""}`;
+      const record = ctx.world().rooms.get(message.roomId);
+
+      if (seen.has(key) || record === undefined) continue;
+
+      const thread =
+        message.threadId === null ? undefined : ctx.world().threads.get(message.threadId);
+
+      seen.set(key, {
+        roomId: record.room.id,
+        threadId: message.threadId,
+        roomKind: record.room.kind,
+        roomName: ctx.displayName(record),
+        roomIconName: record.room.iconName,
+        threadName: thread?.name ?? null,
+      });
+    }
+
+    return [...seen.values()];
   };
 
   const createScheduled = (roomId: number, body: Json | undefined): MockResponse => {
@@ -634,8 +672,12 @@ export function createComposer(
       replyToMessageId: replyTo,
       markdownSource: markdown,
       sendAt,
+      state: "pending",
+      sendable: true,
       sentAt: null,
+      sentMessageId: null,
       droppedAt: null,
+      dropReason: null,
       createdAt: iso(ctx.now()),
     };
 
@@ -647,7 +689,13 @@ export function createComposer(
 
   const updateScheduled = (id: number, body: Json | undefined): ScheduledMessage => {
     const current = scheduledOr404(id);
-    const next = { ...current, markdownSource: markdownOf(body), sendAt: sendAtOf(body) };
+
+    const next = {
+      ...current,
+      markdownSource:
+        stringField(body, "markdownSource") === null ? current.markdownSource : markdownOf(body),
+      sendAt: stringField(body, "sendAt") === null ? current.sendAt : sendAtOf(body),
+    };
 
     ctx.world().scheduled.set(id, next);
     arm(next);
@@ -666,7 +714,9 @@ export function createComposer(
   const sendNow = (id: number): ScheduledMessage => {
     const sent = send(scheduledOr404(id));
 
-    if (sent.droppedAt !== null) throw conflict("This message can no longer be sent here");
+    if (sent.droppedAt !== null) {
+      throw validation("base", sent.dropReason ?? "This message can no longer be sent here");
+    }
 
     return sent;
   };
