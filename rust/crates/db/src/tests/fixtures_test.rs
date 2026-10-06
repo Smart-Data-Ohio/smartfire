@@ -1,8 +1,10 @@
-//! The fixture loader against facts from a Ruby-loaded fixtures database, and (ignored
-//! unless `CAMPFIRE_RUBY_FIXTURES_DB` is set) a row-for-row comparison with one.
+//! The fixture loader against facts from a Ruby-loaded fixtures database, row for row against
+//! the frozen rows the reference loaded, and (ignored unless `CAMPFIRE_RUBY_FIXTURES_DB` is set)
+//! a row-for-row comparison with a live one.
 
 use super::*;
 use crate::{Membership, Message, Role, Room, RoomType, Session, User};
+use std::collections::BTreeMap;
 
 #[test]
 fn ids_are_label_crcs() {
@@ -77,9 +79,7 @@ fn passwords_are_bcrypt_of_secret123456() {
 /// Every row of a table, sorted (some FTS shadow tables have no rowid), exactly, except the salted BCrypt digests: those are
 /// their cost prefix (`$2a$12$`) and whether they verify `secret123456`, the fixtures' password.
 fn dump(conn: &Connection, table: &str) -> Vec<String> {
-    let mut stmt = conn
-        .prepare(&format!("SELECT * FROM \"{table}\""))
-        .unwrap();
+    let mut stmt = conn.prepare(&format!("SELECT * FROM \"{table}\"")).unwrap();
     let names: Vec<String> = stmt.column_names().into_iter().map(String::from).collect();
     let mut rows = stmt.query([]).unwrap();
     let mut out = Vec::new();
@@ -147,7 +147,8 @@ fn fixture_sets() -> Vec<String> {
 fn fixtures_match_ruby_row_for_row() {
     let path = std::env::var("CAMPFIRE_RUBY_FIXTURES_DB").expect("CAMPFIRE_RUBY_FIXTURES_DB");
     let now = std::env::var("CAMPFIRE_FIXTURES_NOW").expect("CAMPFIRE_FIXTURES_NOW");
-    let now = crate::Timestamp::parse_db(&now).expect("CAMPFIRE_FIXTURES_NOW like 2026-09-26 12:34:56.123456");
+    let now = crate::Timestamp::parse_db(&now)
+        .expect("CAMPFIRE_FIXTURES_NOW like 2026-09-26 12:34:56.123456");
     let ruby = Connection::open(path).unwrap();
     // bcrypt-ruby's default cost, which the fixtures' `BCrypt::Password.create` uses.
     let t = TestDb::with_clock(crate::TestClock::frozen_at(now), 12);
@@ -165,7 +166,9 @@ fn fixtures_match_ruby_row_for_row() {
         if actual != expected {
             let only_ruby: Vec<_> = expected.iter().filter(|r| !actual.contains(r)).collect();
             let only_rust: Vec<_> = actual.iter().filter(|r| !expected.contains(r)).collect();
-            mismatches.push(format!("{table}:\n  ruby only: {only_ruby:#?}\n  rust only: {only_rust:#?}"));
+            mismatches.push(format!(
+                "{table}:\n  ruby only: {only_ruby:#?}\n  rust only: {only_rust:#?}"
+            ));
         }
     }
     assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
@@ -177,7 +180,59 @@ fn fixtures_match_ruby_row_for_row() {
         let table = set.replace('/', "_");
         assert!(ruby_tables.contains(&table), "{set} -> {table}");
     }
-    eprintln!("compared {} tables; rows in {}: {loaded:?}", ruby_tables.len(), loaded.len());
+    eprintln!(
+        "compared {} tables; rows in {}: {loaded:?}",
+        ruby_tables.len(),
+        loaded.len()
+    );
+}
+
+/// The instant `fixtures_rails_rows.json` was recorded at: nonzero microseconds keep Rails'
+/// six-digit timestamp representation.
+const FROZEN_FIXTURES_NOW: &str = "2026-03-02 16:00:00.123456";
+
+/// Compares `actual` (table name to rows) with the frozen file `src/tests/NAME`, or rewrites the
+/// file from it when `CAMPFIRE_FIXTURES_DUMP=write` (after a deliberate fixture or schema change).
+pub(super) fn assert_frozen_rows(name: &str, actual: &BTreeMap<String, Vec<String>>) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("src/tests")
+        .join(name);
+    if std::env::var("CAMPFIRE_FIXTURES_DUMP").as_deref() == Ok("write") {
+        std::fs::write(&path, serde_json::to_string_pretty(actual).unwrap() + "\n").unwrap();
+        return;
+    }
+    let expected: BTreeMap<String, Vec<String>> =
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    let names = |rows: &BTreeMap<String, Vec<String>>| rows.keys().cloned().collect::<Vec<_>>();
+    assert_eq!(names(actual), names(&expected), "tables differ from {name}");
+    let mismatches: Vec<String> = expected
+        .iter()
+        .filter(|(table, rows)| &actual[*table] != *rows)
+        .map(|(table, rows)| {
+            let only_frozen: Vec<_> = rows.iter().filter(|r| !actual[table].contains(r)).collect();
+            let only_rust: Vec<_> = actual[table].iter().filter(|r| !rows.contains(r)).collect();
+            format!("{table}:\n  frozen only: {only_frozen:#?}\n  rust only: {only_rust:#?}")
+        })
+        .collect();
+    assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
+}
+
+/// `fixtures_match_ruby_row_for_row` without the reference: the rows the reference's
+/// `db:fixtures:load` wrote at `FROZEN_FIXTURES_NOW` (pinned Rails, recorded 2026-10-05 when
+/// that test last passed), every table but `ar_internal_metadata`.
+#[test]
+fn fixtures_match_frozen_rails_rows() {
+    let now = crate::Timestamp::parse_db(FROZEN_FIXTURES_NOW).unwrap();
+    // bcrypt-ruby's default cost, which the fixtures' `BCrypt::Password.create` uses.
+    let t = TestDb::with_clock(crate::TestClock::frozen_at(now), 12);
+    let rows = t.read(|c| {
+        Ok(tables(c)
+            .into_iter()
+            .map(|table| (table.clone(), dump(c, &table)))
+            .collect())
+    });
+    assert_frozen_rows("fixtures_rails_rows.json", &rows);
+    assert_eq!(fixture_sets().len(), 20);
 }
 
 #[test]
@@ -355,9 +410,10 @@ fn export_database_for_rails() {
             },
         )?
         .id;
-        for (client_message_id, thread_id, system_note) in
-            [("rust-board-note", None, true), ("rust-board-post", Some(post), false)]
-        {
+        for (client_message_id, thread_id, system_note) in [
+            ("rust-board-note", None, true),
+            ("rust-board-post", Some(post), false),
+        ] {
             Message::create(
                 tx,
                 crate::NewMessage {
@@ -465,18 +521,42 @@ fn export_database_for_rails() {
             fn discard(&self, _: &[crate::Blob]) {}
         }
         use crate::models::forwarder::{Destination, forward};
-        let destinations = [Destination::room(id("watercooler")), Destination::room(id("designers"))];
-        forward(tx, &edited, &destinations, Some("@[Jason] look"), id("david"), &NoAttachments)?
-            .map_err(|refusal| crate::Error::Other(refusal.to_string()))?;
+        let destinations = [
+            Destination::room(id("watercooler")),
+            Destination::room(id("designers")),
+        ];
+        forward(
+            tx,
+            &edited,
+            &destinations,
+            Some("@[Jason] look"),
+            id("david"),
+            &NoAttachments,
+        )?
+        .map_err(|refusal| crate::Error::Other(refusal.to_string()))?;
         Ok(())
     })
     .unwrap();
 
     // Room deletion marking and its cleanup claim remain readable and valid to Rails.
     db.write_blocking(|tx| {
-        let room=crate::Room::create_for(tx,crate::RoomType::Closed,Some("Rust deleted room"),id("david"),&[id("david")])?;
-        crate::models::room_delete::begin_destroy(tx,&room,&crate::models::room_delete::HuddleConfig{api_secret:Some("fixture-secret".into()),admin_configured:true})
-    }).unwrap();
+        let room = crate::Room::create_for(
+            tx,
+            crate::RoomType::Closed,
+            Some("Rust deleted room"),
+            id("david"),
+            &[id("david")],
+        )?;
+        crate::models::room_delete::begin_destroy(
+            tx,
+            &room,
+            &crate::models::room_delete::HuddleConfig {
+                api_secret: Some("fixture-secret".into()),
+                admin_configured: true,
+            },
+        )
+    })
+    .unwrap();
 
     // A multiple-choice poll with votes, closed; and an open one closing later.
     db.write_blocking(|tx| {
@@ -493,7 +573,11 @@ fn export_database_for_rails() {
         let mut poll = crate::Poll::create_for_message(
             tx,
             &question,
-            crate::NewPoll { labels: vec!["Tacos".into(), "Pizza".into()], multiple: true, ..Default::default() },
+            crate::NewPoll {
+                labels: vec!["Tacos".into(), "Pizza".into()],
+                multiple: true,
+                ..Default::default()
+            },
         )?;
         let options: Vec<i64> = poll.options(tx.conn())?.iter().map(|o| o.id).collect();
         poll.cast_vote(tx, id("david"), &options)?;
