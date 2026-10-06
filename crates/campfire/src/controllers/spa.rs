@@ -3,7 +3,9 @@
 //!
 //! - `GET /app/assets/*`: Vite's content-hashed files, cached as immutable, in the client's best
 //!   encoding (brotli, gzip or the file itself). Public, like `/assets`, with the classic pages'
-//!   security headers and policy (no nonce: the response is shared by everyone).
+//!   security headers and policy (no nonce: the response is shared by everyone). `no-transform`
+//!   keeps the app's gzip middleware (and proxies) off them: the build already chose each file's
+//!   encodings, and a font or image is sent as it is.
 //! - `GET /app`, `/app/*`: the shell, behind `ApplicationController`'s before-actions, so signing
 //!   in (with the return path), two-step enforcement, deactivation and the rest apply as on a
 //!   classic page. A file at the dist's root (Vite's `public/`) is served as it is.
@@ -107,11 +109,12 @@ fn file_response(kit: &Kit, request: &Request, immutable_cache_control: &'static
 
 pub(crate) fn served_response(kit: &Kit, served: campfire_spa::Served, immutable_cache_control: &'static str) -> Response {
     let cache_control = if served.file.immutable { immutable_cache_control } else { campfire_spa::REVALIDATE_CACHE_CONTROL };
+    let cache_control = format!("{cache_control}, no-transform");
     let mut response = Response::new(axum::body::Body::from(served.body));
     let headers = response.headers_mut();
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(served.file.content_type));
     headers.insert(header::CONTENT_LENGTH, HeaderValue::from(served.body.len()));
-    headers.insert(header::CACHE_CONTROL, HeaderValue::from_static(cache_control));
+    headers.insert(header::CACHE_CONTROL, HeaderValue::from_str(&cache_control).expect("a constant policy"));
     if let Some(encoding) = served.content_encoding {
         headers.insert(header::CONTENT_ENCODING, HeaderValue::from_static(encoding));
     }

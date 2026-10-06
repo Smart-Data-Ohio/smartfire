@@ -103,6 +103,20 @@ fn built_dist_is_embedded_whole() {
         assert!(!file.path.starts_with('.') && !file.path.contains("/."), "{} is build metadata", file.path);
         assert_ne!(file.path, "index.html");
         assert_ne!(file.content_type, "application/octet-stream", "{} has no known type", file.path);
+        let extension = file.path.rsplit_once('.').map_or("", |(_, ext)| ext);
+        let expected = match extension {
+            "js" => Some("text/javascript; charset=utf-8"),
+            "css" => Some("text/css; charset=utf-8"),
+            "woff2" => Some("font/woff2"),
+            "svg" => Some("image/svg+xml"),
+            _ => None,
+        };
+        if let Some(expected) = expected {
+            assert_eq!(file.content_type, expected, "{}", file.path);
+        }
+        if extension == "woff2" {
+            assert_eq!((file.br, file.gz), (None, None), "{}: woff2 is compressed already", file.path);
+        }
         if file.path.starts_with("assets/") && !file.path.ends_with(".map") {
             assert!(file.immutable, "Vite hashes every asset's name: {}", file.path);
         }

@@ -110,6 +110,10 @@ async fn the_shell_boots_the_signed_in_user_with_the_classic_headers() {
     let shell = b.get("/app/rooms/1").await;
     assert_eq!(shell.status, StatusCode::OK);
     assert_eq!(shell.content_type(), Some("text/html; charset=utf-8"));
+    // Any client route deep-links to the shell, the design system's kitchen sink included.
+    let kitchen_sink = b.get("/app/_kitchen-sink").await;
+    assert_eq!((kitchen_sink.status, kitchen_sink.content_type()), (StatusCode::OK, Some("text/html; charset=utf-8")));
+    assert!(kitchen_sink.text().contains(r#"<script type="application/json" id="boot""#));
 
     for name in SECURITY_HEADERS.iter().chain(&["x-version", "x-rev"]) {
         assert!(shell.header(name).is_some(), "{name}");
@@ -224,7 +228,7 @@ async fn assets_carry_the_security_headers_and_a_shareable_policy() {
     let served = campfire_spa::Served { file: &FILE, content_encoding: Some("br"), body: b"brotli" };
     let response = super::served_response(&a.booted.fixture_kit, served, "public, immutable, max-age=31556952");
     let header = |name: &str| response.headers().get(name).map(|v| v.to_str().unwrap().to_string());
-    assert_eq!(header("cache-control").as_deref(), Some("public, immutable, max-age=31556952"));
+    assert_eq!(header("cache-control").as_deref(), Some("public, immutable, max-age=31556952, no-transform"));
     assert_eq!(header("content-type").as_deref(), Some("text/javascript; charset=utf-8"));
     assert_eq!(header("content-encoding").as_deref(), Some("br"));
     assert_eq!(header("vary").as_deref(), Some("accept-encoding"));
@@ -240,7 +244,7 @@ async fn assets_carry_the_security_headers_and_a_shareable_policy() {
     static UNHASHED: campfire_spa::File = campfire_spa::File { path: "assets/unhashed.js", immutable: false, ..FILE };
     let unhashed = campfire_spa::Served { file: &UNHASHED, content_encoding: None, body: b"export {}" };
     let response = super::served_response(&a.booted.fixture_kit, unhashed, "public, immutable, max-age=31556952");
-    assert_eq!(response.headers()["cache-control"], campfire_spa::REVALIDATE_CACHE_CONTROL);
+    assert_eq!(response.headers()["cache-control"], format!("{}, no-transform", campfire_spa::REVALIDATE_CACHE_CONTROL));
     assert!(response.headers().get("content-encoding").is_none());
 }
 
@@ -261,5 +265,6 @@ async fn embedded_assets_are_served_by_path_and_unknown_ones_are_not_found() {
         let expected = file.br.map(|br| (Some("br"), br)).unwrap_or((None, file.identity));
         assert_eq!((reply.header("content-encoding"), &reply.body[..]), expected, "{path}");
         assert_eq!(reply.header("set-cookie"), None, "{path}: no session for a static file");
+        assert!(reply.header("cache-control").is_some_and(|cc| cc.ends_with(", no-transform")), "{path}: never gzipped again");
     }
 }
