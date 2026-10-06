@@ -119,9 +119,16 @@ them the inbox item is the whole alert and nothing is sent.
 
 ## Dependency updates
 
-`.github/dependabot.yml` runs weekly Bundler and GitHub Actions
-updates with minor and patch updates grouped. There is no npm
-ecosystem (importmap with vendored pins, no node build) and no Docker
-ecosystem: the base image tag is a build arg the updater cannot read,
-so Ruby base image bumps stay a manual, reviewed step (see the file's
-comment).
+`.github/dependabot.yml` runs weekly updates, with minor and patch
+updates grouped, for GitHub Actions, the Rust workspace (`rust/`,
+cargo), every live Node lockfile (the huddle gateway, the LiveKit
+client and code highlighter bundle builders, and the parity harness),
+and the production image's `rust/Dockerfile`. The Rust and Debian base
+images take their tags from build args the updater cannot read, so
+those bumps stay a manual, reviewed step (see the file's comments).
+
+The required `Dependency audit` check (`.github/workflows/repo.yml`)
+runs on every pull request, every push to `main` and nightly. It fails
+on any RustSec advisory against `rust/Cargo.lock` that
+`rust/.cargo/audit.toml` doesn't ignore with a stated reason, and on
+any npm advisory against the huddle gateway's runtime dependencies.

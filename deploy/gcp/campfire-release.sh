@@ -1084,7 +1084,7 @@ phase_preflight() {
   require_rust_image "$IMAGE_REF" target
   require_rust_image "$current_image" current
   # The tag names a commit, but only the image's own GIT_REVISION (baked in by
-  # publish-rust-image.yml) proves which commit was built into it. Fails closed:
+  # publish-image.yml) proves which commit was built into it. Fails closed:
   # no expected revision is a refusal, unless an operator explicitly opts out.
   local built_revision revision_verified=false
   built_revision="$(image_git_revision "$IMAGE_REF")"
