@@ -293,6 +293,21 @@
     transition-timing-function: var(--ease-enter);
   }
 
+  /* The row's time sits where the hover actions float: it steps aside while they show. */
+  .list-row-time {
+    transition: opacity var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  @media (hover: hover) {
+    .list-row-inner:has(> .list-row-bar):is(:hover, :focus-within) .list-row-time,
+    .list-row-inner:has(> .list-row-bar [aria-expanded="true"]) .list-row-time {
+      opacity: 0;
+      transition-delay: var(--duration-intent);
+      transition-duration: var(--duration-micro);
+      transition-timing-function: var(--ease-enter);
+    }
+  }
+
   .list-row-bar .button[data-variant="ghost"] {
     --button-height: var(--control-sm);
   }

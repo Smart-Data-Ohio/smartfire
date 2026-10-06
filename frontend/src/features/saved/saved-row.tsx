@@ -202,7 +202,7 @@ export function SavedRow({
             <span className="saved-author">{authorName}</span>
             <ConversationLabel conversation={conversation} />
             <Tooltip content={`Saved ${formatFull(item.createdAt)}`} describe={false}>
-              <time className="saved-time" dateTime={item.createdAt}>
+              <time className="saved-time list-row-time" dateTime={item.createdAt}>
                 {timeAgo(item.createdAt, now)}
               </time>
             </Tooltip>

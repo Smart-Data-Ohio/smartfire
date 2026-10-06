@@ -178,7 +178,11 @@ export function ScheduledRow({
           <div className="scheduled-line">
             <ConversationLabel conversation={conversation} />
             <Tooltip content={formatFull(item.sendAt)} describe={false}>
-              <time className="scheduled-when" dateTime={item.sendAt} data-section={section}>
+              <time
+                className="scheduled-when list-row-time"
+                dateTime={item.sendAt}
+                data-section={section}
+              >
                 {busy ? "Sending…" : when}
               </time>
             </Tooltip>

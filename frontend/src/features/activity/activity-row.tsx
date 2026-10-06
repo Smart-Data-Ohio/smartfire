@@ -229,7 +229,7 @@ export function ActivityRow({
           )}
         </span>
         <Tooltip content={formatFull(occurredAt)} describe={false}>
-          <time className="activity-time" dateTime={occurredAt}>
+          <time className="activity-time list-row-time" dateTime={occurredAt}>
             {timeAgo(occurredAt, now)}
           </time>
         </Tooltip>

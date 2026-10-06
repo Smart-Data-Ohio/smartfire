@@ -31,6 +31,7 @@ matrix("the activity inbox", async ({ page, theme, phone }) => {
   if (!phone) {
     await rows(page).first().hover();
     await expect(rows(page).first().locator(".list-row-bar")).toHaveCSS("opacity", "1");
+    await expect(rows(page).first().locator(".activity-time")).toHaveCSS("opacity", "0");
     await shot(page, "activity-hover", theme);
     await page.mouse.move(0, 0);
   }
@@ -123,10 +124,18 @@ test("a live item slides in at the top", async ({ page, request }) => {
 
 // --- saved ---
 
-matrix("saved messages", async ({ page, theme }) => {
+matrix("saved messages", async ({ page, theme, phone }) => {
   await openApp(page, "saved", theme);
   await ready(page, "Saved");
   await shot(page, "saved", theme);
+
+  if (!phone) {
+    await rows(page).nth(1).hover();
+    await expect(rows(page).nth(1).locator(".list-row-bar")).toHaveCSS("opacity", "1");
+    await expect(rows(page).nth(1).locator(".saved-time")).toHaveCSS("opacity", "0");
+    await shot(page, "saved-hover", theme);
+    await page.mouse.move(0, 0);
+  }
 
   await page.route("**/api/v1/saved?*", (route) => route.fulfill({ json: EMPTY_SAVED }));
   await openApp(page, "saved?status=done", theme);
@@ -175,12 +184,20 @@ test("the sidebar leads to Saved and Scheduled", async ({ page }) => {
 
 // --- scheduled ---
 
-matrix("scheduled messages", async ({ page, theme }) => {
+matrix("scheduled messages", async ({ page, theme, phone }) => {
   await openApp(page, "scheduled", theme);
   await ready(page, "Scheduled");
   await expect(page.getByRole("heading", { name: /^Upcoming/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /^Can't be sent/ })).toBeVisible();
   await shot(page, "scheduled", theme);
+
+  if (!phone) {
+    await rows(page).first().hover();
+    await expect(rows(page).first().locator(".list-row-bar")).toHaveCSS("opacity", "1");
+    await expect(rows(page).first().locator(".scheduled-when")).toHaveCSS("opacity", "0");
+    await shot(page, "scheduled-hover", theme);
+    await page.mouse.move(0, 0);
+  }
 
   const past = page.getByRole("heading", { name: /^Past/ });
 
