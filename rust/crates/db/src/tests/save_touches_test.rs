@@ -1,6 +1,6 @@
 //! Which timestamps each `Message` save path advances, against `message_save_touches.json`:
-//! the reference app's answer for the same cases, from `ruby/save_touches.rb` (regenerated and
-//! compared by `reference-tools/db/differential.sh`). Each case gets its own room and message at
+//! the reference app's answer for the same cases, recorded from Rails before it was removed (the
+//! table is frozen). Each case gets its own room and message at
 //! T0, runs one action at T0 + 60s, and records how far past T0 the message's `updated_at` and
 //! `streaming_updated_at` (none once destroyed) and the room's `updated_at` ended up.
 //!

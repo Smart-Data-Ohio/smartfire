@@ -1,6 +1,0 @@
-{
-  "app/controllers/accounts/audit_logs_controller.rb": "bfdf099be41ed78b4334e7b251212aea25b06ecf88d8f9411eb27d142dce9246",
-  "app/helpers/audit_logs_helper.rb": "06c6de50ba2775cd2c61d3add1c5e9db447d934d20454e38e9e26a8c274b4da1",
-  "app/views/accounts/audit_logs/show.html.erb": "36a150ea9f3b6d09675aa9a34e4e41a5c91fac7d4948fdad0aed86e72ef13b8e",
-  "app/models/audit_log.rb": "b84d5a7935b867f1a857b43bd554a5ccdb30d2dbcc11dfc09ebb838453035407"
-}

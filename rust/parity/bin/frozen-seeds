@@ -1,0 +1,140 @@
+#!/usr/bin/env python3
+"""The committed test seeds: verify, restore, and migrate them.
+
+The `default`, `first_run`, `agents_ui` and `ledger_originals` seeds were built once by the Rails app
+(parity/bin/seed, validated by reference-tools/campfire/verify_parity_seed.rb) and
+frozen under parity/seeds/frozen/. Rails no longer runs, so they're never rebuilt:
+schema changes are applied to them with this build's `campfire db-migrate`.
+
+  parity/bin/frozen-seeds check              hashes, keys and schema match this checkout
+  parity/bin/frozen-seeds restore            check, then copy them to parity/.seed/NAME
+  parity/bin/frozen-seeds migrate CAMPFIRE   run CAMPFIRE db-migrate on each, then record
+  parity/bin/frozen-seeds record             rewrite manifest.json after a deliberate change
+"""
+
+import argparse
+import hashlib
+import json
+import shutil
+import sqlite3
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+FROZEN = ROOT / "parity/seeds/frozen"
+MANIFEST = FROZEN / "manifest.json"
+SEEDS = ("default", "first_run", "agents_ui", "ledger_originals")
+DATABASE = "db/production.sqlite3"
+ENV = ROOT / "parity/.env.reference"
+# Signed cookies, encrypted columns and push subscriptions in the seeds depend on these.
+ENV_KEYS = ("SECRET_KEY_BASE", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY")
+MIGRATIONS = ROOT / "crates/db/src/schema_migrations.txt"
+
+
+def sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def env_keys_digest():
+    values = dict(line.split("=", 1) for line in ENV.read_text().splitlines()
+                  if line and not line.startswith("#") and "=" in line)
+    return hashlib.sha256("\n".join(f"{key}={values[key]}" for key in ENV_KEYS).encode()).hexdigest()
+
+
+def files():
+    return sorted(path.relative_to(FROZEN).as_posix() for name in SEEDS
+                  for path in (FROZEN / name).rglob("*") if path.is_file())
+
+
+def versions(database):
+    # Read-only and immutable: checking a committed file must never write a -wal beside it.
+    with sqlite3.connect(f"file:{database}?mode=ro&immutable=1", uri=True) as conn:
+        return {row[0] for row in conn.execute("SELECT version FROM schema_migrations")}
+
+
+def check():
+    manifest = json.loads(MANIFEST.read_text())
+    problems = []
+    if manifest["env_keys_sha256"] != env_keys_digest():
+        problems.append(f"{ENV.relative_to(ROOT)}: {', '.join(ENV_KEYS)} changed; the seeds' cookies and "
+                        "encrypted columns need the keys they were built with")
+    if sorted(manifest["files"]) != files():
+        problems.append("files differ from manifest.json (added, removed or renamed)")
+    for name, digest in manifest["files"].items():
+        path = FROZEN / name
+        if path.is_file() and sha256(path) != digest:
+            problems.append(f"{name}: contents differ from manifest.json")
+    expected = {line for line in MIGRATIONS.read_text().splitlines() if line}
+    for name in SEEDS:
+        database = FROZEN / name / DATABASE
+        if not database.is_file():
+            continue
+        if extra := sorted(versions(database) - expected):
+            problems.append(f"{name}: has migrations this build doesn't know: {', '.join(extra)}")
+        if missing := sorted(expected - versions(database)):
+            problems.append(f"{name}: missing migrations {', '.join(missing)}; run "
+                            "parity/bin/frozen-seeds migrate target/debug/campfire")
+    for problem in problems:
+        print(f"frozen-seeds: {problem}", file=sys.stderr)
+    if problems:
+        raise SystemExit(1)
+    print(f"frozen-seeds: {len(manifest['files'])} files match manifest.json; schema at {max(expected)}")
+
+
+def restore(destination):
+    check()
+    for name in SEEDS:
+        target = destination / name
+        shutil.rmtree(target, ignore_errors=True)
+        shutil.copytree(FROZEN / name, target)
+        (target / "storage").mkdir(exist_ok=True)  # Git keeps no empty directory (first_run).
+        print(f"frozen-seeds: {name} -> {target}")
+
+
+def record():
+    manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
+    manifest["env_keys_sha256"] = env_keys_digest()
+    manifest["files"] = {name: sha256(FROZEN / name) for name in files()}
+    MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n")
+    print(f"frozen-seeds: recorded {len(manifest['files'])} files")
+
+
+def migrate(campfire):
+    for name in SEEDS:
+        database = FROZEN / name / DATABASE
+        with tempfile.TemporaryDirectory() as scratch:
+            copy = Path(scratch) / "production.sqlite3"
+            shutil.copyfile(database, copy)
+            subprocess.run([str(campfire), "db-migrate", str(copy)], check=True)
+            # Fold the WAL back in so the committed file is complete on its own.
+            with sqlite3.connect(copy) as conn:
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            conn.close()
+            for suffix in ("-wal", "-shm"):
+                Path(f"{copy}{suffix}").unlink(missing_ok=True)
+            shutil.copyfile(copy, database)
+        print(f"frozen-seeds: {name} migrated")
+    record()
+    check()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("check")
+    restore_parser = commands.add_parser("restore")
+    restore_parser.add_argument("--dest", type=Path, default=ROOT / "parity/.seed")
+    migrate_parser = commands.add_parser("migrate")
+    migrate_parser.add_argument("campfire", type=Path, help="a campfire binary built from this checkout")
+    commands.add_parser("record")
+    args = parser.parse_args()
+    if args.command == "check":
+        check()
+    elif args.command == "restore":
+        restore(args.dest)
+    elif args.command == "migrate":
+        migrate(args.campfire.resolve())
+    else:
+        record()

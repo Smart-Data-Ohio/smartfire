@@ -1,4 +1,5 @@
-//! Generates real Rust-written rows, which `reference-tools/auth/rollback.sh` reads with Rails.
+//! Writes real two-factor rows through the Rust models: enrollment, backup codes, a remembered
+//! device. (Before cutover, `reference-tools/auth/rollback.sh` had Rails read them back.)
 use super::*;
 use crate::{
     DeviceSignIn, NewSession, Session, Timestamp, TwoFactorBackupCode as Backup,
@@ -76,75 +77,4 @@ fn write_rails_rollback_fixture() {
     );
     // Close all connections before Rails opens the snapshot.
     drop(db);
-}
-
-#[test]
-#[ignore = "requires Rails to mutate the rollback fixture; run reference-tools/auth/rollback.sh"]
-fn read_rails_rollback_changes() {
-    let directory =
-        std::path::PathBuf::from(std::env::var_os("WS9_ROLLBACK_DIR").expect("WS9_ROLLBACK_DIR"));
-    let manifest: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(directory.join("manifest.json")).unwrap()).unwrap();
-    let readback: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(directory.join("rails-readback.json")).unwrap())
-            .unwrap();
-    let vectors: serde_json::Value =
-        serde_json::from_str(include_str!("../../../../vectors/two_factor.json")).unwrap();
-    let secrets = Secrets::new(vectors["secret_key_base"].as_str().unwrap());
-    let encryption = ArEncryption::new(&secrets);
-    let now = Timestamp::from_second(manifest["now"].as_i64().unwrap() + 30);
-    let mut config = Config::new(directory.join("rollback.sqlite3"));
-    config.environment = "test".into();
-    let db = Database::open(
-        config,
-        Env {
-            clock: Arc::new(TestClock::frozen_at(now)),
-            ..Default::default()
-        },
-    )
-    .unwrap();
-    db.read_blocking(|conn| {
-        let credential = Credential::find(conn, manifest["credential_id"].as_i64().unwrap())?;
-        assert_eq!(
-            credential.secret(&encryption)?,
-            manifest["enrollment_secret"]
-        );
-        assert_eq!(credential.last_totp_at, Some(now.as_second()));
-        let pending = Setup::valid_for(
-            conn,
-            manifest["unverified_session_id"].as_i64().unwrap(),
-            now,
-        )?
-        .unwrap();
-        assert_eq!(pending.secret(&encryption)?, readback["pending_secret"]);
-        assert_eq!(
-            Backup::for_credential(conn, credential.id)?
-                .iter()
-                .filter(|code| code.used_at.is_some())
-                .count(),
-            2
-        );
-        assert!(
-            Session::find(conn, manifest["verified_session_id"].as_i64().unwrap())?
-                .two_factor_verified()
-        );
-        assert!(
-            !Session::find(conn, manifest["unverified_session_id"].as_i64().unwrap())?
-                .two_factor_verified()
-        );
-        Ok(())
-    })
-    .unwrap();
-    let token = cookies::read_two_factor_remember(
-        &secrets,
-        readback["remember_cookie"].as_str().unwrap(),
-        now.jiff(),
-    )
-    .unwrap();
-    assert_eq!(token, manifest["remembered_token"]);
-    assert!(
-        db.write_blocking(move |tx| Remembered::find_valid(tx, Some(&token), Some(id("david"))))
-            .unwrap()
-            .is_some()
-    );
 }

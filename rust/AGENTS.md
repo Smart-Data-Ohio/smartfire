@@ -46,9 +46,8 @@ own copies:
 |---|---|
 | `crates/assets/build.rs` | `CAMPFIRE_REFERENCE`, else `rust/web`; reads `app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`, `config/initializers/assets.rb` |
 | Tests | `campfire_db::fixtures`: `reference_root()` is `rust/web`, `reference_dir()` is `rust/fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")` maps a Rails path to the port's copy (all `CAMPFIRE_REFERENCE` instead, when set at compile time) |
-| Tests that compare with Rails source the port doesn't copy (`db/schema.rb`, `db/migrate`, `app/models`, `app/views`, `config/icons.yml`) | `campfire_db::fixtures::rails_root()`: `CAMPFIRE_REFERENCE`, else `rust/..` |
 | `Dockerfile` | copies `web/`'s inputs from its own context (`docker build .` from `rust/`) |
-| `parity/bin/*`, `reference-tools/*`, `crates/assets/script/revendor` (they run Rails) | `REFERENCE_ROOT=${CAMPFIRE_REFERENCE:-rust/..}` |
+| `parity/bin/reference`, `parity/bin/candidate`, `crates/assets/script/revendor` (they run Rails; nothing in CI does) | `REFERENCE_ROOT=${CAMPFIRE_REFERENCE:-rust/..}` |
 | `parity/capture` (TypeScript) | `REFERENCE_DIR`; `reference/...` paths in `screens.yml` resolve against it (`repoPath`) |
 
 `reference/` in comments, docs and `screens.yml` means the reference app's root. There's no
@@ -70,19 +69,20 @@ submodule and no `rust/reference` symlink: a `rust/reference -> ..` link would m
 | `crates/views` | `campfire_views` | Askama templates (at the ERB file's relative path) and view helpers |
 | `crates/campfire` | `campfire` (bin) | Controllers, router wiring, channels, jobs, integrations |
 | `parity/` | — | Playwright parity harness, screen inventory, reference Docker setup |
-| `reference-tools/` | — | Ruby scripts run inside the reference app to produce `vectors/` |
+| `reference-tools/` | — | The browser and behaviour harnesses the correctness suites run against Rust |
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on
-every pull request, building only when Rust or Rails comparison inputs changed. Every ordinary nextest group and runnable doctest is
-required; tests run as twelve nextest partitions beside seed validation, clippy/doctest,
+every pull request, building only when `rust/`, the workflow or its setup action changed, and
+never runs Ruby, Rails or a reference image. Every ordinary nextest group and runnable doctest is
+required; tests run as twelve nextest partitions beside the frozen-seed check, clippy/doctest,
 LLVM panic-recovery and stable-toolchain jobs, and the `Rust port` job fails unless all of
 them succeeded.
 `ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold, and the CI-only
 `ci/cargo-config.toml` (optimized dependencies, unoptimized workspace crates); local builds
-retain their normal linker and profile. Shared pinned Rails seed build/restore/validation
-lives in `.github/actions/rust-setup`.
+retain their normal linker and profile. `.github/actions/rust-setup` restores the committed
+seeds and the toolchain image.
 
 Dev, test and CI builds use the nightly in `rust-toolchain.toml`, and `.cargo/config.toml` builds
 the `campfire` crate with the Cranelift backend (everything else, and every release build, uses
@@ -92,9 +92,9 @@ tests of panic recovery need `--config 'profile.dev.package.campfire.codegen-bac
 Measurements and rejected options: `plans/build-speed-report.md`.
 
 Separate required correctness jobs (some sharded, behind the `Rust correctness` gate) run
-Rails differential/rollback, Pebble ACME,
-WS12/WS13 browsers and the gateway Node suite, project-local LiveKit, paired messaging,
-and WS11 agent UI. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
+Pebble ACME, WS11/WS12/WS13/ledger browsers and the gateway Node suite, the Drive browser
+declarations, project-local LiveKit, messaging behaviour and the WS11 agent UI, all on Rust
+from the frozen seeds and recorded Rails fixtures. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
 `ci/ignored_tests.py` rejects any ignored test without a CI owner or a `utility:` reason,
 and verifies that every selected test appears as passed in its JUnit receipt.
 `ci/verify-ignored.sh` also reconciles compiler/nextest-discovered ignores with the
@@ -107,12 +107,11 @@ timestamp after the last Rails migration, 20261003180000), compiled into the bin
 by `campfire db-migrate DATABASE`, which the release script runs; boot never migrates. After adding
 one, regenerate `crates/db/src/schema.sql`, `schema_migrations.txt` and `schema_sequences.txt` with
 `CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files` (the test
-fails while they're stale). `crates/db/baseline/` is the frozen Rails-era schema those start from,
-generated from the Rails app by `reference-tools/db/regenerate-schema.sh`;
-`reference-tools/db/check-migration-replay.sh` checks that replaying every Rails migration from
-empty (how production databases were built) gives the same schema. `reference-tools/db/differential.sh` compares fixtures and a scenario with Ruby's,
-regenerates the reference's `Message` save-timestamp table (`crates/db/src/tests/message_save_touches.json`)
-and checks that Rails reads, and validates, every row the Rust crate wrote.
+fails while they're stale), and migrate the committed test seeds with
+`python3 parity/bin/frozen-seeds migrate target/debug/campfire`. `crates/db/baseline/` is the frozen
+Rails-era schema those start from, generated from the Rails app before it was removed. The Ruby
+differential and rollback comparisons are retired; their recorded results
+(`crates/db/src/tests/message_save_touches.json`, the differential test's expected rows) are frozen.
 
 ## Working rules
 
@@ -124,11 +123,12 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
   `cargo nextest run -p campfire --config 'profile.dev.package.campfire.codegen-backend="llvm"' -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)"`
   (`CAMPFIRE_LLVM_ONLY_TESTS` is in `.github/workflows/rust.yml`). Plain `cargo test --workspace`
   exits 101 at the first of them under Cranelift. The app's integration tests need
-  the `default`, `first_run` and `agents_ui` seeds (`parity/bin/seed build default first_run agents_ui`, which runs the
-  reference). Missing seeds fail whenever `CI` is set; locally they skip with a message, so say
-  which seeds were built when reporting results. CI archives `parity/reference.sha`, caches
-  the reference image and seeds by their exact inputs, and validates even restored seeds with
-  Rails in every run (the `Rust seeds` job, which both gates require). See `parity/seeds/README.md`. Storage vectors compare media bytes only when the
+  the committed seeds (`python3 parity/bin/frozen-seeds restore` copies `default`, `first_run`,
+  `agents_ui` and `ledger_originals` to `parity/.seed`). Missing seeds fail whenever `CI` is set;
+  locally they skip with a message, so say whether the seeds were restored when reporting
+  results. The `Rust seeds` job checks them against their manifest and this build's migrations;
+  after adding a migration, run `frozen-seeds migrate target/debug/campfire`. See
+  `parity/seeds/README.md`. Storage vectors compare media bytes only when the
   local libvips/ffmpeg match the ones that produced `vectors/storage.json`.
 - `cargo clippy --workspace --exclude html5ever --all-targets` should stay clean. (`html5ever` is a
   vendored copy with one backported fix, kept identical to upstream otherwise.)
@@ -140,9 +140,9 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
 - Write code that reads like the surrounding code: small, clearly named functions, and comments
   only where the behavior is non-obvious. Cite the reference file (`app/...` in the Rails app) when
   matching Rails.
-- Tests live beside the code. Golden-vector tests read `vectors/*.json`; regenerate them from the
-  reference app (`reference-tools/`) rather than by hand. Upstream generated the current ones from
-  stock Campfire.
+- Tests live beside the code. Golden-vector tests read `vectors/*.json`, recorded from the Rails app
+  (and upstream's from stock Campfire); they're frozen now that Rails is gone, so change them
+  only with the behavior they pin.
 - Never `git stash` (other agents share this repository), and don't edit files outside `rust/`
   for port work unless the task says so.
 

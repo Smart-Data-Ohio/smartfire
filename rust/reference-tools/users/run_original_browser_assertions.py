@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Paired original browser assertions with isolated fixtures and actual DB checks."""
+"""Original browser assertions against the Rust app, with isolated fixtures and actual DB checks."""
 import argparse,atexit,hashlib,json,os,re,shutil,sqlite3,subprocess,tempfile,time,urllib.request
 from pathlib import Path
 from browser_port_leases import DEFAULT_BASE, reserve
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('mode',choices=['people','pickers','members','group','tours','stars','worker'])
+parser.add_argument('mode',choices=['people','pickers','members','group','tours','stars'])
 parser.add_argument('--controls',action='store_true')
 parser.add_argument('--mutation',choices=['tour-stamp','tour-auto-start','group-notice','group-navigation','member-visibility','menu-rendered','identity-visibility','picker-visibility','picker-scope','tour-key-scope','phone-first-row'])
 args=parser.parse_args()
@@ -15,7 +15,7 @@ cases={
 'pickers':['picker-filter','picker-post','picker-enter','picker-row','picker-phone'],
 'members':['mobile-escape','mobile-tab'],'group':['group-lifecycle'],
 'tours':['tour-finish','tour-escape','tour-restart','tour-completed'],
-'stars':['star-card','star-menu','star-escape','star-phone'],'worker':['served-worker'],}
+'stars':['star-card','star-menu','star-escape','star-phone'],}
 if args.mutation:
  mutation_cases={'tour-stamp':('tours','tour-restart'),'tour-auto-start':('tours','tour-completed'),'group-notice':('group','group-lifecycle'),'group-navigation':('group','group-lifecycle'),'member-visibility':('members','mobile-tab'),'menu-rendered':('stars','star-menu'),'identity-visibility':('stars','star-card'),'picker-visibility':('pickers','picker-filter'),'picker-scope':('pickers','picker-filter'),'tour-key-scope':('tours','tour-finish'),'phone-first-row':('pickers','picker-phone')}
  mutation_mode,mutation_case=mutation_cases[args.mutation]
@@ -29,31 +29,28 @@ ports=lease.ports
 print(f'ORIGINAL_PORT_LEASE {args.mode}: {ports}',flush=True)
 scratch=root/'.scratch';scratch.mkdir(exist_ok=True)
 run=Path(tempfile.mkdtemp(prefix='ws11ui-originals-',dir=scratch))
-seed=root/'parity/.seed'/run.name;shutil.copytree(root/'parity/.seed/default',seed)
-with sqlite3.connect(seed/'db/production.sqlite3') as db:
+shutil.copytree(root/'parity/.seed/default/db',run/'db');shutil.copytree(root/'parity/.seed/default/storage',run/'files')
+database=run/'db/production.sqlite3'
+with sqlite3.connect(database) as db:
  # Original fixture list, before the parity seed's added deployment agent.
  db.execute("UPDATE users SET status=1 WHERE name='Deploy Bot'")
  db.execute('DELETE FROM workspace_presence_leases')
  # This unrelated fixture preview would dial an external image origin. Neither
- # the original assertions nor these paths exercise previews; both targets get
- # the same inert body, keeping offline transport failures out of the controls.
+ # the original assertions nor these paths exercise previews; an inert body
+ # keeps offline transport failures out of the controls.
  db.execute("UPDATE action_text_rich_texts SET body='<div>Offline preview fixture</div>' WHERE body LIKE '%pbs.twimg.com/profile_images%'")
  for user in ['david','jz','jason','kevin']:db.execute('UPDATE users SET tour_completed_at=? WHERE id=?',[labels['clock.now'],labels['users.'+user]])
  if args.mode=='pickers':
   for id,name,email in [(9100000001,'Chad Puterbaugh','chad@example.test'),(9100000002,'Renée Dupont','renee@example.test')]:
    db.execute("INSERT INTO users(id,name,email_address,created_at,updated_at) VALUES (?,?,?,'2026-03-02 16:00:00','2026-03-02 16:00:00')",[id,name,email])
   labels.update({'users.chad':9100000001,'users.renee':9100000002})
-(seed/'labels.json').write_text(json.dumps(labels))
-shutil.copytree(seed/'db',run/'db');shutil.copytree(seed/'storage',run/'files')
+(run/'labels.json').write_text(json.dumps(labels))
 env=os.environ.copy()
 for line in (root/'parity/.env.reference').read_text().splitlines():
  if line and not line.startswith('#') and '=' in line:k,v=line.split('=',1);env[k]=v
 env.update({k.removeprefix('reference_env.'):str(v) for k,v in labels.items() if k.startswith('reference_env.')})
 env.update(CAMPFIRE_STORAGE_PATH=str(run),CAMPFIRE_FROZEN_TIME=labels['clock.now'],DISABLE_SSL='1',HTTP_PORT=str(ports[1]),TARGET_PORT=str(ports[2]),RAILS_LOG_LEVEL='warn')
 env.pop('TLS_DOMAIN',None)
-oracle=os.environ.copy();oracle.pop('LD_LIBRARY_PATH',None)
-oracle.update(PARITY_NAMESPACE='ws11ui-originals',PARITY_OWNER='ws11ui',PARITY_RUNTIME='docker',PARITY_CPUS='1',PARITY_IMAGE=os.environ.get('PARITY_IMAGE','campfire-reference'))
-reference=str(root/'parity/bin/reference')
 hash=hashlib.sha256(b''.join((root/'parity'/n).read_bytes() for n in ['Dockerfile.playwright','package.json','package-lock.json'])).hexdigest()[:12]
 image='ws12-playwright:'+hash
 if subprocess.run(['docker','image','inspect',image],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode:
@@ -70,13 +67,13 @@ while not sock.exists():
  if forward.poll() is not None or time.monotonic()>deadline:raise RuntimeError('forwarder did not start')
  time.sleep(.02)
 proof=[]
-def db_path(target):return run/'db/production.sqlite3' if target=='Rust' else root/f'parity/.seed/.instances/{ports[0]}/db/production.sqlite3'
-def fixture(target,case):
- with sqlite3.connect(db_path(target)) as db:
+def fixture(case):
+ with sqlite3.connect(database) as db:
   if args.mode=='tours':db.execute('UPDATE users SET tour_completed_at=? WHERE id=?',[labels['clock.now'] if case=='tour-completed' else None,labels['users.jz']])
   if args.mode=='stars':db.execute('DELETE FROM user_stars WHERE user_id=?',[labels['users.jz']])
-def check_state(target,requests):
- with sqlite3.connect(db_path(target)) as db:
+def check_state(requests):
+ target='Rust'
+ with sqlite3.connect(database) as db:
   for request in requests:
    if request['kind']=='direct':
     row=db.execute("SELECT type FROM rooms WHERE id=?",[request['room']]).fetchone()
@@ -98,7 +95,6 @@ def check_state(target,requests):
    else:raise AssertionError(request)
    print(f'ORIGINAL_DB {target}: {json.dumps(request,sort_keys=True)}',flush=True)
 try:
- subprocess.run([reference,'up','--seed',seed.name,'--port',str(ports[0]),'--time',labels['clock.now'],'--freeze','-e','DISABLE_SSL=1'],env=oracle,check=True,timeout=75)
  with (run/'rust-server.log').open('w') as log:
   server=subprocess.Popen([str(binary),'server'],cwd=root,env=env,stdout=log,stderr=subprocess.STDOUT)
   deadline=time.monotonic()+30
@@ -108,30 +104,26 @@ try:
    except OSError:
     if time.monotonic()>deadline:raise RuntimeError('Rust server failed startup')
     time.sleep(.25)
-  for target,port in [('Rails',ports[0]),('Rust',ports[1])]:
-   if (args.controls or args.mutation) and target=='Rails':continue
-   for case in cases[args.mode]:
-    fixture(target,case)
-    script='original_worker_assertions.mjs' if args.mode=='worker' else 'original_browser_assertions.mjs'
-    cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root.parent}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{port}','-e',f'WS11UI_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json','-e',f'WS11UI_BROWSER_DATABASE=/work/{db_path(target).relative_to(root.parent)}','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/rust/reference-tools/users/'+script]
-    result=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
-    print(f'Original {target} {case}:',flush=True);print(result.stdout,flush=True)
-    if args.controls:
-     assert result.returncode!=0 and 'ORIGINAL_MUTATION' in result.stdout and 'INVALID_CONTROL' not in result.stdout,(case,'invalid/surviving producer control',result.stdout[-2000:])
-     assert ('original assertion' in result.stdout or 'TimeoutError' in result.stdout or (args.mode=='worker' and 'only static entries are ever cached' in result.stdout)),(case,'wrong failure')
-    else:
-     assert result.returncode==0 and f'ORIGINAL_CASE {case}: passed' in result.stdout,(case,'browser receipt missing')
-     requests=json.loads(next(s.removeprefix('ORIGINAL_STATE_REQUESTS ') for s in result.stdout.splitlines() if s.startswith('ORIGINAL_STATE_REQUESTS ')))
-     check_state(target,requests)
-    proof.append((target,case))
- print(f'Original browser {args.mode}: {len(proof)} '+('producer defects rejected; 0 invalid controls' if args.controls else 'paired case executions passed; 0 failures'),flush=True)
+  for case in cases[args.mode]:
+   fixture(case)
+   script='original_browser_assertions.mjs'
+   cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root.parent}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{ports[1]}','-e',f'WS11UI_BROWSER_LABELS=/work/{(run/"labels.json").relative_to(root.parent)}','-e',f'WS11UI_BROWSER_DATABASE=/work/{database.relative_to(root.parent)}','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/rust/reference-tools/users/'+script]
+   result=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
+   print(f'Original Rust {case}:',flush=True);print(result.stdout,flush=True)
+   if args.controls:
+    assert result.returncode!=0 and 'ORIGINAL_MUTATION' in result.stdout and 'INVALID_CONTROL' not in result.stdout,(case,'invalid/surviving producer control',result.stdout[-2000:])
+    assert ('original assertion' in result.stdout or 'TimeoutError' in result.stdout),(case,'wrong failure')
+   else:
+    assert result.returncode==0 and f'ORIGINAL_CASE {case}: passed' in result.stdout,(case,'browser receipt missing')
+    requests=json.loads(next(s.removeprefix('ORIGINAL_STATE_REQUESTS ') for s in result.stdout.splitlines() if s.startswith('ORIGINAL_STATE_REQUESTS ')))
+    check_state(requests)
+   proof.append(case)
+ print(f'Original browser {args.mode}: {len(proof)} '+('producer defects rejected; 0 invalid controls' if args.controls else 'Rust case executions passed; 0 failures'),flush=True)
 finally:
  if server:
   server.terminate()
   try:server.wait(timeout=15)
   except subprocess.TimeoutExpired:server.kill();server.wait()
- subprocess.run([reference,'down','--port',str(ports[0])],env=oracle,check=True)
  forward.terminate();forward.wait(timeout=5)
  shutil.rmtree(net_dir)
- shutil.rmtree(seed)
  if os.environ.get('WS11UI_KEEP_BROWSER_SCRATCH')!='1':shutil.rmtree(run)

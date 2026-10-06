@@ -2,8 +2,8 @@ name: Rust
 
 # The Rust port in rust/: clippy, binary build and tests, in the toolchain stage of rust/Dockerfile (the
 # same libvips and ffmpeg builds as its image, so the storage vectors' byte checks run rather than
-# skip). The whole repository is mounted, so rust/.. is the Rails app the port reads as its
-# reference (assets, fixtures, schema).
+# skip). The port reads only its own inputs under rust/: rust/web and rust/fixtures (copied from
+# the Rails app) and the seeds and recordings Rails built once, which are committed.
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
 # nothing is pushed or published. Deploys stay behind the manual Deploy to GCP workflow, which
@@ -60,8 +60,7 @@ env:
     test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
-  # Rust-relevant inputs: the port itself, the Rails app it reads as its reference, and this
-  # workflow. A PR touching none of them (docs, deploy, other workflows) skips the build, and
+  # Rust-relevant inputs: rust/, its setup action and this workflow. A PR touching none of them (docs, deploy, other workflows) skips the build, and
   # "Rust port" passes on that intentional skip. Pushes, the nightly run, manual runs, empty
   # diffs and unavailable history all keep the full run.
   changes:
@@ -92,9 +91,9 @@ jobs:
           import os
           import subprocess
 
-          PREFIXES = (b"rust/", b"app/", b"config/", b"lib/", b"test/", b"db/", b"public/",
-                      b"vendor/", b"bin/", b"script/", b"Gemfile", b".github/actions/rust-setup/")
-          FILES = (b".ruby-version", b"Dockerfile", b".github/workflows/rust.yml")
+          # The port reads only its own tree: a Rails-only change can't affect it.
+          PREFIXES = (b"rust/", b".github/actions/rust-setup/")
+          FILES = (b".github/workflows/rust.yml",)
 
           rust = True
           try:
@@ -121,9 +120,9 @@ jobs:
           print("Run the Rust gates" if rust else "No Rust inputs changed: skip the Rust gates")
           PY
 
-  # Builds or restores the pinned Rails reference image and the default/first_run/agents_ui
-  # seeds, and validates them with Rails. Other jobs restore that exact seed cache entry
-  # (or, on a miss, build and validate their own); both gates require this job.
+  # The committed default/first_run/agents_ui/ledger_originals seeds (parity/seeds/frozen), built
+  # once by the Rails app: their manifest, keys and schema version match this checkout, and the
+  # checker rejects changed, missing or out-of-date seeds. Every job restores them the same way.
   seeds:
     name: Rust seeds
     needs: changes
@@ -131,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -139,12 +138,11 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
-      - name: Prepare and validate pinned Rails inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: full
-          toolchain: 'false'
-          save-caches: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
+      - name: Prove the seed check rejects changed or missing seeds
+        run: python3 -m unittest discover -s rust/parity -p test_frozen_seeds.py
+
+      - name: Check the committed seeds
+        run: python3 rust/parity/bin/frozen-seeds check
 
   # Every ordinary nextest test but the four LLVM-only ones (the llvm job), split round-robin
   # by nextest into twelve slices.
@@ -511,20 +509,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [database, acme, livekit, agents-ui]
+        suite: [acme, livekit, agents-ui]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
 
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           cargo-cache: correctness
 
       - name: Build pinned correctness prerequisites
@@ -562,13 +558,11 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
       - name: Prepare shared Rust CI inputs
         id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           cargo-cache: correctness
       # The prerequisite image only adds browsers and tools to the toolchain image, so the
       # server binary and campfire's test harnesses (what correctness.sh builds first)
@@ -707,7 +701,6 @@ jobs:
         suite: [messaging]
         shard: ["1/16", "2/16", "3/16", "4/16", "5/16", "6/16", "7/16", "8/16", "9/16", "10/16", "11/16", "12/16", "13/16", "14/16", "15/16", "16/16"]
     env:
-      CORRECTNESS_PART: behavior
       WS8BM_PREBUILT_APP: "1"
     steps:
       - name: Checkout code
@@ -715,12 +708,10 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           # The prerequisite image comes from the application host job.
           toolchain: 'false'
       - name: Collect the Rust hosts
@@ -762,59 +753,48 @@ jobs:
           path: rust/target/ci-receipts/
           if-no-files-found: error
 
-  # The pinned original WS14/WS15 declarations (ignored-tests.json "messaging").
-  correctness-messaging-originals:
-    name: Rust correctness (messaging originals ${{ matrix.shard }})
+  # The Drive attachment, share and sudo browser declarations (ignored-tests.json "drive"), each
+  # on its own app with pinned Chromium.
+  correctness-drive:
+    name: Rust correctness (drive browsers)
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        suite: [messaging]
-        shard: ["1/2", "2/2"]
-    env:
-      CORRECTNESS_PART: originals
+        suite: [drive]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           cargo-cache: correctness
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
-      - name: Permit native browser namespaces
-        run: |
-          if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
-            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
-            echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
-          fi
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}
-          CORRECTNESS_SHARD: ${{ matrix.shard }}
         run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
       - name: Retain correctness receipts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
-          name: rust-correctness-messaging-originals-${{ strategy.job-index }}
+          name: rust-correctness-drive
           path: rust/target/ci-receipts/
           if-no-files-found: error
 
   correctness-gate:
     name: Rust correctness
-    needs: [seeds, correctness, correctness-browsers, messaging-hosts, correctness-messaging, correctness-messaging-originals]
+    needs: [seeds, correctness, correctness-browsers, correctness-drive, messaging-hosts, correctness-messaging]
     if: ${{ always() && github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     permissions:

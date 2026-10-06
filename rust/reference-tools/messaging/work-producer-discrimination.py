@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Mutate real work producers in isolated inputs, never tracked app source.
 
-Starts with a normal paired control that constructs all required inputs. The
+Starts with a normal control run that constructs all required inputs. The
 reviewer's producer bodies run in fresh servers and databases. Independent
-readback checks both applications, even when the normal driver stops at Rails.
+readback checks the app's rows, even when the normal driver stops at the browser.
 """
 import argparse
 import json
@@ -11,7 +11,6 @@ import os
 import re
 from pathlib import Path
 import shutil
-import shlex
 import subprocess
 import sys
 
@@ -78,9 +77,9 @@ READBACK = '''                finally:
                     try:
                         if file == "channel_threads_controller" and 'metadata' in locals():
                             from behavior_work_diagnostics import work_readback
-                            work_readback(work, fixture, ports, metadata, case, env)
+                            work_readback(work, fixture, metadata, case, env)
                     finally:
-                        stop_behavior_servers('''
+                        stop_behavior_server('''
 
 
 
@@ -88,13 +87,10 @@ def driver_source(root, output):
     source = root / 'rust/reference-tools/messaging/behavior-check.py'
     text = source.read_text()
     # Bootstrap above actually ran these unchanged setup commands in this invocation.
-    starts = ('subprocess.run(["bash", "rust/parity/bin/seed"',
-              'subprocess.run(["mise", "exec", "rust@1.98.1"',
-              'subprocess.run(["npm",', 'subprocess.run(["docker", "build",')
+    starts = ('subprocess.run([str(RUST / "parity/bin/frozen-seeds")', 'subprocess.run(["npm",')
     text = '\n'.join('pass # inputs built by this invocation\n' if line.startswith(starts) else line for line in text.splitlines())
-    text = text.replace('reference_up=[reference,', 'reference_up=[str(ROOT / ".scratch/ws8bm-work-producers/reference-producer"),')
     text = text.replace('str(target / "debug/campfire")', 'str(ROOT / ".scratch/ws8bm-work-producers/producer-campfire")')
-    needle = '                finally:\n                    stop_behavior_servers('
+    needle = '                finally:\n                    stop_behavior_server('
     assert text.count(needle) == 1
     text = text.replace(needle, READBACK)
     body = output / 'driver-body.py'
@@ -107,12 +103,12 @@ def driver_source(root, output):
     return wrapper
 
 
-def intended_failure_on_both(text, marker):
-    # Stop before the independent row receipts: a companion's row error must
-    # never provide attribution for this application's earlier browser failure.
-    return all(any(marker in chunk for chunk in re.findall(
-        rf'WS8bm positive application FAILED: {app}:.*?(?=WS8bm failed application:|WS8bm positive application FAILED:|WS8bm browser flow FAILED:|WS8bm real producer rows:|\Z)',
-        text,re.S)) for app in ['Rails','Rust'])
+def intended_failure(text, marker):
+    # Stop before the independent row receipts: a row error must never
+    # provide attribution for the application's earlier browser failure.
+    return any(marker in chunk for chunk in re.findall(
+        r'WS8bm positive application FAILED:.*?(?=WS8bm failed application:|WS8bm positive application FAILED:|WS8bm browser flow FAILED:|WS8bm real producer rows:|\Z)',
+        text,re.S))
 
 
 def main():
@@ -149,17 +145,6 @@ def main():
         (output / 'producer-campfire').chmod(0o755)
     finally:
         source.write_text(original)
-    ruby = output / 'producer.rb'
-    shutil.copyfile(TOOLS / 'work-producer-mutants.rb', ruby)
-    reference = (root / 'rust/parity/bin/reference').read_text()
-    root_lines = [line for line in reference.splitlines() if line.startswith('ROOT=')]
-    assert len(root_lines) == 1
-    reference = reference.replace(root_lines[0], 'ROOT=' + shlex.quote(str(root / 'rust')))
-    needle = '  printf \'%s\\n\' --env-file "$ENV_FILE"'
-    assert reference.count(needle) == 1
-    reference = reference.replace(needle, needle + f'\n  printf \'%s\\n\' -v {ruby}:/rails/config/initializers/ws8bm_work_producer.rb:ro -e "WS8BM_WORK_PRODUCER=${{WS8BM_WORK_PRODUCER:?}}"')
-    (output / 'reference-producer').write_text(reference)
-    (output / 'reference-producer').chmod(0o755)
     driver = driver_source(root, output)
     modes = args.mutant or list(CASES)
     failed = 0
@@ -170,8 +155,7 @@ def main():
                                     cwd=root, env=dict(env,WS8BM_WORK_PRODUCER=mode),stdout=log,stderr=subprocess.STDOUT)
         text = (output / f'{mode}.log').read_text()
         rows = [json.loads(line.removeprefix('WS8bm real producer rows: ')) for line in text.splitlines() if line.startswith('WS8bm real producer rows: ')]
-        paired=(len(rows)==2 and {row['app'] for row in rows}=={'Rails','Rust'}
-                and all(row.get('row_assertion')!='INVALID' for row in rows))
+        paired=(len(rows)==1 and rows[0]['app']=='Rust' and rows[0].get('row_assertion')!='INVALID')
         escape = args.expect_escapes and mode in {'extra-foreign-event','rewrite-history-client-id'}
         if not paired:
             valid=False
@@ -180,7 +164,7 @@ def main():
             valid &= (all(row['global_event_delta']==4 and row['target_event_delta']==2 for row in rows)
                       if mode=='extra-foreign-event' else all(row['history_client_id']=='corrupted-work-history' for row in rows))
         elif mode == 'extra-foreign-event':
-            valid = (result.returncode != 0 and intended_failure_on_both(text,'work-event-count:')
+            valid = (result.returncode != 0 and intended_failure(text,'work-event-count:')
                      and all(row['global_event_delta']==2 and row['target_event_delta']==1 for row in rows))
         elif mode == 'rewrite-history-client-id':
             valid = (result.returncode != 0 and all(row['history_client_id']=='corrupted-work-history'
@@ -193,23 +177,23 @@ def main():
         elif mode in {'wrong-event-type','wrong-event-actor'}:
             markers=("'work_update'","'work_assignment'") if mode=='wrong-event-type' else ('712064548','773523953')
             index,expected=(1,'work_update') if mode=='wrong-event-type' else (0,712064548)
-            valid=(result.returncode!=0 and all(intended_failure_on_both(text,marker) for marker in markers)
+            valid=(result.returncode!=0 and all(intended_failure(text,marker) for marker in markers)
                    and all(row['events'] and row['events'][-1][index]==expected
                            and row['row_assertion']=='FAIL' for row in rows))
         elif mode == 'missing-history':
-            valid = (result.returncode != 0 and intended_failure_on_both(text,'work-event-count:')
+            valid = (result.returncode != 0 and intended_failure(text,'work-event-count:')
                      and all(row['events']==[] and row['thread'][0]=='planned' for row in rows))
         elif mode == 'allow-reassignment':
-            valid = result.returncode != 0 and intended_failure_on_both(text,'200 !== 403') and all(row['thread'][1]==773523953 for row in rows)
+            valid = result.returncode != 0 and intended_failure(text,'200 !== 403') and all(row['thread'][1]==773523953 for row in rows)
         else:
-            valid = (result.returncode != 0 and intended_failure_on_both(text,'agent-event-count:')
+            valid = (result.returncode != 0 and intended_failure(text,'agent-event-count:')
                      and all(row['agent_events']==0 and row['row_assertion']=='FAIL'
                              and 'agent-event-count:' in row.get('row_error','') for row in rows))
         failed += not valid
-        print(f'WS8bm real producer discrimination: {mode}: ' + ('ESCAPED as expected at baseline' if escape and valid else 'REJECTED on Rails and Rust at intended assertion' if valid else 'INVALID or unexpected result'),flush=True)
+        print(f'WS8bm real producer discrimination: {mode}: ' + ('ESCAPED as expected at baseline' if escape and valid else 'REJECTED at intended assertion' if valid else 'INVALID or unexpected result'),flush=True)
         for row in rows:
             print(json.dumps(row),flush=True)
-    print(f'WS8bm producer discrimination check: {len(modes)-failed} paired proofs; {failed} invalid or unexpected; '+('baseline escapes expected' if args.expect_escapes else 'no escapes accepted'),flush=True)
+    print(f'WS8bm producer discrimination check: {len(modes)-failed} proofs; {failed} invalid or unexpected; '+('baseline escapes expected' if args.expect_escapes else 'no escapes accepted'),flush=True)
     return bool(failed)
 
 
