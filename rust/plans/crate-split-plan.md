@@ -41,13 +41,13 @@ names, and fails on any path to a higher layer. `#[cfg(test)] mod` modules are e
 phase 2 relocates the ones that reach up; `#[cfg(test)]` items in ordinary modules are checked
 like any other code, since they'd stay in their crate. A second test runs the walker on a
 synthetic tree and requires it to report an upward `use` and an upward `super::` path. Adding
-`use crate::controllers::rooms::pins;` and `use crate::{jobs::{self}, net};` to `cable.rs`
-fails it with:
+`use crate::controllers::rooms::pins;` to `cable.rs` and `use crate::admin;` to
+`controllers/searches.rs` fails it with:
 
 ```
 2 references to a higher layer (move the code down, or see plans/crate-split-plan.md):
-cable.rs:10 (app) -> crate::jobs (channels)
 cable.rs:8 (app) -> crate::controllers::rooms::pins (rooms)
+controllers/searches.rs:4 (controllers) -> crate::admin (server)
 ```
 
 The check sees module paths, not item resolution: a path through an imported name is covered by
@@ -114,6 +114,10 @@ in `integrations`.
 **`config`, `integrations::github` → `concerns`** (`ruby_to_i`). Moved to `ruby`.
 
 **`channels`, `concerns` → `controllers`** (`MatchedRoute`). Moved into `concerns`.
+
+**`concerns`, `presenters::view_context` → `controllers::ledger_browser_tests`** (arrived with
+#253: the test-only switch that turns off forgery protection). Moved `FORGERY_DISABLED` and
+`forgery_disabled` to `test_support`.
 
 **`channels`/`jobs`/presenters → controllers' presentation helpers.** Moved each to
 `controllers::presenters`, re-exported at the old path:

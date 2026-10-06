@@ -288,7 +288,7 @@ fn layer(module: &str) -> (usize, &'static str) {
             } else {
                 module == base || module.starts_with(&format!("{base}::"))
             };
-            let weight = base.len() * 2 + usize::from(!children_only);
+            let weight = base.len() * 2 + usize::from(children_only);
             if matches && best.is_none_or(|(_, w, _)| weight > w) {
                 best = Some((index, weight, name));
             }

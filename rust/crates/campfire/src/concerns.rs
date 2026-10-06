@@ -245,7 +245,7 @@ pub async fn before_actions_with_authentication(
     // The original timezone system test temporarily disables Rails' verifier
     // and token renderer. Only the external cfg(test) host has this switch.
     #[cfg(test)]
-    let forgery_protection = forgery_protection && !crate::controllers::ledger_browser_tests::forgery_disabled();
+    let forgery_protection = forgery_protection && !crate::test_support::forgery_disabled();
     if forgery_protection && !authenticated_by(c).skips_forgery_protection() {
         c.verify_authenticity_token()?;
     }

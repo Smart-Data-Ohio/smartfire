@@ -8,6 +8,11 @@ use futures_util::FutureExt;
 
 pub const WAIT: Duration = Duration::from_secs(30);
 
+/// The original timezone system test's switch for Rails' verifier and token renderer
+/// (`controllers::ledger_browser_tests`).
+pub(crate) static FORGERY_DISABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+pub(crate) fn forgery_disabled() -> bool { FORGERY_DISABLED.load(std::sync::atomic::Ordering::SeqCst) }
+
 pub async fn wait<T>(what: &str, future: impl Future<Output = T>) -> T {
     tokio::time::timeout(WAIT, future)
         .await
