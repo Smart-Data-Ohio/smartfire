@@ -60,8 +60,7 @@ env:
     test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
-  # Rust-relevant inputs: the port itself, the Rails app it reads as its reference, and this
-  # workflow. A PR touching none of them (docs, deploy, other workflows) skips the build, and
+  # Rust-relevant inputs: rust/, its setup action and this workflow. A PR touching none of them (docs, deploy, other workflows) skips the build, and
   # "Rust port" passes on that intentional skip. Pushes, the nightly run, manual runs, empty
   # diffs and unavailable history all keep the full run.
   changes:
@@ -92,9 +91,9 @@ jobs:
           import os
           import subprocess
 
-          PREFIXES = (b"rust/", b"app/", b"config/", b"lib/", b"test/", b"db/", b"public/",
-                      b"vendor/", b"bin/", b"script/", b"Gemfile", b".github/actions/rust-setup/")
-          FILES = (b".ruby-version", b"Dockerfile", b".github/workflows/rust.yml")
+          # The port reads only its own tree: a Rails-only change can't affect it.
+          PREFIXES = (b"rust/", b".github/actions/rust-setup/")
+          FILES = (b".github/workflows/rust.yml",)
 
           rust = True
           try:
@@ -517,8 +516,6 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
 
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
@@ -561,8 +558,6 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
       - name: Prepare shared Rust CI inputs
         id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
@@ -713,8 +708,6 @@ jobs:
         with:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
-          # The external harnesses read original case bodies and the approved layout commit.
-          fetch-depth: 0
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
