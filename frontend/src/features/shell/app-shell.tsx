@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
+import { SearchHotkey } from "../search/search-hotkey.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
 import { GlobalOverlays } from "../switcher/global-overlays.tsx";
@@ -31,13 +32,15 @@ function useDocumentTitle(roomId: number | null): void {
 
 /**
  * Which column a phone shows: the conversation list, a tab's page beside the tab bar (the
- * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled).
+ * activity inbox), or a pushed full screen (a conversation, Saved, Scheduled, Search).
  */
 function usePhoneView(roomId: number | null): "list" | "tab" | "room" {
   const matchRoute = useMatchRoute();
 
   const pushed =
-    matchRoute({ to: "/saved" }) !== false || matchRoute({ to: "/scheduled" }) !== false;
+    matchRoute({ to: "/saved" }) !== false ||
+    matchRoute({ to: "/scheduled" }) !== false ||
+    matchRoute({ to: "/search" }) !== false;
 
   if (roomId !== null || pushed) {
     return "room";
@@ -78,6 +81,7 @@ export function AppShell() {
         <Outlet />
       </main>
       <GlobalOverlays />
+      <SearchHotkey />
       <Toaster />
     </div>
   );

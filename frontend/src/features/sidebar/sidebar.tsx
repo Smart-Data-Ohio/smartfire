@@ -12,6 +12,7 @@ import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
+import { SidebarSearchButton } from "../search/sidebar-search-button.tsx";
 import { UserMenu } from "../shell/user-menu.tsx";
 import { useDestination } from "../shell/view-store.ts";
 import { openOverlay } from "../switcher/overlay-store.ts";
@@ -185,6 +186,7 @@ function WorkspaceHeader({ title }: { readonly title: string }) {
         className="sidebar-compose"
         onClick={() => openOverlay("new-direct")}
       />
+      <SidebarSearchButton />
     </header>
   );
 }
