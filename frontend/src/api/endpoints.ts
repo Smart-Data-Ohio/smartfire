@@ -61,7 +61,7 @@ export const room = Effect.fn("api.room")(function* (roomId: number) {
   return yield* client.execute(get(`/rooms/${roomId}`), wire<RoomDetail>(RoomDetailSchema));
 });
 
-function cursorQuery(cursor: PageCursor): Readonly<Record<string, string>> | undefined {
+export function cursorQuery(cursor: PageCursor): Readonly<Record<string, string>> | undefined {
   if (cursor === null) {
     return undefined;
   }

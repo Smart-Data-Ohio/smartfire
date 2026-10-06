@@ -1,0 +1,108 @@
+/*
+ * Like button: adapted from the free "Like button" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add like-button`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: it drives reaction pills, so the "heart" is the emoji (or icon) in
+ * `.t-like-icon` and there is no stroke-to-fill step; the colour is the accent; the pop, fill
+ * and particle timings point at the motion tokens (spring pop, micro fill). The pill sets
+ * `data-liked` when the viewer has reacted and adds `.is-bursting` for one particle burst when
+ * they add it (never for other people's reactions arriving live).
+ */
+
+@layer recipes {
+  :root {
+    --like-color: var(--accent);
+    --like-fill: var(--duration-micro);
+    --like-pop: var(--duration-spring);
+    --like-pop-ease: var(--ease-spring);
+    --like-particle-dur: 520ms;
+    --like-particle-dist: 14px;
+    --like-particle-size: 3px;
+    --like-ease: var(--ease-enter);
+  }
+
+  /* The pop lives on an HTML wrapper, never on an <svg> or <img> directly (crisp on hi-DPI). */
+  .t-like-icon {
+    display: inline-grid;
+    place-items: center;
+  }
+
+  /* Reduced motion: no pop, no burst (the !important beats the state rules below). */
+  @media (prefers-reduced-motion: reduce) {
+    :where(:root:not([data-motion="full"])) .t-like-icon,
+    :where(:root:not([data-motion="full"])) .t-like-particles i {
+      animation: none !important;
+    }
+  }
+
+  :where(:root[data-motion="reduce"]) .t-like-icon,
+  :where(:root[data-motion="reduce"]) .t-like-particles i {
+    animation: none !important;
+  }
+
+  .t-like[data-liked="true"].is-popping .t-like-icon {
+    animation: t-like-pop var(--like-pop) var(--like-pop-ease);
+  }
+
+  @keyframes t-like-pop {
+    0% {
+      transform: scale(1);
+    }
+
+    30% {
+      transform: scale(0.78);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Particle burst: eight dots flung along per-particle vectors (--px, --py). */
+  .t-like-particles {
+    position: absolute;
+    top: 50%;
+    left: var(--like-origin-x, 14px);
+    width: 0;
+    height: 0;
+    color: var(--like-color);
+    pointer-events: none;
+  }
+
+  .t-like-particles i {
+    position: absolute;
+    top: calc(var(--like-particle-size) * var(--psize, 1) / -2);
+    left: calc(var(--like-particle-size) * var(--psize, 1) / -2);
+    width: calc(var(--like-particle-size) * var(--psize, 1));
+    height: calc(var(--like-particle-size) * var(--psize, 1));
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0;
+  }
+
+  @keyframes t-like-burst {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.4);
+    }
+
+    20% {
+      opacity: 1;
+      transform: translate(calc(var(--px) * 0.25), calc(var(--py) * 0.25)) scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translate(var(--px), var(--py)) scale(var(--p-end-scale, 0.6));
+    }
+  }
+
+  .t-like.is-bursting .t-like-particles i {
+    animation: t-like-burst var(--pdur, var(--like-particle-dur)) ease-out var(--pdelay, 0ms)
+      forwards;
+  }
+}

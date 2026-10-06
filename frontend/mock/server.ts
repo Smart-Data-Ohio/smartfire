@@ -1,13 +1,16 @@
 /**
- * An in-memory Smartfire backend for the SPA's dev mode and integration tests: every S1
+ * An in-memory Smartfire backend for the SPA's dev mode and integration tests: every S1 and S2
  * endpoint and the sync protocol over the real wire contract (camelCase, numeric ids, RFC 3339
  * millisecond timestamps, nulls never omitted). Plain TypeScript with no Node-only APIs, so the
  * same server runs behind the Vite dev server and inside jsdom tests. Never imported by app code.
+ *
+ * The S1 routes live here; the S2 ones are modules under s2/, each handed an `S2Context` and
+ * reached through `dispatch` when no S1 route matches.
  */
-import type { ApiError } from "../src/gen/ApiError.ts";
 import type { Me } from "../src/gen/Me.ts";
 import type { MessageDTO } from "../src/gen/MessageDTO.ts";
-import type { MessagePage } from "../src/gen/MessagePage.ts";
+import type { MessageReactions } from "../src/gen/MessageReactions.ts";
+import type { PinState } from "../src/gen/PinState.ts";
 import type { Presence } from "../src/gen/Presence.ts";
 import type { PresenceList } from "../src/gen/PresenceList.ts";
 import type { ReadState } from "../src/gen/ReadState.ts";
@@ -17,9 +20,41 @@ import type { SidebarRow } from "../src/gen/SidebarRow.ts";
 import type { UnreadDivider } from "../src/gen/UnreadDivider.ts";
 import type { User } from "../src/gen/User.ts";
 import type { UserList } from "../src/gen/UserList.ts";
+import {
+  forbidden,
+  headerOf,
+  type MockBinaryRequest,
+  type MockBinaryResponse,
+  type MockRequest,
+  type MockResponse,
+  notFound,
+  plainError,
+  queryOf,
+  respond,
+  validation,
+} from "./http.ts";
 import { booleanField, intField, type Json, type JsonRecord, stringField } from "./json.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import { createRandom, type Random } from "./random.ts";
+import { createAmbient } from "./s2/ambient.ts";
+import { createComposer, VIEWER_TIME_ZONE } from "./s2/composer.ts";
+import { dispatch, type S2Context } from "./s2/context.ts";
+import { createDirects } from "./s2/directs.ts";
+import { createMessages } from "./s2/messages.ts";
+import {
+  buildMessage,
+  locate,
+  type MessageDraft,
+  pageOf,
+  pinCount,
+  plainDraft,
+  threadStatus,
+} from "./s2/model.ts";
+import { createPanes } from "./s2/panes.ts";
+import { clientMessageIdOf, parseMessage } from "./s2/posting.ts";
+import { buildWorld, MESSAGE_IDS, SCHEDULED_IDS, THREAD_IDS } from "./s2/seed.ts";
+import { createThreads } from "./s2/threads.ts";
+import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -27,7 +62,6 @@ import {
   ROOM_IDS,
   type RoomRecord,
   seededUuid,
-  seedWorld,
   timestamp,
   USER_IDS,
   VIEWER_ID,
@@ -42,11 +76,17 @@ import {
   type SyncConnection,
 } from "./sync.ts";
 
-/** Messages per page, as `Message::PAGE_SIZE`. */
-export const PAGE_SIZE = 40;
+export type {
+  MockBinaryRequest,
+  MockBinaryResponse,
+  MockHeaders,
+  MockRequest,
+  MockResponse,
+} from "./http.ts";
 
-/** `Message::SOURCE_LIMIT`. */
-export const SOURCE_LIMIT = 50_000;
+export { PAGE_SIZE, SOURCE_LIMIT } from "./s2/model.ts";
+
+export { isBinaryPath } from "./s2/uploads.ts";
 
 /** The seeded ids, for tests and screenshots. */
 export const SEED_IDS = {
@@ -55,28 +95,10 @@ export const SEED_IDS = {
   users: USER_IDS,
   rooms: ROOM_IDS,
   categories: CATEGORY_IDS,
+  threads: THREAD_IDS,
+  messages: MESSAGE_IDS,
+  scheduled: SCHEDULED_IDS,
 } as const;
-
-/** Request headers, names in any case. */
-export interface MockHeaders {
-  readonly [name: string]: string | undefined;
-}
-
-/** An HTTP request as the transports hand it over. */
-export interface MockRequest {
-  readonly method: string;
-  /** The path, e.g. `/api/v1/rooms/1/messages`; a `?query` here is read too. */
-  readonly path: string;
-  readonly query?: URLSearchParams | string | undefined;
-  /** The parsed JSON body, if any. */
-  readonly body?: Json | undefined;
-  readonly headers?: MockHeaders | undefined;
-}
-
-export interface MockResponse {
-  readonly status: number;
-  readonly json: Json;
-}
 
 export interface MockServerOptions {
   /** The clock (ms since the epoch); seed data is placed relative to it. */
@@ -92,6 +114,8 @@ export interface MockServerOptions {
 export interface MockServer {
   /** Serves `/api/v1/*` and `/__mock/*`. Held sends resolve when released. */
   handle(request: MockRequest): Promise<MockResponse>;
+  /** Serves the byte routes: the upload `PUT`, blob downloads and icon images. */
+  handleBinary(request: MockBinaryRequest): Promise<MockBinaryResponse>;
   /** Opens a sync connection; `drop` is how the hub hangs up abruptly. */
   connect(send: SendFrame, drop?: DropSocket): SyncConnection;
   /** The CSRF token non-GET requests must send as `X-CSRF-Token`. */
@@ -109,6 +133,27 @@ export interface MockServer {
   releaseSends(): void;
   /** Held sends still waiting. */
   pendingSends(): number;
+  /** While on, upload `PUT`s wait until released. Turning it off releases them. */
+  holdUploads(on: boolean): void;
+  /** Lets every held upload through. */
+  releaseUploads(): void;
+  /** Delays each upload `PUT`'s answer by `ms` on the scheduler (0 turns it off). */
+  throttleUploads(ms: number): void;
+  /** Held uploads still waiting. */
+  pendingUploads(): number;
+  /** `userId` replies in a thread, as if from their own client. */
+  threadPost(threadId: number, userId: number, markdown: string): MessageDTO;
+  /** `userId` starts or stops typing in a thread (fanned out to `thread:<id>`). */
+  threadTyping(threadId: number, userId: number, on: boolean): void;
+  /** `userId` reacts (toggling) or boosts, as `POST /messages/:id/boosts` would for them. */
+  react(messageId: number, userId: number, content: string): MessageReactions;
+  /** `userId` pins (or, with `pinned: false`, unpins) a message. */
+  pin(messageId: number, userId: number, pinned?: boolean): PinState;
+  /**
+   * Posts the scheduled messages that are due now (all pending ones with `all`). Their timers
+   * also fire on their own, exactly at `sendAt`.
+   */
+  fireScheduled(all?: boolean): number;
   /** A new CSRF token; the old one now gets 422 InvalidAuthenticityToken. */
   rotateCsrf(): string;
   /** Hangs up every sync connection (abruptly, or after `bye{reconnect:true}`). */
@@ -125,59 +170,10 @@ export interface MockServer {
   syncState(): { readonly epoch: string; readonly seq: number; readonly connections: number };
 }
 
-class HttpError extends Error {
-  readonly status: number;
-  readonly error: ApiError;
-
-  constructor(status: number, error: ApiError) {
-    super(error.message);
-    this.status = status;
-    this.error = error;
-  }
-}
-
-/** The `ApiError` variants that carry only a message. */
-type PlainErrorTag = Exclude<ApiError["_tag"], "Validation" | "RateLimited">;
-
-/**
- * An error body exactly as the Rust server serializes it. This is wire JSON, not an Effect
- * tagged value (Effect stays out of the mock), so the tag is plain data here.
- */
-function plainError(status: number, tag: PlainErrorTag, message: string): HttpError {
-  return new HttpError(status, { _tag: tag, message });
-}
-
-const notFound = (message = "Not found") => plainError(404, "NotFound", message);
-
-const VALIDATION: ApiError["_tag"] = "Validation";
-
-const validation = (field: string, message: string) =>
-  new HttpError(422, {
-    _tag: VALIDATION,
-    message: `Validation failed: ${message}`,
-    fields: { [field]: [message] },
-  });
-
 function token(random: Random): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
   return Array.from({ length: 43 }, () => alphabet[random.int(0, alphabet.length - 1)]).join("");
-}
-
-function queryOf(request: MockRequest): URLSearchParams {
-  const inline = request.path.includes("?") ? request.path.slice(request.path.indexOf("?")) : "";
-
-  if (request.query === undefined) return new URLSearchParams(inline);
-
-  return new URLSearchParams(request.query);
-}
-
-function headerOf(request: MockRequest, name: string): string | undefined {
-  for (const [key, value] of Object.entries(request.headers ?? {})) {
-    if (key.toLowerCase() === name) return value;
-  }
-
-  return undefined;
 }
 
 function idsParam(query: URLSearchParams): number[] {
@@ -196,11 +192,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   const scheduler = options.scheduler ?? realScheduler();
   const simulate = options.simulate ?? false;
 
-  let world: World = seedWorld(now(), createRandom(seed));
+  let world: World = buildWorld(now(), seed);
   let random = createRandom(seed * 7919 + 17);
   let csrf = token(random);
   let restarts = 0;
-  let sentByClientId = new Map<string, MessageDTO>();
   let holding = false;
   let held: (() => void)[] = [];
 
@@ -323,16 +318,16 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     preferences: {
       theme: "system",
       textSize: "default",
-      timeZone: "America/New_York",
+      timeZone: VIEWER_TIME_ZONE,
       timeZoneExplicit: false,
       tourCompleted: true,
       voiceMode: "voice_activity",
       pushToTalkKey: "Space",
     },
     presenceSetting: "auto",
-    doNotDisturb: { enabled: false, until: null },
+    doNotDisturb: world.doNotDisturb,
     quietHours: null,
-    outOfOffice: null,
+    outOfOffice: world.outOfOffice,
     lastRoomId: ROOM_IDS.general,
   });
 
@@ -377,7 +372,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
       membership: record.membership,
       displayName: displayName(record),
       memberCount: record.memberIds.length,
-      pinsCount: record.pinsCount,
+      pinsCount: pinCount(world, record.room.id),
       directMemberIds: direct,
       memberPreviewIds: preview,
       users: usersFor([...direct, ...preview]),
@@ -385,48 +380,8 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     };
   };
 
-  const page = (record: RoomRecord, from: number, to: number): MessagePage => {
-    const start = Math.max(0, from);
-    const end = Math.min(record.messages.length, to);
-    const messages = record.messages.slice(start, end);
-    const oldest = messages[0];
-    const newest = messages.at(-1);
-
-    return {
-      messages,
-      users: usersFor(messages.map((message) => message.creatorId)),
-      before: oldest !== undefined && start > 0 ? oldest.id : null,
-      after: newest !== undefined && end < record.messages.length ? newest.id : null,
-      saved: [],
-    };
-  };
-
-  const messages = (roomId: number, query: URLSearchParams): MessagePage => {
-    const record = roomOr404(roomId);
-    const cursors = (["before", "after", "around"] as const).filter((key) => query.has(key));
-
-    if (cursors.length > 1) throw validation("base", "Pass at most one of before, after, around");
-
-    const [cursor] = cursors;
-
-    if (cursor === undefined) {
-      return page(record, record.messages.length - PAGE_SIZE, record.messages.length);
-    }
-
-    const anchorId = Number(query.get(cursor));
-    const index = record.messages.findIndex((message) => message.id === anchorId);
-
-    if (index < 0) throw notFound("Message not found");
-
-    switch (cursor) {
-      case "before":
-        return page(record, index - PAGE_SIZE, index);
-      case "after":
-        return page(record, index + 1, index + 1 + PAGE_SIZE);
-      case "around":
-        return page(record, index - PAGE_SIZE, index + 1 + PAGE_SIZE);
-    }
-  };
+  const messages = (roomId: number, query: URLSearchParams) =>
+    pageOf(roomOr404(roomId).messages, query, { usersFor, saved: world.saved });
 
   // --- writes ---
 
@@ -436,41 +391,18 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   };
 
   /** Everything that happens when someone posts: the message, unreads, sidebar, the bot. */
-  const createMessage = (
-    record: RoomRecord,
-    creatorId: number,
-    markdown: string,
-    clientMessageId: string,
-    replyToMessageId: number | null,
-    streaming: boolean,
-  ): MessageDTO => {
+  const createMessage = (record: RoomRecord, draft: MessageDraft): MessageDTO => {
     const createdAt = timestamp(Math.max(now(), Date.parse(record.room.updatedAt) + 1));
+    const creatorId = draft.creatorId;
 
-    const message: MessageDTO = {
-      id: world.nextMessageId++,
-      roomId: record.room.id,
-      threadId: null,
-      creatorId,
-      clientMessageId,
-      bodyHtml: renderMarkdown(markdown, mentionables()),
-      markdownSource: markdown,
-      systemNote: false,
-      action: false,
-      streaming,
-      embedsSuppressed: false,
-      replyToMessageId,
-      forwardedFromMessageId: null,
-      forwardedAt: null,
-      forwardNote: null,
-      editedAt: null,
-      attachment: null,
-      reactions: [],
-      boosts: [],
-      pinned: false,
-      thread: null,
+    const message = buildMessage(
+      world.nextMessageId++,
+      record.room.id,
+      null,
+      draft,
       createdAt,
-      updatedAt: createdAt,
-    };
+      mentionables(),
+    );
 
     record.messages.push(message);
     record.room = { ...record.room, updatedAt: createdAt };
@@ -481,7 +413,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     if (creatorId === VIEWER_ID) {
       markReadUpTo(record, message.id);
-    } else {
+    } else if (!message.systemNote) {
       const mentioned = mentionsUser(message.bodyHtml, VIEWER_ID);
       const quiet = ["muted", "nothing"].includes(record.membership.involvement) && !mentioned;
       const viewing = hub.presentRooms().has(record.room.id);
@@ -511,64 +443,57 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     const forBot = record.room.id === ROOM_IDS.dmEmber || mentionsUser(message.bodyHtml, BOT_ID);
 
-    if (simulate && creatorId === VIEWER_ID && forBot) simulation.botReply(record.room.id);
+    if (simulate && creatorId === VIEWER_ID && forBot && !message.systemNote) {
+      simulation.botReply(record.room.id);
+    }
 
     return message;
   };
 
   const updateMessage = (messageId: number, markdown: string, streaming: boolean) => {
-    for (const record of world.rooms.values()) {
-      const index = record.messages.findIndex((message) => message.id === messageId);
-      const current = record.messages[index];
+    const location = locate(world, messageId);
 
-      if (current === undefined) continue;
+    if (location === null) return;
 
-      const updatedAt = timestamp(Math.max(now(), Date.parse(current.updatedAt) + 1));
+    const current = location.message;
+    const updatedAt = timestamp(Math.max(now(), Date.parse(current.updatedAt) + 1));
 
-      const message: MessageDTO = {
-        ...current,
-        bodyHtml: renderMarkdown(markdown, mentionables()),
-        markdownSource: markdown,
-        streaming,
-        updatedAt,
-      };
+    const message: MessageDTO = {
+      ...current,
+      bodyHtml: renderMarkdown(markdown, mentionables()),
+      markdownSource: markdown,
+      streaming,
+      updatedAt,
+    };
 
-      record.messages[index] = message;
-      hub.publish([{ topic: `room:${record.room.id}`, type: "message.updated", data: message }]);
-
-      return;
-    }
+    location.list[location.index] = message;
+    hub.publish([
+      { topic: `room:${location.room.room.id}`, type: "message.updated", data: message },
+    ]);
   };
 
   const createFromClient = (roomId: number, body: Json | undefined): MockResponse => {
     const record = roomOr404(roomId);
-    const clientMessageId = stringField(body, "clientMessageId");
-    const markdown = stringField(body, "markdownSource");
-    const replyTo = intField(body, "replyToMessageId");
-
-    if (clientMessageId === null || clientMessageId === "") {
-      throw validation("clientMessageId", "Client message can't be blank");
-    }
-
+    const clientMessageId = clientMessageIdOf(body);
     const key = `${roomId}:${VIEWER_ID}:${clientMessageId}`;
-    const duplicate = sentByClientId.get(key);
+    const duplicate = world.sentByClientId.get(key);
 
     if (duplicate !== undefined) return { status: 200, json: duplicate };
 
-    if (markdown === null || markdown.trim() === "")
-      throw validation("body", "Body can't be blank");
-
-    if (markdown.length > SOURCE_LIMIT) {
-      throw validation("body", `Body is too long (maximum is ${SOURCE_LIMIT} characters)`);
-    }
+    const parsed = parseMessage(body, uploads.attachment);
+    const replyTo = parsed.replyToMessageId;
 
     if (replyTo !== null && !record.messages.some((message) => message.id === replyTo)) {
       throw validation("replyToMessageId", "Reply to message must be on this timeline");
     }
 
-    const message = createMessage(record, VIEWER_ID, markdown, clientMessageId, replyTo, false);
+    const message = createMessage(record, {
+      ...plainDraft(VIEWER_ID, parsed.markdown, clientMessageId),
+      replyToMessageId: replyTo,
+      attachment: parsed.attachment,
+    });
 
-    sentByClientId.set(key, message);
+    world.sentByClientId.set(key, message);
 
     return { status: 201, json: message };
   };
@@ -636,7 +561,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
     if (record === undefined) throw notFound("Room not found");
 
-    return createMessage(record, userId, markdown, seededUuid(random), null, false);
+    return createMessage(record, plainDraft(userId, markdown, seededUuid(random)));
   };
 
   // --- the simulation ---
@@ -652,7 +577,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
 
         return record === undefined
           ? null
-          : createMessage(record, userId, markdown, seededUuid(random), null, streaming);
+          : createMessage(record, {
+              ...plainDraft(userId, markdown, seededUuid(random)),
+              streaming,
+            });
       },
       update: updateMessage,
       setPresence: (userId, presence) => setPresence(userId, presence),
@@ -696,6 +624,107 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     if (!on) release();
   };
 
+  /** Runs a posting request now, or once released while sends are held. */
+  const whenReleased = (run: () => MockResponse): MockResponse | Promise<MockResponse> => {
+    if (!holding) return run();
+
+    return new Promise<MockResponse>((resolve) => {
+      held.push(() => resolve(respond(run)));
+    });
+  };
+
+  // --- the S2 modules ---
+
+  const ctx: S2Context = {
+    world: () => world,
+    now,
+    scheduler,
+    publish: (events) => hub.publish(events),
+    uuid: () => seededUuid(random),
+    hex: (length) => Array.from({ length }, () => random.int(0, 15).toString(16)).join(""),
+    roomOr404,
+    usersFor,
+    mentionables,
+    sidebarRow,
+    roomDetail,
+    displayName,
+    postToRoom: createMessage,
+  };
+
+  const uploads = createUploads(ctx);
+  const threads = createThreads(ctx, uploads, whenReleased);
+  const messageActions = createMessages(ctx, threads);
+
+  const composer = createComposer(ctx, threads, (messageId, remindAt) => {
+    messageActions.save(messageId, remindAt);
+  });
+
+  const routes = [
+    ...uploads.routes,
+    ...threads.routes,
+    ...messageActions.routes,
+    ...composer.routes,
+    ...createDirects(ctx).routes,
+    ...createPanes(ctx).routes,
+  ];
+
+  composer.arm();
+
+  const threadPost = (threadId: number, userId: number, markdown: string): MessageDTO => {
+    const thread = world.threads.get(threadId);
+
+    if (thread === undefined) throw notFound("Thread not found");
+
+    if (thread.locked) throw forbidden("This thread is locked");
+
+    return threads.postReply(thread, plainDraft(userId, markdown, seededUuid(random)));
+  };
+
+  const ambient = createAmbient(
+    {
+      reactable: () => {
+        const targets = [];
+
+        for (const roomId of hub.subscribedRooms()) {
+          const record = world.rooms.get(roomId);
+
+          if (record === undefined || record.room.kind === "direct") continue;
+
+          const people = record.memberIds.filter((id) => id !== VIEWER_ID && id !== BOT_ID);
+
+          for (const message of record.messages.slice(-5)) {
+            if (!message.systemNote) targets.push({ messageId: message.id, people });
+          }
+        }
+
+        return targets;
+      },
+      threads: () =>
+        [...world.threads.values()].flatMap((thread) =>
+          threadStatus(thread, now()) === "active"
+            ? [
+                {
+                  threadId: thread.id,
+                  people: [...thread.memberIds].filter((id) => id !== VIEWER_ID && id !== BOT_ID),
+                },
+              ]
+            : [],
+        ),
+      react: (messageId, userId, content) => {
+        messageActions.react(messageId, userId, content);
+      },
+      typing: (threadId, userId, on) => threads.typing(threadId, userId, on),
+      reply: (threadId, userId, markdown) => {
+        threadPost(threadId, userId, markdown);
+      },
+      paused: () => simulation.paused(),
+    },
+    scheduler,
+    createRandom(seed * 15_485_863 + 7),
+  );
+
+  if (simulate) ambient.start();
+
   // --- routing ---
 
   const api = (request: MockRequest, path: string): MockResponse | Promise<MockResponse> => {
@@ -703,7 +732,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     const query = queryOf(request);
 
     if (method !== "GET" && method !== "HEAD") {
-      const sent = headerOf(request, "x-csrf-token");
+      const sent = headerOf(request.headers, "x-csrf-token");
 
       if (sent !== csrf) {
         throw plainError(422, "InvalidAuthenticityToken", "Can't verify CSRF token authenticity.");
@@ -729,22 +758,21 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         return { status: 200, json: roomDetail(roomId) };
       case "GET /rooms/:id/messages":
         return { status: 200, json: messages(roomId, query) };
-      case "POST /rooms/:id/messages": {
+      case "POST /rooms/:id/messages":
         roomOr404(roomId);
 
-        if (!holding) return createFromClient(roomId, request.body);
-
-        return new Promise<MockResponse>((resolve) => {
-          held.push(() => resolve(respond(() => createFromClient(roomId, request.body))));
-        });
-      }
-
+        return whenReleased(() => createFromClient(roomId, request.body));
       case "POST /rooms/:id/read":
         return { status: 200, json: markRead(roomId) };
       case "DELETE /rooms/:id/read":
         return { status: 200, json: markUnread(roomId, request.body) };
-      default:
-        throw notFound(`No route for ${method} /api/v1${path}`);
+      default: {
+        const handler = dispatch(routes, method, path, query, request.body);
+
+        if (handler === null) throw notFound(`No route for ${method} /api/v1${path}`);
+
+        return handler();
+      }
     }
   };
 
@@ -795,14 +823,44 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         typing(int("roomId"), int("userId"), flag("on", true));
 
         return ok;
+      case "thread-typing":
+        threads.typing(int("threadId"), int("userId"), flag("on", true));
+
+        return ok;
       case "post":
         return { status: 201, json: post(int("roomId"), int("userId"), text("markdown")) };
+      case "thread-post":
+        return { status: 201, json: threadPost(int("threadId"), int("userId"), text("markdown")) };
+      case "react":
+        return {
+          status: 200,
+          json: messageActions.react(int("messageId"), int("userId"), text("content")),
+        };
+      case "pin":
+        return {
+          status: 200,
+          json: messageActions.pin(int("messageId"), int("userId"), flag("pinned", true)),
+        };
+      case "schedule-due":
+        return { status: 200, json: { sent: composer.fireScheduled(flag("all", false)).length } };
       case "hold-sends":
         holdSends(flag("on", true));
 
         return ok;
       case "release-sends":
         release();
+
+        return ok;
+      case "hold-uploads":
+        uploads.hold(flag("on", true));
+
+        return ok;
+      case "release-uploads":
+        uploads.release();
+
+        return ok;
+      case "throttle-uploads":
+        uploads.throttle(int("ms"));
 
         return ok;
       case "rotate-csrf":
@@ -845,19 +903,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     paused: simulation.paused(),
     holdingSends: holding,
     pendingSends: held.length,
+    pendingUploads: uploads.pending(),
     csrfToken: csrf,
     ids: SEED_IDS,
   });
-
-  const respond = (run: () => MockResponse): MockResponse => {
-    try {
-      return run();
-    } catch (error) {
-      if (error instanceof HttpError) return { status: error.status, json: { error: error.error } };
-
-      throw error;
-    }
-  };
 
   const server: MockServer = {
     async handle(request) {
@@ -875,6 +924,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         });
       }
     },
+    handleBinary: (request) => uploads.handleBinary(request),
     connect: (send, drop) => hub.connect(send, drop),
     csrfToken: () => csrf,
     pause: () => simulation.pause(),
@@ -884,6 +934,15 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     holdSends,
     releaseSends: release,
     pendingSends: () => held.length,
+    holdUploads: (on) => uploads.hold(on),
+    releaseUploads: () => uploads.release(),
+    throttleUploads: (ms) => uploads.throttle(ms),
+    pendingUploads: () => uploads.pending(),
+    threadPost,
+    threadTyping: (threadId, userId, on) => threads.typing(threadId, userId, on),
+    react: (messageId, userId, content) => messageActions.react(messageId, userId, content),
+    pin: (messageId, userId, pinned = true) => messageActions.pin(messageId, userId, pinned),
+    fireScheduled: (all = false) => composer.fireScheduled(all).length,
     rotateCsrf() {
       csrf = token(random);
 
@@ -894,22 +953,29 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     setPresence,
     reset() {
       release();
+      uploads.reset();
+      composer.stop();
       simulation.stop();
-      world = seedWorld(now(), createRandom(seed));
+      ambient.stop();
+      world = buildWorld(now(), seed);
       random = createRandom(seed * 7919 + 17);
       csrf = token(random);
-      sentByClientId = new Map();
       restarts += 1;
       hub.restart(epochFor());
+      composer.arm();
 
       if (simulate) {
         simulation.resume();
         simulation.start();
+        ambient.start();
       }
     },
     dispose() {
       release();
+      uploads.reset();
+      composer.stop();
       simulation.stop();
+      ambient.stop();
       hub.dropAll(false);
     },
     syncState: () => ({ epoch: hub.epoch(), seq: hub.seq(), connections: hub.connectionCount() }),
@@ -918,7 +984,12 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
   return server;
 }
 
-/** Whether a request path is one the mock serves. */
+/** Whether a request path is one the mock serves as JSON. */
 export function isMockPath(path: string): boolean {
   return path.startsWith("/api/v1/") || path.startsWith("/__mock/");
+}
+
+/** Whether a request path is one the mock serves at all, as JSON or bytes. */
+export function isAnyMockPath(path: string): boolean {
+  return isMockPath(path) || isBinaryPath(path);
 }

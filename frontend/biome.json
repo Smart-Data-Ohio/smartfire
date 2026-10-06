@@ -41,6 +41,26 @@
                   {
                     "group": ["effect/**", "@effect/**"],
                     "message": "Effect stays in src/api and src/sync. Call the plain async functions in src/sync/runtime.ts (actions) instead."
+                  },
+                  {
+                    "group": ["**/api/**", "!**/api/testing.ts"],
+                    "message": "React code doesn't call endpoints. Add a plain async function to actions in src/sync/runtime.ts (or a facade module in src/sync) and call that."
+                  },
+                  {
+                    "group": [
+                      "**/sync/**",
+                      "!**/sync/runtime.ts",
+                      "!**/sync/composer-actions.ts",
+                      "!**/sync/directs.ts",
+                      "!**/sync/panes.ts",
+                      "!**/sync/run.ts"
+                    ],
+                    "message": "src/sync's Effect programs stay behind the plain async facades: actions in src/sync/runtime.ts, composer-actions.ts, directs.ts or panes.ts."
+                  },
+                  {
+                    "group": ["**/sync/runtime.ts"],
+                    "importNamePattern": "(runAction|runtime)",
+                    "message": "Running Effect programs is src/sync's job. Call (or add) a plain async function on actions instead."
                   }
                 ]
               }

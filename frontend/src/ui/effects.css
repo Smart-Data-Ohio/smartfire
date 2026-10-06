@@ -93,8 +93,12 @@
 
   /* ── AgentAvatar ── */
 
-  .agent-avatar {
-    background: var(--agent-soft);
+  /*
+   * A tile a step stronger than --agent-soft, so a small bot still reads against the sidebar.
+   * Doubled up to outrank `.avatar`'s person fill whichever stylesheet loads last.
+   */
+  .avatar.agent-avatar {
+    background: light-dark(oklch(90% 0.06 300), oklch(36% 0.09 300));
     color: var(--agent-text);
   }
 }

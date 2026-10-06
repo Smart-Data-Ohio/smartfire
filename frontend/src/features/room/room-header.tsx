@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton } from "../../ui/skeleton.tsx";
+import { DirectHeaderActions } from "../directs/direct-header-actions.tsx";
+import { PaneButtons } from "../panes/pane-buttons.tsx";
 import { usePresenceStatus, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "./room-icon.ts";
@@ -28,29 +30,11 @@ function DirectSubtitle({ userId }: { readonly userId: number }) {
   return text === null ? null : <span className="room-header-topic">{text}</span>;
 }
 
-/** The overlapping member stack (Slack's), with the count beside it. */
-function MemberStack({ ids, count }: { readonly ids: readonly number[]; readonly count: number }) {
-  return (
-    <span
-      className="room-members"
-      role="img"
-      aria-label={`${count} ${count === 1 ? "member" : "members"}`}
-    >
-      <span className="room-members-stack" aria-hidden="true">
-        {ids.slice(0, 3).map((id) => (
-          <UserAvatar key={id} userId={id} size={22} decorative />
-        ))}
-      </span>
-      <span className="room-members-count tabular" aria-hidden="true">
-        {count}
-      </span>
-    </span>
-  );
-}
-
 /**
- * The 48 px pane header: the room's glyph and name (a DM shows the person, their presence and
- * status), then the member stack. On phones a back button returns to the list.
+ * The 48 px pane header, Slack's: the room's glyph and name (a DM shows the person, their
+ * presence and status) on the left, the tools on the right (a DM's people actions, then the pane
+ * toggles: threads, pins, files and the member stack). On phones a back button returns to the
+ * list.
  */
 export function RoomHeader({ roomId }: { readonly roomId: number }) {
   const detail = useStore((state) => state.rooms[roomId]?.detail ?? null);
@@ -79,9 +63,8 @@ export function RoomHeader({ roomId }: { readonly roomId: number }) {
         </div>
       )}
       <div className="room-header-tools">
-        {detail === null || kind === "direct" ? null : (
-          <MemberStack ids={detail.memberPreviewIds} count={detail.memberCount} />
-        )}
+        {kind === "direct" ? <DirectHeaderActions roomId={roomId} /> : null}
+        <PaneButtons roomId={roomId} />
       </div>
     </header>
   );

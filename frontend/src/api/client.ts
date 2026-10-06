@@ -47,7 +47,7 @@ export class Navigation extends Context.Service<
 
 /** One `/api/v1` request. Bodies and replies are JSON. */
 export interface ApiRequest {
-  readonly method: "GET" | "POST" | "DELETE";
+  readonly method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   /** Below the API base, e.g. `/rooms/12/messages`. */
   readonly path: string;
   readonly query?: Readonly<Record<string, string>>;

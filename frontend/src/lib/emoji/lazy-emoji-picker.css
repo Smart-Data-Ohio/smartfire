@@ -1,0 +1,14 @@
+/* The picker's placeholder while its chunk loads: the same footprint as the picker. */
+@layer app {
+  .popover:has(> .emoji-picker-fallback) {
+    padding: 0;
+  }
+
+  .emoji-picker-fallback {
+    display: grid;
+    place-items: center;
+    width: min(356px, calc(100vw - var(--space-4)));
+    height: 420px;
+    color: var(--text-faint);
+  }
+}

@@ -52,8 +52,9 @@ pub struct CreateBoost {
     pub content: String,
 }
 
-/// A message's reactions and boosts after a change. The reply to `POST` and
-/// `DELETE /api/v1/messages/:id/boosts[/:boostId]`, and the `message.reactions` event on the
+/// A message's reactions and boosts after a change. The reply to
+/// `POST /api/v1/messages/:id/boosts` and `DELETE /api/v1/messages/:id/boosts/:boostId` (a
+/// reaction is removed by posting it again, never by `DELETE`), and the `message.reactions` event on the
 /// message's conversation topic (the JSON twin of `message_reactions_replace`).
 ///
 /// Replaces the message's `reactions`, `boosts` and `updatedAt` when `updatedAt` is newer than

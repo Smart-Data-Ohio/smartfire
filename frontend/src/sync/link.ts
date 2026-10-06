@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Ref, Semaphore } from "effect";
+import { Context, Effect, Layer, PubSub, Ref, Semaphore, Stream } from "effect";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { SyncConnection } from "./socket.ts";
 
@@ -18,6 +18,8 @@ export class SyncLink extends Context.Service<
     ) => Effect.Effect<void>;
     readonly detach: Effect.Effect<void>;
     readonly isConnected: Effect.Effect<boolean>;
+    /** Emits each time a connection becomes current (after its greeting went out). */
+    readonly attached: Stream.Stream<void>;
   }
 >()("smartfire/sync/SyncLink") {
   static readonly layer = Layer.effect(
@@ -25,6 +27,7 @@ export class SyncLink extends Context.Service<
     Effect.gen(function* () {
       const current = yield* Ref.make<SyncConnection | null>(null);
       const lock = yield* Semaphore.make(1);
+      const attachments = yield* PubSub.unbounded<void>();
 
       const send = (frame: ClientFrame) =>
         lock.withPermit(
@@ -44,6 +47,7 @@ export class SyncLink extends Context.Service<
             }
 
             yield* Ref.set(current, connection);
+            yield* PubSub.publish(attachments, undefined);
           }),
         );
 
@@ -52,6 +56,7 @@ export class SyncLink extends Context.Service<
         attach,
         detach: lock.withPermit(Ref.set(current, null)),
         isConnected: Effect.map(Ref.get(current), (connection) => connection !== null),
+        attached: Stream.fromPubSub(attachments),
       });
     }),
   );

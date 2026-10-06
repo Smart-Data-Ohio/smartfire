@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from "@effect/vitest";
-import { Clock, Deferred, Effect, Layer, Random, Ref } from "effect";
+import { Clock, Deferred, Effect, Layer, Random, Ref, Schema } from "effect";
 import { TestClock } from "effect/testing";
-import { ServerError, Validation } from "../api/errors.ts";
+import { NetworkError, ServerError, Validation } from "../api/errors.ts";
+import { CreateMessage as CreateMessageSchema } from "../api/schema/message.ts";
 import {
   FakeApi,
   meFixture,
@@ -12,6 +13,7 @@ import {
   sidebarRowFixture,
 } from "../api/testing.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
+import type { CreateMessage } from "../gen/CreateMessage.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import { mutations, store } from "../store/store.ts";
@@ -21,6 +23,7 @@ import { SyncServices } from "./layers.ts";
 import { Outbox } from "./outbox.ts";
 import * as session from "./session.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
+import * as threadActions from "./thread-actions.ts";
 import { Typing } from "./typing.ts";
 
 const TestLayer = SyncServices.pipe(
@@ -287,6 +290,69 @@ describe("resuming", () => {
       );
     }),
   );
+  it.effect("doesn't count replayed unreads twice on a sidebar loaded after a reload", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          const counted = (unread: number) =>
+            sidebarFixture([{ ...sidebarRowFixture(12, "general"), unreadCount: unread }]);
+
+          // The page loaded the sidebar with 41 and 42 already counted.
+          yield* serve([]);
+          mutations.loadSidebar(counted(2));
+          // By the time the socket says welcome, 43 has happened too.
+          yield* api.reply("GET /sidebar", counted(3));
+          yield* startEngine;
+          yield* welcome(43, true);
+
+          expect(unreadCount(12)).toBe(3);
+
+          yield* pushEvents(unreadEvent(41), unreadEvent(42), unreadEvent(43));
+
+          expect(unreadCount(12)).toBe(3);
+          expect(sessionStorage.getItem(CURSOR_STORAGE_KEY)).toBe(
+            JSON.stringify({ epoch: "e1", seq: 43 }),
+          );
+
+          yield* pushEvents(unreadEvent(44));
+
+          expect(unreadCount(12)).toBe(4);
+        }),
+      );
+    }),
+  );
+
+  it.effect("applies replays normally on a later reconnect", () =>
+    Effect.gen(function* () {
+      sessionStorage.setItem(CURSOR_STORAGE_KEY, JSON.stringify({ epoch: "e1", seq: 40 }));
+
+      yield* withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+          const socket = yield* MemorySocket;
+
+          yield* serve([]);
+          mutations.loadSidebar(sidebarFixture([sidebarRowFixture(12, "general")]));
+          yield* startEngine;
+          yield* welcome(40, true);
+          yield* socket.drop;
+          yield* TestClock.adjust(250);
+
+          const before = (yield* api.requests).length;
+
+          yield* welcome(42, true);
+          yield* pushEvents(unreadEvent(41), unreadEvent(42));
+
+          expect((yield* api.requests).length).toBe(before);
+          expect(unreadCount(12)).toBe(2);
+        }),
+      );
+    }),
+  );
 });
 
 describe("resync", () => {
@@ -353,6 +419,109 @@ describe("resync", () => {
           { method: "GET", path: "/rooms/12/messages" },
         ]);
         expect(timelineIds(12)).toEqual([1, 2]);
+      }),
+    ),
+  );
+
+  it.effect("refetches a subscribed thread's header and replies", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        const detail = (status: "active" | "closed", canClose: boolean) => ({
+          thread: {
+            id: 88,
+            roomId: 12,
+            parentMessageId: 1,
+            creatorId: 7,
+            name: "Plans",
+            status,
+            replyCount: 2,
+            lastActivityAt: "2026-10-06T00:00:10.000Z",
+            autoArchiveAfterMinutes: 4320,
+            createdAt: "2026-10-06T00:00:01.000Z",
+          },
+          membership: null,
+          parentMessage: null,
+          permissions: {
+            canRename: true,
+            canClose,
+            canReopen: !canClose,
+            canLock: true,
+            canUnlock: false,
+            canDelete: true,
+          },
+          users: [],
+        });
+
+        const replies = (ids: readonly number[]) =>
+          pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/88", detail("active", true));
+        yield* api.reply("GET /threads/88/messages", replies([5, 6]));
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(88);
+
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 6]);
+
+        // Closed and one reply deleted while the events were lost.
+        yield* api.reply("GET /threads/88", detail("closed", false));
+        yield* api.reply("GET /threads/88/messages", replies([5, 7]));
+        yield* socket.push({ t: "resync", topics: ["thread:88"], reason: "lagged" });
+        yield* settle;
+
+        expect(store.getState().threads[88]?.status).toBe("closed");
+        expect(store.getState().threadPanes[88]?.permissions?.canClose).toBe(false);
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 7]);
+      }),
+    ),
+  );
+
+  it.effect("re-reads a window that stops short of the present in place, dropping deletions", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* api.reply(
+          "GET /rooms/12/messages",
+          pageFixture(
+            [4, 5, 6].map((id) => messageFixture(id, 12)),
+            3,
+            7,
+          ),
+        );
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, 5);
+
+        expect(timelineIds(12)).toEqual([4, 5, 6]);
+
+        // The newest page would yank the reader away; the page around the window's middle (5,
+        // since deleted) is re-read instead.
+        yield* api.route("GET /rooms/12/messages", (request) =>
+          Effect.succeed(
+            request.query?.around === "5"
+              ? pageFixture(
+                  [4, 6].map((id) => messageFixture(id, 12)),
+                  3,
+                  7,
+                )
+              : pageFixture(
+                  [40, 41].map((id) => messageFixture(id, 12)),
+                  39,
+                ),
+          ),
+        );
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+
+        expect(timelineIds(12)).toEqual([4, 6]);
+        expect(store.getState().timelines[12]?.after).toBe(7);
       }),
     ),
   );
@@ -518,6 +687,93 @@ describe("outbox", () => {
       }),
     ),
   );
+  it.effect("resends at once when the socket reconnects, without waiting out the backoff", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const socket = yield* MemorySocket;
+        const lifecycle = yield* TestLifecycle;
+        const attempts = yield* Ref.make(0);
+        const reachable = yield* Ref.make(false);
+        const clientId = yield* Ref.make("");
+
+        yield* serve([]);
+        yield* api.route("POST /rooms/12/messages", () =>
+          Effect.flatMap(
+            Ref.updateAndGet(attempts, (count) => count + 1),
+            () =>
+              Effect.flatMap(Ref.get(reachable), (up) =>
+                up
+                  ? Effect.map(Ref.get(clientId), (id) =>
+                      messageFixture(1, 12, { clientMessageId: id }),
+                    )
+                  : Effect.fail(new NetworkError({ message: "offline" })),
+              ),
+          ),
+        );
+        yield* socket.setReachable(false);
+        yield* startEngine;
+
+        const id = yield* session.send(12, "hello");
+
+        yield* Ref.set(clientId, id);
+
+        // Failures at 0, 1 s, 3 s and 7 s; the next resend would wait until 15 s.
+        for (const delay of [0, 1000, 2000, 4000]) {
+          yield* TestClock.adjust(delay);
+        }
+
+        expect(yield* Ref.get(attempts)).toBe(4);
+
+        yield* Ref.set(reachable, true);
+        yield* socket.setReachable(true);
+        yield* lifecycle.fire("online");
+        yield* settle;
+
+        expect(yield* socket.isOpen).toBe(true);
+        expect(yield* Ref.get(attempts)).toBe(5);
+        expect(store.getState().pending[id]).toBeUndefined();
+      }),
+    ),
+  );
+  it.effect("posts a thread reply to its thread and keeps it off the room's timeline", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+        const posted = yield* Ref.make<CreateMessage | null>(null);
+
+        yield* serve([messageFixture(1, 12)]);
+        yield* api.route("POST /threads/88/messages", (request) =>
+          Effect.gen(function* () {
+            const body = yield* Schema.decodeUnknownEffect(CreateMessageSchema)(request.body);
+
+            yield* Ref.set(posted, body);
+
+            return messageFixture(5, 12, { threadId: 88, clientMessageId: body.clientMessageId });
+          }).pipe(Effect.orDie),
+        );
+        yield* startEngine;
+        yield* session.openRoom(12, null);
+
+        const id = yield* session.send(12, "in the thread", {
+          threadId: 88,
+          attachmentSignedId: "signed-1",
+        });
+
+        yield* settle;
+
+        expect(yield* Ref.get(posted)).toMatchObject({
+          clientMessageId: id,
+          markdownSource: "in the thread",
+          attachmentSignedId: "signed-1",
+        });
+        expect(store.getState().pending[id]).toBeUndefined();
+        expect(store.getState().pendingByThread[88]).toEqual([]);
+        expect(store.getState().pendingByRoom[12] ?? []).toEqual([]);
+        expect(timelineIds(12)).toEqual([1]);
+      }),
+    ),
+  );
 });
 
 describe("tombstones", () => {
@@ -570,13 +826,13 @@ describe("typing", () => {
         const typing = yield* Typing;
 
         yield* startEngine;
-        yield* typing.set(12, true);
+        yield* typing.set("room:12", true);
         yield* TestClock.adjust(1000);
-        yield* typing.set(12, true);
+        yield* typing.set("room:12", true);
         yield* TestClock.adjust(2000);
-        yield* typing.set(12, true);
-        yield* typing.set(12, false);
-        yield* typing.set(12, false);
+        yield* typing.set("room:12", true);
+        yield* typing.set("room:12", false);
+        yield* typing.set("room:12", false);
 
         expect(typingFrames(yield* socket.sent)).toEqual([
           { t: "typing", conv: "room:12", on: true },
@@ -598,12 +854,38 @@ describe("typing", () => {
 
         expect(Object.keys(store.getState().typing["room:12"] ?? {})).toEqual(["9"]);
 
-        yield* TestClock.adjust(5000);
+        const expiresAt = store.getState().typing["room:12"]?.[9] ?? 0;
+        const now = yield* Clock.currentTimeMillis;
+
+        expect(expiresAt - now).toBeLessThanOrEqual(6000);
+
+        // Dropped at the exact millisecond it lapses, not on a periodic sweep.
+        yield* TestClock.adjust(expiresAt - now - 1);
 
         expect(store.getState().typing["room:12"]?.[9]).toBeDefined();
 
-        // Expired at 6 s; the next once-a-second sweep drops it.
-        yield* TestClock.adjust(2000);
+        yield* TestClock.adjust(1);
+
+        expect(store.getState().typing["room:12"]?.[9]).toBeUndefined();
+      }),
+    ),
+  );
+
+  it.effect("a refreshed typist's earlier expiry doesn't drop them", () =>
+    withSync(
+      Effect.gen(function* () {
+        const typing = (seq: number) =>
+          pushEvents({ seq, topic: "room:12", type: "typing", data: { userId: 9, on: true } });
+
+        yield* startEngine;
+        yield* typing(1);
+        yield* TestClock.adjust(4000);
+        yield* typing(2);
+        yield* TestClock.adjust(3000);
+
+        expect(store.getState().typing["room:12"]?.[9]).toBeDefined();
+
+        yield* TestClock.adjust(3000);
 
         expect(store.getState().typing["room:12"]?.[9]).toBeUndefined();
       }),

@@ -126,3 +126,30 @@ export function timelineItems({ timeline, messages, pending, now }: TimelineInpu
 
   return items;
 }
+
+/** What a list committed last render, for telling a prepend from an append. */
+export interface CommittedEdges {
+  readonly first: string | null;
+  readonly firstMessage: string | null;
+}
+
+/** The key of the first message row, or `null`. */
+export function firstMessageKey(items: readonly TimelineItem[]): string | null {
+  return items.find((item) => item.kind === "message")?.key ?? null;
+}
+
+/**
+ * Whether rows were added or removed before what was on top (an older page landing, its spinner
+ * coming or going), so the virtualiser keeps the view from the end instead of jumping. Either
+ * the first row or the first message moved down: when an older page replaces its spinner, the
+ * spinner (the old first row) is gone but the old first message sits further down.
+ */
+export function prepended(items: readonly TimelineItem[], previous: CommittedEdges): boolean {
+  const movedDown = (key: string | null, now: string | null) =>
+    key !== null && now !== key && items.findIndex((item) => item.key === key) > 0;
+
+  return (
+    movedDown(previous.first, items[0]?.key ?? null) ||
+    movedDown(previous.firstMessage, firstMessageKey(items))
+  );
+}

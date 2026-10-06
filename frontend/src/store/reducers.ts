@@ -2,6 +2,8 @@
  * Pure state transitions. Each takes the current state (and the time, so tests and the sync
  * engine's clock agree) and returns the next. `store.ts` wraps them in `setState`.
  */
+
+import { mergeSavedMarks, setPinState, setReactions, setSavedMark } from "./message-extras.ts";
 import type {
   Me,
   MessageDTO,
@@ -15,57 +17,11 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
+import { removeThread, setThreadIndicator, setThreadUnread, upsertThread } from "./threads.ts";
 
-/** `(createdAt, id)`: the server's timeline order. */
-export function compareMessages(left: MessageDTO, right: MessageDTO): number {
-  if (left.createdAt !== right.createdAt) {
-    return left.createdAt < right.createdAt ? -1 : 1;
-  }
-
-  return left.id - right.id;
-}
-
-/** Inserts `message` into ordered `ids` (no-op when present). */
-function insertOrdered(
-  ids: readonly number[],
-  message: MessageDTO,
-  messages: Readonly<Record<number, MessageDTO>>,
-): readonly number[] {
-  if (ids.includes(message.id)) {
-    return ids;
-  }
-
-  let low = 0;
-  let high = ids.length;
-
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    const other = messages[ids[middle] ?? -1];
-
-    if (other !== undefined && compareMessages(other, message) < 0) {
-      low = middle + 1;
-    } else {
-      high = middle;
-    }
-  }
-
-  return [...ids.slice(0, low), message.id, ...ids.slice(low)];
-}
-
-function mergeUserList(users: State["users"], list: readonly User[]): State["users"] {
-  if (list.length === 0) {
-    return users;
-  }
-
-  const next = { ...users };
-
-  for (const user of list) {
-    next[user.id] = user;
-  }
-
-  return next;
-}
+export { compareMessages };
 
 export function setMe(state: State, me: Me): State {
   return { ...state, me, users: mergeUserList(state.users, [me.user]) };
@@ -156,6 +112,10 @@ function withTimeline(state: State, roomId: number, timeline: Timeline): State {
   return { ...state, timelines: { ...state.timelines, [roomId]: timeline } };
 }
 
+function withThreadTimeline(state: State, threadId: number, timeline: Timeline): State {
+  return { ...state, threadTimelines: { ...state.threadTimelines, [threadId]: timeline } };
+}
+
 export function setRoomLoading(state: State, roomId: number): State {
   const room = state.rooms[roomId];
 
@@ -199,10 +159,50 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
   };
 }
 
-export type PageMode = "replace" | "older" | "newer";
+/**
+ * How a page lands: `replace` makes it the window; `older` and `newer` add it at an end;
+ * `refresh` re-reads part of a window in place (a resync of a window away from the present): the
+ * window's messages inside the page's span that the page lacks are gone, the rest stay.
+ */
+export type PageMode = "replace" | "older" | "newer" | "refresh";
 
-/** Lands a page of messages: a fresh window, or one more page on either end. */
-export function applyPage(state: State, roomId: number, page: MessagePage, mode: PageMode): State {
+/** A page merged into the store, and the window it makes. */
+interface LandedPage {
+  readonly state: State;
+  readonly timeline: Timeline;
+}
+
+/**
+ * `ids` without the ones inside the page's span (first to last by time) that the page lacks:
+ * deleted, or moved out of this conversation, since the window loaded.
+ */
+function withoutMissing(
+  ids: readonly number[],
+  pageIds: readonly number[],
+  messages: Readonly<Record<number, MessageDTO>>,
+): readonly number[] {
+  const first = messages[pageIds[0] ?? -1];
+  const last = messages[pageIds.at(-1) ?? -1];
+
+  if (first === undefined || last === undefined) {
+    return ids;
+  }
+
+  const onPage = new Set(pageIds);
+
+  return ids.filter((id) => {
+    const message = messages[id];
+
+    if (onPage.has(id) || message === undefined) {
+      return true;
+    }
+
+    return compareMessages(message, first) < 0 || compareMessages(message, last) > 0;
+  });
+}
+
+/** The page's messages merged into the store, and the window they make with `timeline`. */
+function landPage(state: State, timeline: Timeline, page: MessagePage, mode: PageMode): LandedPage {
   const messages = { ...state.messages };
 
   for (const message of page.messages) {
@@ -218,44 +218,92 @@ export function applyPage(state: State, roomId: number, page: MessagePage, mode:
     }
   }
 
-  const timeline = timelineOf(state, roomId);
-
   const pageIds = page.messages
     .filter((message) => state.tombstones[message.id] === undefined)
     .map((message) => message.id);
 
-  let ids: readonly number[];
+  const insertAll = (into: readonly number[], add: readonly number[]) => {
+    let merged = into;
 
-  if (mode === "replace") {
-    ids = pageIds;
-  } else {
-    ids = timeline.ids;
-
-    for (const id of pageIds) {
+    for (const id of add) {
       const message = messages[id];
 
-      if (message !== undefined) {
-        ids = insertOrdered(ids, message, messages);
+      if (message !== undefined && state.tombstones[id] === undefined) {
+        merged = insertOrdered(merged, message, messages);
       }
     }
-  }
 
-  const next: Timeline = {
-    ...timeline,
-    ids,
-    status: "ready",
-    before: mode === "newer" ? timeline.before : page.before,
-    after: mode === "older" ? timeline.after : page.after,
-    loadingOlder: mode === "older" ? false : timeline.loadingOlder,
-    loadingNewer: mode === "newer" ? false : timeline.loadingNewer,
-    generation: mode === "replace" ? timeline.generation + 1 : timeline.generation,
+    return merged;
   };
 
-  return withTimeline(
-    { ...state, messages, users: mergeUserList(state.users, page.users) },
-    roomId,
-    next,
-  );
+  let ids: readonly number[];
+  let { before, after } = timeline;
+
+  if (mode === "replace") {
+    // Messages that arrived live while it loaded join a window that reaches the present.
+    ids = page.after === null ? insertAll(pageIds, timeline.arrived ?? []) : pageIds;
+    before = page.before;
+    after = page.after;
+  } else if (mode === "refresh") {
+    ids = insertAll(withoutMissing(timeline.ids, pageIds, messages), pageIds);
+
+    const first = ids[0];
+    const last = ids.at(-1);
+
+    // The page reaching past either end of the window moves that end's cursor too.
+    if (first !== undefined && pageIds[0] === first) {
+      before = page.before;
+    }
+
+    if (last !== undefined && pageIds.at(-1) === last) {
+      after = page.after;
+    }
+  } else {
+    ids = insertAll(timeline.ids, pageIds);
+    before = mode === "newer" ? timeline.before : page.before;
+    after = mode === "older" ? timeline.after : page.after;
+  }
+
+  const fresh = mode === "replace" || mode === "refresh";
+
+  return {
+    state: {
+      ...state,
+      messages,
+      users: mergeUserList(state.users, page.users),
+      saved: mergeSavedMarks(state.saved, page),
+    },
+    timeline: {
+      ...timeline,
+      ids,
+      status: "ready",
+      before,
+      after,
+      loadingOlder: mode === "older" ? false : timeline.loadingOlder,
+      loadingNewer: mode === "newer" ? false : timeline.loadingNewer,
+      generation: mode === "replace" ? timeline.generation + 1 : timeline.generation,
+      arrived: fresh ? null : timeline.arrived,
+    },
+  };
+}
+
+/** Lands a page of messages: a fresh window, or one more page on either end. */
+export function applyPage(state: State, roomId: number, page: MessagePage, mode: PageMode): State {
+  const landed = landPage(state, timelineOf(state, roomId), page, mode);
+
+  return withTimeline(landed.state, roomId, landed.timeline);
+}
+
+/** Lands a page of a thread's replies, as `applyPage` does for a room. */
+export function applyThreadPage(
+  state: State,
+  threadId: number,
+  page: MessagePage,
+  mode: PageMode,
+): State {
+  const landed = landPage(state, state.threadTimelines[threadId] ?? emptyTimeline, page, mode);
+
+  return withThreadTimeline(landed.state, threadId, landed.timeline);
 }
 
 export function setPageLoading(state: State, roomId: number, direction: "older" | "newer"): State {
@@ -270,15 +318,96 @@ export function setPageLoading(state: State, roomId: number, direction: "older" 
   );
 }
 
+/**
+ * A fresh window (open, retry, resync, jump to present) is on its way: live messages that arrive
+ * before it lands are held for it.
+ */
+export function setPageReplacing(state: State, roomId: number): State {
+  return withTimeline(state, roomId, { ...timelineOf(state, roomId), arrived: [] });
+}
+
+/** As `setPageReplacing`, for a thread's replies. */
+export function setThreadPageReplacing(state: State, threadId: number): State {
+  const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
+
+  return withThreadTimeline(state, threadId, { ...timeline, arrived: [] });
+}
+
 export function setPageFailed(state: State, roomId: number): State {
   const timeline = timelineOf(state, roomId);
 
   return withTimeline(state, roomId, {
     ...timeline,
+    arrived: null,
     loadingOlder: false,
     loadingNewer: false,
     status: timeline.status === "loading" ? "error" : timeline.status,
   });
+}
+
+export function setThreadPageLoading(
+  state: State,
+  threadId: number,
+  direction: "older" | "newer",
+): State {
+  const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
+
+  return withThreadTimeline(state, threadId, {
+    ...timeline,
+    status: timeline.status === "idle" ? "loading" : timeline.status,
+    loadingOlder: direction === "older" ? true : timeline.loadingOlder,
+    loadingNewer: direction === "newer" ? true : timeline.loadingNewer,
+  });
+}
+
+export function setThreadPageFailed(state: State, threadId: number): State {
+  const timeline = state.threadTimelines[threadId] ?? emptyTimeline;
+
+  return withThreadTimeline(state, threadId, {
+    ...timeline,
+    arrived: null,
+    loadingOlder: false,
+    loadingNewer: false,
+    status: timeline.status === "loading" || timeline.status === "idle" ? "error" : timeline.status,
+  });
+}
+
+/**
+ * "Mark unread from here": the divider moves to `fromId`, counting it and every loaded root
+ * message after it. A message outside the loaded window leaves the divider alone.
+ */
+export function moveUnreadDivider(state: State, roomId: number, fromId: number): State {
+  const timeline = state.timelines[roomId];
+  const index = timeline?.ids.indexOf(fromId) ?? -1;
+
+  if (timeline === undefined || index < 0) {
+    return state;
+  }
+
+  return withTimeline(state, roomId, {
+    ...timeline,
+    unreadFromId: fromId,
+    unreadCount: timeline.ids.length - index,
+  });
+}
+
+/**
+ * "Mark unread from here", confirmed: the divider moves to `fromId` and the sidebar row counts
+ * what the divider counts (at least 1, when the message is outside the loaded window).
+ */
+export function markUnreadFrom(state: State, roomId: number, fromId: number, now: number): State {
+  const moved = moveUnreadDivider(state, roomId, fromId);
+  const timeline = moved.timelines[roomId];
+  const count = timeline?.unreadFromId === fromId ? timeline.unreadCount : 0;
+
+  return updateRow(moved, roomId, (row) => ({
+    ...row,
+    unreadCount: Math.max(count, 1),
+    membership: {
+      ...row.membership,
+      unreadAt: row.membership.unreadAt ?? new Date(now).toISOString(),
+    },
+  }));
 }
 
 /** Forgets the divider once the room is left, so the next visit computes a fresh one. */
@@ -301,25 +430,37 @@ function removePending(state: State, clientMessageId: string): State {
 
   const { [clientMessageId]: _gone, ...rest } = state.pending;
 
+  const others = (ids: readonly string[] | undefined) =>
+    (ids ?? []).filter((id) => id !== clientMessageId);
+
+  if (pending.threadId !== null) {
+    return {
+      ...state,
+      pending: rest,
+      pendingByThread: {
+        ...state.pendingByThread,
+        [pending.threadId]: others(state.pendingByThread[pending.threadId]),
+      },
+    };
+  }
+
   return {
     ...state,
     pending: rest,
     pendingByRoom: {
       ...state.pendingByRoom,
-      [pending.roomId]: (state.pendingByRoom[pending.roomId] ?? []).filter(
-        (id) => id !== clientMessageId,
-      ),
+      [pending.roomId]: others(state.pendingByRoom[pending.roomId]),
     },
   };
 }
 
 /**
  * A confirmed message (the `POST` reply or the `message.created` event, whichever is first):
- * replaces its pending row and joins the timeline if the window reaches the present. The second
- * arrival is a no-op unless it's newer.
+ * replaces its pending row and joins its timeline (the room's, or its thread's) if that window
+ * reaches the present. The second arrival is a no-op unless it's newer.
  */
 export function receiveMessage(state: State, message: MessageDTO): State {
-  if (state.tombstones[message.id] !== undefined || message.threadId !== null) {
+  if (state.tombstones[message.id] !== undefined) {
     return removePending(state, message.clientMessageId);
   }
 
@@ -331,17 +472,40 @@ export function receiveMessage(state: State, message: MessageDTO): State {
   }
 
   const messages = { ...reconciled.messages, [message.id]: message };
-  const timeline = reconciled.timelines[message.roomId];
+  const threadId = message.threadId;
 
-  // Not loaded, or the window stops short of the present: the message is beyond it.
-  if (timeline === undefined || timeline.status !== "ready" || timeline.after !== null) {
+  const timeline =
+    threadId === null ? reconciled.timelines[message.roomId] : reconciled.threadTimelines[threadId];
+
+  if (timeline === undefined) {
     return held === undefined ? reconciled : { ...reconciled, messages };
   }
 
-  return withTimeline({ ...reconciled, messages }, message.roomId, {
-    ...timeline,
-    ids: insertOrdered(timeline.ids, message, messages),
-  });
+  // A fresh window is loading: hold the message for it, whatever the window shows meanwhile.
+  const waiting =
+    timeline.arrived === null
+      ? timeline
+      : {
+          ...timeline,
+          arrived: [...timeline.arrived.filter((id) => id !== message.id), message.id],
+        };
+
+  // Not loaded, or the window stops short of the present: the message is beyond it.
+  if (timeline.status !== "ready" || timeline.after !== null) {
+    if (waiting === timeline) {
+      return held === undefined ? reconciled : { ...reconciled, messages };
+    }
+
+    return threadId === null
+      ? withTimeline({ ...reconciled, messages }, message.roomId, waiting)
+      : withThreadTimeline({ ...reconciled, messages }, threadId, waiting);
+  }
+
+  const next = { ...waiting, ids: insertOrdered(timeline.ids, message, messages) };
+
+  return threadId === null
+    ? withTimeline({ ...reconciled, messages }, message.roomId, next)
+    : withThreadTimeline({ ...reconciled, messages }, threadId, next);
 }
 
 /** An edit lands only if it's newer than the copy held (and the message is held at all). */
@@ -355,25 +519,58 @@ export function updateMessage(state: State, message: MessageDTO): State {
   return { ...state, messages: { ...state.messages, [message.id]: message } };
 }
 
-export function removeMessage(state: State, messageId: number, roomId: number, now: number): State {
+export function removeMessage(
+  state: State,
+  messageId: number,
+  roomId: number,
+  threadId: number | null,
+  now: number,
+): State {
   const { [messageId]: _gone, ...messages } = state.messages;
-  const timeline = state.timelines[roomId];
   const tombstones = { ...state.tombstones, [messageId]: now + TOMBSTONE_TTL_MS };
+  const { [messageId]: _unsaved, ...saved } = state.saved;
+  let next: State = { ...state, messages, tombstones, saved };
+  const timeline = state.timelines[roomId];
 
-  if (timeline === undefined) {
-    return { ...state, messages, tombstones };
+  if (timeline !== undefined) {
+    next = withTimeline(next, roomId, {
+      ...timeline,
+      ids: timeline.ids.filter((id) => id !== messageId),
+    });
   }
 
-  return withTimeline({ ...state, messages, tombstones }, roomId, {
-    ...timeline,
-    ids: timeline.ids.filter((id) => id !== messageId),
-  });
+  const threadTimeline = threadId === null ? undefined : state.threadTimelines[threadId];
+
+  if (threadId !== null && threadTimeline !== undefined) {
+    next = withThreadTimeline(next, threadId, {
+      ...threadTimeline,
+      ids: threadTimeline.ids.filter((id) => id !== messageId),
+    });
+  }
+
+  return next;
 }
 
 export function addPending(state: State, pending: PendingMessage): State {
+  const all = { ...state.pending, [pending.clientMessageId]: pending };
+
+  if (pending.threadId !== null) {
+    return {
+      ...state,
+      pending: all,
+      pendingByThread: {
+        ...state.pendingByThread,
+        [pending.threadId]: [
+          ...(state.pendingByThread[pending.threadId] ?? []),
+          pending.clientMessageId,
+        ],
+      },
+    };
+  }
+
   return {
     ...state,
-    pending: { ...state.pending, [pending.clientMessageId]: pending },
+    pending: all,
     pendingByRoom: {
       ...state.pendingByRoom,
       [pending.roomId]: [...(state.pendingByRoom[pending.roomId] ?? []), pending.clientMessageId],
@@ -481,7 +678,34 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = updateMessage(next, event.data);
         break;
       case "message.removed":
-        next = removeMessage(next, event.data.id, event.data.roomId, now);
+        next = removeMessage(next, event.data.id, event.data.roomId, event.data.threadId, now);
+        break;
+      case "message.reactions":
+        next = setReactions(next, event.data);
+        break;
+      case "message.pinned":
+        next = setPinState(next, event.data);
+        break;
+      case "saved.changed":
+        next = setSavedMark(next, event.data.messageId, event.data.savedItemId);
+        break;
+      case "thread.indicator":
+        next = setThreadIndicator(next, event.data);
+        break;
+      case "thread.created":
+      case "thread.updated":
+        next = upsertThread(next, event.data);
+        break;
+      case "thread.removed":
+        next = removeThread(next, event.data.threadId, event.data.roomId);
+        break;
+      case "thread.unread":
+        next = event.data.refreshOnly
+          ? next
+          : setThreadUnread(next, event.data.threadId, new Date(now).toISOString());
+        break;
+      case "thread.read":
+        next = setThreadUnread(next, event.data.threadId, null);
         break;
       case "typing":
         next =
@@ -554,4 +778,21 @@ export function prune(state: State, now: number): State {
     typing: typingChanged ? typing : state.typing,
     tombstones: tombstonesChanged ? tombstones : state.tombstones,
   };
+}
+
+/** When the soonest typing entry or tombstone lapses (ms), or `null` when none is held. */
+export function nextExpiry(state: State): number | null {
+  let soonest: number | null = null;
+
+  for (const typists of Object.values(state.typing)) {
+    for (const expiresAt of Object.values(typists)) {
+      soonest = soonest === null ? expiresAt : Math.min(soonest, expiresAt);
+    }
+  }
+
+  for (const expiresAt of Object.values(state.tombstones)) {
+    soonest = soonest === null ? expiresAt : Math.min(soonest, expiresAt);
+  }
+
+  return soonest;
 }

@@ -107,8 +107,9 @@ pub struct MessagePage {
 
 /// `POST /api/v1/rooms/:id/messages`: post to the room's root timeline (`messages#create`).
 /// `POST /api/v1/threads/:id/messages` takes the same body and posts a reply to a thread
-/// (`channel_thread_messages#create`; 403 in a locked thread unless the viewer may moderate it),
-/// published as `message.created` on `thread:<id>`. A thread's first reply goes through
+/// (`channel_thread_messages#create`), published as `message.created` on `thread:<id>`. A locked
+/// thread refuses every reply, moderators' too (`ChannelThread::LockedError`: 403, "This thread is
+/// locked"); a moderator unlocks it first with `PATCH /api/v1/threads/:id` `status: active`. A thread's first reply goes through
 /// `POST /api/v1/rooms/:id/threads` ([`crate::CreateThread`]) instead.
 ///
 /// Idempotent on `clientMessageId` (`Message::find_duplicate`): posting the same id again

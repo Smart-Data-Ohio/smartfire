@@ -4,13 +4,22 @@ import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
 import type { PendingMessage } from "../../store/model.ts";
 import { emptyTimeline } from "../../store/state.ts";
-import { store, useStore } from "../../store/store.ts";
+import { store, useMessagesIn, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { useEditingId } from "../messages/editing-store.ts";
+import { useListEdges } from "../messages/list-edges.ts";
+import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
 import { DayDivider, RoomIntro, UnreadDivider } from "./dividers.tsx";
 import { MessageRow, PendingRow } from "./message-row.tsx";
-import { type TimelineItem, timelineItems } from "./timeline-items.ts";
+import {
+  type CommittedEdges,
+  firstMessageKey,
+  prepended,
+  type TimelineItem,
+  timelineItems,
+} from "./timeline-items.ts";
 
 /** Within this many px of the end counts as "at the bottom" (live messages keep it pinned). */
 const BOTTOM_SLOP = 40;
@@ -72,16 +81,20 @@ interface TimelineProps {
 export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   const navigate = useNavigate();
   const timeline = useStore((state) => state.timelines[roomId] ?? emptyTimeline);
-  const messages = useStore((state) => state.messages);
+  const messages = useMessagesIn(timeline.ids);
   const pendingIds = useStore((state) => state.pendingByRoom[roomId] ?? NO_PENDING);
   const pendingById = useStore((state) => state.pending);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const [openedAt] = useState(() => Date.now());
   const listRef = useRef<VListHandle | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const atBottomRef = useRef(true);
 
-  const committedRef = useRef<{ first: string | null; last: string | null; count: number }>({
+  const committedRef = useRef<
+    CommittedEdges & { readonly last: string | null; readonly count: number }
+  >({
     first: null,
+    firstMessage: null,
     last: null,
     count: 0,
   });
@@ -100,17 +113,14 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
 
   const now = Date.now();
   const items = timelineItems({ timeline, messages, pending, now });
+
+  useListEdges(containerRef, listRef, items);
   const ready = timeline.status === "ready";
   const firstKey = items[0]?.key ?? null;
   const lastKey = items.at(-1)?.key ?? null;
 
   // Older rows went in above the previous first row: keep the view anchored from the end.
-  const previousFirst = committedRef.current.first;
-
-  const shift =
-    previousFirst !== null &&
-    firstKey !== previousFirst &&
-    items.findIndex((item) => item.key === previousFirst) > 0;
+  const shift = prepended(items, committedRef.current);
 
   // Place the view once per loaded window: on the permalinked message, on the unread divider
   // (clamped, so a short unread run just lands at the bottom), or at the bottom.
@@ -145,7 +155,12 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     const previous = committedRef.current;
     const appended = previous.last !== null && lastKey !== previous.last && !shift;
 
-    committedRef.current = { first: firstKey, last: lastKey, count: items.length };
+    committedRef.current = {
+      first: firstKey,
+      firstMessage: firstMessageKey(items),
+      last: lastKey,
+      count: items.length,
+    };
 
     if (!appended || !ready) {
       return;
@@ -161,10 +176,32 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
   });
 
+  // An edit opened from elsewhere (the composer's ↑) brings its row into view.
+  const editingId = useEditingId();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when a new edit starts, not on every new message
+  useEffect(() => {
+    if (editingId === null) {
+      return;
+    }
+
+    const index = items.findIndex(
+      (item) => item.kind === "message" && item.message.id === editingId,
+    );
+
+    if (index >= 0) {
+      listRef.current?.scrollToIndex(index, { align: "nearest" });
+    }
+  }, [editingId]);
+
+  // "Mark unread" holds the room unread until it's left; let go when this timeline goes.
+  useEffect(() => () => releaseUnread(roomId), [roomId]);
+
   const markReadIfDue = () => {
     const row = store.getState().sidebar.rows[roomId];
 
     if (
+      !isUnreadHeld(roomId) &&
       atBottomRef.current &&
       timeline.after === null &&
       document.visibilityState === "visible" &&
@@ -271,7 +308,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
   };
 
   return (
-    <div className="timeline">
+    <div className="timeline" ref={containerRef}>
       <SkeletonReveal loading={!ready} skeleton={<TimelineSkeleton />}>
         {ready ? (
           <VList
@@ -285,6 +322,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             data={items}
             aria-label="Messages"
             role="log"
+            data-message-list
           >
             {renderItem}
           </VList>

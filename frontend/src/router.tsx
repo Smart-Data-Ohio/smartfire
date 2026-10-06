@@ -65,9 +65,62 @@ const permalinkRoute = createRoute({
   component: () => null,
 });
 
+/** The new-thread pane's query as the URL has it. */
+interface RawNewThreadSearch {
+  readonly parent?: unknown;
+}
+
+/** The new-thread pane's query: the root message the thread starts on. */
+export interface NewThreadSearch {
+  readonly parent: number;
+}
+
+/** `/app/r/$roomId/t/new?parent=`: the right pane drafting a thread's first reply on `parent`. */
+const newThreadRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "t/new",
+  validateSearch: (search: RawNewThreadSearch): NewThreadSearch => ({
+    parent: parseId(String(search.parent ?? "")),
+  }),
+  component: () => null,
+});
+
+/** The thread pane's query as the URL has it. */
+interface RawThreadSearch {
+  readonly m?: unknown;
+}
+
+/** The thread pane's query: the reply a permalink points at, if any. */
+export interface ThreadSearch {
+  readonly m?: number;
+}
+
+/**
+ * `/app/r/$roomId/t/$threadId`: the room with a thread open in the right pane; `?m=` scrolls to
+ * and highlights one reply (a reply's permalink).
+ */
+const threadRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "t/$threadId",
+  validateSearch: (search: RawThreadSearch): ThreadSearch => {
+    const m = Number(search.m);
+
+    // Anything but a positive integer id is ignored: the thread opens at its newest reply.
+    return Number.isSafeInteger(m) && m > 0 ? { m } : {};
+  },
+  params: {
+    parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
+    stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
+  },
+  component: () => null,
+});
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
-  shellRoute.addChildren([homeRoute, roomRoute.addChildren([permalinkRoute])]),
+  shellRoute.addChildren([
+    homeRoute,
+    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
+  ]),
 ]);
 
 export const router = createRouter({

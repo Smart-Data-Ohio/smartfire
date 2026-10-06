@@ -1,0 +1,390 @@
+/* Threads: the indicator under a message, the thread pane, a new thread and the Threads pane. */
+@layer app {
+  /* ── The indicator under a message ─────────────────────────────────────── */
+
+  .thread-indicator-row {
+    display: flex;
+    margin-top: var(--space-1);
+  }
+
+  .thread-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: min(100%, 520px);
+    min-height: 30px;
+    margin-left: calc(var(--space-1) * -1);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 0 0 1px transparent;
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    text-align: left;
+    transition:
+      background-color var(--duration-micro-exit) var(--ease-exit),
+      box-shadow var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .thread-indicator:hover,
+  .thread-indicator:focus-visible,
+  .thread-indicator[data-open] {
+    background: var(--bg-pane);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    transition-duration: var(--duration-micro);
+  }
+
+  .thread-indicator[data-open] {
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 55%);
+  }
+
+  .thread-indicator:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .thread-indicator .avatar-group .avatar {
+    border-radius: var(--radius-xs);
+  }
+
+  .thread-indicator-count {
+    flex-shrink: 0;
+    color: var(--accent);
+    font-weight: var(--weight-semibold);
+  }
+
+  .thread-indicator:hover .thread-indicator-count {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .thread-indicator-dot {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    margin-left: calc(var(--space-1) * -1);
+    border-radius: var(--radius-pill);
+    background: var(--accent-solid);
+  }
+
+  .thread-indicator[data-unread] .thread-indicator-count {
+    color: var(--text);
+  }
+
+  .thread-indicator-last,
+  .thread-indicator-view {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* "Last reply" and "View thread" share the spot: hover swaps one for the other. */
+  .thread-indicator-view {
+    display: none;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .thread-indicator:hover .thread-indicator-last,
+  .thread-indicator:focus-visible .thread-indicator-last {
+    display: none;
+  }
+
+  .thread-indicator:hover .thread-indicator-view,
+  .thread-indicator:focus-visible .thread-indicator-view {
+    display: inline-flex;
+  }
+
+  @media (hover: none) {
+    .thread-indicator:hover .thread-indicator-last {
+      display: inline;
+    }
+
+    .thread-indicator:hover .thread-indicator-view {
+      display: none;
+    }
+  }
+
+  /* ── The thread pane ───────────────────────────────────────────────────── */
+
+  .thread-timeline {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .thread-timeline > .t-skel {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .thread-timeline .t-skel-content,
+  .thread-timeline .t-skel-skeleton {
+    min-height: 0;
+  }
+
+  /* Threads read top-down from the parent: short ones sit at the top. */
+  .thread-timeline-list {
+    height: 100%;
+    padding-bottom: var(--space-3);
+    overscroll-behavior: contain;
+  }
+
+  .right-pane .pane-body:has(> .thread-timeline) {
+    overflow: hidden;
+  }
+
+  .thread-parent {
+    padding-top: var(--space-2);
+  }
+
+  .thread-parent .message[data-group-start] {
+    margin-top: 0;
+  }
+
+  .thread-parent-gone {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-3) var(--space-4) 0;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+  }
+
+  /* "4 replies" with a hairline running to the edge. */
+  .thread-replies-rule {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-3) var(--space-4) var(--space-1);
+  }
+
+  .thread-replies-rule::after {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    content: "";
+  }
+
+  .thread-replies-label {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-meta);
+  }
+
+  .thread-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding: var(--space-4);
+  }
+
+  .thread-skeleton-row {
+    display: flex;
+    gap: var(--space-3);
+  }
+
+  .thread-skeleton-lines {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-0-5);
+  }
+
+  .thread-follow[aria-pressed="true"] {
+    --button-fg: var(--accent);
+  }
+
+  .thread-status {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-1);
+    height: 18px;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+  }
+
+  .thread-status[data-status="locked"] {
+    background: color-mix(in oklch, var(--warning), transparent 84%);
+    color: var(--warning-text);
+  }
+
+  /* In place of the composer: the composer's card, inert, saying why. */
+  .thread-locked {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 52px;
+    margin: 0 var(--space-4) var(--space-4);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+    border-radius: var(--radius-lg);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    cursor: not-allowed;
+  }
+
+  .thread-locked .icon {
+    flex-shrink: 0;
+    color: var(--warning-text);
+  }
+
+  .thread-locked-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .thread-locked strong {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .thread-locked .button {
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .thread-composer-note {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    padding: 0 var(--space-4) var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  /* ── New thread ────────────────────────────────────────────────────────── */
+
+  .new-thread {
+    padding-top: var(--space-2);
+  }
+
+  .new-thread .message[data-group-start] {
+    margin-top: 0;
+  }
+
+  .new-thread-name {
+    padding: var(--space-2) var(--space-4) var(--space-4);
+  }
+
+  /* ── The Threads pane ──────────────────────────────────────────────────── */
+
+  .thread-list {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-1) var(--space-2) var(--space-4);
+    list-style: none;
+  }
+
+  .thread-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    text-align: left;
+    transition: background-color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .thread-row:hover {
+    background: var(--bg-hover);
+    transition-duration: var(--duration-micro);
+  }
+
+  .thread-row:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .thread-row-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .thread-row-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+  }
+
+  .thread-row-title {
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-ui);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .thread-row[data-unread] .thread-row-title {
+    font-weight: var(--weight-semibold);
+  }
+
+  .thread-row-dot {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-pill);
+    background: var(--accent-solid);
+  }
+
+  .thread-row-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+    white-space: nowrap;
+  }
+
+  .thread-row-meta > :first-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .thread-row-tags {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-1);
+    padding-top: 2px;
+  }
+
+  .thread-following-tag {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-pill);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+}

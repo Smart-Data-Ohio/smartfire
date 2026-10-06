@@ -1,11 +1,15 @@
 /* The composer card and the typing line under it. */
 @layer app {
   .composer {
+    position: relative;
+    /* Above the timeline's floating chips (the jump button), so its menus cover them. */
+    z-index: 4;
     flex-shrink: 0;
     padding: 0 var(--space-5);
   }
 
   .composer .beam-host {
+    position: relative;
     border-radius: var(--radius-lg);
   }
 
@@ -55,27 +59,83 @@
   .composer-toolbar {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-0-5);
+    min-width: 0;
     padding: var(--space-1) var(--space-1-5) var(--space-1-5);
   }
 
   .composer-formats {
     display: flex;
-    flex: 1;
+    align-items: center;
     gap: var(--space-0-5);
-    opacity: 0.7;
+  }
+
+  /* Formatting and the emoji/mention buttons recede until the card is in use. */
+  .composer-toolbar > .icon-button,
+  .composer-formats {
+    opacity: 0.72;
     transition: opacity var(--duration-small) var(--ease-enter);
   }
 
+  .composer-card:focus-within .composer-toolbar > .icon-button,
   .composer-card:focus-within .composer-formats,
+  .composer-toolbar > .icon-button:hover,
   .composer-formats:hover {
     opacity: 1;
+  }
+
+  .composer-divider {
+    flex-shrink: 0;
+    width: 1px;
+    height: 16px;
+    margin: 0 var(--space-1);
+    background: var(--border);
+  }
+
+  .composer-spacer {
+    flex: 1;
+    min-width: var(--space-2);
+  }
+
+  /* While files are dragged over the pane, the card answers too. */
+  .composer-card[data-drop] {
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 82%);
+  }
+
+  /* The command being typed: its usage and what it does, above the text. */
+  .composer-usage {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: 0;
+    padding: var(--space-2) var(--space-4) 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .composer-usage-line {
+    flex-shrink: 0;
+    color: var(--text);
+    font-family: var(--font-mono);
+  }
+
+  .composer-usage-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .composer-hint {
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
+    margin-right: var(--space-1-5);
+    white-space: nowrap;
     color: var(--text-faint);
     font-size: 11px;
     opacity: 0;
@@ -162,11 +222,23 @@
   }
 
   @media (width < 720px) {
+    /* Sticky above the on-screen keyboard; the toolbar keeps only what a thumb needs. */
     .composer {
-      padding: 0 var(--space-2) env(safe-area-inset-bottom);
+      position: sticky;
+      bottom: 0;
+      padding: 0 var(--space-2) max(env(safe-area-inset-bottom), var(--keyboard-inset, 0px));
+      background: var(--bg-pane);
     }
 
-    .composer-hint {
+    .composer-hint,
+    .composer-formats,
+    .composer-mention,
+    .composer-formats + .composer-divider,
+    .composer-toolbar > .composer-divider {
+      display: none;
+    }
+
+    .composer-usage-text {
       display: none;
     }
   }

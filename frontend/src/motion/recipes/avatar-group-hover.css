@@ -1,0 +1,44 @@
+/*
+ * Avatar group hover: adapted from the free "Avatar group hover" recipe on transitions.dev by
+ * Jakub Antalik (https://transitions.dev), installed with
+ * `npx transitions-dev add avatar-group-hover`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the duration is the spring step, the lift is a quieter 3 px with a
+ * 1.08 scale (the faces are 20-22 px, not 40), and the return overshoot is softened from 3.85 to
+ * 2.4 so small faces don't wobble. AvatarGroup (src/features/threads) writes --shift and
+ * --scale-active, setting the in or out curve first as the recipe's orchestration does.
+ */
+
+@layer recipes {
+  :root {
+    --avatar-lift: -3px;
+    --avatar-dur: var(--duration-spring);
+    --avatar-scale: 1.08;
+    --avatar-falloff: 0.45;
+    --avatar-ease-in: cubic-bezier(0.22, 1, 0.36, 1);
+    --avatar-ease-out: cubic-bezier(0.34, 2.4, 0.64, 1);
+  }
+
+  .t-avatar {
+    transform-origin: center;
+    /* translateY before scale, so the scale doesn't amplify the lift. */
+    transform: translateY(var(--shift, 0px)) scale(var(--scale-active, 1));
+    transition: transform var(--avatar-dur) var(--avatar-ease-in);
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-avatar {
+      transition: none !important;
+      transform: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-avatar {
+    transition: none !important;
+    transform: none !important;
+  }
+}

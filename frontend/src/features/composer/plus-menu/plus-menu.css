@@ -1,0 +1,149 @@
+/*
+ * The composer's + button and its liquid menu. The liquid group covers the open footprint above
+ * the button (bottom-left anchored on it) and ignores the pointer except on its rows and button.
+ */
+@layer app {
+  .composer-plus.button {
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .composer-plus.button:hover,
+  .composer-plus.button[aria-expanded="true"] {
+    background: var(--bg-active);
+    color: var(--text);
+  }
+
+  .composer-plus .icon {
+    transition: rotate var(--duration-medium) var(--ease-spring);
+  }
+
+  .composer-plus[aria-expanded="true"] .icon {
+    rotate: 45deg;
+  }
+
+  .gooey-plus {
+    position: relative;
+    display: inline-block;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    flex-shrink: 0;
+  }
+
+  .gooey-plus-group {
+    bottom: 0;
+    left: 0;
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  /* Open, the + button sits on the liquid seed: no fill of its own. */
+  .gooey-plus[data-open] .gooey-plus-trigger.button {
+    background: transparent;
+  }
+
+  .gooey-plus-trigger {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    pointer-events: auto;
+  }
+
+  .gooey-plus-seed-slot,
+  .gooey-plus-slot {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+  }
+
+  .gooey-plus-seed {
+    display: block;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    border-radius: var(--radius-pill);
+  }
+
+  .gooey-plus-menu {
+    position: absolute;
+    inset: 0;
+  }
+
+  .gooey-plus-menu:focus-visible {
+    outline: none;
+  }
+
+  .gooey-plus-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-ui);
+    text-align: left;
+    cursor: default;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity var(--duration-micro-exit) var(--ease-exit),
+      background-color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  /* Each row fades in once its droplet has landed (--row-delay, set per row). */
+  .gooey-plus[data-open] .gooey-plus-item {
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      opacity var(--duration-small) var(--ease-enter) var(--row-delay, 0ms),
+      background-color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .gooey-plus-glyph {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  /* A translucent ink wash, so the highlight reads on the liquid in both themes. */
+  .gooey-plus-item:focus {
+    outline: none;
+    background: color-mix(in oklch, var(--text), transparent 92%);
+  }
+
+  .gooey-plus-item:focus .gooey-plus-glyph {
+    color: var(--text);
+  }
+
+  .gooey-plus-item[aria-disabled="true"],
+  .gooey-plus-item[aria-disabled="true"] .gooey-plus-glyph {
+    color: var(--text-faint);
+  }
+
+  .gooey-plus-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gooey-plus-shortcut {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  /* Quiet keys: the menu's own row hover carries the emphasis. */
+  .gooey-plus-shortcut .kbd-key {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-faint);
+  }
+}

@@ -21,7 +21,10 @@ interface TabsProps {
   readonly onValueChange: (value: string) => void;
   /** The tab list's accessible name. */
   readonly label: string;
-  /** The selected tab's panel. */
+  /**
+   * The selected tab's panel. Without it the tabs act as a filter for content the caller lays
+   * out itself, and no tab claims to control a panel.
+   */
   readonly children?: ReactNode;
 }
 
@@ -121,7 +124,7 @@ export function Tabs({ items, value, onValueChange, label, children }: TabsProps
               className="tab t-tab"
               data-value={item.value}
               aria-selected={selected}
-              aria-controls={selected ? `${id}-panel` : undefined}
+              aria-controls={selected && children !== undefined ? `${id}-panel` : undefined}
               tabIndex={selected ? 0 : -1}
               onClick={() => onValueChange(item.value)}
             >
