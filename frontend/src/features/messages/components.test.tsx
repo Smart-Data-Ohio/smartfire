@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SEED_IDS } from "../../../mock/server.ts";
 import { messageFixture, pageFixture, userFixture } from "../../api/testing.ts";
 import type { Me } from "../../gen/Me.ts";
+import { loadEmojiData } from "../../lib/emoji/data.ts";
 import { resetRecentEmoji } from "../../lib/emoji/recent.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { mutations, store } from "../../store/store.ts";
@@ -146,6 +147,8 @@ describe("reaction pills", () => {
     await user.click(screen.getByRole("button", { name: "Add reaction" }));
 
     expect(added).toHaveLength(1);
+    // Hovering the pill preloads the emoji catalogue; let that import land before teardown.
+    await loadEmojiData();
   });
 
   it("lets the viewer take back their own boost, and only theirs", async () => {
