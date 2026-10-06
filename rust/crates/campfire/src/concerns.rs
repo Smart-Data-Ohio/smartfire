@@ -56,6 +56,14 @@ use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, Us
 use campfire_kit::{Cookie, Ctx, Error, Result, SameSite, StatusCode, halt};
 
 use crate::app::AppCtx;
+pub use crate::ruby::ruby_to_i;
+
+/// The route that matched the current request (`request.path_parameters` plus the endpoint),
+/// available to actions as `c.current::<MatchedRoute>()`.
+#[derive(Debug, Clone)]
+pub struct MatchedRoute {
+    pub endpoint: &'static str,
+}
 
 // --- Current -----------------------------------------------------------------------------------
 
@@ -397,7 +405,7 @@ pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> 
         return Ok(());
     }
     // Use the trusted dispatcher endpoint, never query/body controller or action parameters.
-    let endpoint = c.current::<crate::controllers::MatchedRoute>().map(|r| r.endpoint);
+    let endpoint = c.current::<MatchedRoute>().map(|r| r.endpoint);
     if endpoint.is_some_and(|endpoint| {
         let (controller, action) = endpoint.split_once('#').unwrap_or((endpoint, ""));
         matches!(controller, "two_factor/challenges" | "pwa")
@@ -877,7 +885,7 @@ async fn render_incompatible_browser(c: &mut Ctx) -> Result {
     use campfire_views::sessions::IncompatibleBrowser;
 
     let own_layout = c
-        .current::<crate::controllers::MatchedRoute>()
+        .current::<MatchedRoute>()
         .is_some_and(|route| {
             route.endpoint.starts_with("messages#")
                 || route.endpoint.starts_with("messages/by_bots#")
@@ -1001,35 +1009,6 @@ pub fn cast_integer(value: &str) -> Option<i64> {
     };
     let digits: String = digits.chars().take_while(char::is_ascii_digit).collect();
     digits.parse::<i64>().ok().map(|n| sign * n)
-}
-
-/// `String#to_i`: optional leading whitespace and sign, then digits (underscores between them).
-pub fn ruby_to_i(value: &str) -> i64 {
-    let value = value.trim_start_matches([' ', '\t', '\n', '\u{b}', '\u{c}', '\r']);
-    let (negative, rest) = match value.as_bytes().first() {
-        Some(b'-') => (true, &value[1..]),
-        Some(b'+') => (false, &value[1..]),
-        _ => (false, value),
-    };
-    let rest = rest
-        .strip_prefix("0d")
-        .or_else(|| rest.strip_prefix("0D"))
-        .unwrap_or(rest);
-    let mut number: i64 = 0;
-    let mut previous_digit = false;
-    for c in rest.chars() {
-        match c {
-            '0'..='9' => {
-                number = number
-                    .saturating_mul(10)
-                    .saturating_add(i64::from(c as u8 - b'0'));
-                previous_digit = true;
-            }
-            '_' if previous_digit => previous_digit = false,
-            _ => break,
-        }
-    }
-    if negative { -number } else { number }
 }
 
 /// Ruby's `String#strip` (ASCII whitespace and NUL).

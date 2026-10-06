@@ -4,6 +4,8 @@ mod active_storage;
 mod admin;
 mod app;
 mod authentication;
+// The cable server's user, stream names and typed broadcasts.
+mod cable;
 mod account_security;
 mod channels;
 mod concerns;
@@ -15,12 +17,24 @@ mod picker_configuration;
 mod controllers;
 mod integrations;
 mod huddle;
+// The icon catalog: config/icons.yml's brands and the workspace's own.
+mod icons;
 mod jobs;
 mod mail;
 mod rich_text;
 mod messaging;
+// The outbound HTTP stack every client shares.
+mod net;
 mod public_policy;
+// The job queue's enqueueing side: job classes, queues and the durable sink.
+mod queue;
+// Ruby core conversions.
+mod ruby;
 mod security;
+// App state whose behaviour lives in the layers above.
+mod state;
+// Boot, the HTTP stack and the binary's commands.
+mod server;
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many
 /// threads as the blocking pool grows to.
@@ -42,7 +56,7 @@ fn main() -> anyhow::Result<()> {
     if let Some(status) = admin::run(&std::env::args().skip(1).collect::<Vec<_>>()) {
         std::process::exit(status);
     }
-    app::run()
+    server::run()
 }
 
 /// On kernels with transparent huge pages set to `always` (Debian's and Arch's default), every

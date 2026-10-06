@@ -1,5 +1,6 @@
 //! PR196 R4 boundaries, captured from pinned Rails by render_replay.sh.
-use super::{github_connections, input_casts};
+use super::input_casts;
+use crate::server::json_params;
 use crate::controllers::presenters::test_support::{
     BENDER, DAVID, Req, TestApp, with_fixed_render_secrets,
 };
@@ -86,7 +87,7 @@ fn tokens(key: &str) {
         let raw = inputs[key][case["input_index"].as_u64().unwrap() as usize]
             .as_str()
             .unwrap();
-        let actual = match github_connections::json_body_params(
+        let actual = match json_params::json_body_params(
             &Method::POST,
             "/account/bots/1/github_connection",
             format!("{{\"access_token\":{raw}}}").as_bytes(),
@@ -275,7 +276,7 @@ async fn pr196_r4_overridden_routes_match_rails_and_keep_create_parser_scoped() 
                     .body("{\"access_token\":\"\"}"),
             )
             .await;
-        let selected = github_connections::scoped_json_body_params(
+        let selected = json_params::scoped_json_body_params(
             &effective,
             &path,
             b"{\"access_token\":1e999}",

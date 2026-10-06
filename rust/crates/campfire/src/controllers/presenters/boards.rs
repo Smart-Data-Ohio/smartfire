@@ -155,7 +155,7 @@ pub fn listing(
         digest,
         stream_name: rails_compat::turbo::signed_stream_name(
             &p.app().secrets,
-            &[&crate::channels::room_gid(room).to_param(), "messages"],
+            &[&crate::cable::room_gid(room).to_param(), "messages"],
         ),
     })
 }

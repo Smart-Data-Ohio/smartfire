@@ -805,7 +805,7 @@ mod call_channel_declaration_tests;
 #[cfg(test)]
 mod call_page_tests;
 
-pub(crate) mod call_navigation;
+pub(crate) use crate::controllers::presenters::call_navigation;
 
 pub(crate) mod shell;
 

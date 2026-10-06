@@ -440,7 +440,7 @@ async fn google_pending_meet_conference_uses_the_real_durable_retry_handler() {
         a.booted.app.jobs.queue.clone(),
         crate::jobs::registry(),
         a.booted.app.clone(),
-        crate::jobs::runner_config(&a.booted.app.config),
+        crate::queue::runner_config(&a.booted.app.config),
     );
     tokio::time::timeout(Duration::from_secs(5),async {loop {
         let ready=a.db().read(|c|Ok(c.query_row("SELECT EXISTS(SELECT 1 FROM background_jobs WHERE job_class='Calendar::MeetLinkJob' AND status='ready' AND attempts=1)",[],|r|r.get::<_,bool>(0))?)).await.unwrap();

@@ -17,7 +17,7 @@ async fn setup(route: Route) -> (FakeServer, Network, Arc<FakeResolver>) {
             to: server.addr,
             dialed: Default::default(),
         }),
-        tls: crate::integrations::net::tls_config(roots),
+        tls: crate::net::tls_config(roots),
     };
     (server, net, resolver)
 }

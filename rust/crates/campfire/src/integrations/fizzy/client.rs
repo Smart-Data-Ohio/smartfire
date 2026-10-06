@@ -1,7 +1,7 @@
 //! `app/models/fizzy/client.rb`. The configured origin is trusted (including self-hosted HTTP).
 //! Path IDs are checked before DNS. The open budget includes DNS, TCP and TLS.
 use super::blank;
-use crate::integrations::net::{
+use crate::net::{
     Network,
     http::{self, Body, Endpoint, HttpError, Request, Timeouts},
 };

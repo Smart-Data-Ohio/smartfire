@@ -272,7 +272,7 @@ fn pr196_r2_raw_numeric_tokens_match_pinned_json() {
     for case in cases {
         let index = case["input_index"].as_u64().unwrap() as usize;
         let raw = inputs["tokens"][index].as_str().unwrap();
-        let actual = match super::github_connections::json_body_params(
+        let actual = match crate::server::json_params::json_body_params(
             &Method::POST,
             "/account/bots/1/github_connection",
             format!("{{\"access_token\":{raw}}}").as_bytes(),
@@ -338,7 +338,7 @@ fn pr196_r2_generated_extreme_components_and_numeric_lexemes_match_rails() {
     let mut token_failures = Vec::new();
     for case in oracle["tokens"].as_array().unwrap() {
         let raw = case["raw"].as_str().unwrap();
-        let params = super::github_connections::json_body_params(
+        let params = crate::server::json_params::json_body_params(
             &Method::POST,
             "/account/bots/1/github_connection",
             format!("{{\"access_token\":{raw}}}").as_bytes(),

@@ -1157,8 +1157,8 @@ async fn run_action(f: &Fresh, approval: i64, webhooks: bool) {
             .unwrap();
     }
     let registry = crate::jobs::registry();
-    let config = crate::jobs::runner_config(&f.app.config);
-    let (_, adhoc) = crate::jobs::Jobs::new(&registry, &config).unwrap();
+    let config = crate::queue::runner_config(&f.app.config);
+    let (_, adhoc) = crate::queue::Jobs::new(&registry, &config).unwrap();
     let runner = crate::jobs::start(
         f.app.clone(),
         registry,
@@ -1939,8 +1939,8 @@ async fn cutover_d_room_http_query_count_stays_flat_for_two_then_six_pr_messages
 async fn run_registered(f: &Fresh, classes: &[&str]) {
     let classes = classes.iter().map(|s| s.to_string()).collect::<Vec<_>>();
     let registry = crate::jobs::registry();
-    let config = crate::jobs::runner_config(&f.app.config);
-    let (_, adhoc) = crate::jobs::Jobs::new(&registry, &config).unwrap();
+    let config = crate::queue::runner_config(&f.app.config);
+    let (_, adhoc) = crate::queue::Jobs::new(&registry, &config).unwrap();
     let runner = crate::jobs::start(
         f.app.clone(),
         registry,

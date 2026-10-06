@@ -1,5 +1,5 @@
 //! The trailing stream broadcast waits outside the SQLite writer, then checks its stamp.
-use crate::{app::App, jobs::Registry};
+use crate::{app::App, queue::Registry};
 use campfire_db::models::agent_streaming::{self as domain, StreamTrailingBroadcastJob};
 use campfire_jobs::{Execution, JobKind, JobResult, Outcome, RetryPolicy};
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ impl JobKind for Trailing {
         RetryPolicy::application_job()
     }
 }
-pub(super) fn register(registry: &mut Registry) {
+pub(crate) fn register(registry: &mut Registry) {
     registry.register(trailing);
 }
 async fn trailing(app: App, job: Trailing, _: Execution) -> JobResult {

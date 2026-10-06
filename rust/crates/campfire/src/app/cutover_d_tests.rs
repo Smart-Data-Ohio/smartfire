@@ -231,7 +231,7 @@ impl meeting_refresh::EventLister for EscapingJsonParser {
         _start: Timestamp,
         _end: Timestamp,
         _now: Timestamp,
-    ) -> crate::integrations::net::BoxFuture<'a, api::Result<Value>> {
+    ) -> crate::net::BoxFuture<'a, api::Result<Value>> {
         Box::pin(async {
             Err(api::Error::JsonParser(
                 <serde_json::Error as serde::de::Error>::custom("unexpected token"),

@@ -20,7 +20,8 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use crate::channels::{self, Broadcasts, Cable, Deps, Partials, sink};
+use crate::cable::Partials;
+use crate::channels::{self, Broadcasts, Cable, Deps, sink};
 
 pub use crate::test_support::{WAIT, bind_listener, eventually, wait};
 

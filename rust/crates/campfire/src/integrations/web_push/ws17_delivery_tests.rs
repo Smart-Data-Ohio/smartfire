@@ -23,7 +23,7 @@ fn with_pool(original: &App, pool: Pool) -> App {
         github_read: original.github_read.clone(),
         sudo: Default::default(),
         two_factor: Default::default(),
-        slack_network: crate::integrations::net::Network::system(),
+        slack_network: crate::net::Network::system(),
         subscription_network: original.subscription_network.clone(),
         config: original.config.clone(),
         secrets: original.secrets.clone(),
@@ -119,7 +119,7 @@ async fn ws17_durable_event_board_and_huddle_jobs_decrypt_complete_rails_json() 
             app.jobs.queue.clone(),
             crate::jobs::registry(),
             app.clone(),
-            crate::jobs::runner_config(&app.config),
+            crate::queue::runner_config(&app.config),
         );
         wait_for_jobs_and_deliveries(
             &db,
@@ -241,7 +241,7 @@ async fn ws17_ws13_wire_requests_deliver_captured_payload_and_claim_join_once() 
             app.jobs.queue.clone(),
             crate::jobs::registry(),
             app.clone(),
-            crate::jobs::runner_config(&app.config),
+            crate::queue::runner_config(&app.config),
         );
         let wait = || {
             wait_for_jobs_and_deliveries(
@@ -318,7 +318,7 @@ async fn cutover_c_deliver_reminder(app: &App, pool: &Pool, event_id: i64) {
         app.jobs.queue.clone(),
         crate::jobs::registry(),
         app.clone(),
-        crate::jobs::runner_config(&app.config),
+        crate::queue::runner_config(&app.config),
     );
     wait_for_jobs_and_deliveries(&app.db, pool, &["Event::ReminderPushJob"]).await;
     runner.shutdown(Duration::from_secs(5)).await;

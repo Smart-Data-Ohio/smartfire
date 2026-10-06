@@ -348,7 +348,7 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
         })
         .unwrap();
         // No token: the queued fetch cannot make an external request.
-        let booted = crate::app::boot_with_github_read(
+        let booted = crate::server::boot_with_github_read(
             config,
             Arc::new(campfire_kit::FrozenClock::new(
                 "2026-01-01T12:00:00Z".parse().unwrap(),
@@ -517,7 +517,7 @@ async fn github_notifier_runtime_uses_default_retry_policy_and_fails_nontransien
             _ => None,
         })
         .unwrap();
-        let booted = crate::app::boot_with_github_read(
+        let booted = crate::server::boot_with_github_read(
             config,
             Arc::new(campfire_kit::FrozenClock::new(
                 "2026-01-01T12:00:00Z".parse().unwrap(),

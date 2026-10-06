@@ -1,5 +1,5 @@
 use super::*;
-use crate::integrations::net::http::HttpError;
+use crate::net::http::HttpError;
 use std::io;
 
 fn oracle() -> Value {

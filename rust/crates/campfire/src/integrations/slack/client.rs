@@ -7,7 +7,7 @@ use hyper::Method;
 use serde_json::Value;
 use tokio::time::Instant;
 
-use crate::integrations::net::{
+use crate::net::{
     Network,
     http::{self, Body, Endpoint, Request, Timeouts},
 };

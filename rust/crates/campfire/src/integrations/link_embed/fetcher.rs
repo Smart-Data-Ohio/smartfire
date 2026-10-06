@@ -32,7 +32,7 @@ impl JobKind for FetchJob {
 pub async fn perform(app: App, job: FetchJob, _: Execution) -> JobResult {
     fetch(&app, &Network::system(), job.embed_id)
         .await
-        .map_err(crate::jobs::discard_missing)?;
+        .map_err(crate::queue::discard_missing)?;
     Ok(Outcome::Done)
 }
 

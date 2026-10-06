@@ -129,7 +129,7 @@ impl Layout {
                 .is_some_and(|value| !campfire_richtext::ruby::is_blank(value));
         chrome.huddle_configured = app.config.huddle.configured();
         chrome.global_search_query = if c.request.path().starts_with("/searches") {
-            crate::controllers::searches::display_query(c)
+            crate::controllers::presenters::params::display_query(c)
         } else {
             None
         };
@@ -164,7 +164,7 @@ impl Layout {
             csp_nonce: c.content_security_policy_nonce(),
         };
         #[cfg(test)]
-        let secrets = super::test_support::fixed_render_secrets().unwrap_or(secrets);
+        let secrets = super::render_secrets::fixed_render_secrets().unwrap_or(secrets);
         self.render_with_secrets(c, Some(secrets), render)
     }
 

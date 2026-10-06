@@ -108,7 +108,7 @@ async fn pr201_shared_brand_icon_json_callers_match_complete_rails_outputs() {
                     Ok((
                         p.agent_message_payload(&message)?,
                         p.agent_message_payloads(std::slice::from_ref(&message))?,
-                        crate::controllers::messages::payload::user(
+                        crate::controllers::presenters::message_payload::user(
                             &p,
                             &p.user(DAVID)?,
                             "http://campfire.test",

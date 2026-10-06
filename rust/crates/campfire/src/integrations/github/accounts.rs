@@ -15,7 +15,7 @@ use super::{
     blank,
     client::{AppClient, ErrorKind, WriteClient, ruby_strip, ruby_to_i},
 };
-use crate::integrations::net::Network;
+use crate::net::Network;
 
 pub const UNREADABLE_TOKEN_REASON: &str = "The stored token could not be read; link it again";
 pub const REJECTED_TOKEN_REASON: &str = "GitHub rejected the linked token (401)";

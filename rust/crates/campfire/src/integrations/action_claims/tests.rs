@@ -251,7 +251,7 @@ async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval()
         let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
             "2026-01-01T12:00:00Z".parse().unwrap(),
         ));
-        let booted = crate::app::boot_with_clock(config, clock.clone())
+        let booted = crate::server::boot_with_clock(config, clock.clone())
             .await
             .unwrap();
         booted

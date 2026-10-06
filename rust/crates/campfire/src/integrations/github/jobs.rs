@@ -40,7 +40,7 @@ impl JobKind for PerformAgentActionJob {
     }
 }
 
-pub fn register(registry: &mut crate::jobs::Registry) {
+pub fn register(registry: &mut crate::queue::Registry) {
     registry.register(fetch_pull_request);
     registry.register(perform_agent_action);
     registry.register(deliver_subscription_event);
@@ -53,7 +53,7 @@ async fn fetch_pull_request(
 ) -> campfire_jobs::JobResult {
     super::fetcher::fetch(&app.db, &app.github_read, job.pull_request_id)
         .await
-        .map_err(crate::jobs::discard_missing)?;
+        .map_err(crate::queue::discard_missing)?;
     Ok(campfire_jobs::Outcome::Done)
 }
 
@@ -64,7 +64,7 @@ async fn perform_agent_action(
 ) -> campfire_jobs::JobResult {
     super::agent_actions::perform(&app.db, &app.github_accounts, job.approval_id)
         .await
-        .map_err(crate::jobs::discard_missing)?;
+        .map_err(crate::queue::discard_missing)?;
     Ok(campfire_jobs::Outcome::Done)
 }
 

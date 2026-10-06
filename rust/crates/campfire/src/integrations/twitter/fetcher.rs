@@ -2,7 +2,7 @@
 use super::{post::Post, urls};
 use crate::{
     app::App,
-    integrations::net::{
+    net::{
         Network,
         http::{self, Body, Endpoint, HttpError, Request, Timeouts},
     },
@@ -38,7 +38,7 @@ impl JobKind for FetchJob {
 pub async fn perform(app: App, job: FetchJob, _: Execution) -> JobResult {
     fetch(&app, &Network::system(), job.post_id)
         .await
-        .map_err(crate::jobs::discard_missing)?;
+        .map_err(crate::queue::discard_missing)?;
     Ok(Outcome::Done)
 }
 pub async fn fetch(app: &App, net: &Network, id: i64) -> campfire_db::Result<()> {

@@ -91,7 +91,7 @@ impl SidebarData {
 #[path = "sidebars_tests.rs"]
 mod tests;
 
-pub(crate) mod composition;
+pub(crate) use crate::controllers::presenters::sidebar_composition as composition;
 #[cfg(test)]
 #[path="sidebars/tests.rs"]
 mod composition_tests;

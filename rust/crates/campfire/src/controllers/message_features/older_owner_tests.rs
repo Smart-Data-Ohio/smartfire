@@ -257,7 +257,7 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                 dialed: Default::default(),
             });
             let mut net = network(resolver, dialer);
-            net.tls = crate::integrations::net::tls_config(roots);
+            net.tls = crate::net::tls_config(roots);
             let reads = Arc::new(Mutex::new(None));
             let observed = reads.clone();
             let mut registry = Registry::new();
@@ -278,7 +278,7 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                             .await;
                             app.db.stop_capturing_read_queries();
                             *observed.lock().unwrap() = Some(queries.lock().unwrap().len());
-                            result.map_err(crate::jobs::discard_missing)?;
+                            result.map_err(crate::queue::discard_missing)?;
                             Ok(Outcome::Done)
                         }
                     },
@@ -293,7 +293,7 @@ async fn older_owner_network_jobs_match_rails_on_real_streams() {
                             let result = twitter::fetcher::fetch(&app, &net, job.post_id).await;
                             app.db.stop_capturing_read_queries();
                             *observed.lock().unwrap() = Some(queries.lock().unwrap().len());
-                            result.map_err(crate::jobs::discard_missing)?;
+                            result.map_err(crate::queue::discard_missing)?;
                             Ok(Outcome::Done)
                         }
                     },

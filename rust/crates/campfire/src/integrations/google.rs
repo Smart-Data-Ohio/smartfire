@@ -21,7 +21,7 @@ impl Default for State {
         Self(
             Arc::new(RwLock::new(Arc::new(sign_in::SignIn::new(
                 sign_in::Config::from_env(),
-                crate::integrations::net::Network::system(),
+                crate::net::Network::system(),
             )))),
             Arc::new(RwLock::new(Arc::new(api::Api::default()))),
             Arc::new(drive::State::default()),
@@ -30,7 +30,7 @@ impl Default for State {
 }
 impl State {
     pub fn from_config(config: &crate::config::Config) -> Self {
-        let transport = Arc::new(client::HttpClient(crate::integrations::net::Network::system()));
+        let transport = Arc::new(client::HttpClient(crate::net::Network::system()));
         Self(
             Arc::new(RwLock::new(Arc::new(sign_in::SignIn::with_client(sign_in::Config {
                 client_id: config.google_client.client_id.clone(),
@@ -78,7 +78,7 @@ impl State {
         )
     }
 }
-impl crate::concerns::sudo::GoogleSudo for State {
+impl crate::state::sudo::GoogleSudo for State {
     fn configured(&self) -> bool {
         self.sign_in().config.configured()
     }
@@ -86,7 +86,7 @@ impl crate::concerns::sudo::GoogleSudo for State {
         self.start(c, "sudo", Some(user_id))
     }
 }
-impl crate::concerns::two_factor::GoogleReauthentication for State {
+impl crate::state::two_factor::GoogleReauthentication for State {
     fn configured(&self) -> bool {
         self.sign_in().config.configured()
     }

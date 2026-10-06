@@ -1,13 +1,9 @@
 //! The two `ChannelThread` reads the channels need, until the messaging workstream's model lands
 //! (then these should call it). Read-only: the channels never write threads.
 use campfire_db::{Connection, Result};
-use rails_compat::global_id::GlobalId;
 use rusqlite::OptionalExtension as _;
 
-/// A thread's GlobalID (`gid://campfire/ChannelThread/1`).
-pub fn thread_gid(thread_id: i64) -> GlobalId {
-    GlobalId::new("ChannelThread", thread_id)
-}
+pub use crate::cable::thread_gid;
 
 /// `ChannelThread.find(id).room_id`, or `None` for `RecordNotFound`.
 pub fn room_id_of(conn: &Connection, thread_id: i64) -> Result<Option<i64>> {

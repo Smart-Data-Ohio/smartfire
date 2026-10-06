@@ -43,7 +43,7 @@ pub fn ooo_notice_members(
         .into_iter()
         .map(|id| {
             let user = users.remove(&id).expect("batch includes selected user");
-            let gid = crate::channels::user_gid(id).to_param();
+            let gid = crate::cable::user_gid(id).to_param();
             campfire_views::users::statuses::OooNoticeMember {
                 id,
                 name: user.user.name.clone(),
@@ -97,7 +97,7 @@ pub fn profile_status_in_zone(
         campfire_db::models::workspace_presence_lease::Presence::Dnd => "dnd",
         campfire_db::models::workspace_presence_lease::Presence::Offline => "offline",
     };
-    let gid = crate::channels::user_gid(user_id).to_param();
+    let gid = crate::cable::user_gid(user_id).to_param();
     Ok(campfire_views::users::statuses::ProfileStatus {
         user_id,
         stream_name: rails_compat::turbo::signed_stream_name(secrets, &[&gid, "status"]),

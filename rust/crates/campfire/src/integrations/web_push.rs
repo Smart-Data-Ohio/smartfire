@@ -15,8 +15,8 @@ use base64::Engine;
 use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
 use campfire_db::{Connection, Message, PushPayload, PushSubscription, RichText, Timestamp};
 
-use crate::integrations::net::http::{self, Endpoint, HttpError, Timeouts};
-use crate::integrations::net::{Network, guard};
+use crate::net::http::{self, Endpoint, HttpError, Timeouts};
+use crate::net::{Network, guard};
 
 pub use encryption::EncryptionError;
 pub use pool::Pool;

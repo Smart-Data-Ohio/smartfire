@@ -3,7 +3,7 @@
 pub mod credentials;
 pub mod github_connections;
 pub mod grants;
-pub(crate) mod input_casts;
+pub(crate) use crate::controllers::presenters::bot_input_casts as input_casts;
 pub mod keys;
 pub mod webhook_secrets;
 

@@ -4,7 +4,13 @@ use campfire_jobs::inspect::{self, JobRow};
 use tokio::sync::Notify;
 
 use super::*;
-use crate::app::{Booted, boot_with_services};
+use campfire_db::{Event, EventSink as _, JobRequest, Tx};
+use campfire_jobs::JobQueue;
+use futures_util::future::BoxFuture;
+use crate::cable::Cable;
+use crate::config::Config;
+use crate::queue::{Jobs, PUSH_QUEUE, PushMessageJob, WEBHOOK_HOLD, WEBHOOKS_QUEUE, WebhookJob, request_for, runner_config};
+use crate::server::{Booted, boot_with_services};
 use crate::test_support::{WAIT, eventually, wait};
 
 /// An app booted over an empty storage directory.
@@ -22,7 +28,7 @@ async fn app_in(dir: &std::path::Path) -> Booted {
     boot_with_services(
         config,
         campfire_kit::clock::from_env().unwrap(),
-        crate::integrations::net::Network::system(),
+        crate::net::Network::system(),
         periodic::Intervals { periodic: None, huddle: None },
     ).await.unwrap()
 }

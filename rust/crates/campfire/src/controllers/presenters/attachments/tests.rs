@@ -727,7 +727,7 @@ async fn durable_analysis_survives_restart_and_repeated_delivery() {
     drop(app);
     drop(test.booted.router);
     drop(test.booted.app);
-    let restarted = crate::app::boot_with_clock(config, seed_clock())
+    let restarted = crate::server::boot_with_clock(config, seed_clock())
         .await
         .unwrap();
     let analyzed = wait_analyzed(&restarted.app, id).await;
@@ -737,9 +737,9 @@ async fn durable_analysis_survives_restart_and_repeated_delivery() {
     );
     restarted.app.db.write(move |tx| {
         tx.conn().execute_batch("CREATE TRIGGER reject_reanalysis BEFORE UPDATE OF metadata ON active_storage_blobs BEGIN SELECT RAISE(ABORT, 'reanalyzed'); END;")?;
-        tx.emit_after_commit(Event::job(&crate::jobs::AnalyzeJob { blob_id: id }));
-        tx.emit_after_commit(Event::job(&crate::jobs::AnalyzeJob { blob_id: id }));
-        tx.emit_after_commit(Event::job(&crate::jobs::AnalyzeJob { blob_id: -1 }));
+        tx.emit_after_commit(Event::job(&crate::queue::AnalyzeJob { blob_id: id }));
+        tx.emit_after_commit(Event::job(&crate::queue::AnalyzeJob { blob_id: id }));
+        tx.emit_after_commit(Event::job(&crate::queue::AnalyzeJob { blob_id: -1 }));
         Ok(())
     }).await.unwrap();
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);

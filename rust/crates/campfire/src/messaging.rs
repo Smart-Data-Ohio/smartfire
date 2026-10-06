@@ -3,6 +3,9 @@ use campfire_db::{Blob, Result, Tx};
 use campfire_storage::Storage;
 use std::sync::Arc;
 
+mod operations;
+pub(crate) use operations::{canonicalize_body, process_attachment, process_attachment_now, save_staged};
+
 pub struct ForwarderCopier {
     storage: Arc<Storage>,
 }

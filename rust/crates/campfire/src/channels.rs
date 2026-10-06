@@ -9,7 +9,6 @@
 
 pub mod activity;
 pub mod agents;
-pub mod broadcasts;
 pub(crate) mod board_digests;
 pub(crate) mod message_features;
 mod github_notifier;
@@ -40,46 +39,12 @@ pub(crate) mod tests;
 use std::sync::Arc;
 
 use campfire_cable::turbo::{STREAMS_CHANNEL, StreamsChannel};
-use campfire_cable::{Config, EmptyChannel, Identified, Server, ServerBuilder};
+use campfire_cable::{Config, EmptyChannel, Server, ServerBuilder};
 use campfire_db::Database;
 use rails_compat::Secrets;
-use rails_compat::global_id::GlobalId;
 
-pub use broadcasts::{Broadcasts, Partials};
+pub use crate::cable::{Broadcasts, Cable, CableUser, broadcasts, room_gid, user_gid};
 pub use connection::SessionAuthenticator;
-
-/// The cable server, identified by `current_user`.
-pub type Cable = Server<CableUser>;
-
-/// `identified_by :current_user`: the user as loaded when the connection opened, and the
-/// connection's `current_session` (by id: channels that need it read it fresh).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CableUser {
-    pub id: i64,
-    pub name: String,
-    pub role: campfire_db::Role,
-    pub status: campfire_db::Status,
-    pub session_id: i64,
-}
-
-impl CableUser {
-    pub fn bot(&self) -> bool {
-        self.role == campfire_db::Role::Bot
-    }
-
-    /// `ActivityItem.active_human?(user)`: `user&.active? && !user.bot?`.
-    pub fn active_human(&self) -> bool {
-        self.status == campfire_db::Status::Active && !self.bot()
-    }
-}
-
-impl Identified for CableUser {
-    /// `connection_gid`: the user's GlobalID, which `remote_connections.where(current_user:)`
-    /// matches.
-    fn connection_identifier(&self) -> String {
-        user_gid(self.id).to_string()
-    }
-}
 
 /// What the cable server needs from the app.
 #[derive(Clone)]
@@ -122,13 +87,4 @@ pub fn register(builder: ServerBuilder<CableUser>, deps: &Deps, streams: Streams
         .channel("UnreadThreadsChannel", || unread_threads::UnreadThreadsChannel)
         .channel("WorkspacePresenceChannel", move || workspace_presence::WorkspacePresenceChannel::new(workspace_db.clone(), idle_timeout))
         .channel(STREAMS_CHANNEL, move || stock.clone())
-}
-
-pub fn user_gid(user_id: i64) -> GlobalId {
-    GlobalId::new("User", user_id)
-}
-
-/// A room's GlobalID names its STI class (`gid://campfire/Rooms::Open/1`).
-pub fn room_gid(room: &campfire_db::Room) -> GlobalId {
-    GlobalId::new(room.room_type.class_name(), room.id)
 }

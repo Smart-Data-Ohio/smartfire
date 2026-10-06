@@ -1,7 +1,7 @@
 //! HTML adapter only; shared X cards use persisted, session-independent facts.
 use crate::{
     app::App,
-    channels::broadcasts::{Stream, message_dom_id},
+    cable::broadcasts::{Stream, message_dom_id},
 };
 use campfire_db::{Account, Message, Room};
 use campfire_views::helpers::{AvatarIcon, IconSource};

@@ -1,6 +1,6 @@
 //! Calendar consumers. Arguments come from Rails; SyncEntry/MeetLink are produced by WS14e.
 use super::api::{self, ApiRequest, Credentials};
-use crate::{app::App, jobs::Registry};
+use crate::{app::App, queue::Registry};
 use campfire_db::{
     Timestamp,
     models::{

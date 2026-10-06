@@ -321,9 +321,9 @@ async fn ws15e_fizzy_fetch_results_are_private_and_match_failure_states() {
         }
     }
     let resolver = Arc::new(FakeResolver::default());
-    let net = crate::integrations::net::Network {
+    let net = crate::net::Network {
         resolver: resolver.clone(),
-        ..crate::integrations::net::Network::system()
+        ..crate::net::Network::system()
     };
     fetch::fetch(
         &app.booted.app,
@@ -361,9 +361,9 @@ async fn ws15e_fizzy_transport_error_is_cached_and_job_has_one_attempt() {
         .await
         .unwrap();
     let resolver = Arc::new(FakeResolver::default());
-    let net = crate::integrations::net::Network {
+    let net = crate::net::Network {
         resolver: resolver.clone(),
-        ..crate::integrations::net::Network::system()
+        ..crate::net::Network::system()
     };
     fetch::fetch(
         &app.booted.app,

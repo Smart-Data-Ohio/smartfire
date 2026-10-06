@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_services};
+use crate::server::{Booted, boot_with_services};
 use crate::config::Config;
 
 /// The pinned Rails `test/support/test_session_controller.rb` GET bridge. Only tests
@@ -243,7 +243,7 @@ impl TestApp {
     }
 
     pub async fn boot_with_settings(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock, settings: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_with_huddle_services(clock, crate::integrations::net::Network::system(), settings, huddle).await
+        Self::boot_with_huddle_services(clock, crate::net::Network::system(), settings, huddle).await
     }
     /// Stop and join job workers before arranging assertions about committed enqueues.
     /// HTTP routes and the durable queue sink stay active. Tests of job execution should
@@ -254,7 +254,7 @@ impl TestApp {
     }
 
     pub async fn boot_with_fizzy(clock: campfire_kit::SharedClock, fizzy: crate::integrations::fizzy::State) -> Option<TestApp> {
-        Self::boot_seed_with_fizzy("default", clock, crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(), (None, None), Some(fizzy)).await
+        Self::boot_seed_with_fizzy("default", clock, crate::net::Network::system(), &[], crate::huddle::Config::default(), (None, None), Some(fizzy)).await
     }
     /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
@@ -271,7 +271,7 @@ impl TestApp {
     ) -> Option<TestApp> {
         Self::boot_with_huddle_services(
             clock,
-            crate::integrations::net::Network::system(),
+            crate::net::Network::system(),
             &[],
             huddle,
         )
@@ -297,7 +297,7 @@ impl TestApp {
 
     /// WS16 fixture seam: real Google/Slack HTTP with a shared frozen clock/config.
     pub async fn boot_with_network_clock_and_env(
-        network: crate::integrations::net::Network,
+        network: crate::net::Network,
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
@@ -306,7 +306,7 @@ impl TestApp {
 
     /// All real GitHub clients use the caller's isolated external-service transport.
     pub async fn boot_with_github_network_clock_and_env(
-        network: crate::integrations::net::Network,
+        network: crate::net::Network,
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
@@ -317,7 +317,7 @@ impl TestApp {
         ).await
     }
 
-    pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+    pub async fn boot_with_network(network: crate::net::Network) -> Option<TestApp> {
         Self::boot_with_clients("default", seed_clock(), network, &[], None).await
     }
 
@@ -337,7 +337,7 @@ impl TestApp {
         Self::boot_with_clients(
             "default",
             clock,
-            crate::integrations::net::Network::system(),
+            crate::net::Network::system(),
             extra,
             None,
         )
@@ -353,7 +353,7 @@ impl TestApp {
         Self::boot_with_clock(clock).await
     }
 
-    pub async fn boot_with_github_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+    pub async fn boot_with_github_network(network: crate::net::Network) -> Option<TestApp> {
         Self::boot_with_clients("default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), network, &[], Some(crate::integrations::github::client::AppClient::new(None,None))).await
     }
 
@@ -363,7 +363,7 @@ impl TestApp {
     ) -> Option<TestApp> {
         Self::boot_seed_with_huddle_services(
             "default", std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())),
-            crate::integrations::net::Network::system(), &[], crate::huddle::Config::default(),
+            crate::net::Network::system(), &[], crate::huddle::Config::default(),
             Some(crate::integrations::github::client::AppClient::new(None, None)), Some(reader),
         ).await
     }
@@ -374,7 +374,7 @@ impl TestApp {
         Self::boot_with_clients(
             "default",
             seed_clock(),
-            crate::integrations::net::Network::system(),
+            crate::net::Network::system(),
             &[],
             Some(github_app),
         )
@@ -389,7 +389,7 @@ impl TestApp {
         Self::boot_with_clients(
             name,
             clock,
-            crate::integrations::net::Network::system(),
+            crate::net::Network::system(),
             vars,
             None,
         )
@@ -399,7 +399,7 @@ impl TestApp {
         Self::boot_with_clients(
             name,
             seed_clock(),
-            crate::integrations::net::Network::system(),
+            crate::net::Network::system(),
             &[],
             None,
         )
@@ -409,7 +409,7 @@ impl TestApp {
     async fn boot_with_clients(
         name: &str,
         clock: campfire_kit::SharedClock,
-        network: crate::integrations::net::Network,
+        network: crate::net::Network,
         extra: &[(&str, &str)],
         github_app: Option<crate::integrations::github::client::AppClient>,
     ) -> Option<TestApp> {
@@ -427,7 +427,7 @@ impl TestApp {
 
     async fn boot_with_huddle_services(
         clock: campfire_kit::SharedClock,
-        network: crate::integrations::net::Network,
+        network: crate::net::Network,
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
     ) -> Option<TestApp> {
@@ -437,7 +437,7 @@ impl TestApp {
     async fn boot_seed_with_huddle_services(
         name: &str,
         clock: campfire_kit::SharedClock,
-        network: crate::integrations::net::Network,
+        network: crate::net::Network,
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
         github_app: Option<crate::integrations::github::client::AppClient>,
@@ -449,7 +449,7 @@ impl TestApp {
     async fn boot_seed_with_fizzy(
         name: &str,
         clock: campfire_kit::SharedClock,
-        network: crate::integrations::net::Network,
+        network: crate::net::Network,
         extra: &[(&str, &str)],
         huddle: crate::huddle::Config,
         (github_app, github_read): (
@@ -486,9 +486,9 @@ impl TestApp {
             huddle: None,
         };
         let booted = if let Some(fizzy) = fizzy {
-            crate::app::boot_with_integrations(config, clock, crate::app::BootIntegrations { github_read: crate::integrations::github::client::ReadClient::from_env(), github_app: crate::integrations::github::client::AppClient::new(None, None), github_network: crate::integrations::net::Network::system(), subscription_network: network, fizzy }, intervals).await.unwrap()
+            crate::server::boot_with_integrations(config, clock, crate::server::BootIntegrations { github_read: crate::integrations::github::client::ReadClient::from_env(), github_app: crate::integrations::github::client::AppClient::new(None, None), github_network: crate::net::Network::system(), subscription_network: network, fizzy }, intervals).await.unwrap()
         } else { match github_app {
-            Some(client) => crate::app::boot_with_all_services(
+            Some(client) => crate::server::boot_with_all_services(
                 config,
                 clock,
                 github_read.unwrap_or_else(crate::integrations::github::client::ReadClient::from_env),
@@ -683,35 +683,7 @@ pub fn encode(value: &str) -> String {
     percent_encoding::utf8_percent_encode(value, percent_encoding::NON_ALPHANUMERIC).to_string()
 }
 
-tokio::task_local! {
-    static FIXED_RENDER_SECRETS: ();
-}
-
-/// Fix only rendering entropy, before the real router/controller runs. No HTML inputs
-/// or response rewrites; authentication and forgery verification keep their real tokens.
-pub async fn with_fixed_render_secrets<T>(request: impl std::future::Future<Output = T>) -> T {
-    FIXED_RENDER_SECRETS.scope((), request).await
-}
-
-pub(super) fn fixed_render_secrets()
--> Option<campfire_views::helpers::request_forgery::RequestSecrets> {
-    use campfire_views::helpers::request_forgery::{AuthenticityTokens, RequestSecrets};
-    struct Tokens;
-    impl AuthenticityTokens for Tokens {
-        fn global(&self) -> String {
-            "GLOBAL".into()
-        }
-        fn for_form(&self, action: &str, method: &str) -> String {
-            format!("{method}:{action}")
-        }
-    }
-    FIXED_RENDER_SECRETS
-        .try_with(|()| RequestSecrets {
-            tokens: Box::new(Tokens),
-            csp_nonce: Some("NONCE".into()),
-        })
-        .ok()
-}
+pub use super::render_secrets::with_fixed_render_secrets;
 
 impl Browser<'_> {
     /// Rails-compatible sudo session for controller tests; no confirmation endpoint shortcut.
@@ -900,7 +872,7 @@ async fn ws8bm_browser_host_without_jobs() {
     let booted = boot_with_services(
         config,
         clock,
-        crate::integrations::net::Network::system(),
+        crate::net::Network::system(),
         crate::jobs::periodic::Intervals {
             periodic: None,
             huddle: None,

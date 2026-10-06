@@ -20,7 +20,7 @@ impl Job for ImportStep {
     const CLASS: &'static str = StepJob::CLASS;
 }
 impl JobKind for ImportStep {
-    const QUEUE: &'static str = crate::jobs::SLACK_IMPORT_QUEUE;
+    const QUEUE: &'static str = crate::queue::SLACK_IMPORT_QUEUE;
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -29,10 +29,10 @@ impl Job for UndoStep {
     const CLASS: &'static str = UndoJob::CLASS;
 }
 impl JobKind for UndoStep {
-    const QUEUE: &'static str = crate::jobs::SLACK_IMPORT_QUEUE;
+    const QUEUE: &'static str = crate::queue::SLACK_IMPORT_QUEUE;
 }
 
-pub fn register(registry: &mut crate::jobs::Registry) {
+pub fn register(registry: &mut crate::queue::Registry) {
     registry.register(import_step);
     registry.register(undo_step);
 }

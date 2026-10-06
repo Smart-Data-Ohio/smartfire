@@ -112,7 +112,7 @@ async fn ws11_review_repository_batch_order_disconnect_and_public_fields_match_r
                 to: github.addr,
                 dialed: Default::default(),
             }),
-            tls: crate::integrations::net::tls_config(roots),
+            tls: crate::net::tls_config(roots),
         };
         let (app, _dir) = TestApp::boot_with_github_network(net)
             .await
@@ -138,7 +138,7 @@ async fn ws11_review_repository_batch_order_disconnect_and_public_fields_match_r
                 dialed: Default::default(),
             }),
         );
-        crate::integrations::agent_jobs::post_with_network(
+        crate::jobs::agent_jobs::post_with_network(
             &app,
             EventWebhookJob {
                 event_id: event,
@@ -249,7 +249,7 @@ async fn ws11_review_stale_batch_is_redacted_by_work_message_and_poll_readers() 
             to: github.addr,
             dialed: Default::default(),
         }),
-        tls: crate::integrations::net::tls_config(roots),
+        tls: crate::net::tls_config(roots),
     };
     let (app, _dir) = TestApp::boot_with_github_network(net)
         .await
@@ -390,7 +390,7 @@ async fn ws11_review_poll_batch_does_not_reuse_access_after_disconnect() {
             to: github.addr,
             dialed: Default::default(),
         }),
-        tls: crate::integrations::net::tls_config(roots),
+        tls: crate::net::tls_config(roots),
     };
     let (app, _dir) = TestApp::boot_with_github_network(net)
         .await

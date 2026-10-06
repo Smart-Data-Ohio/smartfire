@@ -4,7 +4,7 @@ use campfire_db::{Message, Room};
 use campfire_kit::{Ctx, Result};
 use campfire_views::messages as views;
 use crate::app::{App, AppCtx};
-use crate::channels::broadcasts::{Stream, message_dom_id};
+use crate::cable::broadcasts::{Stream, message_dom_id};
 use crate::controllers::presenters::{Presenter, page::{self, db_error}};
 
 pub async fn broadcast_edit(c: &Ctx, room: &Room, message: &Message, drive_given: bool) -> Result<()> {

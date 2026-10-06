@@ -32,8 +32,20 @@ pub mod work_threads;
 pub mod switcher;
 #[cfg(test)]
 pub mod test_support;
+#[cfg(test)]
+pub(crate) mod render_secrets;
 pub mod twitter_cards;
 pub mod view_context;
+pub(crate) mod search_preloads;
+pub(crate) mod message_freshness;
+pub(crate) mod message_payload;
+pub(crate) mod bot_input_casts;
+pub(crate) mod call_navigation;
+pub(crate) mod sidebar_composition;
+pub(crate) mod calls;
+pub(crate) mod message_parts;
+pub(crate) mod params;
+pub(crate) mod pins;
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
@@ -248,7 +260,7 @@ pub struct Presenter<'a> {
     room_names: RefCell<HashMap<i64, (Room, String)>>,
     render_account: RefCell<Option<Option<campfire_db::Account>>>,
     // WS8bm2 shared rendering-details seam for root and search pages.
-    pub(crate) search_preloads: Option<super::searches::preloads::Preloads>,
+    pub(crate) search_preloads: Option<search_preloads::Preloads>,
     link_fetches: std::rc::Rc<RefCell<std::collections::BTreeSet<i64>>>,
     twitter_fetches: std::rc::Rc<RefCell<std::collections::BTreeSet<i64>>>,
     twitter_posts:
@@ -306,8 +318,8 @@ impl<'a> Presenter<'a> {
         self.github_refreshes.borrow_mut().insert(id);
     }
 
-    pub(crate) fn resolver(&self) -> super::searches::preloads::PageResolver<'_> {
-        super::searches::preloads::PageResolver {
+    pub(crate) fn resolver(&self) -> search_preloads::PageResolver<'_> {
+        search_preloads::PageResolver {
             db: DbResolver::with_twitter_cache(
                 self.conn,
                 self.secrets,
@@ -318,18 +330,18 @@ impl<'a> Presenter<'a> {
         }
     }
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
-        self.with_preloads(super::searches::preloads::Preloads::load(self,messages)?,messages)
+        self.with_preloads(search_preloads::Preloads::load(self,messages)?,messages)
     }
     pub(crate) fn preload_payload(&self,messages:&[Message]) -> Result<Self> {
-        self.with_preloads(super::searches::preloads::Preloads::load_payload(self,messages)?,messages)
+        self.with_preloads(search_preloads::Preloads::load_payload(self,messages)?,messages)
     }
     pub(crate) fn preload_plain_text(&self,messages:&[Message]) -> Result<Self> {
-        Ok(self.with_preloaded_facts(super::searches::preloads::Preloads::load_plain_text(self,messages)?))
+        Ok(self.with_preloaded_facts(search_preloads::Preloads::load_plain_text(self,messages)?))
     }
     pub(crate) fn preload_broadcast(&self, messages: &[Message]) -> Result<Self> {
-        self.with_preloads(super::searches::preloads::Preloads::load_broadcast(self, messages)?, messages)
+        self.with_preloads(search_preloads::Preloads::load_broadcast(self, messages)?, messages)
     }
-    fn with_preloads(&self,data:super::searches::preloads::Preloads,messages:&[Message]) -> Result<Self> {
+    fn with_preloads(&self,data:search_preloads::Preloads,messages:&[Message]) -> Result<Self> {
         let ids = data.records.body_ids(messages);
         let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
         for id in &ids {
@@ -347,7 +359,7 @@ impl<'a> Presenter<'a> {
         self.twitter_posts.borrow_mut().extend(posts);
         Ok(self.with_preloaded_facts(data))
     }
-    fn with_preloaded_facts(&self,data:super::searches::preloads::Preloads) -> Self {
+    fn with_preloaded_facts(&self,data:search_preloads::Preloads) -> Self {
         Self {
             app: self.app,
             conn: self.conn,

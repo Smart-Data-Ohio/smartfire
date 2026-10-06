@@ -4,7 +4,7 @@
 use super::{Presenter, Result};
 use campfire_db::{Message, User};
 use serde_json::Value;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 pub trait MessagePayload: Send + Sync {
     fn message(
@@ -24,21 +24,26 @@ impl MessagePayload for SharedPayload {
         viewer: &User,
         base_url: &str,
     ) -> Result<Value> {
-        crate::controllers::messages::payload::message(presenter, message, viewer, base_url)
+        crate::controllers::presenters::message_payload::message(presenter, message, viewer, base_url)
     }
 }
-#[derive(Default)]
-pub struct State {
-    adapter: RwLock<Option<Arc<dyn MessagePayload>>>,
+pub use crate::state::agent_payload::State;
+
+/// The payload adapter in the app's [`State`] slot, which holds it type-erased: the adapter
+/// takes a [`Presenter`], above the app state.
+pub trait StateExt {
+    fn live() -> State;
+    fn install(&self, adapter: Arc<dyn MessagePayload>);
+    fn message(&self, presenter: &Presenter<'_>, message: &Message) -> Result<Value>;
 }
-impl State {
-    pub fn live() -> Self {
-        let state = Self::default();
+impl StateExt for State {
+    fn live() -> State {
+        let state = State::default();
         state.install(Arc::new(SharedPayload));
         state
     }
-    pub fn install(&self, adapter: Arc<dyn MessagePayload>) {
-        *self.adapter.write().unwrap_or_else(|p| p.into_inner()) = Some(adapter);
+    fn install(&self, adapter: Arc<dyn MessagePayload>) {
+        self.install_erased(Arc::new(adapter));
     }
     fn message(&self, presenter: &Presenter<'_>, message: &Message) -> Result<Value> {
         let viewer = presenter.current_user_id.ok_or_else(|| {
@@ -48,11 +53,10 @@ impl State {
         let base = presenter.cache_base_url.as_deref().ok_or_else(|| {
             campfire_db::Error::Other("message payload requires request base URL".into())
         })?;
+        // Only `install` fills the slot, so it always holds an adapter.
         let adapter = self
-            .adapter
-            .read()
-            .unwrap_or_else(|p| p.into_inner())
-            .clone();
+            .erased()
+            .and_then(|adapter| adapter.downcast_ref::<Arc<dyn MessagePayload>>().cloned());
         // Explicitly uninstalled custom states fail instead of returning cached stock JSON.
         adapter
             .ok_or_else(|| {

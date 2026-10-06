@@ -1,5 +1,5 @@
 use crate::{
-    app::{self, App},
+    app::App,
     config::Config,
     integrations::{
         github::{
@@ -37,12 +37,12 @@ impl Fresh {
         .await
     }
     pub(super) async fn with_routes(case: &Value, routes: Vec<Route>) -> Self {
-        Self::with_networks(case, routes, crate::integrations::net::Network::system()).await
+        Self::with_networks(case, routes, crate::net::Network::system()).await
     }
     pub(super) async fn with_networks(
         case: &Value,
         routes: Vec<Route>,
-        subscription_network: crate::integrations::net::Network,
+        subscription_network: crate::net::Network,
     ) -> Self {
         let (server, network) = fake(routes).await;
         let scratch =
@@ -65,7 +65,7 @@ impl Fresh {
         let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new(
             "2026-01-01T12:00:00Z".parse().unwrap(),
         ));
-        let booted = app::boot_with_all_services(
+        let booted = crate::server::boot_with_all_services(
             config,
             clock.clone(),
             ReadClient::with_network(

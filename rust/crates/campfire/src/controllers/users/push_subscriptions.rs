@@ -15,7 +15,7 @@ use crate::app::AppCtx;
 use crate::concerns::{self, Before, cast_integer};
 use crate::controllers::presenters;
 use crate::controllers::presenters::page::framed_page;
-use crate::integrations::net::{Network, guard};
+use crate::net::{Network, guard};
 
 pub async fn index(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;

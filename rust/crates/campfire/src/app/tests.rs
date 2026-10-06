@@ -14,6 +14,7 @@ use campfire_kit::{Ctx, Kit, KitConfig, RailsCrypto, Result};
 use tower::ServiceExt;
 
 use super::*;
+use crate::server::*;
 use crate::concerns::{Before, before_actions, current_user};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");

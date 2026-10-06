@@ -3,7 +3,7 @@ use super::{
     api::{self, ApiRequest},
     calendar,
 };
-use crate::{app::App, jobs::Registry};
+use crate::{app::App, queue::Registry};
 use campfire_db::{
     Timestamp, User,
     models::{

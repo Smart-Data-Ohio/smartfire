@@ -184,7 +184,7 @@ impl Config {
 
 /// `ENV.fetch("ADMIN_SESSION_IDLE_TIMEOUT_DAYS", "7").to_i` days, and 7 for anything under one.
 pub fn admin_session_idle_timeout(days: Option<String>) -> jiff::SignedDuration {
-    let days = crate::concerns::ruby_to_i(days.as_deref().unwrap_or("7"));
+    let days = crate::ruby::ruby_to_i(days.as_deref().unwrap_or("7"));
     let days = if days < 1 { 7 } else { days };
     jiff::SignedDuration::from_hours(days.saturating_mul(24))
 }

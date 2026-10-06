@@ -102,15 +102,15 @@ fn twitter_backfill(database: &Path) -> anyhow::Result<String> {
     let registry = crate::jobs::registry();
     let config = campfire_jobs::RunnerConfig::new(
         [
-            crate::jobs::DEFAULT_QUEUE,
-            crate::jobs::PUSH_QUEUE,
-            crate::jobs::WEBHOOKS_QUEUE,
-            crate::jobs::SLACK_IMPORT_QUEUE,
+            crate::queue::DEFAULT_QUEUE,
+            crate::queue::PUSH_QUEUE,
+            crate::queue::WEBHOOKS_QUEUE,
+            crate::queue::SLACK_IMPORT_QUEUE,
         ]
         .map(|queue| campfire_jobs::QueueConfig::new(queue, 1))
         .to_vec(),
     );
-    let (jobs, _ad_hoc) = crate::jobs::Jobs::new(&registry, &config)?;
+    let (jobs, _ad_hoc) = crate::queue::Jobs::new(&registry, &config)?;
     // Selection needs the real Action Text renderer (including attachables). Its
     // temporary signed markup is neither returned nor stored. Reuse the configured
     // signing base when present; an offline invocation without one uses a private,
