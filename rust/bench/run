@@ -20,7 +20,8 @@
 # Images (unmodified production images, not the parity ones: no libfaketime, no pinned cable pool,
 # the reference's own resque-pool.yml):
 #   RUST_IMAGE       campfire-rust:app        (docker build -t campfire-rust:app rust)
-#   REFERENCE_IMAGE  campfire-reference:app   (the Rails app's image, from before its removal)
+#   REFERENCE_IMAGE  no default: a Rails app image you built from the git history (before the
+#                    Rails removal); required only with --apps reference
 #
 # Knobs (env): SERVER_CPUS=8-11 LOADGEN_CPUS=12-15 HTTP_SECS=8 HTTP_CONCS="1 16 64"
 #   CABLE_CLIENTS="100 500 1000" CABLE_TPUT_SECS=15 CABLE_POSTERS=4 UPLOAD_REPS=5 PORT=4390
@@ -36,7 +37,7 @@ SEED=$ROOT/parity/.seed/default
 LABELS=$SEED/labels.json
 ENV_FILE=$ROOT/parity/.env.reference
 
-REFERENCE_IMAGE=${REFERENCE_IMAGE:-campfire-reference:app}
+REFERENCE_IMAGE=${REFERENCE_IMAGE-}
 RUST_IMAGE=${RUST_IMAGE:-campfire-rust:app}
 SERVER_CPUS=${SERVER_CPUS:-8-11}
 LOADGEN_CPUS=${LOADGEN_CPUS:-12-15}
@@ -69,6 +70,10 @@ while [ $# -gt 0 ]; do
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
 done
+if [[ ",$APPS," = *,reference,* ]] && [ -z "$REFERENCE_IMAGE" ]; then
+  echo "--apps reference needs REFERENCE_IMAGE: a Rails image built from the git history before the Rails removal" >&2
+  exit 2
+fi
 OUT=${OUT:-$BENCH/results/$(date +%Y%m%d-%H%M%S)}
 mkdir -p "$OUT"
 WORK=$BENCH/.work

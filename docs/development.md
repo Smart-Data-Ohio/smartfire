@@ -72,11 +72,15 @@ For local huddles, see [huddles](huddles.md).
 
 ### Running tests
 
-The app's integration tests read committed SQLite seeds. Restore them first (from `rust/`):
+The app's integration tests read committed SQLite seeds. Restore them first:
 
 ```sh
-python3 parity/bin/frozen-seeds restore
+cd rust
+python3 parity/bin/frozen-seeds restore   # copies the seeds to rust/parity/.seed/
 ```
+
+`frozen-seeds` finds the seeds relative to its own location, so it works from any directory;
+only the `campfire` binary passed to `migrate` is relative to your working directory.
 
 Without them, seed-dependent tests skip locally with a message (and fail when `CI` is set), so
 say whether the seeds were restored when you report results. Then:
@@ -128,9 +132,10 @@ cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnin
 Schema changes are SQL files in `rust/crates/db/migrations/<VERSION>_<name>.sql`, with a 14-digit
 UTC timestamp version. They are compiled into the binary and applied only by
 `campfire db-migrate DATABASE`, which the release script runs while writes are frozen; the server
-never migrates on boot. After adding one (from `rust/`):
+never migrates on boot. After adding one:
 
 ```sh
+cd rust
 CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files
 cargo build -p campfire
 python3 parity/bin/frozen-seeds migrate target/debug/campfire

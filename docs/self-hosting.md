@@ -130,9 +130,9 @@ identity already linked by mistake can be unlinked on the account page.
 
 #### Content Security Policy
 
-Every page sends a `Content-Security-Policy-Report-Only` header (see
-`config/initializers/content_security_policy.rb` for each allowed source
-and why). Browsers report violations to `POST /csp_reports`, which logs one
+Every page sends an enforced `Content-Security-Policy` header (see
+`content_security_policy` in `rust/crates/campfire/src/security.rs` for
+each allowed source). Browsers report violations to `POST /csp_reports`, which logs one
 `CSP violation:` line per report (directive, blocked origin, and document
 path; never query strings), rate-limited to 20 reports per client per
 minute. The LiveKit origin comes from `LIVEKIT_URL`. The policy blocks

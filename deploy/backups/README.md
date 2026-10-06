@@ -17,5 +17,12 @@ The workflows are
 [.github/workflows/nightly-backup.yml](../../.github/workflows/nightly-backup.yml)
 and
 [.github/workflows/backup-restore-check.yml](../../.github/workflows/backup-restore-check.yml).
-The backup script's contract is pinned by `test/backups/campfire_backup_test.rb`,
-which runs it against a temp database with a stubbed `df`.
+The backup script's contract is pinned by `tests/test_campfire_backup.py`,
+which runs it against a temp database with a stubbed `df`. The other scripts,
+both workflows and the runbook have contract tests beside it in `tests/`
+(stdlib only; the age cases skip when `age` is not on PATH). Run them from the
+repo root:
+
+```sh
+python3 -m unittest discover -s deploy/backups/tests -p 'test_*.py' -v
+```

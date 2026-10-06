@@ -88,7 +88,7 @@ by `campfire db-migrate DATABASE`, which the release script runs; boot never mig
 one, regenerate `crates/db/src/schema.sql`, `schema_migrations.txt` and `schema_sequences.txt` with
 `CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files` (the test
 fails while they're stale), and migrate the committed test seeds with
-`python3 parity/bin/frozen-seeds migrate target/debug/campfire`. `crates/db/baseline/` is the frozen
+`python3 parity/bin/frozen-seeds migrate target/debug/campfire` (from `rust/`). `crates/db/baseline/` is the frozen
 Rails-era schema those start from, generated from the Rails app before it was removed. The Ruby
 differential and rollback comparisons are retired; their recorded results
 (`crates/db/src/tests/message_save_touches.json`, the differential test's expected rows) are frozen.
@@ -107,7 +107,8 @@ differential and rollback comparisons are retired; their recorded results
   `agents_ui` and `ledger_originals` to `parity/.seed`). Missing seeds fail whenever `CI` is set;
   locally they skip with a message, so say whether the seeds were restored when reporting
   results. The `Rust seeds` job checks them against their manifest and this build's migrations;
-  after adding a migration, run `frozen-seeds migrate target/debug/campfire`. See
+  after adding a migration, run `python3 parity/bin/frozen-seeds migrate target/debug/campfire` from
+  `rust/` (the binary path is relative to the working directory; the script finds the seeds itself). See
   `parity/seeds/README.md`. Storage vectors compare media bytes only when the
   local libvips/ffmpeg match the ones that produced `vectors/storage.json`.
 - `cargo clippy --workspace --exclude html5ever --all-targets` should stay clean. (`html5ever` is a
