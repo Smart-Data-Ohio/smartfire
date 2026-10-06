@@ -1,10 +1,11 @@
-import { Clock, Context, Duration, Effect, Layer, Ref, Schedule, type Scope, Stream } from "effect";
+import { Clock, Context, Effect, Layer, Queue, Ref, Schedule, type Scope, Stream } from "effect";
 import type { ApiClient } from "../api/client.ts";
 import { messages, sidebar, users } from "../api/endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
 import type { ConnectionStatus } from "../store/model.ts";
+import { nextExpiry } from "../store/reducers.ts";
 import { mutations, store } from "../store/store.ts";
 import { Cursor } from "./cursor.ts";
 import { Lifecycle } from "./lifecycle.ts";
@@ -19,13 +20,21 @@ export const SILENCE_LIMIT_MS = 30_000;
 /** A connection that lasted this long resets the reconnect backoff. */
 export const STABLE_AFTER_MS = 60_000;
 
-/** How often typing entries and tombstones are swept. */
-export const PRUNE_EVERY_MS = 1000;
-
 /** Reconnect delays: exponential from 250 ms, factor 2, jittered, capped at 30 s. */
 export const reconnectSchedule = Schedule.min([
   Schedule.exponential("250 millis", 2).pipe(Schedule.jittered),
   Schedule.spaced("30 seconds"),
+]);
+
+/**
+ * Events whose effect a fresh sidebar snapshot already includes. After a reload they are replayed
+ * from the stored cursor on top of a sidebar fetched since, so applying them would count twice.
+ */
+const SNAPSHOT_EVENTS: ReadonlySet<SyncEvent["type"]> = new Set([
+  "room.unread",
+  "room.read",
+  "sidebar.row.upserted",
+  "sidebar.row.removed",
 ]);
 
 /** Frames this close together land in one store commit. */
@@ -60,7 +69,7 @@ function unknownAuthors(events: readonly SyncEvent[]): readonly number[] {
 /**
  * The sync engine's main fiber: connect, `hello` (resume point and topics), then apply what the
  * server sends, reconnecting with backoff whenever the socket drops, goes silent, or the server
- * says `bye{reconnect:true}`. Also sweeps the store's typing entries and tombstones every second
+ * says `bye{reconnect:true}`. Also drops each typing entry and tombstone the moment it lapses
  * and runs the presence heartbeat. Everything reads time from Effect's `Clock`.
  */
 export class Engine extends Context.Service<
@@ -80,6 +89,10 @@ export class Engine extends Context.Service<
       const presence = yield* Presence;
       const lifecycle = yield* Lifecycle;
       const api = yield* Effect.context<ApiClient>();
+      /** The cursor came from storage (a reload) and no `welcome` has been handled yet. */
+      const restored = yield* Ref.make((yield* cursor.get) !== null);
+      /** Replayed sidebar events up to this seq are already in the refetched sidebar. */
+      const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
 
       /** REST refetch for topics the server can't replay: the newest page, or the sidebar. */
       const resync = Effect.fnUntraced(function* (topicList: readonly string[]) {
@@ -119,17 +132,28 @@ export class Engine extends Context.Service<
         scope: Scope.Scope,
       ) {
         const point = yield* cursor.get;
+        const covered = yield* Ref.get(snapshotThrough);
         const fresh: SyncEvent[] = [];
-        let seq = point?.seq ?? Number.NEGATIVE_INFINITY;
+        const start = point?.seq ?? Number.NEGATIVE_INFINITY;
+        let seq = start;
 
         for (const event of events) {
           if (event.seq > seq) {
-            fresh.push(event);
             seq = event.seq;
+
+            if (!(event.seq <= covered && SNAPSHOT_EVENTS.has(event.type))) {
+              fresh.push(event);
+            }
           }
         }
 
+        if (seq === start) {
+          return;
+        }
+
         if (fresh.length === 0) {
+          yield* cursor.set({ epoch: point?.epoch ?? "", seq });
+
           return;
         }
 
@@ -148,9 +172,19 @@ export class Engine extends Context.Service<
 
       const welcome = Effect.fnUntraced(function* (frame: Extract<ServerFrame, { t: "welcome" }>) {
         const point = yield* cursor.get;
+        const afterReload = yield* Ref.getAndSet(restored, false);
 
         if (frame.resumed && point !== null) {
           yield* cursor.set({ epoch: frame.epoch, seq: point.seq });
+
+          // After a reload the sidebar was fetched before this socket, while the replay starts
+          // at the stored cursor: some replayed unreads are already counted, others (those since
+          // the fetch) aren't. Refetch now, after every replayed event happened, and skip the
+          // replayed sidebar events the new snapshot covers.
+          if (afterReload && frame.seq > point.seq) {
+            yield* Ref.set(snapshotThrough, frame.seq);
+            yield* resync(["user"]);
+          }
 
           return;
         }
@@ -289,16 +323,45 @@ export class Engine extends Context.Service<
         }
       });
 
-      const prune = Clock.currentTimeMillis.pipe(
-        Effect.tap((now) => Effect.sync(() => mutations.prune(now))),
-        Effect.repeat(Schedule.spaced(Duration.millis(PRUNE_EVERY_MS))),
-      );
+      /**
+       * Drops typing entries and tombstones exactly when they lapse: sleeps until the soonest
+       * expiry, waking early whenever either map changes (a new typist may lapse sooner).
+       */
+      const expire = Effect.gen(function* () {
+        const changed = yield* Queue.sliding<void>(1);
+
+        yield* Effect.acquireRelease(
+          Effect.sync(() =>
+            store.subscribe((state, previous) => {
+              if (state.typing !== previous.typing || state.tombstones !== previous.tombstones) {
+                Queue.offerUnsafe(changed, undefined);
+              }
+            }),
+          ),
+          (unsubscribe) => Effect.sync(unsubscribe),
+        );
+
+        while (true) {
+          const now = yield* Clock.currentTimeMillis;
+
+          mutations.prune(now);
+          // Prune's own change is already applied; only later changes should wake the wait.
+          yield* Queue.clear(changed);
+
+          const soonest = nextExpiry(store.getState());
+          const wake = Queue.take(changed);
+
+          yield* soonest === null
+            ? wake
+            : Effect.raceFirst(Effect.sleep(Math.max(0, soonest - now)), wake);
+        }
+      });
 
       const run = Effect.scoped(
         Effect.gen(function* () {
           const scope = yield* Effect.scope;
 
-          yield* Effect.forkIn(prune, scope);
+          yield* Effect.forkIn(Effect.scoped(expire), scope);
           yield* Effect.forkIn(presence.run, scope);
           yield* connectLoop(scope);
         }),

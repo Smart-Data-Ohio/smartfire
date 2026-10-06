@@ -555,3 +555,20 @@ export function prune(state: State, now: number): State {
     tombstones: tombstonesChanged ? tombstones : state.tombstones,
   };
 }
+
+/** When the soonest typing entry or tombstone lapses (ms), or `null` when none is held. */
+export function nextExpiry(state: State): number | null {
+  let soonest: number | null = null;
+
+  for (const typists of Object.values(state.typing)) {
+    for (const expiresAt of Object.values(typists)) {
+      soonest = soonest === null ? expiresAt : Math.min(soonest, expiresAt);
+    }
+  }
+
+  for (const expiresAt of Object.values(state.tombstones)) {
+    soonest = soonest === null ? expiresAt : Math.min(soonest, expiresAt);
+  }
+
+  return soonest;
+}
