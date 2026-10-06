@@ -1,0 +1,80 @@
+/*
+ * Page side-by-side: adapted from the free "Page side-by-side" recipe on transitions.dev by Jakub
+ * Antalik (https://transitions.dev), installed with
+ * `npx transitions-dev add page-side-by-side`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium step, --ease-enter,
+ * --distance-pane, --blur-small); the page that comes in also starts from its exit position on
+ * insertion (`@starting-style`), so a pane mounted straight onto page 2 slides in instead of
+ * appearing; and under reduced motion the distance and blur tokens are zero, so the pages
+ * cross-fade (opacity only) rather than cutting. A settled page has `transform: none` and
+ * `filter: none` and no will-change, so it isn't a containing block for the fixed-position
+ * popovers inside it and doesn't stay one big composited layer. On phones the conversation is page 1 and the
+ * right pane (thread, members, pins, files) is page 2 (src/features/room, src/features/panes).
+ */
+
+@layer recipes {
+  :root {
+    --page-slide-dur: var(--duration-medium);
+    --page-fade-dur: var(--duration-medium);
+    --page-slide-distance: var(--distance-pane);
+    --page-blur: var(--blur-small);
+    --page-stagger: 0ms;
+    --page-exit-enabled: 1;
+    --page-slide-ease: var(--ease-enter);
+    --page-fade-ease: var(--ease-enter);
+  }
+
+  .t-page-slide {
+    position: relative;
+  }
+
+  .t-page-slide .t-page[data-page-id="1"] {
+    --t-page-from-x: calc(var(--page-slide-distance) * -1);
+  }
+
+  .t-page-slide .t-page[data-page-id="2"] {
+    --t-page-from-x: var(--page-slide-distance);
+  }
+
+  .t-page-slide .t-page {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(calc(var(--t-page-from-x, 0px) * var(--page-exit-enabled)));
+    filter: blur(calc(var(--page-blur) * var(--page-exit-enabled)));
+    transition:
+      opacity var(--page-fade-dur) var(--page-fade-ease),
+      transform var(--page-slide-dur) var(--page-slide-ease),
+      filter var(--page-slide-dur) var(--page-slide-ease);
+  }
+
+  .t-page-slide[data-page="1"] .t-page[data-page-id="1"],
+  .t-page-slide[data-page="2"] .t-page[data-page-id="2"] {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    filter: none;
+    transition-delay: var(--page-stagger);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateX(calc(var(--t-page-from-x, 0px) * var(--page-exit-enabled)));
+      filter: blur(calc(var(--page-blur) * var(--page-exit-enabled)));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-page-slide .t-page {
+      transition-property: opacity !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-page-slide .t-page {
+    transition-property: opacity !important;
+  }
+}

@@ -100,59 +100,6 @@
     gap: var(--space-1);
   }
 
-  .room-members {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1-5);
-    height: 30px;
-    padding: 0 var(--space-2) 0 var(--space-1);
-    border-radius: var(--radius-md);
-    box-shadow: inset 0 0 0 1px var(--border);
-    color: var(--text-muted);
-    font-size: var(--text-sidebar);
-    font-weight: var(--weight-medium);
-    transition:
-      background-color var(--duration-micro) var(--ease-enter),
-      box-shadow var(--duration-micro) var(--ease-enter);
-  }
-
-  .room-members:hover {
-    background: var(--bg-hover);
-    box-shadow: inset 0 0 0 1px var(--border-strong);
-  }
-
-  .room-members-stack {
-    display: inline-flex;
-  }
-
-  .room-members-stack .avatar {
-    --avatar-ring: var(--bg-pane);
-
-    box-shadow: 0 0 0 2px var(--bg-pane);
-    transition: translate var(--duration-small) var(--ease-move);
-  }
-
-  .room-members-stack .avatar + .avatar {
-    margin-left: -4px;
-  }
-
-  .room-members-count {
-    transition: translate var(--duration-small) var(--ease-move);
-  }
-
-  /* avatar-group-hover: the stack fans out a little on hover. */
-  .room-members:hover .room-members-stack .avatar:nth-child(2) {
-    translate: 3px 0;
-  }
-
-  .room-members:hover .room-members-stack .avatar:nth-child(3) {
-    translate: 6px 0;
-  }
-
-  .room-members:hover .room-members-count {
-    translate: 6px 0;
-  }
-
   /* ── Timeline ──────────────────────────────────────────────────────────── */
 
   .timeline {
