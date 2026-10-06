@@ -474,11 +474,18 @@ pub fn paging_anchor(conn: &campfire_db::Connection, timeline: Timeline, value: 
 /// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
 /// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
-    created_message(create_message_outcome(c, room, None, attributes, false).await?)
+    created_message(create_message_outcome(c, room, None, attributes, false, false).await?)
 }
 
 pub async fn create_message_into(c: &Ctx, room: &Room, thread: Option<campfire_db::ChannelThread>, attributes: MessageParams) -> Result<Message> {
-    created_message(create_message_outcome(c, room, thread, attributes, false).await?)
+    created_message(create_message_outcome(c, room, thread, attributes, false, false).await?)
+}
+
+/// [`create_message`], unless the creator already posted the message's `client_message_id` in
+/// the room (`Message.find_duplicate`): `Replay` then carries the earlier message. The check runs
+/// in the create's write transaction, so retries racing each other can't both create.
+pub async fn create_or_find_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
+    create_message_outcome(c, room, None, attributes, false, true).await
 }
 
 fn created_message(outcome: campfire_db::models::agent_posting::PostingOutcome) -> Result<Message> {
@@ -489,10 +496,10 @@ fn created_message(outcome: campfire_db::models::agent_posting::PostingOutcome) 
 }
 
 pub(crate) async fn create_message_with_agent_policy(c: &Ctx, room: &Room, attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
-    create_message_outcome(c, room, None, attributes, agent_policy).await
+    create_message_outcome(c, room, None, attributes, agent_policy, false).await
 }
 
-async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db::ChannelThread>, mut attributes: MessageParams, agent_policy: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
+async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db::ChannelThread>, mut attributes: MessageParams, agent_policy: bool, replay_duplicate: bool) -> Result<campfire_db::models::agent_posting::PostingOutcome> {
     use campfire_db::models::agent_posting::{PostingOutcome, PostingCheck};
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
@@ -510,6 +517,12 @@ async fn create_message_outcome(c: &Ctx, room: &Room, thread: Option<campfire_db
         .app()
         .db
         .write(move |tx| {
+            if replay_duplicate
+                && let Some(client_message_id) = attributes.client_message_id.as_deref()
+                && let Some(duplicate) = Message::find_duplicate(tx.conn(), room_id, creator_id, client_message_id)?
+            {
+                return Ok((PostingOutcome::Replay(duplicate), None));
+            }
             if agent_policy {
                 match campfire_db::models::agent_posting::prepare_for_user_with_lookup(tx, creator_id, room_id, attributes.client_message_id.as_deref(), &attributes.client_message_lookup)? {
                     Some(PostingCheck::Replay(message)) => return Ok((PostingOutcome::Replay(*message), None)),

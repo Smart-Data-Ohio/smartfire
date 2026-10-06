@@ -383,8 +383,17 @@ const BOOSTED: i64 = 136976342;
 async fn messages_carry_reactions_boosts_pins_saves_threads_and_forwards() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(DAVID).await;
-    let page: api::MessagePage = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages?around={BOOSTED}"))).await);
-    let at = page.messages.iter().position(|message| message.id == BOOSTED).unwrap();
+    let page: api::MessagePage = parse(
+        &b.send(get(&format!(
+            "/api/v1/rooms/{ALL_TALK}/messages?around={BOOSTED}"
+        )))
+        .await,
+    );
+    let at = page
+        .messages
+        .iter()
+        .position(|message| message.id == BOOSTED)
+        .unwrap();
     let (next, other) = (page.messages[at - 1].id, page.messages[at - 2].id);
     a.db()
         .write(move |tx| {
@@ -404,55 +413,150 @@ async fn messages_carry_reactions_boosts_pins_saves_threads_and_forwards() {
         .await
         .unwrap();
 
-    let page: api::MessagePage = parse(&b.send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages?around={BOOSTED}"))).await);
-    let find = |id: i64| page.messages.iter().find(|message| message.id == id).unwrap();
+    let page: api::MessagePage = parse(
+        &b.send(get(&format!(
+            "/api/v1/rooms/{ALL_TALK}/messages?around={BOOSTED}"
+        )))
+        .await,
+    );
+    let find = |id: i64| {
+        page.messages
+            .iter()
+            .find(|message| message.id == id)
+            .unwrap()
+    };
     let boosted = find(BOOSTED);
     assert_eq!(boosted.reactions.len(), 1, "{:?}", boosted.reactions);
     assert_eq!(boosted.reactions[0].content, "💯");
-    assert_eq!(boosted.reactions[0].reactor_ids, [JASON, DAVID], "distinct reactors in order of reaction");
+    assert_eq!(
+        boosted.reactions[0].reactor_ids,
+        [JASON, DAVID],
+        "distinct reactors in order of reaction"
+    );
     assert_eq!(boosted.reactions[0].image_url, None);
-    assert_eq!(boosted.boosts.iter().map(|boost| (boost.booster_id, boost.content.as_str())).collect::<Vec<_>>(), [(KEVIN, "nice work")]);
+    assert_eq!(
+        boosted
+            .boosts
+            .iter()
+            .map(|boost| (boost.booster_id, boost.content.as_str()))
+            .collect::<Vec<_>>(),
+        [(KEVIN, "nice work")]
+    );
     assert!(!boosted.pinned && boosted.thread.is_none() && boosted.attachment.is_none());
 
     let pinned = find(next);
     assert!(pinned.pinned);
     let thread = pinned.thread.as_ref().expect("the reply indicator");
-    assert_eq!((thread.reply_count, thread.replier_ids.as_slice()), (3, &[JASON, KEVIN][..]));
-    assert!(page.messages.iter().all(|message| message.thread_id.is_none()), "replies stay off the room's timeline");
+    assert_eq!(
+        (thread.reply_count, thread.replier_ids.as_slice()),
+        (3, &[JASON, KEVIN][..])
+    );
+    assert!(
+        page.messages
+            .iter()
+            .all(|message| message.thread_id.is_none()),
+        "replies stay off the room's timeline"
+    );
 
     let forwarded = find(other);
     assert!(forwarded.forwarded_at.is_some());
     assert_eq!(forwarded.forward_note.as_deref(), Some("FYI"));
 
-    let saved_item_id = a.db().read(move |conn| Ok(conn.query_row("SELECT id FROM saved_items WHERE user_id = ? AND message_id = ?", [DAVID, next], |row| row.get::<_, i64>(0))?)).await.unwrap();
-    assert_eq!(page.saved, [api::SavedMark { message_id: next, saved_item_id }], "David's saves only");
+    let saved_item_id = a
+        .db()
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT id FROM saved_items WHERE user_id = ? AND message_id = ?",
+                [DAVID, next],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        page.saved,
+        [api::SavedMark {
+            message_id: next,
+            saved_item_id
+        }],
+        "David's saves only"
+    );
 }
 
 #[tokio::test]
 async fn posting_attaches_a_direct_upload() {
     let Some(a) = app(true).await else { return };
     let mut b = a.sign_in(DAVID).await;
-    let staged = a.booted.app.storage.stage_bytes(b"meeting notes", campfire_storage::Filename::new("notes.txt"), Some("text/plain")).unwrap();
-    let blob = a.db().write(move |tx| crate::controllers::messages::save_staged(tx, staged)).await.unwrap();
-    let signed_id = campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
-    let body = |client_message_id: &str, signed_id: Option<&str>| {
-        json!({"clientMessageId": client_message_id, "markdownSource": "", "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id})
-    };
+    let staged = a
+        .booted
+        .app
+        .storage
+        .stage_bytes(
+            b"meeting notes",
+            campfire_storage::Filename::new("notes.txt"),
+            Some("text/plain"),
+        )
+        .unwrap();
+    let blob = a
+        .db()
+        .write(move |tx| crate::controllers::messages::save_staged(tx, staged))
+        .await
+        .unwrap();
+    let signed_id =
+        campfire_storage::paths::signed_blob_id(&*a.booted.app.storage.verifier, blob.id, None);
+    let body = |client_message_id: &str, signed_id: Option<&str>| json!({"clientMessageId": client_message_id, "markdownSource": "", "replyToMessageId": null, "replyNotifyAuthor": null, "attachmentSignedId": signed_id});
     let path = format!("/api/v1/rooms/{ALL_TALK}/messages");
 
-    let bare = b.write(json_body(Method::POST, &path, &body("bare", None))).await;
-    assert_eq!((bare.status, tag(&bare)), (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into()));
-    let forged = b.write(json_body(Method::POST, &path, &body("forged-upload", Some("not-a-signed-id")))).await;
-    assert_eq!((forged.status, tag(&forged)), (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into()));
+    let bare = b
+        .write(json_body(Method::POST, &path, &body("bare", None)))
+        .await;
+    assert_eq!(
+        (bare.status, tag(&bare)),
+        (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into())
+    );
+    let forged = b
+        .write(json_body(
+            Method::POST,
+            &path,
+            &body("forged-upload", Some("not-a-signed-id")),
+        ))
+        .await;
+    assert_eq!(
+        (forged.status, tag(&forged)),
+        (StatusCode::UNPROCESSABLE_ENTITY, "Validation".into())
+    );
 
-    let posted = b.write(json_body(Method::POST, &path, &body("upload-1", Some(&signed_id)))).await;
+    let posted = b
+        .write(json_body(
+            Method::POST,
+            &path,
+            &body("upload-1", Some(&signed_id)),
+        ))
+        .await;
     assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
     let message: api::MessageDTO = parse(&posted);
     let attachment = message.attachment.expect("the attachment");
-    assert_eq!((attachment.filename.as_str(), attachment.byte_size, attachment.preview), ("notes.txt", 13, api::AttachmentPreview::File));
+    assert_eq!(
+        (
+            attachment.filename.as_str(),
+            attachment.byte_size,
+            attachment.preview
+        ),
+        ("notes.txt", 13, api::AttachmentPreview::File)
+    );
     assert_eq!(attachment.content_type, "text/plain");
-    assert!(attachment.url.starts_with("/rails/active_storage/blobs/redirect/"), "{}", attachment.url);
-    assert!(attachment.download_url.ends_with("disposition=attachment"), "{}", attachment.download_url);
+    assert!(
+        attachment
+            .url
+            .starts_with("/rails/active_storage/blobs/redirect/"),
+        "{}",
+        attachment.url
+    );
+    assert!(
+        attachment.download_url.ends_with("disposition=attachment"),
+        "{}",
+        attachment.download_url
+    );
 }
 
 #[tokio::test]
@@ -520,6 +624,11 @@ struct Sync {
 
 impl Sync {
     async fn connect(addr: SocketAddr, cookie: &str, topics: &[String]) -> Self {
+        Self::open(addr, cookie, topics, Value::Null).await
+    }
+
+    /// Connects and says hello, resuming from `resume` (`{epoch, seq}` or null).
+    async fn open(addr: SocketAddr, cookie: &str, topics: &[String], resume: Value) -> Self {
         let mut request = format!("ws://{addr}/api/v1/sync")
             .into_client_request()
             .unwrap();
@@ -537,7 +646,7 @@ impl Sync {
             socket,
             pending: Default::default(),
         };
-        sync.send(json!({"t": "hello", "v": 1, "resume": null, "topics": topics}))
+        sync.send(json!({"t": "hello", "v": 1, "resume": resume, "topics": topics}))
             .await;
         sync
     }
@@ -747,4 +856,461 @@ async fn revoking_the_session_closes_the_sync_socket() {
         })
     ));
     server.abort();
+}
+
+#[tokio::test]
+async fn identical_posts_in_flight_create_one_message() {
+    let Some(a) = app(true).await else { return };
+    let mut first = a.sign_in(DAVID).await;
+    let mut second = a.sign_in(DAVID).await;
+    first.authenticity_token().await;
+    second.authenticity_token().await;
+    let (one, two) = tokio::join!(
+        post(&mut first, ALL_TALK, "race-1", "Only once"),
+        post(&mut second, ALL_TALK, "race-1", "Only once"),
+    );
+    let mut statuses = [one.status, two.status];
+    statuses.sort();
+    assert_eq!(
+        statuses,
+        [StatusCode::OK, StatusCode::CREATED],
+        "{} / {}",
+        one.text(),
+        two.text()
+    );
+    assert_eq!(
+        parse::<api::MessageDTO>(&one).id,
+        parse::<api::MessageDTO>(&two).id
+    );
+    let count = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM messages WHERE client_message_id = 'race-1'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn a_cursor_on_a_deleted_message_still_pages() {
+    let Some(a) = app(true).await else { return };
+    let mut david = a.sign_in(DAVID).await;
+    let mut ids = Vec::new();
+    for n in 1..=3 {
+        let reply = post(
+            &mut david,
+            ALL_TALK,
+            &format!("cursor-{n}"),
+            &format!("Cursor {n}"),
+        )
+        .await;
+        assert_eq!(reply.status, StatusCode::CREATED, "{}", reply.text());
+        ids.push(parse::<api::MessageDTO>(&reply).id);
+    }
+    let deleted = david
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/rooms/{ALL_TALK}/messages/{}.turbo_stream", ids[1]),
+        ))
+        .await;
+    assert_eq!(deleted.status, StatusCode::OK, "{}", deleted.text());
+
+    let older = b_page(&mut david, &format!("before={}", ids[1])).await;
+    assert_eq!(
+        older.messages.last().map(|message| message.id),
+        Some(ids[0])
+    );
+    assert_eq!(older.messages.len(), 40);
+    let newer = b_page(&mut david, &format!("after={}", ids[1])).await;
+    assert_eq!(
+        newer
+            .messages
+            .iter()
+            .map(|message| message.id)
+            .collect::<Vec<_>>(),
+        [ids[2]]
+    );
+    let gone = david
+        .send(get(&format!(
+            "/api/v1/rooms/{ALL_TALK}/messages?around={}",
+            ids[1]
+        )))
+        .await;
+    assert_eq!(
+        gone.status,
+        StatusCode::NOT_FOUND,
+        "an around anchor that's gone"
+    );
+}
+
+async fn b_page(b: &mut Browser<'_>, query: &str) -> api::MessagePage {
+    let reply = b
+        .send(get(&format!("/api/v1/rooms/{ALL_TALK}/messages?{query}")))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK, "{query}: {}", reply.text());
+    parse(&reply)
+}
+
+fn sidebar_row_removed(room_id: i64) -> impl Fn(&api::SyncEvent) -> bool {
+    move |event| matches!(&event.payload, api::SyncPayload::SidebarRowRemoved(removed) if removed.room_id == room_id)
+}
+
+#[tokio::test]
+async fn hiding_a_room_keeps_its_messages_coming() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[format!("room:{ALL_TALK}")]).await;
+    sync.welcome().await;
+
+    let hidden = david
+        .write(
+            Req::new(
+                Method::PATCH,
+                &format!("/rooms/{ALL_TALK}/involvement.json"),
+            )
+            .form(&[("involvement", "invisible")]),
+        )
+        .await;
+    assert_eq!(hidden.status, StatusCode::OK, "{}", hidden.text());
+    sync.until(sidebar_row_removed(ALL_TALK), |_| false).await;
+
+    // The classic page keeps streaming a room that's open, hidden or not; so does the socket.
+    let mut jason = a.sign_in(JASON).await;
+    let posted = post(&mut jason, ALL_TALK, "hidden-1", "Still here").await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    let event = sync.until(created_in(ALL_TALK), |_| false).await;
+    assert_eq!(event.topic, format!("room:{ALL_TALK}"));
+    server.abort();
+}
+
+#[tokio::test]
+async fn a_removed_member_stops_getting_the_rooms_events() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let mut david = a.sign_in(DAVID).await;
+    let cookie = david.cookie_header();
+    let topics = [format!("room:{ALL_TALK}")];
+    let mut sync = Sync::connect(addr, &cookie, &topics).await;
+    let Some(api::ServerFrame::Welcome { epoch, mut seq, .. }) = sync.next().await else {
+        panic!("a welcome")
+    };
+
+    a.db()
+        .write(|tx| {
+            campfire_db::Membership::find_by_room_and_user(tx.conn(), ALL_TALK, DAVID)?
+                .expect("David is in All Talk")
+                .destroy(tx)
+        })
+        .await
+        .unwrap();
+    // Losing a membership drops the person's connections, which reconnect (as the classic
+    // pages do), resuming where they were.
+    loop {
+        match sync.next().await {
+            Some(api::ServerFrame::Batch { events }) => {
+                seq = events.last().map_or(seq, |event| event.seq);
+            }
+            Some(api::ServerFrame::Ping) => {}
+            Some(api::ServerFrame::Bye {
+                reconnect: true, ..
+            }) => break,
+            other => panic!("expected bye, got {other:?}"),
+        }
+    }
+    assert!(sync.next().await.is_none());
+    let mut sync = Sync::open(addr, &cookie, &topics, json!({"epoch": epoch, "seq": seq})).await;
+    assert!(matches!(
+        sync.next().await,
+        Some(api::ServerFrame::Welcome { resumed: true, .. })
+    ));
+
+    let mut jason = a.sign_in(JASON).await;
+    let posted = post(&mut jason, ALL_TALK, "after-removal", "David has left").await;
+    assert_eq!(posted.status, StatusCode::CREATED, "{}", posted.text());
+    // David's own topic as a fence: the room's events, if any, would come before it.
+    let read = david
+        .write(
+            Req::new(Method::POST, &format!("/api/v1/rooms/{HQ}/read"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(read.status, StatusCode::OK, "{}", read.text());
+    sync.until(
+        |event| {
+            matches!(
+                event.payload,
+                api::SyncPayload::RoomRead(api::RoomRead { room_id: HQ })
+            )
+        },
+        |event| event.topic == format!("room:{ALL_TALK}") || created_in(ALL_TALK)(event),
+    )
+    .await;
+    server.abort();
+}
+
+#[tokio::test]
+async fn an_idle_admin_session_ends_on_the_next_heartbeat() {
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let david = a.sign_in(DAVID).await;
+    let cookie = david.cookie_header();
+    let mut sync = Sync::connect(addr, &cookie, &[]).await;
+    sync.welcome().await;
+
+    a.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE sessions SET last_active_at = '2000-01-01 00:00:00.000000' WHERE user_id = ?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    sync.send(json!({"t": "hb", "active": false})).await;
+    loop {
+        match sync.next().await {
+            Some(api::ServerFrame::Bye { reconnect, reason }) => {
+                assert_eq!((reconnect, reason.as_str()), (false, "session_expired"));
+                break;
+            }
+            Some(api::ServerFrame::Batch { .. } | api::ServerFrame::Ping) => {}
+            other => panic!("expected bye, got {other:?}"),
+        }
+    }
+    assert!(sync.next().await.is_none(), "the socket closes after bye");
+    let mut again = Sync::connect(addr, &cookie, &[]).await;
+    assert!(matches!(
+        again.next().await,
+        Some(api::ServerFrame::Bye {
+            reconnect: false,
+            ..
+        })
+    ));
+    server.abort();
+}
+
+#[tokio::test]
+async fn a_database_unread_carries_its_message_and_mention() {
+    const ROOM: i64 = 654632876;
+    let Some(a) = app(true).await else { return };
+    let (addr, server) = serve(&a).await;
+    let david = a.sign_in(DAVID).await;
+    let mut sync = Sync::connect(addr, &david.cookie_header(), &[]).await;
+    sync.welcome().await;
+    let sgid = rails_compat::global_id::attachable_sgid(
+        &a.booted.app.secrets,
+        &rails_compat::global_id::GlobalId::new("User", DAVID),
+    );
+    let mention = a
+        .db()
+        .write(move |tx| {
+            campfire_db::Message::create(
+                tx,
+                campfire_db::NewMessage {
+                    room_id: ROOM,
+                    creator_id: JASON,
+                    body: Some(format!(
+                        "Thanks <action-text-attachment sgid=\"{sgid}\" content-type=\"application/vnd.campfire.mention\"></action-text-attachment>"
+                    )),
+                    client_message_id: Some("unread-mention".into()),
+                    ..Default::default()
+                },
+            )
+            .map(|message| message.id)
+        })
+        .await
+        .unwrap();
+    a.db()
+        .write(move |tx| {
+            use campfire_db::broadcasts::Broadcast;
+            for (room_id, message_id) in
+                [(ROOM, Some(mention)), (ALL_TALK, Some(BOOSTED)), (HQ, None)]
+            {
+                tx.emit_after_commit(campfire_db::Event::broadcast(&Broadcast::UnreadRoom {
+                    user_id: DAVID,
+                    room_id,
+                    message_id,
+                }));
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut unreads = Vec::new();
+    while unreads.len() < 3 {
+        let event = sync
+            .until(
+                |event| matches!(event.payload, api::SyncPayload::RoomUnread(_)),
+                |_| false,
+            )
+            .await;
+        let api::SyncPayload::RoomUnread(unread) = event.payload else {
+            unreachable!()
+        };
+        unreads.push(unread);
+    }
+    assert_eq!(
+        unreads,
+        [
+            api::RoomUnread {
+                room_id: ROOM,
+                message_id: Some(mention),
+                mentioned: true
+            },
+            api::RoomUnread {
+                room_id: ALL_TALK,
+                message_id: Some(BOOSTED),
+                mentioned: false
+            },
+            api::RoomUnread {
+                room_id: HQ,
+                message_id: None,
+                mentioned: false
+            },
+        ]
+    );
+    server.abort();
+}
+
+/// The classic frames (stream, payload) for one run of message create, edit and remove, and a
+/// read and unread, with or without the SPA and a sync socket open.
+async fn classic_frames(spa: bool) -> Option<Vec<(String, String)>> {
+    use crate::controllers::presenters::test_support::SEED_NOW;
+    use campfire_kit::clock::FrozenClock;
+    let clock = std::sync::Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let env: &[(&str, &str)] = if spa { &[("SPA_ENABLED", "1")] } else { &[] };
+    let a = TestApp::boot_seed_with_env("default", clock, env).await?;
+    let (mut client, cable) =
+        crate::controllers::messages::attachment_processing_tests::subscribe(&a).await;
+    for channel in ["UnreadRoomsChannel", "ReadRoomsChannel"] {
+        let identifier = crate::channels::tests::support::identifier(json!({ "channel": channel }));
+        client.confirm(&identifier).await;
+    }
+    let mut david = a.sign_in(DAVID).await;
+    let mut jason = a.sign_in(JASON).await;
+    david.authenticity_token().await;
+    jason.authenticity_token().await;
+    let (_sync, server) = if spa {
+        let (addr, server) = serve(&a).await;
+        let mut sync =
+            Sync::connect(addr, &david.cookie_header(), &[format!("room:{ALL_TALK}")]).await;
+        sync.welcome().await;
+        (Some(sync), Some(server))
+    } else {
+        (None, None)
+    };
+    assert_eq!(a.booted.app.cable.sync_wanted(), spa);
+    let capture = a.publications();
+    capture.take();
+
+    let created = jason
+        .write(
+            Req::new(
+                Method::POST,
+                &format!("/rooms/{ALL_TALK}/messages.turbo_stream"),
+            )
+            .form(&[
+                ("message[markdown_source]", "**Parity**"),
+                ("message[client_message_id]", "parity-1"),
+            ]),
+        )
+        .await;
+    assert_eq!(created.status, StatusCode::OK, "{}", created.text());
+    let id = a
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT id FROM messages WHERE client_message_id = 'parity-1'",
+                [],
+                |row| row.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    let edited = jason
+        .write(
+            Req::new(
+                Method::PATCH,
+                &format!("/rooms/{ALL_TALK}/messages/{id}.json"),
+            )
+            .header("content-type", "application/json")
+            .body(json!({"message": {"markdown_source": "## Edited"}}).to_string()),
+        )
+        .await;
+    assert_eq!(edited.status, StatusCode::OK, "{}", edited.text());
+    let removed = jason
+        .write(Req::new(
+            Method::DELETE,
+            &format!("/rooms/{ALL_TALK}/messages/{id}.turbo_stream"),
+        ))
+        .await;
+    assert_eq!(removed.status, StatusCode::OK, "{}", removed.text());
+    let read = david
+        .write(
+            Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/read"))
+                .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(read.status, StatusCode::OK, "{}", read.text());
+    let unread = david
+        .write(
+            Req::new(
+                Method::DELETE,
+                &format!("/rooms/{ALL_TALK}/read?message_id={BOOSTED}"),
+            )
+            .header("accept", "application/json"),
+        )
+        .await;
+    assert_eq!(unread.status, StatusCode::OK, "{}", unread.text());
+
+    // Some frames go out after the response (the after-commit sink): wait for them to settle.
+    let mut frames = Vec::new();
+    let mut quiet = 0;
+    while quiet < 10 {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        let more = capture.take();
+        quiet = if more.is_empty() { quiet + 1 } else { 0 };
+        frames.extend(more);
+    }
+    cable.abort();
+    if let Some(server) = server {
+        server.abort();
+    }
+    Some(frames)
+}
+
+#[tokio::test]
+async fn the_classic_frames_are_the_same_with_the_sync_engine_on() {
+    let (Some(off), Some(on)) = (classic_frames(false).await, classic_frames(true).await) else {
+        return;
+    };
+    let kinds = |stream: &str, needle: &str| {
+        off.iter()
+            .any(|(s, frame)| s.ends_with(stream) && frame.contains(needle))
+    };
+    assert!(
+        kinds(":messages", "action=\\\"append\\\""),
+        "a create: {off:?}"
+    );
+    assert!(
+        kinds(":messages", "action=\\\"replace\\\""),
+        "an edit: {off:?}"
+    );
+    assert!(
+        kinds(":messages", "action=\\\"remove\\\""),
+        "a remove: {off:?}"
+    );
+    assert!(kinds("_unreads", "roomId"), "an unread: {off:?}");
+    assert!(kinds("_reads", "room_id"), "a read: {off:?}");
+    assert_eq!(off.len(), on.len(), "off: {off:#?}\non: {on:#?}");
+    for (index, (off, on)) in off.iter().zip(&on).enumerate() {
+        assert_eq!(off, on, "frame {index}");
+    }
 }

@@ -185,11 +185,12 @@ fn creation_prepends_both_renderings_and_marks_only_visible_disconnected_unmuted
     }));
     let actual = t.events()[from..]
         .iter()
-        .filter_map(|event| match event.as_broadcast()? {
-            Broadcast::Cable { stream, payload } if payload.get("roomId").is_some() => {
-                Some(serde_json::json!({"stream":stream,"payload":payload}))
-            }
-            _ => None,
+        .filter_map(|event| {
+            let (stream, payload) = event.as_broadcast()?.channel_frame()?;
+            payload
+                .get("roomId")
+                .is_some()
+                .then(|| serde_json::json!({"stream":stream,"payload":payload}))
         })
         .collect::<Vec<_>>();
     assert_eq!(room.id, oracle["room_id"].as_i64().unwrap());

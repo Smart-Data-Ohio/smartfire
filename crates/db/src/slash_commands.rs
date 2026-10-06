@@ -543,9 +543,10 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
             if member.involvement != Some(crate::Involvement::Muted)
                 || mentioned.contains(&member.user_id)
             {
-                tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
-                    stream: crate::broadcasts::unread_rooms_stream_name(member.user_id),
-                    payload: json!({"roomId":room.id}),
+                tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
+                    user_id: member.user_id,
+                    room_id: room.id,
+                    message_id: Some(message.id),
                 }));
             }
         }

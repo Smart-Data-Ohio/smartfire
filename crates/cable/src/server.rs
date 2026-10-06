@@ -299,11 +299,31 @@ impl<U: Send + Sync + 'static> Server<U> {
     /// Starts the sync engine: from here on [`Server::sync_publish`] records events and
     /// [`Server::sync_call`] accepts sockets. Only the first call takes effect.
     pub fn install_sync(&self, handler: impl SyncHandler<U>, config: SyncConfig) {
-        let _ = self.inner.sync.set(Arc::new(Engine { ring: Ring::new(config), handler: Arc::new(handler) }));
+        let _ = self.inner.sync.set(Arc::new(Engine {
+            ring: Ring::new(config),
+            handler: Arc::new(handler),
+            connections: std::sync::atomic::AtomicUsize::new(0),
+        }));
     }
 
     pub fn sync_enabled(&self) -> bool {
         self.inner.sync.get().is_some()
+    }
+
+    /// Whether a sync event is worth building now: the engine is installed and a sync socket is
+    /// open. While none is, this records a gap in the ring instead, so a client resuming from
+    /// before it refetches rather than missing the events nobody built.
+    pub fn sync_wanted(&self) -> bool {
+        let Some(engine) = self.inner.sync.get() else {
+            return false;
+        };
+        if engine.connections.load(std::sync::atomic::Ordering::Acquire) > 0 {
+            return true;
+        }
+        if engine.ring.gap_needed() {
+            self.inner.hub.sequenced(|seq| engine.ring.skip(seq));
+        }
+        false
     }
 
     /// The sync engine's epoch and latest sequence, once installed.

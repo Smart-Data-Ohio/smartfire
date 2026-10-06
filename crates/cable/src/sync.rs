@@ -9,14 +9,20 @@
 //! means events were lost: the client is told to refetch over REST instead.
 //!
 //! The ring keeps the last [`SyncConfig::ring_capacity`] events or [`SyncConfig::ring_max_age`]
-//! of them, whichever is fewer. Its epoch is random per boot, so a resume point from another
-//! process never matches.
+//! of them, whichever is fewer. It counts events, not bytes, and live-only events (typing) take
+//! room like any other. Its epoch is random per boot, so a resume point from another process
+//! never matches.
+//!
+//! While no sync socket is open, the broadcast points skip building their events
+//! ([`crate::Server::sync_wanted`]); the ring records the gap instead ([`Ring::skip`]), so a
+//! client resuming from before it refetches rather than missing what was never built.
 //!
 //! What a connection may subscribe to, and what its typing, presence and heartbeat frames do, is
 //! the app's: [`SyncHandler`] opens a [`SyncSession`] per connection.
 mod connection;
 
 use std::collections::VecDeque;
+use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -100,7 +106,14 @@ pub struct SyncPublication {
 
 impl SyncPublication {
     pub fn new(audience: Audience, payload: String) -> Self {
-        Self { audience, payload, except_user: None, coalesce: None, unsubscribe: None, ephemeral: false }
+        Self {
+            audience,
+            payload,
+            except_user: None,
+            coalesce: None,
+            unsubscribe: None,
+            ephemeral: false,
+        }
     }
 }
 
@@ -160,7 +173,12 @@ pub(crate) enum Read {
 impl Ring {
     pub fn new(config: SyncConfig) -> Self {
         let (head, _) = watch::channel(0);
-        Self { config, epoch: new_epoch(), state: Mutex::new(RingState::default()), head }
+        Self {
+            config,
+            epoch: new_epoch(),
+            state: Mutex::new(RingState::default()),
+            head,
+        }
     }
 
     pub fn config(&self) -> &SyncConfig {
@@ -182,10 +200,26 @@ impl Ring {
     /// Appends the event published at `seq`. The caller holds the hub lock, so calls come in
     /// sequence order.
     pub fn push(&self, seq: u64, publication: SyncPublication) {
-        let SyncPublication { audience, payload, except_user, coalesce, unsubscribe, ephemeral } = publication;
+        let SyncPublication {
+            audience,
+            payload,
+            except_user,
+            coalesce,
+            unsubscribe,
+            ephemeral,
+        } = publication;
         let json = encode_event(seq, audience.topic(), &payload);
         let now = Instant::now();
-        let entry = Arc::new(Entry { seq, audience, except_user, coalesce, unsubscribe, ephemeral, at: now, json });
+        let entry = Arc::new(Entry {
+            seq,
+            audience,
+            except_user,
+            coalesce,
+            unsubscribe,
+            ephemeral,
+            at: now,
+            json,
+        });
         let mut state = self.state.lock().unwrap();
         state.entries.push_back(entry);
         state.head = seq;
@@ -203,6 +237,24 @@ impl Ring {
         }
         let start = state.entries.partition_point(|entry| entry.seq <= cursor);
         Read::Events(state.entries.range(start..).cloned().collect(), state.head)
+    }
+
+    /// Whether [`Ring::skip`] has anything to record: events since the last gap, or none yet.
+    pub fn gap_needed(&self) -> bool {
+        let state = self.state.lock().unwrap();
+        !(state.entries.is_empty() && state.evicted_through == state.head)
+    }
+
+    /// Records that the event published at `seq` was skipped (nobody was connected to read it):
+    /// a cursor before it has lost events, so everything kept so far is dropped. The caller holds
+    /// the hub lock, as for [`Ring::push`].
+    pub fn skip(&self, seq: u64) {
+        let mut state = self.state.lock().unwrap();
+        state.entries.clear();
+        state.head = seq;
+        state.evicted_through = seq;
+        drop(state);
+        self.head.send_replace(seq);
     }
 
     /// Where a `hello` starts reading: `(cursor, resumed)`. A resume point from this epoch that
@@ -237,9 +289,16 @@ impl Ring {
 
 /// `{"seq":…,"topic":…,` followed by the payload object's members.
 fn encode_event(seq: u64, topic: &str, payload: &str) -> Box<str> {
-    let members = payload.trim_start().strip_prefix('{').expect("a sync payload is a JSON object");
+    let members = payload
+        .trim_start()
+        .strip_prefix('{')
+        .expect("a sync payload is a JSON object");
     let topic = serde_json::to_string(topic).expect("strings serialize");
-    let separator = if members.trim_start().starts_with('}') { "" } else { "," };
+    let separator = if members.trim_start().starts_with('}') {
+        ""
+    } else {
+        ","
+    };
     format!(r#"{{"seq":{seq},"topic":{topic}{separator}{members}"#).into_boxed_str()
 }
 
@@ -262,7 +321,8 @@ pub trait SyncSession: Send {
     /// `absent`: the person stopped looking at the room.
     async fn absent(&mut self, room_id: i64);
     /// `hb`: the connection is alive; `active` if the person used the tab since the last one.
-    async fn heartbeat(&mut self, active: bool);
+    /// False when the person's session has ended (it idled out): the connection says `bye`.
+    async fn heartbeat(&mut self, active: bool) -> bool;
     /// The connection closed.
     async fn close(&mut self);
 }
@@ -279,6 +339,8 @@ pub trait SyncHandler<U>: Send + Sync + 'static {
 pub(crate) struct Engine<U> {
     pub ring: Ring,
     pub handler: Arc<dyn SyncHandler<U>>,
+    /// Sync sockets open, from the upgrade until they close.
+    pub connections: AtomicUsize,
 }
 
 pub(crate) use connection::run;
@@ -288,11 +350,18 @@ mod tests {
     use super::*;
 
     fn ring(capacity: usize, max_age: Duration) -> Ring {
-        Ring::new(SyncConfig { ring_capacity: capacity, ring_max_age: max_age, ..SyncConfig::default() })
+        Ring::new(SyncConfig {
+            ring_capacity: capacity,
+            ring_max_age: max_age,
+            ..SyncConfig::default()
+        })
     }
 
     fn publication(topic: &str, n: u64) -> SyncPublication {
-        SyncPublication::new(Audience::Topic(topic.into()), format!(r#"{{"type":"x","data":{n}}}"#))
+        SyncPublication::new(
+            Audience::Topic(topic.into()),
+            format!(r#"{{"type":"x","data":{n}}}"#),
+        )
     }
 
     fn seqs(read: Read) -> Vec<u64> {
@@ -306,10 +375,18 @@ mod tests {
     fn events_are_encoded_with_seq_and_topic_first() {
         let ring = ring(10, Duration::from_secs(60));
         ring.push(7, publication("room:1", 3));
-        let Read::Events(events, head) = ring.read(0) else { panic!() };
+        let Read::Events(events, head) = ring.read(0) else {
+            panic!()
+        };
         assert_eq!(head, 7);
-        assert_eq!(&*events[0].json, r#"{"seq":7,"topic":"room:1","type":"x","data":3}"#);
-        assert_eq!(&*encode_event(1, "user", "{}"), r#"{"seq":1,"topic":"user"}"#);
+        assert_eq!(
+            &*events[0].json,
+            r#"{"seq":7,"topic":"room:1","type":"x","data":3}"#
+        );
+        assert_eq!(
+            &*encode_event(1, "user", "{}"),
+            r#"{"seq":1,"topic":"user"}"#
+        );
     }
 
     #[test]
@@ -331,7 +408,11 @@ mod tests {
             ring.push(seq, publication("room:1", seq));
         }
         assert_eq!(ring.resume(Some((&epoch, 1))), (1, true));
-        assert_eq!(ring.resume(Some((&epoch, 0))), (0, true), "nothing was evicted yet");
+        assert_eq!(
+            ring.resume(Some((&epoch, 0))),
+            (0, true),
+            "nothing was evicted yet"
+        );
         ring.push(4, publication("room:1", 4));
         // Seq 1 was dropped: resuming from 0 would miss it, from 1 would not.
         assert_eq!(ring.resume(Some((&epoch, 0))), (4, false));
@@ -348,7 +429,11 @@ mod tests {
         assert_eq!(ring.resume(Some((ring.epoch(), 5))), (1, false));
         assert_eq!(ring.resume(Some((ring.epoch(), -1))), (1, false));
         assert_eq!(ring.resume(None), (1, false));
-        assert_ne!(Ring::new(SyncConfig::default()).epoch(), ring.epoch(), "a new epoch per ring");
+        assert_ne!(
+            Ring::new(SyncConfig::default()).epoch(),
+            ring.epoch(),
+            "a new epoch per ring"
+        );
     }
 
     #[test]
@@ -361,6 +446,22 @@ mod tests {
         // A cursor at the head lost nothing.
         assert_eq!(seqs(ring.read(1)), Vec::<u64>::new());
         assert_eq!(ring.resume(Some((ring.epoch(), 1))), (1, true));
+    }
+
+    #[test]
+    fn a_skipped_event_ends_every_resume_point_before_it() {
+        let ring = ring(10, Duration::from_secs(60));
+        let epoch = ring.epoch().to_string();
+        assert!(!ring.gap_needed(), "nothing to lose yet");
+        ring.push(1, publication("room:1", 1));
+        assert!(ring.gap_needed());
+        ring.skip(2);
+        assert!(!ring.gap_needed(), "the gap is recorded");
+        assert_eq!(ring.resume(Some((&epoch, 1))), (2, false));
+        assert!(matches!(ring.read(1), Read::Lost(2)));
+        assert_eq!(ring.resume(Some((&epoch, 2))), (2, true));
+        ring.push(3, publication("room:1", 3));
+        assert_eq!(seqs(ring.read(2)), [3]);
     }
 
     #[test]

@@ -307,7 +307,7 @@ impl Broadcasts {
                 &UnreadRoom { room_id: room.id },
             );
         }
-        if self.server.sync_enabled() {
+        if self.server.sync_wanted() {
             let mentioned: Vec<i64> = message
                 .mentionees(conn, rich_text)?
                 .iter()

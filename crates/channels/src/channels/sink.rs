@@ -267,6 +267,10 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
                 cable.broadcast(&stream, &payload);
                 crate::cable::sync::cable_stream(cable, &stream, &payload);
             }
+            Broadcast::UnreadRoom { user_id, room_id, message_id } => {
+                cable.broadcast(&stream, &payload);
+                crate::cable::sync::unread_room(cable, app.map(|app| &app.db), *user_id, *room_id, *message_id);
+            }
             Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
         }
         return Ok(());
@@ -359,7 +363,7 @@ pub fn template_free_broadcast(
 ) -> Option<(String, serde_json::Value)> {
     use campfire_db::broadcasts::{Broadcast, TurboAction};
     match broadcast {
-        Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
+        Broadcast::Cable { .. } | Broadcast::UnreadRoom { .. } => broadcast.channel_frame(),
         Broadcast::Turbo(frame)
             if frame.action == TurboAction::Remove && frame.partial.is_none() =>
         {

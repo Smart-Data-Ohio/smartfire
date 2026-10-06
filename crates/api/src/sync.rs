@@ -45,13 +45,8 @@ impl SyncRenderer for Renderer {
         conn: &Connection,
         room: &Room,
         membership: &Membership,
-    ) -> Option<api::SidebarRow> {
+    ) -> campfire_db::Result<Option<api::SidebarRow>> {
         dto::sidebar_row(conn, room, membership)
-            .inspect_err(
-                |error| tracing::warn!(%error, room_id = room.id, "sync: sidebar row not rendered"),
-            )
-            .ok()
-            .flatten()
     }
 
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>) {
@@ -295,9 +290,11 @@ impl SyncSession for Session {
     }
 
     /// `WorkspacePresenceChannel#heartbeat` (and `PresenceChannel#refresh` for the rooms open).
-    async fn heartbeat(&mut self, active: bool) {
+    /// An admin's session that idled out is destroyed here, as the classic channel does; unlike
+    /// it, this connection then ends too.
+    async fn heartbeat(&mut self, active: bool) -> bool {
         let Some(app) = self.app.upgrade() else {
-            return;
+            return true;
         };
         let (session_id, timeout, lease) = (
             self.user.session_id,
@@ -308,18 +305,24 @@ impl SyncSession for Session {
             .db
             .write(move |tx| {
                 expire_idle_timed_out_session(tx, session_id, timeout)?;
+                match campfire_db::Session::find(tx.conn(), session_id) {
+                    Ok(_) => {}
+                    Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
+                    Err(error) => return Err(error),
+                }
                 match lease {
                     Some(mut lease) => {
                         let refreshed = lease.refresh(tx, active)?;
-                        Ok((Some(lease), refreshed))
+                        Ok(Some((Some(lease), refreshed)))
                     }
-                    None => Ok((None, false)),
+                    None => Ok(Some((None, false))),
                 }
             })
             .await;
         match result {
-            Ok((lease, true)) => self.lease = lease,
-            Ok((_, false)) => self.establish(&app).await,
+            Ok(None) => return false,
+            Ok(Some((lease, true))) => self.lease = lease,
+            Ok(Some((_, false))) => self.establish(&app).await,
             Err(error) => {
                 tracing::warn!(%error, user_id = self.user.id, "sync: heartbeat not saved")
             }
@@ -331,6 +334,7 @@ impl SyncSession for Session {
             .await;
         }
         self.publish_presence(&app).await;
+        true
     }
 
     async fn close(&mut self) {

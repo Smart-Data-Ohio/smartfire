@@ -5,7 +5,9 @@
 //! Twins that carry only ids are built here. Those that carry a rendered DTO (a message's
 //! `bodyHtml`, a sidebar row's label and counts) go through the [`SyncRenderer`] the server
 //! installs at boot (`campfire_api`); until one is installed, and whenever the sync engine isn't,
-//! every twin is a no-op.
+//! every twin is a no-op. So is every twin while no sync socket is open
+//! ([`Cable::sync_wanted`](campfire_cable::Server::sync_wanted)): each checks that before
+//! building anything.
 //!
 //! [`TWINS`] lists which broadcasts have twins and [`NOT_YET_TWINNED`] the ones still to port;
 //! a test in the server crate fails when a broadcast is in neither.
@@ -16,7 +18,7 @@ use campfire_api_types::{
     SyncPayload, Typing, UserPresence,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
-use campfire_db::{Connection, Membership, Message, Room};
+use campfire_db::{Connection, Database, Membership, Message, Room};
 
 use super::Cable;
 
@@ -31,7 +33,7 @@ pub trait SyncRenderer: Send + Sync + 'static {
         conn: &Connection,
         room: &Room,
         membership: &Membership,
-    ) -> Option<SidebarRow>;
+    ) -> campfire_db::Result<Option<SidebarRow>>;
     /// Runs `job` soon with a reader connection, off the caller's thread: for broadcast points
     /// that have no connection at hand (taking a second reader there could wait on the pool).
     fn defer(&self, job: Box<dyn FnOnce(&Connection) + Send>);
@@ -48,7 +50,7 @@ impl RendererSlot {
     }
 
     fn get(&self, server: &Cable) -> Option<&Arc<dyn SyncRenderer>> {
-        server.sync_enabled().then(|| self.0.get()).flatten()
+        server.sync_wanted().then(|| self.0.get()).flatten()
     }
 }
 
@@ -150,20 +152,20 @@ pub fn room_topic(room_id: i64) -> String {
     format!("room:{room_id}")
 }
 
-/// Publishes `payload` to `audience`. Serializes nothing while the sync engine is off.
+/// Publishes `payload` to `audience`. Serializes nothing while no sync socket is open.
 pub fn publish(server: &Cable, audience: Audience, payload: &SyncPayload) {
-    publish_with(server, audience, payload, |publication| publication);
+    if server.sync_wanted() {
+        send(server, audience, payload, |publication| publication);
+    }
 }
 
-fn publish_with(
+/// Publishes; the caller has checked [`Cable::sync_wanted`](campfire_cable::Server::sync_wanted).
+fn send(
     server: &Cable,
     audience: Audience,
     payload: &SyncPayload,
     adjust: impl FnOnce(SyncPublication) -> SyncPublication,
 ) {
-    if !server.sync_enabled() {
-        return;
-    }
     let payload = serde_json::to_string(payload).expect("sync payloads serialize");
     server.sync_publish(adjust(SyncPublication::new(audience, payload)));
 }
@@ -187,7 +189,12 @@ pub fn message(
     } else {
         SyncPayload::MessageUpdated(dto)
     };
-    publish(server, Audience::Topic(message_topic(message)), &payload);
+    send(
+        server,
+        Audience::Topic(message_topic(message)),
+        &payload,
+        |publication| publication,
+    );
 }
 
 /// `message.updated`, read afresh later: for broadcast points without a connection.
@@ -208,12 +215,20 @@ pub fn message_updated_later(server: &Cable, slot: &RendererSlot, message_id: i6
 
 /// `message.removed` on the message's conversation.
 pub fn message_removed(server: &Cable, message: &Message) {
+    if !server.sync_wanted() {
+        return;
+    }
     let payload = SyncPayload::MessageRemoved(MessageRemoved {
         id: message.id,
         room_id: message.room_id,
         thread_id: message.thread_id,
     });
-    publish(server, Audience::Topic(message_topic(message)), &payload);
+    send(
+        server,
+        Audience::Topic(message_topic(message)),
+        &payload,
+        |publication| publication,
+    );
 }
 
 /// `room.unread` on the person's `user` topic.
@@ -224,26 +239,71 @@ pub fn room_unread(
     message_id: Option<i64>,
     mentioned: bool,
 ) {
+    if !server.sync_wanted() {
+        return;
+    }
     let payload = SyncPayload::RoomUnread(RoomUnread {
         room_id,
         message_id,
         mentioned,
     });
-    publish(server, Audience::User(user_id), &payload);
+    send(server, Audience::User(user_id), &payload, |publication| {
+        publication
+    });
+}
+
+/// The twin of a `Broadcast::UnreadRoom` the database layer emits: `room.unread` with the message
+/// that made the room unread, and whether it mentions the person (read from `db` when there is
+/// one; without a database, unmentioned).
+pub fn unread_room(
+    server: &Cable,
+    db: Option<&Database>,
+    user_id: i64,
+    room_id: i64,
+    message_id: Option<i64>,
+) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let mentioned = match (db, message_id) {
+        (Some(db), Some(message_id)) => {
+            let rich_text = db.env().rich_text.clone();
+            let mentioned = db.read_blocking(move |conn| {
+                let message = Message::find(conn, message_id)?;
+                let mentionees = message.mentionees(conn, &*rich_text)?;
+                Ok(mentionees.iter().any(|user| user.id == user_id))
+            });
+            match mentioned {
+                Ok(mentioned) => mentioned,
+                Err(error) => {
+                    return tracing::warn!(%error, message_id, "sync: unread message not read");
+                }
+            }
+        }
+        _ => false,
+    };
+    room_unread(server, user_id, room_id, message_id, mentioned);
 }
 
 /// `room.read` on the person's `user` topic.
 pub fn room_read(server: &Cable, user_id: i64, room_id: i64) {
-    publish(
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
         server,
         Audience::User(user_id),
         &SyncPayload::RoomRead(RoomRead { room_id }),
+        |publication| publication,
     );
 }
 
 /// The twin of a `Broadcast::Cable` the database layer emits, by its stream: unread and read
 /// pings. Anything else has none.
 pub fn cable_stream(server: &Cable, stream: &str, payload: &serde_json::Value) {
+    if !server.sync_wanted() {
+        return;
+    }
     let user_id = |suffix: &str| {
         stream
             .strip_prefix("user_")?
@@ -260,7 +320,9 @@ pub fn cable_stream(server: &Cable, stream: &str, payload: &serde_json::Value) {
 }
 
 /// `sidebar.row.upserted` (or `sidebar.row.removed` when the room left their sidebar) for the
-/// room's members, or just `user_ids` among them.
+/// room's members, or just `user_ids` among them. A member who hid the room is still a member:
+/// their connections keep following it, as the classic pages keep streaming it. A row that
+/// can't be read is skipped (and logged), not taken for gone.
 pub fn sidebar_rows(
     server: &Cable,
     slot: &RendererSlot,
@@ -282,12 +344,20 @@ pub fn sidebar_rows(
             continue;
         }
         match renderer.sidebar_row(conn, room, &membership) {
-            Some(row) => publish(
+            Ok(Some(row)) => send(
                 server,
                 Audience::User(membership.user_id),
                 &SyncPayload::SidebarRowUpserted(row),
+                |publication| publication,
             ),
-            None => sidebar_row_removed(server, membership.user_id, room.id),
+            Ok(None) if room.deleted() => sidebar_row_removed(server, membership.user_id, room.id),
+            Ok(None) => sidebar_row_hidden(server, membership.user_id, room.id),
+            Err(error) => tracing::warn!(
+                %error,
+                room_id = room.id,
+                user_id = membership.user_id,
+                "sync: sidebar row not rendered"
+            ),
         }
     }
 }
@@ -312,11 +382,14 @@ pub fn sidebar_rows_later(
     }));
 }
 
-/// `sidebar.row.removed` on the person's `user` topic; their connections stop following the
-/// room.
+/// The person left the room: `sidebar.row.removed` on their `user` topic, and their connections
+/// stop following the room.
 pub fn sidebar_row_removed(server: &Cable, user_id: i64, room_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
     let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id });
-    publish_with(server, Audience::User(user_id), &payload, |publication| {
+    send(server, Audience::User(user_id), &payload, |publication| {
         SyncPublication {
             unsubscribe: Some(room_topic(room_id)),
             ..publication
@@ -324,10 +397,22 @@ pub fn sidebar_row_removed(server: &Cable, user_id: i64, room_id: i64) {
     });
 }
 
+/// The person hid the room (an invisible membership): `sidebar.row.removed` on their `user`
+/// topic, while their connections go on following it.
+fn sidebar_row_hidden(server: &Cable, user_id: i64, room_id: i64) {
+    let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id });
+    send(server, Audience::User(user_id), &payload, |publication| {
+        publication
+    });
+}
+
 /// The room is gone: `sidebar.row.removed` for everyone, and nobody follows it any more.
 pub fn room_removed(server: &Cable, room_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
     let payload = SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id });
-    publish_with(server, Audience::Everyone, &payload, |publication| {
+    send(server, Audience::Everyone, &payload, |publication| {
         SyncPublication {
             unsubscribe: Some(room_topic(room_id)),
             ..publication
@@ -338,8 +423,11 @@ pub fn room_removed(server: &Cable, room_id: i64) {
 /// `typing` on the conversation's topic, for everyone there but the typist. Only the latest
 /// state per person and conversation goes out in a batch, and none is replayed on resume.
 pub fn typing(server: &Cable, topic: &str, user_id: i64, on: bool) {
+    if !server.sync_wanted() {
+        return;
+    }
     let payload = SyncPayload::Typing(Typing { user_id, on });
-    publish_with(
+    send(
         server,
         Audience::Topic(topic.to_string()),
         &payload,
@@ -354,8 +442,11 @@ pub fn typing(server: &Cable, topic: &str, user_id: i64, on: bool) {
 
 /// `presence` on every connection's `user` topic, latest per person in a batch.
 pub fn presence(server: &Cable, presence: UserPresence) {
+    if !server.sync_wanted() {
+        return;
+    }
     let user_id = presence.user_id;
-    publish_with(
+    send(
         server,
         Audience::Everyone,
         &SyncPayload::Presence(presence),
@@ -369,6 +460,9 @@ pub fn presence(server: &Cable, presence: UserPresence) {
 /// The twin of a status badge update (`StatusBadgeBroadcast`), whose presence is the badge's
 /// word.
 pub fn status_badge(server: &Cable, user_id: i64, presence_word: &str, status_text: Option<&str>) {
+    if !server.sync_wanted() {
+        return;
+    }
     let presence_value = match presence_word {
         "online" => Presence::Online,
         "idle" => Presence::Idle,

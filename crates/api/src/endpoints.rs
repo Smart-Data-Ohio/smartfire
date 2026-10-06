@@ -4,12 +4,13 @@
 
 use campfire_api_types as api;
 use campfire_app::app::AppCtx;
+use campfire_db::models::agent_posting::PostingOutcome;
 use campfire_db::{Account, Message, Timeline};
 use campfire_kit::{Ctx, Error, Result, StatusCode};
+use campfire_messages::controllers::messages::{self as posting, MessageParams};
 use campfire_web::concerns::{self, Authentication, Before};
 use campfire_web::controllers::presenters::attachments::Assignment;
 use campfire_web::controllers::presenters::page::db_error;
-use campfire_messages::controllers::messages::{self as posting, MessageParams};
 use serde::de::DeserializeOwned;
 
 use crate::dto;
@@ -205,10 +206,22 @@ async fn index_messages(c: &mut Ctx) -> Result {
         .read(move |conn| {
             let timeline = Timeline::Room(room_id);
             let anchor = |id| Message::find_in(conn, timeline, id);
+            // A `before`/`after` cursor whose message was deleted since pages from its id, so
+            // paging doesn't stall on it; an `around` anchor that's gone is a 404.
+            let gone =
+                |error: &campfire_db::Error| matches!(error, campfire_db::Error::RecordNotFound(_));
             let messages = match cursor {
                 Cursor::Newest => Message::last_page(conn, timeline)?,
-                Cursor::Before(id) => Message::page_before(conn, timeline, &anchor(id)?)?,
-                Cursor::After(id) => Message::page_after(conn, timeline, &anchor(id)?)?,
+                Cursor::Before(id) => match anchor(id) {
+                    Ok(message) => Message::page_before(conn, timeline, &message)?,
+                    Err(error) if gone(&error) => Message::page_before_id(conn, timeline, id)?,
+                    Err(error) => return Err(error),
+                },
+                Cursor::After(id) => match anchor(id) {
+                    Ok(message) => Message::page_after(conn, timeline, &message)?,
+                    Err(error) if gone(&error) => Message::page_after_id(conn, timeline, id)?,
+                    Err(error) => return Err(error),
+                },
                 Cursor::Around(id) => Message::page_around(conn, timeline, &anchor(id)?)?,
             };
             let before = match messages.first() {
@@ -254,12 +267,16 @@ async fn post_message(c: &mut Ctx) -> Result {
             ),
         ));
     }
-    let signed_id = input.attachment_signed_id.filter(|signed_id| !signed_id.is_empty());
+    let signed_id = input
+        .attachment_signed_id
+        .filter(|signed_id| !signed_id.is_empty());
     if signed_id.is_none() && input.markdown_source.trim().is_empty() {
         return Err(fail(c, validation("markdownSource", "can't be blank")));
     }
     let (room_id, creator_id) = (room.id, concerns::require_current_user(c)?.id);
-    // `Message.find_duplicate`: a retry gets the message the first attempt created.
+    // `Message.find_duplicate`: a retry gets the message the first attempt created. This read
+    // answers a later retry without validating it again; the create checks again in its write
+    // transaction, for retries racing each other.
     let lookup = client_message_id.clone();
     let duplicate = c
         .app()
@@ -309,10 +326,17 @@ async fn post_message(c: &mut Ctx) -> Result {
                 reply_notify_author: input.reply_notify_author,
                 ..MessageParams::default()
             };
-            let message = posting::create_message_into(c, &room, None, attributes).await?;
-            posting::broadcast_create(c, &room, &message).await?;
-            posting::release_webhooks(c, &message).await;
-            (message, StatusCode::CREATED)
+            match posting::create_or_find_message(c, &room, attributes).await? {
+                PostingOutcome::Created(message) => {
+                    posting::broadcast_create(c, &room, &message).await?;
+                    posting::release_webhooks(c, &message).await;
+                    (message, StatusCode::CREATED)
+                }
+                PostingOutcome::Replay(message) => (message, StatusCode::OK),
+                PostingOutcome::Budget(_) => {
+                    unreachable!("human posting does not run agent policy")
+                }
+            }
         }
     };
     let app = c.app().clone();
@@ -329,7 +353,8 @@ async fn post_message(c: &mut Ctx) -> Result {
 async fn blob_exists(c: &Ctx, signed_id: &str) -> Result<bool> {
     let app = c.app();
     let now = app.clock.now();
-    let Some(id) = campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, signed_id, now)
+    let Some(id) =
+        campfire_storage::paths::verify_signed_blob_id(&*app.storage.verifier, signed_id, now)
     else {
         return Ok(false);
     };
