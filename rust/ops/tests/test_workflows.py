@@ -27,7 +27,7 @@ def audit_actions(document):
     return count
 
 
-def plan(document, runtime):
+def plan(document, runtime=None):
     step = next(step for step in document["jobs"]["deploy"]["steps"] if step.get("id") == "plan")
     with tempfile.TemporaryDirectory(dir=ROOT / ".scratch", prefix="workflow-plan-") as tmp:
         work = Path(tmp)
@@ -39,10 +39,11 @@ def plan(document, runtime):
             poison.write_text("#!/bin/sh\necho forbidden-external-command >&2\nexit 99\n")
             poison.chmod(0o755)
         output = work / "output"
+        extra = {} if runtime is None else {"INPUT_RUNTIME": runtime}
         env = {**os.environ, "PATH": f"{work}:{os.environ['PATH']}", "GITHUB_OUTPUT": str(output),
-            "INPUT_SHA": REVISION, "INPUT_LABEL": "ws18-fixture", "INPUT_DIGEST": "", "INPUT_RUNTIME": runtime,
+            "INPUT_SHA": REVISION, "INPUT_LABEL": "ws18-fixture", "INPUT_DIGEST": "",
             "INPUT_DRY_RUN": "true", "INPUT_SKIP_SNAPSHOT": "false", "INPUT_RESUME": "false",
-            "INPUT_ENVIRONMENT": "validation", "RUN_ID": "42", "SIMULATE_FAILURE_VAR": "0"}
+            "INPUT_ENVIRONMENT": "validation", "RUN_ID": "42", "SIMULATE_FAILURE_VAR": "0", **extra}
         result = subprocess.run(["bash", "-c", step["run"]], cwd=ROOT, env=env, text=True, capture_output=True)
         if result.returncode:
             raise RuntimeError(result.stdout + result.stderr)
@@ -61,32 +62,35 @@ class WorkflowTest(unittest.TestCase):
                 self.assertIn("campfire-release.sh " + phase, steps[phase]["run"])
         print("WORKFLOW REFERENCE: preflight/freeze/cutover use the same resolved repository@digest string")
 
-    def test_default_rails_plan_is_identical_and_rust_uses_a_separate_sha_tag(self):
+    def test_plan_always_selects_the_rust_sha_tag(self):
         old = subprocess.check_output(["git", "show", f"{REVISION}:.github/workflows/deploy-gcp.yml"], cwd=ROOT, text=True)
-        old = yaml_json(old)
+        expected = plan(yaml_json(old), "")
         current = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())
-        expected = plan(old, "")
-        self.assertEqual(plan(current, ""), expected)
-        self.assertEqual(plan(current, "rails"), expected)
-        self.assertEqual(plan(current, "rust"), {**expected, "tag": f"rust-git-{REVISION}"})
+        self.assertEqual(plan(current), {**expected, "tag": f"rust-git-{REVISION}"})
         on = current.get("on", current.get("true"))
-        self.assertEqual(on["workflow_dispatch"]["inputs"]["runtime"]["default"], "rails")
-        print("WORKFLOW PLAN: Rails default unchanged; Rust full-SHA tag selected")
+        self.assertNotIn("runtime", on["workflow_dispatch"]["inputs"])
+        self.assertNotIn("INPUT_RUNTIME", next(step for step in current["jobs"]["deploy"]["steps"] if step.get("id") == "plan")["env"])
+        print("WORKFLOW PLAN: only the Rust full-SHA tag; no runtime input")
 
-    def test_image_workflow_has_readonly_pr_builds_and_main_only_publish(self):
+    def test_release_is_gated_on_the_rust_checks_alone(self):
+        workflow = yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())
+        steps = {step["id"]: step for step in workflow["jobs"]["deploy"]["steps"] if "id" in step}
+        gate = steps["ci"]["run"]
+        self.assertIn("rust.yml", gate)
+        self.assertIn("push", gate)
+        self.assertIn("schedule", gate)
+        self.assertNotIn("ci.yml", (ROOT / ".github/workflows/deploy-gcp.yml").read_text())
+        print("WORKFLOW GATE: rust.yml push/schedule success is the single gate")
+
+    def test_image_workflow_publishes_from_main_only_with_pinned_actions(self):
         image = yaml_json((ROOT / ".github/workflows/publish-rust-image.yml").read_text())
-        pr, publish = image["jobs"]["pull-request"], image["jobs"]["publish"]
-        self.assertEqual(pr["permissions"], {"contents": "read"})
-        self.assertEqual(pr["if"], "github.event_name == 'pull_request'")
-        self.assertEqual(publish["if"].strip(), "github.event_name == 'push' && github.ref == 'refs/heads/main'")
-        builds = [step["with"] for step in pr["steps"] if step.get("uses", "").startswith("docker/build-push-action@")]
-        self.assertEqual(len(builds), 1)
-        self.assertFalse(builds[0]["push"])
-        self.assertNotIn("cache-to", builds[0])
-        self.assertEqual(builds[0]["build-contexts"], "reference=.")
+        on = image.get("on", image.get("true"))
+        self.assertEqual(set(on), {"push"})
+        self.assertEqual(on["push"]["branches"], ["main"])
+        self.assertEqual(image["jobs"]["publish"]["if"].strip(), "github.event_name == 'push' && github.ref == 'refs/heads/main'")
         for workflow in [image, yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())]:
             self.assertGreater(audit_actions(workflow), 0)
-        print("WORKFLOW ACTIONS: all third-party actions pinned; PRs have no publish credentials/cache writes")
+        print("WORKFLOW ACTIONS: all third-party actions pinned; images publish from main pushes only")
 
     def test_action_audit_rejects_unpinned_references(self):
         with self.assertRaises(ValueError):
