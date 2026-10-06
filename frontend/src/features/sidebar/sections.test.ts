@@ -80,10 +80,46 @@ describe("sidebarSections", () => {
     ]);
   });
 
-  it("keeps Channels and Direct messages even when empty", () => {
+  it("keeps every category, Channels and Direct messages even when empty", () => {
     expect(sidebarSections(sidebarOf([])).map((section) => section.key)).toEqual([
+      "category-7",
       "channels",
       "direct",
+    ]);
+  });
+
+  it("leaves invisible rooms out", () => {
+    const hidden = row(2, "hidden");
+
+    const sections = sidebarSections(
+      sidebarOf([
+        row(1, "alpha"),
+        { ...hidden, membership: { ...hidden.membership, involvement: "invisible" } },
+      ]),
+    );
+
+    expect(
+      sections.find((section) => section.key === "channels")?.rows.map((entry) => entry.room.id),
+    ).toEqual([1]);
+  });
+
+  it("draws pending organising changes over the server's rows", () => {
+    const base = sidebarOf([row(1, "alpha"), row(2, "beta", { favorite: 0 })]);
+
+    const sections = sidebarSections({
+      ...base,
+      overlay: {
+        memberships: { 1: { roomCategoryId: -1 }, 2: { favoritePosition: null } },
+        categories: { [-1]: { id: -1, name: "Drafts", collapsed: false, position: 1 }, 7: null },
+      },
+    });
+
+    expect(
+      sections.map((section) => [section.key, section.rows.map((entry) => entry.room.id)]),
+    ).toEqual([
+      ["category--1", [1]],
+      ["channels", [2]],
+      ["direct", []],
     ]);
   });
 });

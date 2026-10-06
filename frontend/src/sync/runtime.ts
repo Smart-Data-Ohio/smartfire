@@ -9,8 +9,10 @@ import type { DirectUpload } from "../gen/DirectUpload.ts";
 import type { ForwardDestinationList } from "../gen/ForwardDestinationList.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
 import type { Icon } from "../gen/Icon.ts";
+import type { Involvement } from "../gen/Involvement.ts";
 import type { MessageDTO } from "../gen/MessageDTO.ts";
 import type { PinList } from "../gen/PinList.ts";
+import type { RoomCategory } from "../gen/RoomCategory.ts";
 import type { SavedFilter } from "../gen/SavedFilter.ts";
 import type { SavedItem } from "../gen/SavedItem.ts";
 import type { SavedStatus } from "../gen/SavedStatus.ts";
@@ -20,6 +22,7 @@ import type { ThreadInvolvement } from "../gen/ThreadInvolvement.ts";
 import type { UpdateScheduledMessage } from "../gen/UpdateScheduledMessage.ts";
 import type { UpdateThread } from "../gen/UpdateThread.ts";
 import type { ActivityAction } from "../store/activity.ts";
+import type { RoomSlot } from "../store/organize.ts";
 import type { ScheduledListKey } from "../store/scheduled.ts";
 import * as activityActions from "./activity-actions.ts";
 import { Engine } from "./engine.ts";
@@ -27,6 +30,7 @@ import { SyncServices } from "./layers.ts";
 import { Lifecycle } from "./lifecycle.ts";
 import * as messageActions from "./message-actions.ts";
 import * as messageViewActions from "./message-view-actions.ts";
+import * as organizeActions from "./organize-actions.ts";
 import { Outbox, type SendOptions } from "./outbox.ts";
 import { Presence } from "./presence.ts";
 import { ActionError, asAction } from "./run.ts";
@@ -222,6 +226,31 @@ const search = {
   clearRecents: (): Promise<void> => runAction(searchActions.clearRecents()),
 };
 
+/**
+ * Sidebar organisation (S3). Each change shows at once and rolls back if the server refuses;
+ * failures reject with an `ActionError` (a stale category order's is tagged `Conflict`, and the
+ * sidebar has been fetched again by then).
+ */
+const organize = {
+  moveRoom: (roomId: number, slot: RoomSlot): Promise<void> =>
+    runAction(organizeActions.moveRoom(roomId, slot)),
+  favorite: (roomId: number, index?: number): Promise<void> =>
+    runAction(organizeActions.favorite(roomId, index)),
+  unfavorite: (roomId: number): Promise<void> => runAction(organizeActions.unfavorite(roomId)),
+  createCategory: (name: string, roomId: number | null = null): Promise<RoomCategory> =>
+    runAction(organizeActions.createCategory(name, roomId)),
+  renameCategory: (categoryId: number, name: string): Promise<void> =>
+    runAction(organizeActions.renameCategory(categoryId, name)),
+  setCollapsed: (categoryId: number, collapsed: boolean): Promise<void> =>
+    runAction(organizeActions.setCollapsed(categoryId, collapsed)),
+  deleteCategory: (categoryId: number): Promise<void> =>
+    runAction(organizeActions.deleteCategory(categoryId)),
+  reorderCategories: (categoryIds: readonly number[]): Promise<void> =>
+    runAction(organizeActions.reorderCategories(categoryIds)),
+  setInvolvement: (roomId: number, involvement: Involvement): Promise<void> =>
+    runAction(organizeActions.setInvolvement(roomId, involvement)),
+};
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
@@ -230,6 +259,7 @@ export const actions = {
   saved,
   scheduled,
   search,
+  organize,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 

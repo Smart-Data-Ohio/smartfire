@@ -21,9 +21,11 @@ import type {
   Boot,
   ConnectionStatus,
   Me,
+  Membership,
   MessageDTO,
   MessagePage,
   PendingMessage,
+  RoomCategory,
   RoomDetail,
   Sidebar,
   SyncEvent,
@@ -33,6 +35,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import * as organize from "./organize.ts";
 import * as reduce from "./reducers.ts";
 import * as savedList from "./saved-list.ts";
 import * as scheduled from "./scheduled.ts";
@@ -214,6 +217,19 @@ export const mutations = {
     apply((state) =>
       scheduled.markScheduledStale(savedList.markSavedStale(activity.markActivityStale(state))),
     ),
+  /** Sidebar organisation (S3): pending changes, category replies, membership replies. */
+  addSidebarOverlay: (entry: organize.SidebarOverlay) =>
+    apply((state) => organize.addOverlay(state, entry)),
+  dropSidebarOverlay: (entry: organize.SidebarOverlay) =>
+    apply((state) => organize.dropOverlay(state, entry)),
+  upsertCategory: (category: RoomCategory) =>
+    apply((state) => organize.upsertCategory(state, category)),
+  setCategories: (categories: readonly RoomCategory[]) =>
+    apply((state) => organize.setCategories(state, categories)),
+  removeCategory: (categoryId: number) =>
+    apply((state) => organize.removeCategory(state, categoryId)),
+  setMembership: (membership: Membership) =>
+    apply((state) => organize.setMembership(state, membership)),
   /** Back to an empty store (tests). */
   reset: () => apply(() => initialState),
 };

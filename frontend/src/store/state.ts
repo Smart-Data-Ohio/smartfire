@@ -18,6 +18,7 @@ import type {
   User,
   UserPresence,
 } from "./model.ts";
+import { emptyOverlay, type SidebarOverlay } from "./organize.ts";
 import { emptySavedList, type SavedListSlice } from "./saved-list.ts";
 import { emptyScheduled, type ScheduledSlice } from "./scheduled.ts";
 
@@ -73,6 +74,8 @@ export interface SidebarState {
   readonly categories: readonly RoomCategory[];
   readonly placeholderUserIds: readonly number[];
   readonly canCreateRooms: boolean;
+  /** Organising changes on their way to the server, drawn over the rows (S3, organize.ts). */
+  readonly overlay: SidebarOverlay;
 }
 
 export const initialState: State = {
@@ -88,6 +91,7 @@ export const initialState: State = {
     categories: [],
     placeholderUserIds: [],
     canCreateRooms: false,
+    overlay: emptyOverlay,
   },
   rooms: {},
   messages: {},

@@ -19,6 +19,7 @@ import type {
   UserPresence,
 } from "./model.ts";
 import { compareMessages, insertOrdered, mergeUserList } from "./ordering.ts";
+import { removeCategory, setDetailMembership, upsertCategory } from "./organize.ts";
 import { applySavedChange, dropSavedForMessage } from "./saved-list.ts";
 import { applyScheduled, removeScheduled } from "./scheduled.ts";
 import { emptyTimeline, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -76,6 +77,7 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
       categories: sidebar.categories,
       placeholderUserIds: sidebar.directPlaceholderUserIds,
       canCreateRooms: sidebar.canCreateRooms,
+      overlay: state.sidebar.overlay,
     },
   };
 }
@@ -791,10 +793,16 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = markRoomRead(next, event.data.roomId);
         break;
       case "sidebar.row.upserted":
-        next = upsertRow(next, event.data);
+        next = setDetailMembership(upsertRow(next, event.data), event.data.membership);
         break;
       case "sidebar.row.removed":
         next = removeRow(next, event.data.roomId);
+        break;
+      case "sidebar.category.upserted":
+        next = upsertCategory(next, event.data);
+        break;
+      case "sidebar.category.removed":
+        next = removeCategory(next, event.data.id);
         break;
       case "presence":
         next = setPresence(next, [event.data]);
