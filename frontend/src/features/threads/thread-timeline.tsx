@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
 import type { MessageDTO, PendingMessage } from "../../store/model.ts";
@@ -10,11 +10,11 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { useListEdges } from "../messages/list-edges.ts";
 import { DayDivider } from "../room/dividers.tsx";
+import { useFollowPosted } from "../room/follow-posted.ts";
 import { MessageRow, PendingRow } from "../room/message-row.tsx";
 import {
   type CommittedEdges,
   firstMessageKey,
-  postedByViewer,
   prepended,
   type TimelineItem,
   timelineItems,
@@ -180,10 +180,30 @@ export function ThreadTimeline({
       last: lastKey,
     };
 
-    if (appended && (atBottomRef.current || postedByViewer(items.at(-1), viewerId, openedAt))) {
+    if (appended && (atBottomRef.current || items.at(-1)?.kind === "pending")) {
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     }
   });
+
+  useFollowPosted(`thread:${threadId}`, items, listRef);
+
+  /** The next newer replies, when the view is within `PAGE_AHEAD` of a window short of the latest. */
+  const loadNewerNear = (distance: number) => {
+    if (distance < PAGE_AHEAD && timeline.after !== null && !timeline.loadingNewer) {
+      void actions.threads.loadNewer(threadId);
+    }
+  };
+
+  // As the room's timeline: a resync that leaves the window short of the latest reply, with the
+  // reader at its end, pages on without waiting for a scroll.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when the window's end moves, not on every render
+  useEffect(() => {
+    const list = listRef.current;
+
+    if (loaded && list !== null && timeline.after !== null) {
+      loadNewerNear(list.scrollSize - list.scrollOffset - list.viewportSize);
+    }
+  }, [loaded, timeline.after]);
 
   const onScroll = (offset: number) => {
     const list = listRef.current;
@@ -200,9 +220,7 @@ export function ThreadTimeline({
       void actions.threads.loadOlder(threadId);
     }
 
-    if (distance < PAGE_AHEAD && timeline.after !== null && !timeline.loadingNewer) {
-      void actions.threads.loadNewer(threadId);
-    }
+    loadNewerNear(distance);
   };
 
   const renderItem = (item: TimelineItem) => {

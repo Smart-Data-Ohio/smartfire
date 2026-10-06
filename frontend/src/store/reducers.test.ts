@@ -4,6 +4,7 @@ import {
   addPending,
   applyEvents,
   applyPage,
+  applyThreadPage,
   loadSidebar,
   markRoomRead,
   prune,
@@ -131,6 +132,34 @@ describe("applyPage resync", () => {
 
     expect(next.timelines[ROOM]).toBe(away.timelines[ROOM]);
     expect(next.messages[9]).toBeUndefined();
+  });
+
+  it("lands as a fresh window when there's no window to keep", () => {
+    const next = applyPage(initialState, ROOM, page([message(8, 8), message(9, 9)], 8), "resync");
+
+    expect(ids(next)).toEqual([8, 9]);
+    expect(next.timelines[ROOM]?.status).toBe("ready");
+    expect(next.timelines[ROOM]?.after).toBeNull();
+    expect(next.timelines[ROOM]?.generation).toBe(1);
+  });
+
+  it("merges a thread's newest replies in place, as for a room", () => {
+    const THREAD = 70;
+
+    const start = applyThreadPage(
+      initialState,
+      THREAD,
+      page([message(2, 2), message(3, 3)], 2),
+      "replace",
+    );
+
+    const next = applyThreadPage(start, THREAD, page([message(3, 3), message(4, 4)], 3), "resync");
+
+    expect(next.threadTimelines[THREAD]?.ids).toEqual([2, 3, 4]);
+    expect(next.threadTimelines[THREAD]?.before).toBe(2);
+    expect(next.threadTimelines[THREAD]?.generation).toBe(
+      start.threadTimelines[THREAD]?.generation,
+    );
   });
 });
 

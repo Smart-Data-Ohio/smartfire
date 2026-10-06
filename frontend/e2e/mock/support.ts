@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { test as base, type Page } from "@playwright/test";
+import { type APIRequestContext, test as base, type Page } from "@playwright/test";
 
 /** The seeded ids (mock/seed.ts). */
 export { ROOM_IDS, USER_IDS } from "../../mock/seed.ts";
@@ -30,23 +30,55 @@ export const test = base.extend<{ resetMock: undefined }>({
 
 export { expect } from "@playwright/test";
 
+interface HoldOptions {
+  /**
+   * Drops the frames other than the `welcome` that the server sends while held, as a socket that
+   * was down never sees them: the welcome's refetch is all that brings their changes in.
+   */
+  readonly missed?: boolean;
+}
+
 /**
  * Holds every frame the sync socket sends until the returned function is called, so a test can
  * arrange the timeline before the first `welcome` (and the refetch it starts) arrives.
  */
-export async function holdSync(page: Page): Promise<() => void> {
+export async function holdSync(
+  page: Page,
+  { missed = false }: HoldOptions = {},
+): Promise<() => void> {
   const held = Promise.withResolvers<void>();
+  let holding = true;
 
   await page.routeWebSocket(/\/api\/v1\/sync/, (socket) => {
     const server = socket.connectToServer();
 
     server.onMessage(async (message) => {
+      if (missed && holding && !String(message).includes('"t":"welcome"')) {
+        return;
+      }
+
       await held.promise;
       socket.send(message);
     });
   });
 
-  return held.resolve;
+  return () => {
+    holding = false;
+    held.resolve();
+  };
+}
+
+interface MockPost {
+  readonly roomId: number;
+  readonly userId: number;
+  readonly markdown: string;
+}
+
+/** Has someone post in a room through the mock's `/__mock/post` control. */
+export async function postMessage(request: APIRequestContext, body: MockPost): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  await request.post("/__mock/post", { headers: { "X-CSRF-Token": state.csrfToken }, data: body });
 }
 
 /** Opens the app at `path` (under /app/) in `theme`, with motion reduced so shots are settled. */

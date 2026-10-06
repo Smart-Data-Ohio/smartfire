@@ -133,12 +133,6 @@
     overscroll-behavior: contain;
   }
 
-  /* As the room's list (room.css): ringed inside, late, while it holds focus for Home/End. */
-  .thread-timeline-list:focus-visible {
-    outline-offset: -2px;
-    animation: list-focus-ring 400ms step-end;
-  }
-
   .right-pane .pane-body:has(> .thread-timeline) {
     overflow: hidden;
   }

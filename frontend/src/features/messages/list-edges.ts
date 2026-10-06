@@ -39,12 +39,29 @@ function takesFocus(row: HTMLElement): boolean {
   return document.activeElement === row;
 }
 
+function listOf(container: HTMLElement): HTMLElement | null {
+  return container.querySelector<HTMLElement>('[role="log"]');
+}
+
+/**
+ * Whether focus is still where Home/End left it while the edge row is drawn: on the list, on the
+ * row the key came from, or dropped on `<body>` when the scroll unmounted that row. Anywhere else,
+ * the reader has moved on and the wait ends.
+ */
+function stillWaiting(container: HTMLElement, origin: Element | null): boolean {
+  const active = document.activeElement;
+
+  return (
+    active === null || active === document.body || active === origin || active === listOf(container)
+  );
+}
+
 /**
  * Holds focus on the list while the edge row is drawn (and if it never is): off the row the key
- * moved away from at once, and never dropped on `<body>` when the scroll unmounts that row.
+ * moved away from at once, and never left on `<body>` when the scroll unmounts that row.
  */
 function holdFocusOnList(container: HTMLElement): void {
-  const list = container.querySelector<HTMLElement>('[role="log"]');
+  const list = listOf(container);
 
   if (list !== null && document.activeElement !== list) {
     list.focus({ preventScroll: true });
@@ -70,6 +87,9 @@ export function useListEdges(
       return;
     }
 
+    /** The pending frame of the current wait for an edge row, cancelled by the next or unmount. */
+    let frame = 0;
+
     const onEdge = (event: Event) => {
       const list = listRef.current;
       const current = itemsRef.current;
@@ -89,11 +109,16 @@ export function useListEdges(
       const messageId = item.message.id;
       const align = edge === "first" ? "start" : "end";
       const deadline = performance.now() + FOCUS_WAIT_MS;
+      const origin = document.activeElement;
       let scrolledTo = index;
 
-      // Now, then each frame until the row takes focus; a page that landed meanwhile moved it, so
-      // scroll to where it is now.
+      // Now, then each frame until the row takes focus or the reader moves focus elsewhere; a page
+      // that landed meanwhile moved the row, so scroll to where it is now.
       const focusEdge = () => {
+        if (!stillWaiting(container, origin)) {
+          return;
+        }
+
         const row = rowOf(container, messageId);
 
         if (row !== null && takesFocus(row)) {
@@ -114,17 +139,21 @@ export function useListEdges(
         }
 
         if (at >= 0 && performance.now() < deadline) {
-          requestAnimationFrame(focusEdge);
+          frame = requestAnimationFrame(focusEdge);
         }
       };
 
       event.preventDefault();
+      cancelAnimationFrame(frame);
       list.scrollToIndex(index, { align });
       focusEdge();
     };
 
     container.addEventListener(EDGE_EVENT, onEdge);
 
-    return () => container.removeEventListener(EDGE_EVENT, onEdge);
+    return () => {
+      container.removeEventListener(EDGE_EVENT, onEdge);
+      cancelAnimationFrame(frame);
+    };
   }, [containerRef, listRef]);
 }

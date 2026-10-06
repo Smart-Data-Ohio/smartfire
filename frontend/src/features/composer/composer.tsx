@@ -18,6 +18,7 @@ import type { IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { editLastOwnMessage } from "../messages/edit-last.ts";
+import { notePosted } from "../room/follow-posted.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
 import { DropOverlay, useDropTarget } from "./attachments/drop-zone.tsx";
 import {
@@ -352,6 +353,7 @@ export function Composer({
     switch (result.status) {
       case "posted":
         // The server posted it with no pending row: go to it, as a send does.
+        notePosted(threadId === null ? `room:${roomId}` : `thread:${threadId}`, result.messageId);
         toPresent();
 
         if (result.notice !== null) {

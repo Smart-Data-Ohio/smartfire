@@ -1,6 +1,16 @@
 import type { Locator, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
-import { expect, holdSync, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import {
+  expect,
+  holdSync,
+  matrix,
+  postMessage,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 /** A message row by id. */
 function row(page: Page, messageId: number): Locator {
@@ -283,7 +293,10 @@ test.describe("message actions", () => {
   });
 });
 
-test("the sync welcome's refetch leaves a reader on the unread divider", async ({ page }) => {
+test("the sync welcome's refetch leaves a reader on the unread divider", async ({
+  page,
+  request,
+}) => {
   const release = await holdSync(page);
   const messages = `/api/v1/rooms/${ROOM_IDS.general}/messages`;
   // The newer page can load on its own as the room opens, so listen from the start.
@@ -313,15 +326,53 @@ test("the sync welcome's refetch leaves a reader on the unread divider", async (
   }, top);
   await expect(divider).toBeInViewport();
 
-  // The welcome refetches the newest page; it joins the window without moving the reader.
+  // Someone posts while the socket is held. The welcome refetches the newest page, which holds
+  // their message: it joins the window below the reader, counted, without moving them.
+  await postMessage(request, {
+    roomId: ROOM_IDS.general,
+    userId: USER_IDS.maya,
+    markdown: "posted while away",
+  });
+
   const newest = page.waitForResponse((response) => response.url().endsWith(messages));
 
   release();
   await (await newest).finished();
-  await page.evaluate(
-    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
-  );
+  await expect(page.getByRole("button", { name: "1 new message" })).toBeVisible();
   await expect(divider).toBeInViewport();
+});
+
+test("a reader at the bottom through a long absence is paged on to the present", async ({
+  page,
+  request,
+}) => {
+  const release = await holdSync(page, { missed: true });
+
+  // #engineering is read: it opens at the present, the reader at the bottom.
+  await openRoom(page, `r/${ROOM_IDS.engineering}`);
+
+  const log = page.getByRole("log", { name: "Messages" });
+
+  await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
+
+  // More is posted while the socket is down than the welcome's newest page holds, so that page no
+  // longer meets the window: it stops short of the present until the reader is paged on.
+  for (let at = 1; at <= 45; at++) {
+    await postMessage(request, {
+      roomId: ROOM_IDS.engineering,
+      userId: USER_IDS.maya,
+      markdown: `while away ${at}`,
+    });
+  }
+
+  // The welcome also re-reads the window around its middle, which adds older rows and so scrolls
+  // the list; fail that re-read, so nothing the reader does or sees moves the list.
+  await page.route(
+    (url) => url.searchParams.has("around"),
+    (route) => route.abort(),
+  );
+  release();
+  await expect(log.getByText("while away 45", { exact: true })).toBeInViewport();
 });
 
 matrix("message hover bar", async ({ page, theme, phone }) => {

@@ -58,7 +58,7 @@ function frames(count: number): void {
 
 describe("useListEdges", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "performance"] });
+    vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
     // jsdom doesn't lay out, so it has no scrollIntoView; a focused edge row scrolls itself in.
     Element.prototype.scrollIntoView = () => undefined;
   });
@@ -133,9 +133,46 @@ describe("useListEdges", () => {
     rowOf(3)?.focus();
     requestListEdge(rowOf(3) ?? document.body, "first");
     view.rerender(<Harness ids={[1, 2, 3]} drawn={[]} scrollToIndex={scrollToIndex} />);
+    // 400 frames is about 6.4 s, past the 3 s the wait gives up after.
     frames(400);
 
     expect(document.activeElement).toBe(log());
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("stops waiting once the reader moves focus elsewhere", () => {
+    const scrolls: number[] = [];
+    const scrollToIndex = (index: number) => scrolls.push(index);
+    const view = render(<Harness ids={[1, 2, 3]} drawn={[3]} scrollToIndex={scrollToIndex} />);
+    const search = document.createElement("input");
+
+    document.body.append(search);
+    rowOf(3)?.focus();
+    requestListEdge(rowOf(3) ?? document.body, "first");
+    view.rerender(<Harness ids={[1, 2, 3]} drawn={[]} scrollToIndex={scrollToIndex} />);
+    frames(1);
+    search.focus();
+    frames(1);
+
+    expect(document.activeElement).toBe(search);
+    expect(vi.getTimerCount()).toBe(0);
+
+    // The row being drawn later doesn't take focus back either.
+    view.rerender(<Harness ids={[1, 2, 3]} drawn={[1]} scrollToIndex={scrollToIndex} />);
+    frames(10);
+    expect(document.activeElement).toBe(search);
+    search.remove();
+  });
+
+  it("stops waiting when the list unmounts", () => {
+    const view = render(<Harness ids={[1, 2, 3]} drawn={[3]} scrollToIndex={() => undefined} />);
+
+    rowOf(3)?.focus();
+    requestListEdge(rowOf(3) ?? document.body, "first");
+    view.rerender(<Harness ids={[1, 2, 3]} drawn={[]} scrollToIndex={() => undefined} />);
+    frames(1);
+    view.unmount();
+
     expect(vi.getTimerCount()).toBe(0);
   });
 });

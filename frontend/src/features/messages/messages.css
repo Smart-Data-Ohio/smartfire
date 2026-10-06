@@ -10,6 +10,23 @@
     outline: none;
   }
 
+  /*
+   * A room's or thread's list holds focus while Home/End draws a far row (list-edges.ts): ringed
+   * inside, where it isn't clipped, and only once the wait outlasts a blink (usually the row takes
+   * focus a frame or two later).
+   */
+  .timeline-list:focus-visible,
+  .thread-timeline-list:focus-visible {
+    outline-offset: -2px;
+    animation: list-focus-ring 400ms step-end;
+  }
+
+  @keyframes list-focus-ring {
+    from {
+      outline-color: transparent;
+    }
+  }
+
   /* Keyboard focus: an accent ring inside the row, so neighbours never cover it. */
   .message:focus-visible {
     background: color-mix(in oklch, var(--bg-hover), transparent 35%);

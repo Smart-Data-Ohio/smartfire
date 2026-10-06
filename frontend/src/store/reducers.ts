@@ -212,22 +212,18 @@ function heldNewest(timeline: Timeline): number | undefined {
 /**
  * A resync's newest page, landed where the reader is. A window at the present that the page still
  * meets takes it in place (`refresh`), keeping the history above it and the reader's scroll
- * position. One the page no longer meets (more was posted meanwhile than a page holds) keeps its
- * messages and now stops short of the present: the pages towards it load as the reader scrolls
- * down. A window away from the present is left for the engine to re-read around its middle, and
- * only a window with nothing loaded (or a room emptied meanwhile) takes the page as a fresh one.
+ * position. One the page no longer meets (more was posted meanwhile than a page holds, or its
+ * newest message can't be placed) keeps its messages and now stops short of the present: the
+ * timeline pages on towards it from where the reader is. A window away from the present is left
+ * for the engine to re-read around its middle, and only a window with nothing loaded (or a room
+ * emptied meanwhile) takes the page as a fresh one.
  */
 function landNewest(state: State, timeline: Timeline, page: MessagePage): LandedPage {
   const newest = heldNewest(timeline);
   const held = state.messages[newest ?? -1];
   const oldest = page.messages[0];
 
-  if (
-    timeline.status !== "ready" ||
-    newest === undefined ||
-    held === undefined ||
-    oldest === undefined
-  ) {
+  if (timeline.status !== "ready" || newest === undefined || oldest === undefined) {
     return landPage(state, timeline, page, "replace");
   }
 
@@ -235,7 +231,7 @@ function landNewest(state: State, timeline: Timeline, page: MessagePage): Landed
     return { state, timeline };
   }
 
-  if (page.before === null || compareMessages(oldest, held) <= 0) {
+  if (held !== undefined && (page.before === null || compareMessages(oldest, held) <= 0)) {
     return landPage(state, timeline, page, "refresh");
   }
 
