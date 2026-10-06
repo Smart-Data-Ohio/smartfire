@@ -12,7 +12,7 @@ mutations = [
     ('reaction_grant', 'crates/campfire/src/controllers/agents/reactions.rs',
      'if !agent_access::capability_for_agent(', 'if false && !agent_access::capability_for_agent(',
      'agent_reaction_permission_transitions'),
-    ('attachment_file_rollback', 'crates/campfire/src/controllers/messages.rs',
+    ('attachment_file_rollback', 'crates/campfire/src/messaging/operations.rs',
      'keep_after_commit(tx, staged);', 'staged.keep();',
      'agent_attachment_queue_failure'),
 ]

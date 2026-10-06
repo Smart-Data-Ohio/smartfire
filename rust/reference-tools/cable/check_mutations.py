@@ -13,10 +13,10 @@ MUTATIONS = [
     ("two-factor gate", CHANNELS + "connection.rs", "if requires_two_factor(&user)", "if false && requires_two_factor(&user)", MATRIX),
     ("expired session", CHANNELS + "connection.rs", "if session_expired(&session,", "if false && session_expired(&session,", MATRIX),
     ("non-member", "crates/db/src/models/room.rs", '"memberships"."user_id" = ?"#;', '("memberships"."user_id" = ? OR 1)"#;', MATRIX),
-    ("bot", "crates/campfire/src/channels.rs", "self.role == campfire_db::Role::Bot", "false", MATRIX),
+    ("bot", "crates/campfire/src/cable.rs", "self.role == campfire_db::Role::Bot", "false", MATRIX),
     ("banned", "crates/db/src/models/user.rs", "ban", None, MATRIX),
     ("deactivated", "crates/db/src/models/user.rs", "deactivate", None, MATRIX),
-    ("inactive human", "crates/campfire/src/channels.rs", "self.status == campfire_db::Status::Active && !self.bot()", "!self.bot()", "reference_test::activity_rejects_inactive_users"),
+    ("inactive human", "crates/campfire/src/cable.rs", "self.status == campfire_db::Status::Active && !self.bot()", "!self.bot()", "reference_test::activity_rejects_inactive_users"),
     ("typing thread parent", CHANNELS + "typing_notifications.rs", "found.then_some(Conversation::Thread(thread_id))", "Some(Conversation::Thread(thread_id)).filter(|_| found || true)", "reference_test::typing_a_thread"),
     ("typing membership recheck", CHANNELS + "typing_notifications.rs", "if Room::find_for_user(conn, user_id, room_id)?.is_none()", "if false && Room::find_for_user(conn, user_id, room_id)?.is_none()", "reference_test::typing_revoked"),
     ("thread suffix guard", CHANNELS + "room_messages.rs", '[STREAM_SUFFIX, "threads"]', '[STREAM_SUFFIX, STREAM_SUFFIX]', "reference_test::thread_messages_the_stock"),
@@ -27,7 +27,7 @@ MUTATIONS = [
     ("nonce text false positive", "crates/cable/src/turbo.rs", "if let Some(what) = session_bound(content)", "if let Some(what) = session_bound(content).or_else(|| content.contains(\"nonce=\").then_some(\"a CSP nonce\"))", "hub_test::quote_text_post_delivers_to_socket"),
     ("direct mute missing partial", "crates/campfire/src/controllers/rooms/involvements.rs", "direct_rooms: vec![(membership.id, html)]", "direct_rooms: { let _ = html; vec![] }", "hub_test::direct_mute_keeps_the_rendered_sidebar_row"),
     ("repeated stream receivers", "crates/cable/src/channel.rs", ">= MAX_RECEIVERS_PER_STREAM", "> usize::MAX - MAX_RECEIVERS_PER_STREAM", "channels_test::performing_subscribed_bounds_stream_receivers"),
-    ("unresolved token slot", CHANNELS + "broadcasts.rs", "if html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots)", "if false && html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots)", "hub_test::unresolved_token_slots_never_reach_a_socket"),
+    ("unresolved token slot", "crates/campfire/src/cable/broadcasts.rs", "if html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots)", "if false && html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots)", "hub_test::unresolved_token_slots_never_reach_a_socket"),
     ("real message partial", "crates/campfire/src/controllers/messages.rs", "message: Some(html)", "message: Some({ let _ = html; String::new() })", "hub_test::http_broadcasts_supply_real_nonempty_partials"),
 ]
 

@@ -43,7 +43,7 @@ mutations = [
      'if valid_origin && self.any_authenticity_token_valid() {',
      'if valid_origin && { let _ = self.any_authenticity_token_valid(); true } {',
      'cached_owned_forms_submit'),
-    ('github-card-omitted', 'rust/crates/campfire/src/controllers/searches/preloads.rs',
+    ('github-card-omitted', 'rust/crates/campfire/src/controllers/presenters/search_preloads.rs',
      'let html = crate::controllers::presenters::github::message_cards_in_zone(p.conn, p.app(), message, &p.render_zone)?;',
      r'let html = format!("<div id=\"github_pr_cards_message_{}\" class=\"github-pr-cards\"></div>\n", message.client_message_id);',
      'complete_github_containers'),

@@ -6,7 +6,7 @@ root=Path(__file__).resolve().parents[3]
 env=dict(os.environ,CI='1',TMPDIR=str(root/'.scratch'),CARGO_TARGET_DIR=str(root/'rust/target'),CABLE_TEST_PORT_RANGE='52200-52249',MAIL_TEST_PORT_RANGE='52200-52249',INTEGRATION_TEST_PORT_RANGE='52250-52299')
 cases=[
 ('unknown-capability', 'rust/crates/db/src/models/agent_access.rs', 'if !CAPABILITIES.contains(&capability) {\n        return Ok(false);\n    }', 'if !CAPABILITIES.contains(&capability) {\n        return Ok(true);\n    }','campfire_db','ws11_agent_case_unknown_capabilities_are_denied'),
-('nat64-local-use','rust/crates/campfire/src/integrations/net/guard.rs',' || in_v6(ip, NAT64_LOCAL_USE)',' || false','campfire','ws11_private_guard_case_private_ip_returns_true_for_the_whole_local_use_nat64_block_rfc8215'),
+('nat64-local-use','rust/crates/campfire/src/net/guard.rs',' || in_v6(ip, NAT64_LOCAL_USE)',' || false','campfire','ws11_private_guard_case_private_ip_returns_true_for_the_whole_local_use_nat64_block_rfc8215'),
 ]
 for name,file,before,after,package,test in cases:
  path=root/file;original=path.read_text();assert before in original,name

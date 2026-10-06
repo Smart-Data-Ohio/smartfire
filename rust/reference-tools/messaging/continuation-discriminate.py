@@ -38,7 +38,7 @@ thread_tests = "controllers::channel_threads::tests::"
 check("root-page-scope", controller, "Message::find_in(conn, timeline, id)",
       "match timeline { Timeline::Room(room_id) => Message::find_in_room(conn, room_id, id), _ => Message::find_in(conn, timeline, id) }",
       paging + "page_anchors_require_alive_membership_and_a_root_message")
-check("validator-pin-set", "rust/crates/campfire/src/controllers/messages/freshness.rs",
+check("validator-pin-set", "rust/crates/campfire/src/controllers/presenters/message_freshness.rs",
       'pairs.join(", ")', 'String::new()', paging + "validators_observe_related_rows_and_older_unpins_without_message_touches")
 check("publisher-rendered-message", "rust/crates/campfire/src/controllers/messages/rendered.rs",
       "Ok(Some(views::uncached_message(ctx, &view)))", "Ok(Some(String::new()))",
@@ -86,7 +86,7 @@ check("thread-pages-bot", threads,
 check("thread-list-stale", threads,
       "(board || thread.auto_archive_at() > now)", "(board || true || thread.auto_archive_at() > now)",
       "controllers::channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes")
-check("work-event-note", "rust/crates/campfire/src/controllers/messages/payload.rs",
+check("work-event-note", "rust/crates/campfire/src/controllers/presenters/message_payload.rs",
       'event["note"] = note.into();', 'let _ = note;',
       "controllers::channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes")
 print("WS8bm continuation discrimination: 18 compiled regressions detected; sources restored", flush=True)

@@ -13,7 +13,7 @@ env = dict(os.environ, TMPDIR=str(root.parent / '.scratch'), CARGO_TARGET_DIR=st
            INTEGRATION_TEST_PORT_RANGE='52250-52299')
 mutations = [
     ('private-guard', 'campfire', 'crates/campfire/src/integrations/webhook.rs',
-     'crate::integrations::net::guard::resolve_webhook(&*net.resolver, &host).await?', '"10.0.0.7".parse().unwrap()',
+     'crate::net::guard::resolve_webhook(&*net.resolver, &host).await?', '"10.0.0.7".parse().unwrap()',
      'ws11_blocks_private_webhooks_before_connecting'),
     ('dns-pinning', 'campfire', 'crates/campfire/src/integrations/webhook.rs',
      'pinned_ip: Some(address)', 'pinned_ip: None', 'ws11_pins_public_dns_answer_and_sends_timestamp'),
@@ -43,10 +43,10 @@ mutations = [
     ('secret-encoding', 'campfire', 'crates/db/src/models/webhook.rs',
      'encryption.encrypt_with_encoding(secret.as_bytes(), "US-ASCII")', 'encryption.encrypt_with_encoding(secret.as_bytes(), "UTF-8")',
      'ws11_webhook_secrets_reload_encrypt_and_rotate'),
-    ('sync-reply-link', 'campfire', 'crates/campfire/src/integrations/jobs.rs',
+    ('sync-reply-link', 'campfire', 'crates/campfire/src/jobs/integrations.rs',
      'attributes.reply_to_message_id = trigger.map(|message| message.id);', 'attributes.reply_to_message_id = None;',
      'ws11_sync_replies_use_root_links_threads_boards_and_locking'),
-    ('sync-reply-thread', 'campfire', 'crates/campfire/src/integrations/jobs.rs',
+    ('sync-reply-thread', 'campfire', 'crates/campfire/src/jobs/integrations.rs',
      'trigger.and_then(|message| message.thread_id)', 'trigger.and_then(|_| None)',
      'ws11_sync_replies_use_root_links_threads_boards_and_locking'),
     ('posting-budget', 'campfire', 'crates/db/src/models/agent_posting.rs',
@@ -65,7 +65,7 @@ mutations = [
 ]
 clock_path = root / 'crates/campfire/src/integrations/webhook.rs'
 clock_source = clock_path.read_text()
-clock_start = clock_source.index('    let address = crate::integrations::net::guard::resolve_webhook')
+clock_start = clock_source.index('    let address = crate::net::guard::resolve_webhook')
 clock_end = clock_source.index('    let headers = rails_compat::webhook::smartfire_headers', clock_start)
 clock_before = clock_source[clock_start:clock_end]
 clock_after = '    let now = now();\n' + clock_before.replace('    let now = now();\n', '')

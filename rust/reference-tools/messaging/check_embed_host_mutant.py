@@ -21,9 +21,9 @@ def replace(relative,old,new):
     path=ROOT/relative;raw=path.read_bytes();text=raw.decode();assert text.count(old)==1,(relative,old)
     originals[path]=raw;path.write_text(text.replace(old,new))
 try:
-    replace('rust/crates/campfire/src/integrations/net/http.rs', 'pub const NET_HTTP_DEFAULT_TIMEOUT:',
+    replace('rust/crates/campfire/src/net/http.rs', 'pub const NET_HTTP_DEFAULT_TIMEOUT:',
             'pub(crate) static EMBED_HOST_FAULT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);\npub const NET_HTTP_DEFAULT_TIMEOUT:')
-    path=ROOT/'rust/crates/campfire/src/integrations/net/http.rs';text=path.read_text()
+    path=ROOT/'rust/crates/campfire/src/net/http.rs';text=path.read_text()
     marker='self.default("Host", &endpoint.host_header());';assert text.count(marker)==1
     path.write_text(text.replace(marker,marker+'''\n        if EMBED_HOST_FAULT.load(std::sync::atomic::Ordering::SeqCst) {
             for (name, value) in &mut self.headers {
@@ -34,7 +34,7 @@ try:
         replace(f'rust/crates/campfire/src/controllers/message_features/{name}.rs',
             'for job in group["jobs"].as_array().unwrap() {',
             '''for job in group["jobs"].as_array().unwrap() {
-            crate::integrations::net::http::EMBED_HOST_FAULT.store(job["name"]=="http_error",std::sync::atomic::Ordering::SeqCst);''')
+            crate::net::http::EMBED_HOST_FAULT.store(job["name"]=="http_error",std::sync::atomic::Ordering::SeqCst);''')
         path=ROOT/f'rust/crates/campfire/src/controllers/message_features/{name}.rs';text=path.read_text()
         marker='assert!(r.header("Authorization").is_none());';assert text.count(marker)==1
         path.write_text(text.replace(marker,marker+'''\n                    println!("WS8bm2 Host control case={} observed={:?}",job["name"],r.header("Host"));'''))

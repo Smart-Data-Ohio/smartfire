@@ -8,7 +8,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[3]
 CONTROLLER = ROOT / "rust/crates/campfire/src/controllers/messages.rs"
 PRESENTER = ROOT / "rust/crates/campfire/src/controllers/presenters.rs"
-PAYLOAD = ROOT / "rust/crates/campfire/src/controllers/messages/payload.rs"
+PAYLOAD = ROOT / "rust/crates/campfire/src/controllers/presenters/message_payload.rs"
 MODEL = ROOT / "rust/crates/db/src/models/message.rs"
 SCRATCH = ROOT / ".scratch/root-discrimination"
 SCRATCH.mkdir(parents=True, exist_ok=True)

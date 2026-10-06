@@ -7,7 +7,7 @@ async fn ws8bm_browser_host_without_jobs() {
     let booted = boot_with_services(
         Config::from_env().unwrap(),
         campfire_kit::clock::from_env().unwrap(),
-        crate::integrations::net::Network::system(),
+        crate::net::Network::system(),
         crate::jobs::periodic::Intervals { periodic: None, huddle: None },
     ).await.unwrap();
     let app = TestApp { booted, _dir: tempfile::tempdir().unwrap() }

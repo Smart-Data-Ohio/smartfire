@@ -8,7 +8,7 @@ scratch.mkdir(parents=True,exist_ok=True)
 mutations=[
  ('read_workspace','crates/campfire/src/integrations/fizzy/agent_reads.rs',"capability='fizzy' AND room_id IS NULL", "capability='fizzy'",'fizzy_read_wire_errors_and_coercions'),
  ('write_workspace','crates/campfire/src/integrations/fizzy/agent_requests.rs',"capability='external_action' AND room_id IS NULL", "capability='external_action'",'fizzy_action_wire_errors_replays_and_coercions'),
- ('disconnect_owner','crates/campfire/src/jobs.rs','account.mark_disconnected(tx, "Account deactivated")?;', 'let _ = account;', 'rails_deactivating_the_user_disconnects_the_account'),
+ ('disconnect_owner','crates/campfire/src/queue.rs','account.mark_disconnected(tx, "Account deactivated")?;', 'let _ = account;', 'rails_deactivating_the_user_disconnects_the_account'),
 ]
 for name,file,before,after,test in mutations:
  p=root/file; original=p.read_text(); assert original.count(before)==1,(name,original.count(before))

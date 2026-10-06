@@ -115,13 +115,13 @@ check("poll-json-order", "rust/crates/db/src/models/poll.rs",
 check("pin-note", "rust/crates/db/src/models/message_pin.rs",
       "if let Some(note) = pin.post_pin_note(tx, message)? {", "if let Some(note) = None::<Message> {",
       "pin_requests_match_rails_and_keep_the_note_quiet_and_idempotent")
-check("atomic-job", "rust/crates/campfire/src/jobs.rs",
+check("atomic-job", "rust/crates/campfire/src/queue.rs",
       "let id = self.queue.enqueue(tx, &request)?;", "let id = 0;",
       "poll_creation_rolls_back_when_the_durable_job_insert_is_rejected")
 check("turbo-vote", "rust/crates/campfire/src/controllers/rooms/polls.rs",
       "campfire_cable::turbo::Action::Replace", "campfire_cable::turbo::Action::Append",
       "ballots_replace_and_retract_in_turbo_and_reject_foreign_rooms_and_odd_shapes")
-check("sti-pin-list", "rust/crates/campfire/src/controllers/rooms/pins.rs",
+check("sti-pin-list", "rust/crates/campfire/src/controllers/presenters/pins.rs",
       "campfire_db::broadcasts::room_param_key(room.room_type)", '"rooms_closed".to_owned()',
       "boards_reject_root_polls_and_pin_lists_keep_their_sti_dom_identity")
 check("request-zone", "rust/crates/campfire/src/controllers/message_features.rs",
@@ -141,14 +141,14 @@ check("saved-partials", "rust/crates/views/templates/saved_items/_item.html", 'c
       "controllers::message_features::saved_tests::saved_partials_match_rails_for_reminders_statuses_zones_and_empty_page")
 check("saved-csrf", "rust/crates/campfire/src/controllers/saved_items.rs", "before_actions(c, Before::default()).await?;", "before_actions(c, Before::default().skip_forgery_protection()).await?;",
       "controllers::message_features::saved_tests::saved_mutations_require_csrf_and_turbo_redirects_keep_the_filter")
-check("saved-reminder-job", "rust/crates/campfire/src/jobs.rs", "let id = self.queue.enqueue(tx, &request)?;", "let id = 0;",
+check("saved-reminder-job", "rust/crates/campfire/src/queue.rs", "let id = self.queue.enqueue(tx, &request)?;", "let id = 0;",
       "controllers::message_features::saved_tests::reminder_dispatch_rolls_back_failed_jobs_and_refires_the_same_inbox_item")
 check('scheduled-race-edit', 'rust/crates/campfire/src/controllers/scheduled_messages.rs', 'let mut row = ScheduledMessage::find(tx.conn(), initial.id)?;', 'let mut row = initial;', 'controllers::message_features::scheduled_tests::a_send_between_lookup_and_lock_refuses_the_edit')
 check('scheduled-race-cancel', 'rust/crates/campfire/src/controllers/scheduled_messages.rs', 'let row = ScheduledMessage::find(tx.conn(), initial.id)?;', 'let row = initial;', 'controllers::message_features::scheduled_tests::a_send_between_lookup_and_lock_refuses_the_cancel')
 check('scheduled-zone', 'rust/crates/campfire/src/controllers/scheduled_messages.rs', 'let zone = features::user_zone(c).await?;', 'let zone = { let _ = features::user_zone(c).await?; campfire_views::time::Zone::utc() };', 'controllers::message_features::scheduled_tests::scheduled_http_matches_rails_json_offsets_and_claim_outcomes')
 check('scheduled-partials', 'rust/crates/views/templates/scheduled_messages/_item.html', 'class="scheduled-message__meta"', 'class="scheduled-message__meta-broken"', 'controllers::message_features::scheduled_tests::scheduled_row_partials_match_rails_and_empty_page_bytes')
 check('scheduled-csrf', 'rust/crates/campfire/src/controllers/scheduled_messages.rs', 'before_actions(c, Before::default()).await?;', 'before_actions(c, Before::default().skip_forgery_protection()).await?;', 'controllers::message_features::scheduled_tests::scheduled_mutations_require_csrf_and_busy_claims_accept_no_parameters')
-check('scheduled-job', 'rust/crates/campfire/src/jobs.rs', 'let id = self.queue.enqueue(tx, &request)?;', 'let id = 0;', 'controllers::message_features::scheduled_tests::scheduled_send_rolls_back_claim_post_and_history_when_job_insert_fails')
+check('scheduled-job', 'rust/crates/campfire/src/queue.rs', 'let id = self.queue.enqueue(tx, &request)?;', 'let id = 0;', 'controllers::message_features::scheduled_tests::scheduled_send_rolls_back_claim_post_and_history_when_job_insert_fails')
 check('scheduled-socket', 'rust/crates/campfire/src/channels/message_features.rs', 'if !pin_note && !scheduled && !SLASH.with(|flag| flag.get()) {', 'if !pin_note && !SLASH.with(|flag| flag.get()) {', 'controllers::message_features::scheduled_tests::scheduled_send_reaches_a_real_websocket_with_one_token_free_message_frame')
 check('scheduled-composer', 'rust/crates/views/templates/scheduled_messages/_composer_button.html', 'data-controller="schedule-send"', 'data-controller="broken"', 'controllers::message_features::scheduled_tests::scheduled_composer_controls_match_rails_for_room_and_thread')
 check('search-membership', 'rust/crates/db/src/models/search_query.rs', 'mem.room_id=rooms.id AND mem.user_id=?)', 'mem.room_id=rooms.id AND mem.user_id=? OR rooms.id=messages.room_id)', 'controllers::searches::ports::unreachable_messages_are_not_found')
@@ -161,12 +161,12 @@ check('search-header-limit', 'rust/crates/db/src/models/search.rs', 'SELECT * FR
 check('search-fts', 'rust/crates/db/src/models/search_query.rs', 'format!("\\"{w}\\"")', 'w.to_string()', 'controllers::searches::ports::a_boolean_looking_query_does_not_exclude_terms')
 check('search-section-time', 'rust/crates/views/templates/searches/_sections.html', '"time",h::attrs()', '"datetime",h::attrs()', 'controllers::searches::ports::search_sections_load_older_and_older_stream_match_pinned_rails_bytes')
 check('preload-lazy', 'rust/crates/campfire/src/controllers/searches.rs', 'let p = p.preload_search(messages)?;', 'let mut p = p.preload_search(messages)?; let data = p.search_preloads.take(); let _ = p.messages(messages)?; p.search_preloads = data;', 'controllers::searches::ports::full_message_preloads_keep_queries_constant')
-check('preload-pin', 'rust/crates/campfire/src/controllers/searches/preloads.rs', 'pinned: self.records.pinned.contains(&m.id),', 'pinned: false,', 'controllers::searches::ports::preloaded_complete_messages_match_rails_and_lazy_presenter')
+check('preload-pin', 'rust/crates/campfire/src/controllers/presenters/search_preloads.rs', 'pinned: self.records.pinned.contains(&m.id),', 'pinned: false,', 'controllers::searches::ports::preloaded_complete_messages_match_rails_and_lazy_presenter')
 check('slash-csrf', 'rust/crates/campfire/src/controllers/rooms/slash_commands.rs', 'before_actions(c, Before::default()).await?;', 'before_actions(c, Before::default().skip_forgery_protection()).await?;', 'controllers::message_features::slash_tests::slash_writes_require_csrf_and_scope_threads')
 check('slash-token-duplicates', 'rust/crates/db/src/autocomplete_users.rs', 'HAVING COUNT(*)=1', 'HAVING COUNT(*)>=1', 'controllers::message_features::slash_tests::user_tokens_check_duplicates_outside_the_page_and_omit_invalid_names')
 check('slash-icons-rank', 'rust/crates/campfire/src/controllers/autocompletable/icons.rs', 'ar.cmp(br)', 'br.cmp(ar)', 'controllers::message_features::slash_tests::slash_and_picker_responses_match_pinned_rails_exact_bytes')
 check('slash-root-only', 'rust/crates/db/src/command_suggestions.rs', 'available(thread)', 'available({let _ = thread; false})', 'controllers::message_features::slash_tests::picker_thread_conversations_hide_root_only_commands')
-check('slash-job-atomic', 'rust/crates/campfire/src/jobs.rs', 'let id = self.queue.enqueue(tx, &request)?;', 'let id = 0;', 'controllers::message_features::slash_tests::slash_remind_rolls_back_post_save_and_index_when_job_insert_fails')
+check('slash-job-atomic', 'rust/crates/campfire/src/queue.rs', 'let id = self.queue.enqueue(tx, &request)?;', 'let id = 0;', 'controllers::message_features::slash_tests::slash_remind_rolls_back_post_save_and_index_when_job_insert_fails')
 check('slash-socket', 'rust/crates/campfire/src/channels/message_features.rs', '!SLASH.with(|flag| flag.get())', 'true', 'controllers::message_features::slash_tests::slash_post_reaches_a_real_websocket_once_without_session_values')
 check('files-scope', 'rust/crates/db/src/models/room_files.rs', 'AND m.room_id=? AND', 'AND m.room_id>=? AND', 'controllers::message_features::links_files_tests::only_the_rooms_own_files_are_listed')
 check('files-literal', 'rust/crates/db/src/models/room_files.rs', '.replace(\'%\', "\\\\%")', '.replace(\'%\', "%")', 'controllers::message_features::links_files_tests::filename_search_matches_substrings_and_escapes_wildcards')

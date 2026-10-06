@@ -399,7 +399,7 @@
     },
     {
       "rails_file": "test/lib/restricted_http/private_network_guard_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/net/guard_case_tests.rs",
+      "rust_file": "rust/crates/campfire/src/net/guard_case_tests.rs",
       "cases": [
         {
           "rails": "private_ip? returns true for 'This' network (RFC1700)",
@@ -687,7 +687,7 @@
     },
     {
       "rails_file": "test/jobs/agent/event_webhook_job_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/case_tests.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/case_tests.rs",
       "cases": [
         {
           "rails": "a successful post marks the row delivered",
@@ -799,7 +799,7 @@
     },
     {
       "rails_file": "test/models/user/bot_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/case_tests.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/case_tests.rs",
       "cases": [
         {
           "rails": "bot auth keeps working after plaintext clearing",
@@ -809,7 +809,7 @@
     },
     {
       "rails_file": "test/models/webhook_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/webhook_cases.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/webhook_cases.rs",
       "cases": [
         {
           "rails": "payload",
@@ -919,7 +919,7 @@
     },
     {
       "rails_file": "test/models/agent/delivery_recovery_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/recovery_cases.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/recovery_cases.rs",
       "cases": [
         {
           "rails": "a stranded pending row gets recovered",
@@ -1111,7 +1111,7 @@
     },
     {
       "rails_file": "test/jobs/agent/delivery_job_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/delivery_path_cases.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/delivery_path_cases.rs",
       "cases": [
         {
           "rails": "delivery posts the webhook with the additive agent key",
@@ -1137,7 +1137,7 @@
     },
     {
       "rails_file": "test/jobs/agent/delivery_concurrency_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/delivery_path_cases.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/delivery_path_cases.rs",
       "cases": [
         {
           "rails": "concurrent mentions cannot exceed the rate limit",
@@ -1161,7 +1161,7 @@
     },
     {
       "rails_file": "test/models/webhook_agent_key_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/webhook_key_cases.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/webhook_key_cases.rs",
       "cases": [
         {
           "rails": "deliver without agent context for an agent-backed bot sends no agent key or bot key",
@@ -1497,7 +1497,7 @@
     },
     {
       "rails_file": "test/models/user/bot_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/remaining_cases.rs",
       "cases": [
         {
           "rails": "deliver message by webhook",
@@ -1525,7 +1525,7 @@
     },
     {
       "rails_file": "test/models/channel_thread_agent_assignment_test.rb",
-      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/remaining_cases.rs",
+      "rust_file": "rust/crates/campfire/src/jobs/agent_jobs/remaining_cases.rs",
       "cases": [
         {
           "rails": "deleting an agent-owned thread emits work_unassigned",

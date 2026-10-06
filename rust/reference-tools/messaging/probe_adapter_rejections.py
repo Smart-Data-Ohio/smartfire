@@ -21,7 +21,7 @@ assert runner
 module = ROOT / 'rust/crates/campfire/src/controllers/message_features/adapter_rejection_probe.rs'
 assert not module.exists()
 parent = ROOT / 'rust/crates/campfire/src/controllers/message_features.rs'
-jobs = ROOT / 'rust/crates/campfire/src/jobs.rs'
+jobs = ROOT / 'rust/crates/campfire/src/queue.rs'
 original = {parent: parent.read_bytes(), jobs: jobs.read_bytes()}
 try:
     module.write_text(r'''

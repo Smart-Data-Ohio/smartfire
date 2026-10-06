@@ -17,7 +17,7 @@ mutations = [
      '(metadata::ruby_to_s(data.get("room_id")) == room_id).then',
      '(!metadata::ruby_to_s(data.get("room_id")).is_empty()).then',
      'bot_http_reply_invalid_scope'),
-    ('media_analysis', 'crates/campfire/src/controllers/messages.rs',
+    ('media_analysis', 'crates/campfire/src/messaging/operations.rs',
      'let blob = analyze_attachment(app, blob).await?;', 'let blob = blob;',
      'agent_attachments_rest_bytes'),
 ]
