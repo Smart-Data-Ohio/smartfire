@@ -2,8 +2,12 @@
 
 `Rust port` gates clippy, the production-input binary build, all ordinary workspace
 nextest tests, and runnable doctests. It is an aggregator: it fails unless each of
-these jobs succeeded (a failed, cancelled or skipped one fails it), and its summary
-adds up every shard's JUnit receipt and doctest log. It reports on every pull request:
+these jobs succeeded (a failed, cancelled or skipped one fails it). Its summary
+(`summarize-tests.py --expect`) also fails unless the shards' JUnit receipts hold exactly
+the tests `cargo nextest list` selects for their filter, each passed once, with every
+`#[ignore]` test reported; the same for the LLVM job's four; and libtest's doctest logs
+account for every doctest they ran. Both gates run `check_gate_needs.py`, which fails if
+any job in `rust.yml` is missing from their `needs`. It reports on every pull request:
 `Rust changes` checks the PR's diff, and when it touches no Rust input (`rust/`, the
 Rails app the port reads as its reference, this workflow or its setup action) the jobs
 below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
@@ -12,15 +16,18 @@ nightly and manual runs, empty diffs and unavailable history always run everythi
 | Job | Runs |
 | --- | --- |
 | `Rust seeds` | Builds or restores the pinned reference image and seeds, validates them with Rails, and proves the parity gates reject bad inputs. Saves both caches on main. |
-| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (campfire on Cranelift; the nightly run builds campfire with LLVM). Shard 1 also runs `verify-ignored.sh` against the harnesses it compiled. |
+| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (campfire on Cranelift; the nightly run builds campfire with LLVM). Shard 1 also lists the tests the shards and the LLVM job must run, and runs `verify-ignored.sh`, against the harnesses it compiled. |
 | `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with campfire on LLVM: Cranelift can't unwind. Fails unless exactly those four ran and passed. |
-| `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with. |
+| `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with, from its own `stable` Cargo cache. |
 | `Rust clippy, binaries and doctests` | rust/ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
 
 Correctness builds run from the repository root, where neither `rust-toolchain.toml` nor
 `.cargo/config.toml` applies, so they use the stable toolchain and LLVM and restore their
 own `correctness` Cargo cache (saved on main by browsers shard 2/4); the test shards' cache
-holds nightly artifacts.
+holds nightly artifacts. Cargo caches hold only registry dependencies, so their keys are the
+toolchains, build inputs and `Cargo.lock`, not the commit: a push to main saves one only when
+no entry with that key exists. Every artifact upload overwrites its earlier attempt's, so a
+failed job can be re-run on its own.
 
 Test and correctness jobs restore the seed cache entry by its exact key, the same
 immutable entry `Rust seeds` validates in that run; on a miss they build and validate
@@ -48,7 +55,7 @@ instead of building it sixteen times.
 | database | `reference-tools/db/differential.sh --prepare-only`, `reference-tools/auth/rollback.sh --prepare-only`, then exactly 3 ignored Ruby DB/rollback comparisons |
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
 | browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 7 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
-| livekit | `bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
+| livekit | `web/bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
 | messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16` (paired Rails/Rust cases) |
 | messaging originals (2 shards) | `behavior-check.py --prepare-only`, then the 53 registered original WS14/WS15 browser declarations against Rust via the pinned native Selenium image |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget, work against Rails and Rust) |

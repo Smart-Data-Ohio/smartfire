@@ -6,10 +6,10 @@ FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3e
 
 WORKDIR /opt/campfire-huddles/gateway
 
-COPY script/livekit-gateway/package.json script/livekit-gateway/package-lock.json ./
+COPY rust/web/script/livekit-gateway/package.json rust/web/script/livekit-gateway/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
-COPY script/livekit-gateway/gateway.mjs script/livekit-gateway/server.mjs ./
+COPY rust/web/script/livekit-gateway/gateway.mjs rust/web/script/livekit-gateway/server.mjs ./
 COPY deploy/huddles/runtime/start.mjs deploy/huddles/runtime/supervisor.mjs /opt/campfire-huddles/runtime/
 COPY --from=livekit /livekit-server /usr/local/bin/livekit-server
 

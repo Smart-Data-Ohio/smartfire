@@ -50,7 +50,7 @@ helper = original(scopes['source'])
 assert scopes['reference'] == pin and hashlib.sha256(helper.encode()).hexdigest() == scopes['source_sha256']
 for field, constant in [('drive_scopes', 'DRIVE_SCOPES'), ('legacy_drive_scopes', 'LEGACY_DRIVE_SCOPES')]:
     assert scopes[field] == re.search(r'^  ' + constant + r' = "([^"]+)"', helper, re.M).group(1)
-assert (root / 'rust/reference-tools/users/service_worker_original_harness.mjs').read_text() == original('test/scripts/service_worker_harness.mjs')
+assert (root / 'rust/test-support/service_worker_original_harness.mjs').read_text() == original('test/scripts/service_worker_harness.mjs')
 mutations = json.loads((root / sweep['mutation_evidence']).read_text())
 assert len(mutations['controls']) == 22
 assert sum(c['before_exit'] == 0 for c in mutations['controls']) == 21

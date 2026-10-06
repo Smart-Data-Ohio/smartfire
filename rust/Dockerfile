@@ -6,12 +6,10 @@
 # 80, and with TLS_DOMAIN, HTTPS on 443 with Let's Encrypt certificates cached in
 # /rails/storage/thruster, where the reference's Thruster keeps them.
 #
-#   docker build -t campfire-rust --build-context reference=.. \
-#     --build-arg APP_VERSION=... --build-arg GIT_REVISION=... .
+#   docker build -t campfire-rust --build-arg APP_VERSION=... --build-arg GIT_REVISION=... .
 #
-# The build context is rust/; the reference Rails app (the repository root, or any checkout of it)
-# comes in as the named context `reference`, for the assets and public/ files the binary embeds and
-# the assets. Runtime hooks live in this tree and honor the storage overrides.
+# The build context is rust/, including web/, the port's copy of the Rails app's assets and public/
+# files that the binary embeds. Runtime hooks live in this tree and honor the storage overrides.
 #
 # Media: variants and video posters must be byte-identical to the reference's, so libvips and
 # ffmpeg are built from the same Debian trixie source packages the reference image ships
@@ -152,15 +150,14 @@ ARG CARGO_CACHE_SCOPE=campfire-rust
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates crates
-# crates/assets/build.rs digests and embeds the reference's assets and public/ at build time: only
-# those parts of the reference app come in (build.rs leaves out a stray public/assets precompile).
-ENV CAMPFIRE_REFERENCE=/reference
-COPY --from=reference app/assets /reference/app/assets
-COPY --from=reference app/javascript /reference/app/javascript
-COPY --from=reference vendor/javascript /reference/vendor/javascript
-COPY --from=reference public /reference/public
-COPY --from=reference config/importmap.rb /reference/config/importmap.rb
-COPY --from=reference config/initializers/assets.rb /reference/config/initializers/assets.rb
+# crates/assets/build.rs digests and embeds web/'s assets and public/ at build time: only those
+# parts of web/ come in (build.rs leaves out a stray public/assets precompile).
+COPY web/app/assets web/app/assets
+COPY web/app/javascript web/app/javascript
+COPY web/vendor/javascript web/vendor/javascript
+COPY web/public web/public
+COPY web/config/importmap.rb web/config/importmap.rb
+COPY web/config/initializers/assets.rb web/config/initializers/assets.rb
 
 RUN --mount=type=cache,id=${CARGO_CACHE_SCOPE}-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=${CARGO_CACHE_SCOPE}-target,target=/src/target \

@@ -28,7 +28,8 @@ else
 
   WORK="$(mktemp -d -p "${TMPDIR:-$ROOT/target}" assets-export.XXXXXX)"
   trap 'rm -rf "$WORK"' EXIT
-  rsync -a --exclude /tmp --exclude /log --exclude /storage --exclude /public/assets \
+  # --copy-links: the app's assets, public/ and importmap are symlinks into rust/web.
+  rsync -a --copy-links --exclude /tmp --exclude /log --exclude /storage --exclude /public/assets \
     --exclude /rust --exclude /.claude --exclude /.git --exclude node_modules "$REFERENCE_ROOT/" "$WORK/"
   mkdir -p "$WORK/tmp" "$WORK/log"
 

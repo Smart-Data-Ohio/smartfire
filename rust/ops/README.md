@@ -55,15 +55,15 @@ differential uses `campfire-reference` (or `PARITY_IMAGE`) unless
 
 ## Image and release contract
 
-Build from the repository root with the reference as a named context:
+Build with `rust/` as the context; it carries its own frontend inputs in `rust/web/`:
 
 ```sh
-docker build -f rust/Dockerfile --build-context reference=. -t smartfire-rust rust
+docker build -f rust/Dockerfile -t smartfire-rust rust
 ```
 
 The image has uid/gid 1000, `/rails`, `/rails/storage/{db,files,backups}`, ports
 80/443, `bin/boot`, and both ONCE hooks. Like the Rails image it has no
-`HEALTHCHECK`. Assets are digested and embedded from the Rails checkout at build
+`HEALTHCHECK`. Assets are digested and embedded from `rust/web/` at build
 time. `CARGO_BUILD_JOBS` defaults to 4; `CARGO_PROFILE` defaults to release. A
 developer can select dev; measurements intended to represent deployment use
 release. `CARGO_CACHE_SCOPE` separates a worker's Docker target/registry caches.
