@@ -6,7 +6,7 @@ use crate::controllers::presenters::page;
 use askama::Template;
 use campfire_kit::{Ctx, Result, StatusCode, format};
 
-pub(crate) use crate::controllers::presenters::pins::list;
+pub use crate::controllers::presenters::pins::list;
 
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;

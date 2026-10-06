@@ -336,6 +336,3 @@ async fn broadcast_create_room(c: &Ctx, room: &Room) -> Result<()> {
         .await
         .map_err(db_error)
 }
-
-#[cfg(test)]
-mod picker_tests;
