@@ -419,7 +419,7 @@ describe("the activity inbox", () => {
     const read = nextActivityItem(unread, "read", at(20));
     const handled = nextActivityItem(read, "handled", at(30));
 
-    expect(read).toMatchObject({ state: "read", readAt: at(20), updatedAt: at(10) });
+    expect(read).toMatchObject({ state: "read", readAt: at(20), updatedAt: at(20) });
     expect(handled).toMatchObject({ state: "handled", readAt: at(20), handledAt: at(30) });
     expect(nextActivityItem(handled, "read", at(40))).toBe(handled);
     expect(nextActivityItem(handled, "unhandled", at(40))).toMatchObject({

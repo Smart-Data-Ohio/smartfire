@@ -270,7 +270,8 @@ function derivedState(readAt: string | null, handledAt: string | null): Activity
 /**
  * The item after `action`, as the server applies it (`PATCH /activity/:id`, `open` is `read`):
  * read sets `readAt` (a no-op on a handled item); unread clears both; handled sets `handledAt`
- * and `readAt` if unset; unhandled clears `handledAt`. `updatedAt` stays: it isn't the state's.
+ * and `readAt` if unset; unhandled clears `handledAt`. A change bumps `updatedAt`, the inbox's
+ * sort key (`save_state`), so the item lands at the top of its new list.
  */
 export function nextActivityItem(
   item: ActivityItem,
@@ -300,7 +301,13 @@ export function nextActivityItem(
     return item;
   }
 
-  return { ...item, readAt, handledAt, state: derivedState(readAt, handledAt) };
+  return {
+    ...item,
+    readAt,
+    handledAt,
+    updatedAt: now,
+    state: derivedState(readAt, handledAt),
+  };
 }
 
 /** How the badge moves when an item goes from `before` to `after`. */

@@ -1185,7 +1185,8 @@ export function seedS3(world: World, now: number, random: Random): void {
       readAt,
       handledAt,
       createdAt: iso(draft.createdAt),
-      updatedAt: iso(draft.updatedAt),
+      // Every state change bumps `updatedAt` (`save_state`), so a read or handled item sorts by it.
+      updatedAt: handledAt ?? readAt ?? iso(draft.updatedAt),
       source: draft.source,
     });
 

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "@effect/vitest";
 import { Effect } from "effect";
+import { TestClock } from "effect/testing";
 import { Conflict, Forbidden, ServerError, Validation } from "../api/errors.ts";
 import { FakeApi, messageFixture, userFixture } from "../api/testing.ts";
 import type { ActivityEventType } from "../gen/ActivityEventType.ts";
@@ -169,6 +170,7 @@ describe("activity actions", () => {
   it.effect("move a handled item at once, then take the server's item and count", () =>
     Effect.gen(function* () {
       seedInbox();
+      yield* TestClock.setTime(Date.UTC(2026, 9, 6, 10, 0, 0));
 
       const fake = yield* FakeApi;
       let during: readonly (readonly number[] | number | null)[] = [];

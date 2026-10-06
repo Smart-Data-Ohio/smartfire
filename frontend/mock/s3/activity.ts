@@ -107,7 +107,8 @@ export function applyAction(item: ActivityItem, action: ActivityAction, now: str
 
   if (readAt === item.readAt && handledAt === item.handledAt) return item;
 
-  return withActivityState({ ...item, readAt, handledAt });
+  // Every state change bumps the sort key (`save_state`): the item moves to the top of its list.
+  return withActivityState({ ...item, readAt, handledAt, updatedAt: now });
 }
 
 /** The action a body asks for (`{action}`); 422 for anything else. */

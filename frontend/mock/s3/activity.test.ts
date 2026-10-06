@@ -4,7 +4,7 @@ import type { ActivityItemChanged } from "../../src/gen/ActivityItemChanged.ts";
 import type { ActivityList } from "../../src/gen/ActivityList.ts";
 import type { ActivityTab } from "../../src/gen/ActivityTab.ts";
 import type { ActivityUnreadCount } from "../../src/gen/ActivityUnreadCount.ts";
-import { collect, errorOf, expectStatus, get, harness, send } from "../s2/testing.ts";
+import { collect, errorOf, expectStatus, get, harness, NOW, send } from "../s2/testing.ts";
 import type { MockServer } from "../server.ts";
 import { ACTIVITY_PAGE_SIZE, TAB_TYPES } from "./activity.ts";
 import { encodeCursor } from "./model.ts";
@@ -151,7 +151,11 @@ describe("activity state changes", () => {
       200,
     );
 
-    expect(read.item).toMatchObject({ state: "read", handledAt: null, updatedAt: item.updatedAt });
+    expect(read.item).toMatchObject({
+      state: "read",
+      handledAt: null,
+      updatedAt: new Date(NOW).toISOString(),
+    });
     expect(read.unreadCount).toBe(unreadCount - 1);
     expect(events.at(-1)).toMatchObject({ type: "activity.item", data: read });
 
