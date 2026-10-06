@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { expect, matrix, ROOM_IDS, shot, synced, type Theme, test } from "./support.ts";
 
 /**
  * Opens the app at `path` (under /app/) with motion reduced; unlike `openApp` it waits for the
@@ -9,6 +9,7 @@ async function open(page: Page, path: string, theme: Theme = "light"): Promise<v
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path}`);
   await page.getByRole("main").waitFor();
+  await synced(page);
 }
 
 const GENERAL = ROOM_IDS.general;

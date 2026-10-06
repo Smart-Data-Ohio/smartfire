@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { MESSAGE_IDS, THREAD_IDS } from "../../mock/s2/seed.ts";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { expect, matrix, ROOM_IDS, shot, synced, type Theme, test } from "./support.ts";
 
 /**
  * Opens the app at `path` (under /app/) with motion reduced; unlike `openApp` it waits for the
@@ -10,6 +10,7 @@ async function open(page: Page, path: string, theme: Theme = "light"): Promise<v
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path}`);
   await page.getByRole("main").waitFor();
+  await synced(page);
 }
 
 const GENERAL = ROOM_IDS.general;
@@ -36,14 +37,11 @@ function pane(page: Page) {
   return page.locator("aside.right-pane");
 }
 
-matrix("a reply indicator opens its thread", async ({ page, theme, phone }) => {
-  // The thread's root is among the room's latest messages. The room opens at its first unread;
-  // a phone's short screen has to jump down to them.
-  await open(page, `r/${GENERAL}`, theme);
-
-  if (phone) {
-    await page.getByRole("button", { name: /^Jump to present$|new messages?$/ }).click();
-  }
+matrix("a reply indicator opens its thread", async ({ page, theme }) => {
+  // The thread's root is among the room's latest messages, 44 below #general's first unread. The
+  // room opens on a window around that first unread, which the sync welcome's refetch may or may
+  // not swap for the newest page, so open on the root's permalink: it's mounted either way.
+  await open(page, `r/${GENERAL}/m/${MESSAGE_IDS.generalThreadRoot}`, theme);
 
   const indicator = page.getByRole("button", { name: /^\d+ replies, unread\./ }).first();
 

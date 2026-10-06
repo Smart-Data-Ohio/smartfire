@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { boardDeckPdf, onboardingMockupPng } from "../../mock/s2/assets.ts";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { expect, matrix, ROOM_IDS, shot, synced, type Theme, test } from "./support.ts";
 
 const GENERAL = `r/${ROOM_IDS.general}`;
 
@@ -12,6 +12,7 @@ async function openApp(page: Page, path: string, theme: Theme = "light"): Promis
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path}`);
   await composer(page).waitFor();
+  await synced(page);
 }
 
 /** Waits for the finite animations and transitions (not spinners), so a shot never catches a fade. */
@@ -28,8 +29,9 @@ async function settle(page: Page): Promise<void> {
   });
 }
 
+/** The room's composer (#general's, unless a test opens another room). */
 function composer(page: Page) {
-  return page.getByRole("textbox", { name: "Message #general" });
+  return page.getByRole("textbox", { name: /^Message #/ });
 }
 
 function suggestions(page: Page) {
@@ -134,6 +136,9 @@ matrix("the + menu opens as liquid", async ({ page, theme }) => {
 
   const trigger = page.getByRole("button", { name: "Attach and more" });
 
+  // Until its lazy chunk arrives the + button is the plain dropdown, and the liquid one replaces
+  // it (closed) when the chunk lands; a fresh dev server compiles that chunk on first use.
+  await expect(trigger).toHaveClass(/\bgooey-plus-trigger\b/);
   await trigger.click();
 
   const menu = page.getByRole("menu", { name: "Attach and more" });
@@ -289,7 +294,11 @@ test("schedules at a custom time", async ({ page }) => {
 });
 
 test("slash commands run, // escapes, unknown words post", async ({ page }) => {
-  await openApp(page, GENERAL);
+  // Not #general: its 52 unread open it on a window around the first unread that stops short of
+  // the present (unless a page of newer messages lands before the sync welcome's refetch), and a
+  // `/shrug`, posted by the server with no pending row, isn't drawn past such a window. #quiet
+  // has no messages, so the room is its present and every post shows.
+  await openApp(page, `r/${ROOM_IDS.quiet}`);
 
   await typeInto(page, "/shrug fine by me");
   await composer(page).press("Enter");

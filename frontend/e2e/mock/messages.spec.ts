@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
-import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
+import { expect, matrix, ROOM_IDS, shot, synced, type Theme, test } from "./support.ts";
 
 /** A message row by id. */
 function row(page: Page, messageId: number): Locator {
@@ -15,6 +15,7 @@ async function openRoom(page: Page, path: string, theme: Theme = "light") {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path}`);
   await page.getByRole("log", { name: "Messages" }).waitFor();
+  await synced(page);
 }
 
 /** Takes the shot once every finite animation (a popup's entrance, a fade) has played out. */
@@ -245,8 +246,6 @@ test.describe("message actions", () => {
 
   test("Home and End reach the ends of the window, past the rows drawn", async ({ page }) => {
     await openRoom(page, `r/${ROOM_IDS.general}`);
-    // The socket's first welcome refetches the window; let that land before reading the rows.
-    await page.waitForLoadState("networkidle");
 
     const drawn = () =>
       page.evaluate(() =>
@@ -272,14 +271,31 @@ test.describe("message actions", () => {
     const ids = await drawn();
     const newest = Math.max(...ids);
 
-    await row(page, newest).focus();
+    // Start on a row already on screen: focusing one in the virtualiser's overscan would scroll
+    // the list, and a scroll near the window's end pages in newer messages while Home runs.
+    const onScreen = await page.evaluate(() => {
+      const log = document.querySelector('[role="log"][aria-label="Messages"]');
+      const view = log?.getBoundingClientRect();
+
+      return [...(log?.querySelectorAll("[data-message-row]") ?? [])].flatMap((element) => {
+        const box = element.getBoundingClientRect();
+
+        return view !== undefined && box.top >= view.top && box.bottom <= view.bottom
+          ? [Number(element.getAttribute("data-message-id"))]
+          : [];
+      });
+    });
+
+    await row(page, onScreen.at(-1) ?? newest).focus();
     await page.keyboard.press("Home");
 
+    // The list scrolls first and focuses the edge row a frame or more later, so the row focused
+    // before the key can still be the one read: poll until focus has moved.
     // The first message wasn't among the rows drawn at the bottom.
-    expect(await focusedId()).toBeLessThan(Math.min(...ids));
+    await expect.poll(focusedId).toBeLessThan(Math.min(...ids));
 
     await page.keyboard.press("End");
-    expect(await focusedId()).toBeGreaterThanOrEqual(newest);
+    await expect.poll(focusedId).toBeGreaterThanOrEqual(newest);
   });
 });
 
