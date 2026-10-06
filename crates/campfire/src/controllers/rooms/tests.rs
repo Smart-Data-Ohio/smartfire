@@ -445,12 +445,14 @@ async fn rooms_are_destroyed_by_administrators() {
         .write(Req::new(Method::DELETE, &format!("/rooms/{QUIET_CORNER}")))
         .await;
     assert_eq!(reply.location(), Some("http://campfire.test/"));
-    assert!(
-        app.db()
-            .read(|conn| Ok(Room::find(conn, QUIET_CORNER)?.deleted_at.is_some()))
-            .await
-            .unwrap()
-    );
+    // The soft delete commits before the response; the DestroyJob it enqueues after commit may
+    // already have removed the row by the time this reads it.
+    let room = app
+        .db()
+        .read(|conn| Room::find_by_id(conn, QUIET_CORNER))
+        .await
+        .unwrap();
+    assert!(room.is_none_or(|room| room.deleted_at.is_some()));
 }
 
 #[tokio::test]
