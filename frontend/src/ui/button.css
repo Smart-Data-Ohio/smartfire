@@ -185,26 +185,51 @@
     scale: 1;
   }
 
-  /* Metal: brushed silver when it can't (or shouldn't) run the shader; a deep, quiet fill under
-     the live ring when it can. */
+  /*
+   * Metal. Live, metal-fx paints a liquid-metal ring around a deep, quiet fill. Static (reduced
+   * motion, no WebGL2), it is brushed metal: banded stops for the curvature, fine horizontal
+   * grain, a soft diagonal sheen, a lit top edge and a hairline rim, and no motion. Silver in
+   * light, graphite in dark, so it sits beside the live ring rather than glaring from the page.
+   */
   .button[data-variant="metal"] {
-    --button-fg: oklch(24% 0.01 260);
-    --button-bg: linear-gradient(
-      180deg,
-      oklch(97% 0.003 260) 0%,
-      oklch(88% 0.006 260) 48%,
-      oklch(82% 0.008 260) 52%,
-      oklch(92% 0.004 260) 100%
-    );
+    --metal-ink: light-dark(oklch(27% 0.01 260), oklch(96% 0.004 260));
+    --metal-engrave: light-dark(oklch(100% 0 0 / 55%), oklch(0% 0 0 / 45%));
+    --metal-top: light-dark(oklch(98.5% 0.002 260), oklch(50% 0.008 260));
+    --metal-upper: light-dark(oklch(92% 0.004 260), oklch(40% 0.008 260));
+    --metal-mid: light-dark(oklch(85% 0.006 260), oklch(32% 0.008 260));
+    --metal-crease: light-dark(oklch(80% 0.008 260), oklch(27% 0.008 260));
+    --metal-lower: light-dark(oklch(87% 0.005 260), oklch(33% 0.008 260));
+    --metal-bottom: light-dark(oklch(94% 0.003 260), oklch(42% 0.008 260));
+    --metal-grain: light-dark(oklch(100% 0 0 / 12%), oklch(100% 0 0 / 3.5%));
+    --metal-sheen: light-dark(oklch(100% 0 0 / 45%), oklch(100% 0 0 / 12%));
+    --metal-rim: light-dark(oklch(58% 0.01 260 / 55%), oklch(78% 0.008 260 / 30%));
+    --metal-highlight: light-dark(oklch(100% 0 0 / 85%), oklch(100% 0 0 / 24%));
+    --metal-shade: light-dark(oklch(30% 0.01 260 / 12%), oklch(0% 0 0 / 35%));
+
+    --button-fg: var(--metal-ink);
+    --button-bg:
+      linear-gradient(104deg, transparent 28%, var(--metal-sheen) 44%, transparent 58%),
+      repeating-linear-gradient(180deg, var(--metal-grain) 0 0.5px, transparent 0.5px 2px),
+      linear-gradient(
+        180deg,
+        var(--metal-top) 0%,
+        var(--metal-upper) 24%,
+        var(--metal-mid) 47%,
+        var(--metal-crease) 53%,
+        var(--metal-lower) 76%,
+        var(--metal-bottom) 100%
+      );
     --button-bg-hover: var(--button-bg);
     --button-bg-active: var(--button-bg);
 
     border-radius: var(--radius-pill);
     box-shadow:
       var(--shadow-control),
-      inset 0 0 0 1px oklch(60% 0.01 260 / 45%),
-      inset 0 1px 0 oklch(100% 0 0 / 70%);
+      0 0 0 1px var(--metal-rim),
+      inset 0 1px 0 var(--metal-highlight),
+      inset 0 -1px 0 var(--metal-shade);
     font-weight: var(--weight-semibold);
+    text-shadow: 0 1px 0 var(--metal-engrave);
   }
 
   .button[data-variant="metal"]:hover {
@@ -216,6 +241,7 @@
     --button-bg: oklch(22% 0.006 260);
 
     box-shadow: var(--shadow-control);
+    text-shadow: none;
   }
 
   .metal-host {

@@ -633,7 +633,7 @@
   .mock-mention {
     padding: 0 2px;
     border-radius: var(--radius-xs);
-    background: color-mix(in oklch, var(--mention), transparent 65%);
+    background: var(--mention-chip-bg);
     color: var(--mention-text);
     font-weight: var(--weight-medium);
   }

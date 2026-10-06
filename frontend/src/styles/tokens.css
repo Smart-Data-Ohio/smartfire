@@ -56,7 +56,9 @@
     --amber-bg-light: oklch(97% 0.04 90);
     --amber-text-light: oklch(48% 0.1 75);
     --amber-bar-dark: oklch(82% 0.12 85);
-    --amber-bg-dark: oklch(30% 0.05 85);
+    --amber-wash-dark: oklch(82% 0.12 85 / 8%);
+    --amber-chip-light: oklch(80% 0.13 85 / 35%);
+    --amber-chip-dark: oklch(82% 0.12 85 / 20%);
     --amber-text-dark: oklch(84% 0.12 85);
     --amber-500: oklch(75% 0.15 75);
     --amber-warning-text-light: oklch(52% 0.12 70);
@@ -107,7 +109,9 @@
     --focus-ring: var(--accent);
 
     --mention: light-dark(var(--amber-bar-light), var(--amber-bar-dark));
-    --mention-bg: light-dark(var(--amber-bg-light), var(--amber-bg-dark));
+    /* Dark keeps the row a whisper of amber over the pane; the bar carries the signal (Slack's). */
+    --mention-bg: light-dark(var(--amber-bg-light), var(--amber-wash-dark));
+    --mention-chip-bg: light-dark(var(--amber-chip-light), var(--amber-chip-dark));
     --mention-text: light-dark(var(--amber-text-light), var(--amber-text-dark));
 
     --success: var(--green-500);

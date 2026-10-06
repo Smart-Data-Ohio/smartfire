@@ -251,13 +251,13 @@ function Popovers() {
           label="Riel St. Amand"
           trigger={(props) => (
             <Button {...props} variant="ghost">
-              <Avatar name="Riel St. Amand" size={20} decorative /> Riel St. Amand
+              <Avatar name="Riel St. Amand" userId={6} size={20} decorative /> Riel St. Amand
             </Button>
           )}
         >
           {(close) => (
             <div className="ks-profile">
-              <Avatar name="Riel St. Amand" size={56} presence="online" />
+              <Avatar name="Riel St. Amand" userId={6} size={56} presence="online" />
               <div>
                 <p className="ks-profile-name">Riel St. Amand</p>
                 <p className="text-muted text-meta">Lead · Columbus, 9:41 AM local</p>
@@ -288,25 +288,33 @@ const PEOPLE = [
   "Margaret Hamilton",
 ];
 
+/** Eight consecutive user ids walk the whole palette. */
+const TINT_NAMES = [...PEOPLE, "Riel St. Amand", "Alan Turing", "Barbara Liskov"];
+
 function Avatars() {
   return (
     <Section
       title="Avatar"
-      note="Rounded squares; deterministic tints (never violet: agents only)."
+      note="Rounded squares; the tint follows the user id, so consecutive ids differ (never violet: agents only)."
     >
       <Row label="sizes">
         {[20, 24, 32, 36, 48, 80].map((size) => (
-          <Avatar key={size} name="Grace Hopper" size={size} />
+          <Avatar key={size} name="Grace Hopper" userId={2} size={size} />
         ))}
       </Row>
       <Row label="presence">
         {PRESENCES.map((presence, index) => (
-          <Avatar key={presence} name={PEOPLE[index] ?? "Ada"} presence={presence} />
+          <Avatar
+            key={presence}
+            name={PEOPLE[index] ?? "Ada"}
+            userId={index + 1}
+            presence={presence}
+          />
         ))}
       </Row>
-      <Row label="tints">
-        {PEOPLE.map((person) => (
-          <Avatar key={person} name={person} size={32} />
+      <Row label="ids 1-8">
+        {TINT_NAMES.map((person, index) => (
+          <Avatar key={person} name={person} userId={index + 1} size={32} />
         ))}
       </Row>
     </Section>
@@ -448,7 +456,7 @@ function Loading() {
         }
       >
         <div className="ks-message-skeleton">
-          <Avatar name="Katherine Johnson" decorative />
+          <Avatar name="Katherine Johnson" userId={3} decorative />
           <div>
             <p className="text-ui">
               <strong>Katherine Johnson</strong> <span className="text-faint text-meta">10:24</span>
@@ -675,10 +683,10 @@ function Effects() {
       </Row>
       <Row label="speaking">
         <SpeakingRing level={level} speaking={speaking} radius={12}>
-          <Avatar name="Grace Hopper" size={48} decorative />
+          <Avatar name="Grace Hopper" userId={2} size={48} decorative />
         </SpeakingRing>
         <SpeakingRing level={0} speaking={false} radius={12}>
-          <Avatar name="Ada Lovelace" size={48} decorative />
+          <Avatar name="Ada Lovelace" userId={1} size={48} decorative />
         </SpeakingRing>
         <Button
           size="sm"

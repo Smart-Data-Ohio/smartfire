@@ -2,7 +2,15 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { contrastRatio, oklchToRgb, parseOklch, type Rgb } from "../lib/color.ts";
+import {
+  composite,
+  contrastRatio,
+  type Oklch,
+  oklchToRgb,
+  parseOklch,
+  type Rgb,
+} from "../lib/color.ts";
+import { AVATAR_HUES } from "../ui/avatar-palette.ts";
 
 type Theme = "light" | "dark";
 
@@ -66,15 +74,42 @@ function resolve(value: string, theme: Theme): string {
   return value;
 }
 
-function color(token: string, theme: Theme): Rgb {
-  const resolved = resolve(`var(${token})`, theme);
-  const parsed = parseOklch(resolved);
+function parsed(value: string, label: string): Oklch {
+  const color = parseOklch(value);
 
-  if (parsed === null || parsed.alpha !== 1) {
-    throw new Error(`${token} is not an opaque oklch() colour in ${theme}: ${resolved}`);
+  if (color === null) {
+    throw new Error(`${label} is not an oklch() colour: ${value}`);
   }
 
-  return oklchToRgb(parsed);
+  return color;
+}
+
+function color(token: string, theme: Theme): Rgb {
+  const value = parsed(resolve(`var(${token})`, theme), `${token} (${theme})`);
+
+  if (value.alpha !== 1) {
+    throw new Error(`${token} is translucent in ${theme}; test it as "${token} over <surface>"`);
+  }
+
+  return oklchToRgb(value);
+}
+
+/**
+ * A background as painted: one opaque token, or translucent layers over one, written top first
+ * ("--mention-chip-bg over --mention-bg over --bg-pane").
+ */
+function surface(spec: string, theme: Theme): Rgb {
+  const layers = spec.split(" over ");
+  const base = layers.pop() ?? spec;
+
+  return layers.reduceRight(
+    (below, token) => {
+      const layer = parsed(resolve(`var(${token})`, theme), `${token} (${theme})`);
+
+      return composite(oklchToRgb({ ...layer, alpha: 1 }), layer.alpha, below);
+    },
+    color(base, theme),
+  );
 }
 
 /** The surfaces text sits on across the app shell. */
@@ -95,7 +130,17 @@ const PAIRS = new Map<string, readonly string[]>([
   ["--text-muted", SURFACES],
   ["--text-faint", SURFACES],
   ["--accent", [...SURFACES, "--accent-soft"]],
-  ["--mention-text", ["--mention-bg", "--bg-pane", "--bg-raised", "--bg-sidebar"]],
+  [
+    "--mention-text",
+    [
+      "--mention-bg over --bg-pane",
+      "--mention-chip-bg over --mention-bg over --bg-pane",
+      "--bg-pane",
+      "--bg-raised",
+      "--bg-sidebar",
+    ],
+  ],
+  ["--text", ["--mention-bg over --bg-pane"]],
   ["--danger-text", ["--bg-pane", "--bg-raised", "--bg-hover", "--danger-soft"]],
   ["--success-text", ["--bg-pane", "--bg-raised", "--bg-sidebar"]],
   ["--warning-text", ["--bg-pane", "--bg-raised", "--bg-sidebar"]],
@@ -104,6 +149,29 @@ const PAIRS = new Map<string, readonly string[]>([
   ["--on-accent", ["--accent-solid"]],
   ["--on-danger", ["--danger-solid"]],
 ]);
+
+/** A component's `--name: value;` declaration, read from its stylesheet in src/ui. */
+function declaration(file: string, name: string): string {
+  const css = readFileSync(new URL(`../ui/${file}`, import.meta.url), "utf8");
+  const match = new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(css);
+
+  if (match === null) {
+    throw new Error(`${file} has no ${name}`);
+  }
+
+  return (match[1] ?? "").trim().replaceAll(/\s+/g, " ");
+}
+
+/** The static metal button's ink against every stop of its brushed gradient. */
+const METAL_STOPS = ["top", "upper", "mid", "crease", "lower", "bottom"];
+
+const METAL_CASES = (["light", "dark"] as const).flatMap((theme) =>
+  METAL_STOPS.map((stop) => ({ theme, stop })),
+);
+
+const AVATAR_CASES = (["light", "dark"] as const).flatMap((theme) =>
+  AVATAR_HUES.map((hue) => ({ theme, hue })),
+);
 
 const CASES = (["light", "dark"] as const).flatMap((theme) =>
   [...PAIRS].flatMap(([text, backgrounds]) =>
@@ -117,11 +185,38 @@ describe("design tokens", () => {
   });
 
   it.each(CASES)("$text on $background holds 4.5:1 in $theme", ({ theme, text, background }) => {
-    const ratio = contrastRatio(color(text, theme), color(background, theme));
+    const ratio = contrastRatio(color(text, theme), surface(background, theme));
 
     expect(
       ratio,
       `${text} on ${background} (${theme}) is ${ratio.toFixed(2)}:1`,
     ).toBeGreaterThanOrEqual(4.5);
   });
+
+  it.each(AVATAR_CASES)("avatar initials hold 4.5:1 on hue $hue in $theme", ({ theme, hue }) => {
+    const tile = (name: string) => {
+      const value = resolve(
+        declaration("avatar.css", name).replaceAll("var(--avatar-hue)", String(hue)),
+        theme,
+      );
+
+      return oklchToRgb(parsed(value, `${name} at hue ${hue} (${theme})`));
+    };
+
+    const ratio = contrastRatio(tile("--avatar-ink"), tile("--avatar-fill"));
+
+    expect(ratio, `hue ${hue} (${theme}) is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(METAL_CASES)(
+    "static metal ink holds 4.5:1 on its $stop stop in $theme",
+    ({ theme, stop }) => {
+      const paint = (name: string) =>
+        oklchToRgb(parsed(resolve(declaration("button.css", name), theme), `${name} (${theme})`));
+
+      const ratio = contrastRatio(paint("--metal-ink"), paint(`--metal-${stop}`));
+
+      expect(ratio, `${stop} (${theme}) is ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(4.5);
+    },
+  );
 });

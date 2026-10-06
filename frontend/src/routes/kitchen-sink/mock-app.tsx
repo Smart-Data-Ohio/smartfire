@@ -8,6 +8,16 @@ import { Icon, type IconName } from "../../ui/icons/icon.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 
+/** Mock user ids: tile colours follow the id, so consecutive ids land on different hues. */
+const USER_IDS = new Map([
+  ["Ada Lovelace", 1],
+  ["Grace Hopper", 2],
+  ["Katherine Johnson", 3],
+  ["Linus Torvalds", 4],
+  ["Margaret Hamilton", 5],
+  ["Riel St. Amand", 6],
+]);
+
 /* ── Rail ─────────────────────────────────────────────────────────────────── */
 
 function RailItem({
@@ -121,7 +131,7 @@ function DmRow({
         data-state={unread ? "unread" : undefined}
         onClick={(event) => event.preventDefault()}
       >
-        <Avatar name={name} size={20} presence={presence} decorative />
+        <Avatar name={name} userId={USER_IDS.get(name)} size={20} presence={presence} decorative />
         <span className="mock-row-name">{name}</span>
       </a>
     </li>
@@ -273,7 +283,7 @@ function Message({
         ) : agent ? (
           <AgentAvatar seed={author} name={author} size={36} decorative />
         ) : (
-          <Avatar name={author} size={36} decorative />
+          <Avatar name={author} userId={USER_IDS.get(author)} size={36} decorative />
         )}
       </div>
       <div className="mock-message-main">
@@ -351,12 +361,12 @@ function ThreadPanel({ open, onClose }: { readonly open: boolean; readonly onClo
       </header>
       <div className="mock-thread-body">
         <div className="mock-thread-root">
-          <Avatar name="Grace Hopper" size={28} decorative />
+          <Avatar name="Grace Hopper" userId={2} size={28} decorative />
           <p className="text-ui">Pushed the new sidebar to staging.</p>
         </div>
         <p className="mock-thread-count">2 replies</p>
         <div className="mock-thread-root">
-          <Avatar name="Linus Torvalds" size={28} decorative />
+          <Avatar name="Linus Torvalds" userId={4} size={28} decorative />
           <p className="text-ui">Looks right. The muted rows could go one step fainter.</p>
         </div>
       </div>

@@ -11,8 +11,19 @@
     width: var(--avatar-size);
     height: var(--avatar-size);
     border-radius: var(--avatar-radius);
-    background: light-dark(oklch(90% 0.05 var(--avatar-hue)), oklch(36% 0.06 var(--avatar-hue)));
-    color: light-dark(oklch(36% 0.09 var(--avatar-hue)), oklch(92% 0.04 var(--avatar-hue)));
+    /*
+     * One lightness and chroma per theme, so every tile carries the same weight: soft fills with
+     * dark initials in light, mid-tone fills with light initials in dark. tokens.test.ts holds
+     * every palette hue to 4.5:1.
+     */
+    --avatar-fill: light-dark(
+      oklch(92% 0.055 var(--avatar-hue)),
+      oklch(50% 0.13 var(--avatar-hue))
+    );
+    --avatar-ink: light-dark(oklch(40% 0.11 var(--avatar-hue)), oklch(97% 0.015 var(--avatar-hue)));
+
+    background: var(--avatar-fill);
+    color: var(--avatar-ink);
     font-size: calc(var(--avatar-size) * 0.4);
     font-weight: var(--weight-semibold);
     line-height: 1;

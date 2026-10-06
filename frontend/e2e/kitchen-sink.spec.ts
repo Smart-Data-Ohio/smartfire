@@ -4,14 +4,17 @@ interface Look {
   readonly name: string;
   readonly theme: "light" | "dark";
   readonly density: "comfortable" | "compact";
+  /** "reduce" captures the page at rest; "full" runs the live effects (metal shader, beams). */
+  readonly motion: "reduce" | "full";
 }
 
-const LIGHT: Look = { name: "light", theme: "light", density: "comfortable" };
+const LIGHT: Look = { name: "light", theme: "light", density: "comfortable", motion: "reduce" };
 
 const LOOKS: readonly Look[] = [
   LIGHT,
-  { name: "dark", theme: "dark", density: "comfortable" },
-  { name: "compact", theme: "dark", density: "compact" },
+  { name: "dark", theme: "dark", density: "comfortable", motion: "reduce" },
+  { name: "compact", theme: "dark", density: "compact", motion: "reduce" },
+  { name: "dark-full-motion", theme: "dark", density: "comfortable", motion: "full" },
 ];
 
 async function openKitchenSink(page: Page, look: Look, errors: string[]) {
@@ -22,12 +25,11 @@ async function openKitchenSink(page: Page, look: Look, errors: string[]) {
     }
   });
 
-  // Motion off, so the page is captured at rest rather than mid-transition.
   await page.addInitScript(
     (appearance) => {
       localStorage.setItem("smartfire.appearance", JSON.stringify(appearance));
     },
-    { theme: look.theme, density: look.density, motion: "reduce" },
+    { theme: look.theme, density: look.density, motion: look.motion },
   );
 
   await page.goto("/app/_kitchen-sink");
@@ -49,10 +51,22 @@ for (const look of LOOKS) {
 
     if (shotsDir !== undefined) {
       await page.setViewportSize({ width: 1440, height: 900 });
+      // Bot avatars render to bitmaps when the browser is idle; wait so the shots show them.
+      await expect(page.locator(".agent-avatar img").first()).toBeVisible();
+
+      if (look.motion === "full") {
+        // Let the lazy effect chunks load and their first frames paint.
+        await page.waitForTimeout(2000);
+      }
+
       await page.screenshot({ path: `${shotsDir}/kitchen-sink-${look.name}.png`, fullPage: true });
       await page
         .getByRole("region", { name: "App preview" })
         .screenshot({ path: `${shotsDir}/mock-app-${look.name}.png` });
+      await page
+        .locator(".ks-section")
+        .filter({ has: page.getByRole("heading", { name: "Button", exact: true }) })
+        .screenshot({ path: `${shotsDir}/buttons-${look.name}.png` });
     }
 
     expect(errors).toEqual([]);
