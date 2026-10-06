@@ -61,7 +61,54 @@ mod message_forwards;
 #[cfg(test)]
 pub(crate) mod message_forwards_tests;
 pub mod messages;
-pub mod presenters;
+pub mod presenters {
+    pub(crate) use campfire_web::controllers::presenters::*;
+
+    #[cfg(test)]
+    pub mod test_support;
+    #[cfg(test)]
+    mod message_links;
+    #[cfg(test)]
+    pub(crate) mod sql_probe;
+    #[cfg(test)]
+    mod chrome_tests;
+    #[cfg(test)]
+    pub(crate) mod accounts {
+        pub(crate) use campfire_web::controllers::presenters::accounts::*;
+        mod tests;
+    }
+    #[cfg(test)]
+    pub(crate) mod agent_payload {
+        pub(crate) use campfire_web::controllers::presenters::agent_payload::*;
+        mod tests;
+        mod callback_tests;
+        mod finalization_tests;
+        mod reference_callback_tests;
+        mod live_tests;
+    }
+    #[cfg(test)]
+    pub(crate) mod attachments {
+        pub(crate) use campfire_web::controllers::presenters::attachments::*;
+        mod tests;
+        mod avatar_logo_tests;
+    }
+    #[cfg(test)]
+    pub(crate) mod link_embeds {
+        pub(crate) use campfire_web::controllers::presenters::link_embeds::*;
+        mod tests;
+        mod linkedin_tests;
+    }
+    #[cfg(test)]
+    pub(crate) mod message_payload {
+        pub(crate) use campfire_web::controllers::presenters::message_payload::*;
+        mod unicode_tests;
+    }
+    #[cfg(test)]
+    pub(crate) mod twitter_cards {
+        pub(crate) use campfire_web::controllers::presenters::twitter_cards::*;
+        mod tests;
+    }
+}
 #[cfg(test)]
 mod activity_domain_tests;
 #[cfg(test)]

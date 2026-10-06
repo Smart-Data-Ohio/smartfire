@@ -37,6 +37,8 @@ async fn ws15e_x_cards_are_visible_in_the_real_message_index() {
 }
 
 use super::*;
+use campfire_db::Room;
+use crate::cable::broadcasts::Stream;
 use crate::integrations::twitter::{post::Post, references};
 use rusqlite::params;
 use serde_json::{Value, json};

@@ -19,10 +19,8 @@ use regex::Regex;
 const LAYERS: &[(&str, &[&str])] = &[
     // `campfire_app`'s modules that still hold tests here (the rest are `use`s of campfire_app).
     ("app", &["app", "huddle", "integrations"]),
-    ("web", &[
-        "active_storage", "authentication", "concerns", "controllers::messages::rendered",
-        "controllers::presenters", "mail", "messaging", "rich_text",
-    ]),
+    // `campfire_web`'s mirrors here: the modules that hold tests, and `rendered` under its old path.
+    ("web", &["concerns", "controllers::messages::rendered", "controllers::presenters", "mail"]),
     ("channels", &["channels", "jobs"]),
     ("message_features", &["controllers::message_features"]),
     ("messages", &["controllers::messages"]),
@@ -44,7 +42,7 @@ const LAYERS: &[(&str, &[&str])] = &[
 fn modules_name_only_their_own_layer_and_below() {
     let tree = ModuleTree::read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
     // A walk that stopped early would pass vacuously.
-    assert!(tree.modules.len() > 700, "found only {} modules", tree.modules.len());
+    assert!(tree.modules.len() > 600, "found only {} modules", tree.modules.len());
     let violations = tree.violations();
     assert!(
         violations.is_empty(),

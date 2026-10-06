@@ -1,5 +1,7 @@
 //! The three remaining User::BotTest reply-token model cases, without HTTP coercion.
 use super::*;
+use campfire_db::Room;
+use campfire_db::User;
 use crate::controllers::presenters::test_support::{ALL_TALK, TestApp};
 use serde_json::{Value, json};
 

@@ -1954,7 +1954,7 @@
       "scope": "rust_production",
       "branch": "Retained fallback in composition_page::Show, which is only constructed by full_room_tests. All 38 recorded cases supply navigation, so they do not render this fallback. Production uses rooms::Show and rooms/show/_nav.html or navigation::Navigation, both separately byte-compared.",
       "sources": [
-        "crates/campfire/src/controllers/presenters/room_native.rs",
+        "crates/web/src/controllers/presenters/room_native.rs",
         "crates/campfire/src/controllers/rooms/full_room_tests.rs",
         "crates/views/src/rooms/composition_page.rs"
       ]
@@ -2545,7 +2545,7 @@
       "status": "not_reachable",
       "branch": "Retained Rust template, absent from the production rendering path. Active Rails counterpart is rendered via messages/_composer_markup.html and has its own byte receipt.",
       "sources": [
-        "crates/campfire/src/controllers/presenters/room_native.rs"
+        "crates/web/src/controllers/presenters/room_native.rs"
       ],
       "scope": "rust_production"
     },

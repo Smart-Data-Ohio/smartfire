@@ -1,4 +1,9 @@
 use super::*;
+use campfire_db::Message;
+use campfire_db::Room;
+use crate::cable::broadcasts::Stream;
+use crate::cable::broadcasts::message_dom_id;
+use crate::integrations::link_embed::Reference;
 use crate::controllers::presenters::test_support::*;
 use crate::integrations::link_embed::{Embed, metadata_parser::Metadata, sync_message};
 use campfire_db::NewMessage;

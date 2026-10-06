@@ -14,7 +14,9 @@ pub(crate) mod attachment_processing_tests;
 mod review_tests;
 pub mod pins;
 pub mod by_bots;
-pub mod rendered;
+pub mod rendered {
+    pub use campfire_web::controllers::messages::rendered::*;
+}
 pub(crate) use crate::controllers::presenters::message_payload as payload;
 pub(crate) use crate::controllers::presenters::message_freshness as freshness;
 #[cfg(test)]

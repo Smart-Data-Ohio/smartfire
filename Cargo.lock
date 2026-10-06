@@ -396,6 +396,7 @@ dependencies = [
  "campfire_spa",
  "campfire_storage",
  "campfire_views",
+ "campfire_web",
  "flate2",
  "futures-util",
  "hmac",
@@ -726,6 +727,43 @@ dependencies = [
  "serde_json",
  "sha2",
  "unicode-segmentation",
+]
+
+[[package]]
+name = "campfire_web"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "axum",
+ "bytes",
+ "campfire_app",
+ "campfire_assets",
+ "campfire_cable",
+ "campfire_db",
+ "campfire_jobs",
+ "campfire_kit",
+ "campfire_mail",
+ "campfire_richtext",
+ "campfire_routes",
+ "campfire_storage",
+ "campfire_views",
+ "futures-util",
+ "http",
+ "indexmap",
+ "jiff",
+ "percent-encoding",
+ "rails_compat",
+ "rand 0.9.5",
+ "regex",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

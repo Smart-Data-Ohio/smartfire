@@ -23,6 +23,7 @@ campfire_views    = { path = "crates/views" }
 campfire_jobs     = { path = "crates/jobs" }
 campfire_mail     = { path = "crates/mail" }
 campfire_app      = { path = "crates/app" }
+campfire_web      = { path = "crates/web" }
 campfire_spa      = { path = "crates/spa" }
 mailparse        = "0.16"
 lettre           = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1-rustls", "ring", "rustls-native-certs", "hostname", "builder"] }
