@@ -142,7 +142,7 @@ export type HuddleNotice = typeof HuddleNotice.Type;
 
 export type HuddleNoticePin = Assert<Pinned<typeof HuddleNotice, GeneratedHuddleNotice>>;
 
-export const HuddleRingEvent = Schema.Literals(["started", "ended"]);
+export const HuddleRingEvent = Schema.Literals(["started", "missed", "ended"]);
 
 export type HuddleRingEventPin = Assert<Pinned<typeof HuddleRingEvent, GeneratedHuddleRingEvent>>;
 

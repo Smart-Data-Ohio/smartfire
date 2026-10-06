@@ -288,6 +288,24 @@ fn notices_are_tagged_by_kind() {
 }
 
 #[test]
+fn a_ring_names_what_happened() {
+    for (event, name) in [
+        (HuddleRingEvent::Started, "started"),
+        (HuddleRingEvent::Missed, "missed"),
+        (HuddleRingEvent::Ended, "ended"),
+    ] {
+        assert_wire(&event, json!(name));
+    }
+    for (state, name) in [
+        (HuddleRingState::Unread, "unread"),
+        (HuddleRingState::Read, "read"),
+        (HuddleRingState::Handled, "handled"),
+    ] {
+        assert_wire(&state, json!(name));
+    }
+}
+
+#[test]
 fn every_s5_event_has_its_type_and_data() {
     let cases = vec![
         (

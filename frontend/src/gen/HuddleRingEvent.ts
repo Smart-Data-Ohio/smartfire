@@ -3,4 +3,4 @@
 /**
  * What a [`HuddleRing`] says.
  */
-export type HuddleRingEvent = "started" | "ended";
+export type HuddleRingEvent = "started" | "missed" | "ended";

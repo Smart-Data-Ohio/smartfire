@@ -194,9 +194,9 @@ pub enum HuddleNotice {
 }
 
 /// The `huddle.ring` event on the recipient's `user` topic: the JSON twin of the
-/// `{activityItemId, huddleInvitation}` frames on `user_<id>_activity`. A call started in a room
-/// that rings them (direct messages, and rooms whose involvement isn't `nothing` or `invisible`),
-/// or it ended or was answered elsewhere.
+/// `{activityItemId, huddleInvitation}` frames on `user_<id>_activity`. Someone started a call in
+/// a direct message the recipient is in (unless they set it to `nothing` or `invisible`), or that
+/// ring was answered, dismissed, missed or ended.
 ///
 /// The client rings (440/480 Hz every 3 s, for at most 45 s) unless `silent`. Joining navigates to
 /// the room and joins; it also marks the activity item handled, and dismissing marks it read
@@ -216,7 +216,8 @@ pub struct HuddleRing {
     pub room_name: String,
     pub caller_name: String,
     /// Don't play a sound: do-not-disturb, quiet hours or the recipient's sound settings
-    /// (`kind=huddle` sound policy). Always `false` when `event` is `ended`.
+    /// (`kind=huddle` sound policy). Always `false` when `event` is `ended`, which is sent
+    /// without a sound check.
     pub silent: bool,
 }
 
@@ -228,6 +229,9 @@ pub enum HuddleRingEvent {
     /// `huddle_started`: ring while `state` is `unread`; stop when it's `read` or `handled`
     /// (answered or dismissed in another tab).
     Started,
+    /// `huddle_missed`: nobody answered within the ring window (the overdue invitation was
+    /// settled); stop ringing.
+    Missed,
     /// `huddle_ended`: stop ringing; show "caller left" for 5 s if it was ringing.
     Ended,
 }
