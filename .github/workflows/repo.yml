@@ -1,0 +1,152 @@
+name: Repository checks
+
+# Checks for everything outside the Rust port's own gates (rust.yml): the workflows
+# themselves, the deploy configuration, the huddle gateway, and the dependency advisories
+# for what production ships. All three jobs are required status checks, so none has a
+# paths filter: each one runs, and reports, on every pull request. They are cheap.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Advisories are published against code that hasn't changed; catch them between pushes.
+  schedule:
+    - cron: "17 6 * * *"
+
+permissions: {}
+
+# A new push to a pull request supersedes the run for its previous commit.
+# Pushes to main are never cancelled, so every main commit keeps a full run.
+concurrency:
+  group: repo-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint-actions:
+    name: GitHub Actions audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        with:
+          advanced-security: false
+
+      - name: Test Google deployment configuration
+        run: python3 -m unittest discover -s deploy/gcp -p 'test_google_configuration.py'
+
+  test_gateway:
+    name: Huddle authorization gateway
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # npm rejects the script/livekit-gateway symlink as a prefix; use the real directory.
+      - name: Install gateway dependencies
+        run: npm ci --ignore-scripts --prefix rust/web/script/livekit-gateway
+
+      - name: Test authorization and connection races
+        run: npm test --prefix rust/web/script/livekit-gateway
+
+  # Known advisories against the dependencies production ships: the Rust binary's crates
+  # (rust/Cargo.lock) and the huddle gateway's npm runtime dependencies. Fails on any
+  # vulnerability advisory that rust/.cargo/audit.toml doesn't list, with its reason;
+  # unmaintained/unsound notices are printed as warnings. Dependabot raises the update PRs.
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CARGO_AUDIT_VERSION: 0.22.2
+      # sha256 of cargo-audit-x86_64-unknown-linux-musl-v0.22.2.tgz, as GitHub records it for
+      # the rustsec/rustsec release asset.
+      CARGO_AUDIT_SHA256: 7fb9497f8594b389e5fce5ef9b92db08432996895b2e0c5a0167a69ed445c428
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install cargo-audit
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/cargo-audit"
+          name="cargo-audit-x86_64-unknown-linux-musl-v${CARGO_AUDIT_VERSION}"
+          mkdir -p "$dir"
+          curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+            "https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv${CARGO_AUDIT_VERSION}/${name}.tgz" \
+            --output "$dir/cargo-audit.tgz"
+          echo "${CARGO_AUDIT_SHA256}  $dir/cargo-audit.tgz" | sha256sum -c -
+          tar -xzf "$dir/cargo-audit.tgz" -C "$dir" --strip-components=1 "${name}/cargo-audit"
+          "$dir/cargo-audit" --version
+          echo "$dir" >> "$GITHUB_PATH"
+
+      # cargo-audit's own fetch has no retry; clone the advisory database here, with retries,
+      # and audit against that copy offline.
+      - name: Fetch the RustSec advisory database
+        run: |
+          set -euo pipefail
+          db="$RUNNER_TEMP/advisory-db"
+          for attempt in 1 2 3 4 5; do
+            rm -rf "$db"
+            if git clone --quiet --depth 1 https://github.com/rustsec/advisory-db.git "$db"; then
+              git -C "$db" log -1 --format='advisory-db %H (%cI)'
+              echo "ADVISORY_DB=$db" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            echo "::warning::advisory-db clone attempt $attempt failed"
+            sleep $((attempt * 10))
+          done
+          echo "::error::could not fetch the RustSec advisory database"
+          exit 1
+
+      # Yanked-crate lookups query the crates.io index per crate and are left out: they
+      # aren't advisories, and a registry hiccup shouldn't fail the check.
+      - name: Audit Rust crates (rust/Cargo.lock)
+        working-directory: rust
+        run: cargo-audit audit --no-fetch --no-yanked --db "$ADVISORY_DB" --file Cargo.lock
+
+      - name: Audit huddle gateway runtime dependencies
+        working-directory: rust/web/script/livekit-gateway
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/npm-audit.json"
+          # npm audit exits 1 both for findings and for registry errors. Retry until the
+          # registry answers with a report, then judge the report itself.
+          for attempt in 1 2 3 4 5; do
+            npm audit --omit=dev --json > "$report" || true
+            if jq -e '.metadata.vulnerabilities.total | numbers' "$report" > /dev/null 2>&1; then
+              break
+            fi
+            echo "::warning::npm audit attempt $attempt returned no report"
+            cat "$report" || true
+            rm -f "$report"
+            sleep $((attempt * 10))
+          done
+          test -s "$report" || { echo "::error::the npm registry returned no audit report"; exit 1; }
+          jq -r '.metadata.vulnerabilities | to_entries | map("\(.key)=\(.value)") | join(" ")' "$report"
+          if ! jq -e '.metadata.vulnerabilities.total == 0' "$report" > /dev/null; then
+            jq -r '.vulnerabilities[] | "::error::\(.name) (\(.severity)): \([.via[] | if type == "object" then .url else . end] | join(", "))"' "$report"
+            exit 1
+          fi
