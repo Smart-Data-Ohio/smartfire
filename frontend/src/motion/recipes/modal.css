@@ -1,0 +1,84 @@
+/*
+ * Modal: adapted from the free "Modal open / close" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add modal`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium,
+ * medium-exit, --scale-surface). Dialog (src/ui) is a native <dialog>: the enter plays from
+ * @starting-style when showModal() puts it in the top layer, `data-state="closing"` plays the exit
+ * before close(), and the ::backdrop fades on the same clock.
+ */
+
+@layer recipes {
+  :root {
+    --modal-open-dur: var(--duration-medium);
+    --modal-close-dur: var(--duration-medium-exit);
+    --modal-scale: var(--scale-surface);
+    --modal-scale-close: var(--scale-surface);
+    --modal-ease: var(--ease-enter);
+    --modal-close-ease: var(--ease-exit);
+  }
+
+  .t-modal {
+    transform-origin: center;
+    transform: scale(1);
+    opacity: 1;
+    transition:
+      transform var(--modal-open-dur) var(--modal-ease),
+      opacity var(--modal-open-dur) var(--modal-ease),
+      display var(--modal-open-dur),
+      overlay var(--modal-open-dur);
+    transition-behavior: allow-discrete;
+    will-change: transform, opacity;
+  }
+
+  @starting-style {
+    .t-modal[open] {
+      transform: scale(var(--modal-scale));
+      opacity: 0;
+    }
+  }
+
+  .t-modal[data-state="closing"] {
+    transform: scale(var(--modal-scale-close));
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--modal-close-dur);
+    transition-timing-function: var(--modal-close-ease);
+  }
+
+  .t-modal::backdrop {
+    background: var(--scrim);
+    opacity: 1;
+    transition:
+      opacity var(--modal-open-dur) var(--modal-ease),
+      display var(--modal-open-dur),
+      overlay var(--modal-open-dur);
+    transition-behavior: allow-discrete;
+  }
+
+  @starting-style {
+    .t-modal[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .t-modal[data-state="closing"]::backdrop {
+    opacity: 0;
+    transition-duration: var(--modal-close-dur);
+    transition-timing-function: var(--modal-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-modal {
+      transition-property: opacity, display, overlay;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-modal {
+    transition-property: opacity, display, overlay;
+  }
+}

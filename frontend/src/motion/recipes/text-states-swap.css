@@ -1,0 +1,57 @@
+/*
+ * Text states swap: adapted from the free "Text states swap" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add text-states-swap`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (small,
+ * --distance-micro, --blur-small, --ease-move). TextSwap (src/motion) runs the recipe's three
+ * phases from React state, timing the hand-off from the element's computed transition, and keeps
+ * the widest label's width so the control never jumps.
+ */
+
+@layer recipes {
+  :root {
+    --text-swap-dur: var(--duration-small);
+    --text-swap-translate-y: var(--distance-micro);
+    --text-swap-blur: var(--blur-small);
+    --text-swap-ease: var(--ease-move);
+  }
+
+  .t-text-swap {
+    display: inline-block;
+    transform: translateY(0);
+    filter: blur(0);
+    opacity: 1;
+    transition:
+      transform var(--text-swap-dur) var(--text-swap-ease),
+      filter var(--text-swap-dur) var(--text-swap-ease),
+      opacity var(--text-swap-dur) var(--text-swap-ease);
+    will-change: transform, filter, opacity;
+  }
+
+  .t-text-swap.is-exit {
+    transform: translateY(calc(var(--text-swap-translate-y) * -1));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+  }
+
+  .t-text-swap.is-enter-start {
+    transform: translateY(var(--text-swap-translate-y));
+    filter: blur(var(--text-swap-blur));
+    opacity: 0;
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-text-swap {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-text-swap {
+    transition: none !important;
+  }
+}

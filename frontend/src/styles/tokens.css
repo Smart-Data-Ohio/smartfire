@@ -1,0 +1,207 @@
+/*
+ * Design tokens. Components use only the semantic tokens (the second block); the primitives
+ * exist so the semantic layer reads as decisions ("the sidebar is neutral-150") rather than
+ * colour maths.
+ *
+ * Theme: `:root[data-theme="light" | "dark"]` pins a theme; no attribute (or "system") follows the
+ * OS through `color-scheme: light dark`, and every colour token is a `light-dark()` pair, so a
+ * theme switch is one property flip with no duplicated blocks. Contrast: every text token is held
+ * to 4.5:1 against the surfaces it sits on, in both themes, by src/styles/tokens.test.ts.
+ *
+ * Admin custom CSS (accounts/custom_styles) is injected unlayered after these layers, so it wins
+ * by cascade order; it should target tokens such as --accent, not class names.
+ */
+@layer tokens, base, motion, recipes, ui, app;
+
+@layer tokens {
+  :root {
+    color-scheme: light dark;
+
+    /* ── Primitives ─────────────────────────────────────────────────────────────── */
+
+    /* Cool neutrals for light surfaces and ink. */
+    --neutral-0: oklch(100% 0 0);
+    --neutral-50: oklch(98.5% 0.002 250);
+    --neutral-100: oklch(96.5% 0.004 250);
+    --neutral-150: oklch(95% 0.004 250);
+    --neutral-200: oklch(92.5% 0.005 250);
+    --neutral-250: oklch(91% 0.004 250);
+    --neutral-300: oklch(86% 0.006 255);
+    --neutral-500: oklch(51% 0.008 260);
+    --neutral-600: oklch(46% 0.01 260);
+    --neutral-900: oklch(22% 0.01 260);
+
+    /* Charcoal for dark surfaces: true charcoal, not black, separated by lightness steps. */
+    --charcoal-950: oklch(17% 0.006 260);
+    --charcoal-900: oklch(20% 0.007 260);
+    --charcoal-850: oklch(23% 0.007 260);
+    --charcoal-800: oklch(27% 0.008 260);
+    --charcoal-750: oklch(30% 0.008 260);
+    --charcoal-700: oklch(34% 0.009 260);
+    --charcoal-400: oklch(69% 0.01 260);
+    --charcoal-300: oklch(74% 0.01 260);
+    --charcoal-100: oklch(94% 0.005 260);
+
+    /* Indigo accent. */
+    --indigo-soft-light: oklch(95% 0.03 268);
+    --indigo-selected-light: oklch(92% 0.02 265);
+    --indigo-500: oklch(52% 0.19 268);
+    --indigo-450: oklch(56% 0.19 268);
+    --indigo-300: oklch(72% 0.14 268);
+    --indigo-selected-dark: oklch(32% 0.03 265);
+    --indigo-soft-dark: oklch(30% 0.06 268);
+
+    /* Amber: mentions of you (Slack's) and warnings. */
+    --amber-bar-light: oklch(80% 0.13 85);
+    --amber-bg-light: oklch(97% 0.04 90);
+    --amber-text-light: oklch(48% 0.1 75);
+    --amber-bar-dark: oklch(82% 0.12 85);
+    --amber-wash-dark: oklch(82% 0.12 85 / 8%);
+    --amber-chip-light: oklch(80% 0.13 85 / 35%);
+    --amber-chip-dark: oklch(82% 0.12 85 / 20%);
+    --amber-text-dark: oklch(84% 0.12 85);
+    --amber-500: oklch(75% 0.15 75);
+    --amber-warning-text-light: oklch(52% 0.12 70);
+    --amber-warning-text-dark: oklch(82% 0.13 80);
+
+    /* Red: danger and do-not-disturb. */
+    --red-500: oklch(53% 0.2 27);
+    --red-450: oklch(56% 0.2 27);
+    --red-300: oklch(72% 0.16 25);
+    --red-soft-light: oklch(96% 0.025 27);
+    --red-soft-dark: oklch(29% 0.06 27);
+
+    /* Green: success and presence. */
+    --green-500: oklch(60% 0.15 150);
+    --green-text-light: oklch(50% 0.13 150);
+    --green-300: oklch(76% 0.15 150);
+
+    /* Violet is reserved for agents, nowhere else. */
+    --violet-500: oklch(62% 0.17 300);
+    --violet-text-light: oklch(52% 0.19 300);
+    --violet-300: oklch(74% 0.14 300);
+    --violet-soft-light: oklch(96% 0.025 300);
+    --violet-soft-dark: oklch(29% 0.06 300);
+
+    /* ── Semantic colour ────────────────────────────────────────────────────────── */
+
+    --bg-app: light-dark(var(--neutral-50), var(--charcoal-950));
+    --bg-sidebar: light-dark(var(--neutral-100), var(--charcoal-900));
+    --bg-pane: light-dark(var(--neutral-0), var(--charcoal-850));
+    --bg-raised: light-dark(var(--neutral-0), var(--charcoal-800));
+    --bg-hover: light-dark(var(--neutral-150), var(--charcoal-800));
+    --bg-active: light-dark(var(--neutral-200), var(--charcoal-750));
+    --bg-selected: light-dark(var(--indigo-selected-light), var(--indigo-selected-dark));
+    --bg-sunken: light-dark(var(--neutral-150), var(--charcoal-950));
+    --bg-skeleton: light-dark(var(--neutral-200), var(--charcoal-750));
+
+    --text: light-dark(var(--neutral-900), var(--charcoal-100));
+    --text-muted: light-dark(var(--neutral-600), var(--charcoal-300));
+    --text-faint: light-dark(var(--neutral-500), var(--charcoal-400));
+
+    --border: light-dark(var(--neutral-250), var(--charcoal-750));
+    --border-strong: light-dark(var(--neutral-300), var(--charcoal-700));
+
+    --accent: light-dark(var(--indigo-500), var(--indigo-300));
+    --accent-solid: light-dark(var(--indigo-500), var(--indigo-450));
+    --accent-soft: light-dark(var(--indigo-soft-light), var(--indigo-soft-dark));
+    --on-accent: var(--neutral-0);
+    --focus-ring: var(--accent);
+
+    --mention: light-dark(var(--amber-bar-light), var(--amber-bar-dark));
+    /* Dark keeps the row a whisper of amber over the pane; the bar carries the signal (Slack's). */
+    --mention-bg: light-dark(var(--amber-bg-light), var(--amber-wash-dark));
+    --mention-chip-bg: light-dark(var(--amber-chip-light), var(--amber-chip-dark));
+    --mention-text: light-dark(var(--amber-text-light), var(--amber-text-dark));
+
+    --success: var(--green-500);
+    --success-text: light-dark(var(--green-text-light), var(--green-300));
+    --warning: var(--amber-500);
+    --warning-text: light-dark(var(--amber-warning-text-light), var(--amber-warning-text-dark));
+    --danger: light-dark(var(--red-500), var(--red-300));
+    --danger-solid: light-dark(var(--red-500), var(--red-450));
+    --danger-soft: light-dark(var(--red-soft-light), var(--red-soft-dark));
+    --danger-text: light-dark(var(--red-500), var(--red-300));
+    --on-danger: var(--neutral-0);
+
+    --presence-online: var(--green-500);
+    --presence-away: var(--amber-500);
+    --presence-dnd: var(--red-450);
+    --presence-offline: light-dark(var(--neutral-500), var(--charcoal-400));
+
+    --agent: light-dark(var(--violet-500), var(--violet-300));
+    --agent-text: light-dark(var(--violet-text-light), var(--violet-300));
+    --agent-soft: light-dark(var(--violet-soft-light), var(--violet-soft-dark));
+
+    --scrim: light-dark(oklch(22% 0.01 260 / 32%), oklch(8% 0.005 260 / 60%));
+    --tooltip-bg: light-dark(var(--neutral-900), var(--charcoal-100));
+    --tooltip-text: light-dark(var(--neutral-0), var(--neutral-900));
+
+    /* Shadows: a hairline ring plus two soft layers. Dark leans on the ring, light on the blur. */
+    --shadow-ring: light-dark(oklch(22% 0.01 260 / 8%), oklch(100% 0 0 / 7%));
+    --shadow-soft: light-dark(oklch(22% 0.01 260 / 8%), oklch(0% 0 0 / 32%));
+    --shadow-deep: light-dark(oklch(22% 0.01 260 / 12%), oklch(0% 0 0 / 44%));
+    --shadow-raised:
+      0 0 0 1px var(--shadow-ring), 0 2px 6px var(--shadow-soft),
+      0 12px 32px -8px var(--shadow-deep);
+    --shadow-overlay:
+      0 0 0 1px var(--shadow-ring), 0 8px 24px var(--shadow-soft),
+      0 24px 64px -12px var(--shadow-deep);
+    --shadow-control: 0 1px 1px light-dark(oklch(22% 0.01 260 / 6%), oklch(0% 0 0 / 24%));
+
+    /* ── Space, size, radius ────────────────────────────────────────────────────── */
+
+    --space-0-5: 2px;
+    --space-1: 4px;
+    --space-1-5: 6px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+
+    --control-sm: 28px;
+    --control-md: 32px;
+    --control-lg: 40px;
+
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-pill: 999px;
+
+    --rail-width: 64px;
+    --sidebar-width: 248px;
+    --pane-header-height: 48px;
+    --right-pane-width: 380px;
+
+    /* ── Density: comfortable (default) ─────────────────────────────────────────── */
+
+    --message-avatar-size: 36px;
+    --message-gutter: 52px;
+    --message-pad-y: 2px;
+    --message-group-gap: var(--space-2);
+    --sidebar-row-height: 28px;
+    --sidebar-row-gap: 1px;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  /* Compact: IRC-style rows, no avatars, name and time inline, 2 px between groups. */
+  :root[data-density="compact"] {
+    --message-avatar-size: 0px;
+    --message-gutter: 0px;
+    --message-pad-y: 1px;
+    --message-group-gap: 2px;
+    --sidebar-row-height: 24px;
+    --sidebar-row-gap: 0px;
+  }
+}

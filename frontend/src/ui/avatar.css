@@ -1,0 +1,79 @@
+@layer ui {
+  .avatar {
+    --avatar-size: 36px;
+    --avatar-radius: clamp(4px, calc(var(--avatar-size) * 0.24), 16px);
+    --avatar-ring: var(--bg-pane);
+
+    position: relative;
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--avatar-size);
+    height: var(--avatar-size);
+    border-radius: var(--avatar-radius);
+    /*
+     * One lightness and chroma per theme, so every tile carries the same weight: soft fills with
+     * dark initials in light, mid-tone fills with light initials in dark. tokens.test.ts holds
+     * every palette hue to 4.5:1.
+     */
+    --avatar-fill: light-dark(
+      oklch(92% 0.055 var(--avatar-hue)),
+      oklch(50% 0.13 var(--avatar-hue))
+    );
+    --avatar-ink: light-dark(oklch(40% 0.11 var(--avatar-hue)), oklch(97% 0.015 var(--avatar-hue)));
+
+    background: var(--avatar-fill);
+    color: var(--avatar-ink);
+    font-size: calc(var(--avatar-size) * 0.4);
+    font-weight: var(--weight-semibold);
+    line-height: 1;
+    letter-spacing: 0;
+    user-select: none;
+  }
+
+  .avatar-image {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+  }
+
+  .avatar-initials {
+    font-feature-settings: "case";
+  }
+
+  /* Presence: a dot cut into the bottom-right corner by a ring of the surface colour. Online is
+     a solid dot, away a crescent, do-not-disturb a bar, offline a hollow ring, so the state
+     reads without colour too. */
+  .avatar-presence {
+    --dot: clamp(8px, calc(var(--avatar-size) * 0.3), 16px);
+
+    position: absolute;
+    right: calc(var(--dot) * -0.2);
+    bottom: calc(var(--dot) * -0.2);
+    width: var(--dot);
+    height: var(--dot);
+    border-radius: 50%;
+    background: var(--presence-online);
+    box-shadow: 0 0 0 2px var(--avatar-ring);
+    transition: background-color var(--duration-small) var(--ease-enter);
+  }
+
+  .avatar-presence[data-presence="away"] {
+    background: radial-gradient(
+      circle at 22% 22%,
+      var(--avatar-ring) 36%,
+      var(--presence-away) 38%
+    );
+  }
+
+  .avatar-presence[data-presence="dnd"] {
+    background:
+      linear-gradient(var(--on-danger), var(--on-danger)) center / 56% 22% no-repeat,
+      var(--presence-dnd);
+  }
+
+  .avatar-presence[data-presence="offline"] {
+    background: radial-gradient(circle, var(--avatar-ring) 34%, var(--presence-offline) 36%);
+  }
+}

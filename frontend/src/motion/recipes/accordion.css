@@ -1,0 +1,76 @@
+/*
+ * Accordion: adapted from the free "Accordion expand" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add accordion`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium to expand,
+ * medium-exit to collapse, --ease-move, --blur-small), the chevron is the Lucide chevron-down
+ * rotated rather than flipped (it reads as one object turning), and closed panels are `inert`
+ * from the component so collapsed content can't take focus.
+ */
+
+@layer recipes {
+  :root {
+    --acc-expand: var(--duration-medium);
+    --acc-collapse: var(--duration-medium-exit);
+    --acc-chevron: var(--duration-medium);
+    --acc-ease: var(--ease-move);
+  }
+
+  /* grid-template-rows 0fr -> 1fr animates height with no measurement; the inner element clips. */
+  .t-acc-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--acc-collapse) var(--acc-ease);
+  }
+
+  .t-acc[data-open="true"] .t-acc-panel {
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--acc-expand) var(--acc-ease);
+  }
+
+  .t-acc-panel-inner {
+    min-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    filter: blur(var(--blur-small));
+    transition:
+      opacity var(--acc-collapse) var(--acc-ease),
+      filter var(--acc-collapse) var(--acc-ease);
+  }
+
+  .t-acc[data-open="true"] .t-acc-panel-inner {
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      opacity var(--acc-expand) var(--acc-ease),
+      filter var(--acc-expand) var(--acc-ease);
+  }
+
+  .t-acc-chevron {
+    display: inline-flex;
+    rotate: -90deg;
+    transition: rotate var(--acc-chevron) var(--acc-ease);
+  }
+
+  .t-acc[data-open="true"] .t-acc-chevron {
+    rotate: 0deg;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-acc-panel,
+    :root:not([data-motion="full"]) .t-acc-panel-inner,
+    :root:not([data-motion="full"]) .t-acc-chevron {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-acc-panel,
+  :root[data-motion="reduce"] .t-acc-panel-inner,
+  :root[data-motion="reduce"] .t-acc-chevron {
+    transition: none !important;
+  }
+}

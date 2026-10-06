@@ -1,0 +1,74 @@
+/*
+ * Enter patterns with @starting-style: an element animates in when it is inserted (or shown) with
+ * no JavaScript and no mount bookkeeping. Add the class to something that appears; leaving is the
+ * component's business (most chrome leaves instantly, overlays use their recipe's exit).
+ *
+ *   .enter-fade   opacity only
+ *   .enter-rise   8 px rise plus fade: a message that arrives live while you're at the bottom
+ *   .enter-pop    0.96 -> 1 plus fade: cards, chips
+ *   .enter-chip   0.8 -> 1 on the pop spring: a reaction that was just added
+ *   .enter-pane   12 px slide from the end edge plus fade: the right pane opening
+ *
+ * Under reduced motion the distance and scale tokens are zero, so each becomes a short fade.
+ */
+
+@layer motion {
+  .enter-fade {
+    transition: opacity var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  .enter-rise {
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      translate var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: 0 var(--distance-rise);
+    }
+  }
+
+  .enter-pop {
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      scale var(--duration-small) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      scale: var(--scale-surface);
+    }
+  }
+
+  .enter-chip {
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      scale var(--duration-spring) var(--ease-spring);
+
+    @starting-style {
+      opacity: 0;
+      scale: var(--scale-chip);
+    }
+  }
+
+  .enter-pane {
+    transition:
+      opacity var(--duration-medium) var(--ease-enter),
+      translate var(--duration-medium) var(--ease-enter);
+
+    @starting-style {
+      opacity: 0;
+      translate: var(--distance-pane) 0;
+    }
+  }
+
+  /* View Transitions (theme switch, conversation swaps): a short cross-fade, nothing more. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--duration-small);
+    animation-timing-function: var(--ease-enter);
+  }
+}

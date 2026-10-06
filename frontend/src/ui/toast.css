@@ -1,0 +1,97 @@
+@layer ui {
+  .toaster {
+    position: fixed;
+    inset: auto auto var(--space-4) var(--space-4);
+    width: min(360px, calc(100vw - var(--space-8)));
+    margin: 0;
+    overflow: visible;
+  }
+
+  .toaster-list {
+    position: relative;
+    min-height: 1px;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Each toast is absolutely stacked from the bottom; the slot carries the stack offset and
+     scale, the toast inside it carries the recipe's enter and exit. */
+  .toast-slot {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform-origin: 50% 100%;
+    transition:
+      translate var(--duration-medium) var(--ease-move),
+      scale var(--duration-medium) var(--ease-move),
+      opacity var(--duration-small) var(--ease-enter);
+  }
+
+  .toast-slot[data-hidden] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .toast {
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    color: var(--text);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .toast-body {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
+    transition: opacity var(--duration-small) var(--ease-enter);
+  }
+
+  /* Collapsed, only the front toast's content shows; the ones behind are just edges. */
+  .toaster:not([data-expanded]) .toast-slot:not([data-front]) .toast-body {
+    opacity: 0;
+    transition: opacity var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .toast-body > .button {
+    align-self: center;
+  }
+
+  .toast-icon {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+
+  .toast[data-tone="success"] .toast-icon {
+    background: color-mix(in oklch, var(--success), transparent 82%);
+    color: var(--success-text);
+  }
+
+  .toast[data-tone="danger"] .toast-icon {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .toast-text {
+    flex: 1;
+    min-width: 0;
+    padding-top: 1px;
+  }
+
+  .toast-title {
+    font-weight: var(--weight-medium);
+  }
+
+  .toast-description {
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+}

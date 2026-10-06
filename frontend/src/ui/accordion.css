@@ -1,0 +1,30 @@
+@layer ui {
+  .accordion-heading {
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+  }
+
+  .accordion-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    width: 100%;
+    height: var(--sidebar-row-height);
+    padding-inline: var(--space-1);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    font-weight: var(--weight-medium);
+    text-align: start;
+    transition: color var(--duration-micro) var(--ease-enter);
+  }
+
+  .accordion-trigger:hover {
+    color: var(--text);
+  }
+
+  .accordion-content {
+    padding-top: var(--space-1);
+  }
+}

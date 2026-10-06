@@ -1,0 +1,29 @@
+@layer ui {
+  .tabs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .tabs .t-tabs {
+    align-self: flex-start;
+  }
+
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    height: var(--control-sm);
+    padding-inline: var(--space-3);
+    font-size: var(--text-sidebar);
+    font-weight: var(--weight-medium);
+  }
+
+  .tab:focus-visible {
+    outline-offset: 0;
+  }
+
+  .tab-panel:focus-visible {
+    border-radius: var(--radius-sm);
+  }
+}

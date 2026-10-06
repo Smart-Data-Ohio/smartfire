@@ -1,0 +1,95 @@
+/*
+ * Menu dropdown: adapted from the free "Menu dropdown" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add menu-dropdown`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at Smartfire's motion tokens
+ * (small/small-exit, enter/exit easing). Open and closing are `data-state=open | closing`
+ * set by usePresence(); the enter plays from @starting-style when the element mounts or enters the
+ * top layer, and a light dismiss by the Popover API exits the same way through `display` and
+ * `overlay` discrete transitions. Menus and popovers both use it.
+ */
+
+@layer recipes {
+  :root {
+    --dropdown-open-dur: var(--duration-small);
+    --dropdown-close-dur: var(--duration-small-exit);
+    --dropdown-pre-scale: var(--scale-menu);
+    --dropdown-closing-scale: var(--scale-menu-exit);
+    --dropdown-ease: var(--ease-enter);
+    --dropdown-close-ease: var(--ease-exit);
+  }
+
+  .t-dropdown {
+    transform-origin: top left;
+    transform: scale(1);
+    opacity: 1;
+    transition:
+      transform var(--dropdown-open-dur) var(--dropdown-ease),
+      opacity var(--dropdown-open-dur) var(--dropdown-ease),
+      display var(--dropdown-open-dur),
+      overlay var(--dropdown-open-dur);
+    transition-behavior: allow-discrete;
+    will-change: transform, opacity;
+  }
+
+  .t-dropdown[data-origin="top-right"] {
+    transform-origin: top right;
+  }
+
+  .t-dropdown[data-origin="top-center"] {
+    transform-origin: top center;
+  }
+
+  .t-dropdown[data-origin="bottom-left"] {
+    transform-origin: bottom left;
+  }
+
+  .t-dropdown[data-origin="bottom-center"] {
+    transform-origin: bottom center;
+  }
+
+  .t-dropdown[data-origin="bottom-right"] {
+    transform-origin: bottom right;
+  }
+
+  .t-dropdown[data-origin="left"] {
+    transform-origin: left center;
+  }
+
+  @starting-style {
+    .t-dropdown[data-state="open"] {
+      transform: scale(var(--dropdown-pre-scale));
+      opacity: 0;
+    }
+  }
+
+  .t-dropdown[data-state="closing"] {
+    transform: scale(var(--dropdown-closing-scale));
+    opacity: 0;
+    pointer-events: none;
+    transition-duration: var(--dropdown-close-dur);
+    transition-timing-function: var(--dropdown-close-ease);
+  }
+
+  /* A light dismiss (outside click, Esc) hides the popover before React hears about it. */
+  .t-dropdown[popover]:not(:popover-open) {
+    transform: scale(var(--dropdown-closing-scale));
+    opacity: 0;
+    transition-duration: var(--dropdown-close-dur);
+    transition-timing-function: var(--dropdown-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-dropdown {
+      transition-property: opacity, display, overlay;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-dropdown {
+    transition-property: opacity, display, overlay;
+  }
+}

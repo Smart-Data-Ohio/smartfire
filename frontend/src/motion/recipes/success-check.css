@@ -1,0 +1,129 @@
+/*
+ * Success check: adapted from the free "Success check" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add success-check`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the pop
+ * spring for the bob, --duration-spring for the rest, a shorter rotate, travel and blur so it reads
+ * at 16-20 px). The check path's dash length is fixed to the Lucide check it draws.
+ */
+
+@layer recipes {
+  :root {
+    --check-opacity-dur: var(--duration-spring);
+    --check-rotate-dur: var(--duration-spring);
+    --check-rotate-from: 45deg;
+    --check-bob-dur: var(--duration-spring);
+    --check-y-amount: var(--distance-rise);
+    --check-blur-dur: var(--duration-spring);
+    --check-blur-from: 4px;
+    --check-path-dur: var(--duration-spring);
+    --check-path-delay: var(--duration-intent);
+    --check-ease-out: var(--ease-enter);
+    --check-ease-opacity: var(--ease-enter);
+    --check-ease-rotate: var(--ease-enter);
+    --check-ease-bob: var(--ease-spring);
+    --check-ease-path: var(--ease-enter);
+  }
+
+  .t-success-check {
+    display: inline-block;
+    transform-origin: center;
+    opacity: 0;
+    will-change: transform, opacity, filter;
+  }
+
+  .t-success-check svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .t-success-check svg path {
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+  }
+
+  .t-success-check[data-state="in"] {
+    animation:
+      t-check-fade var(--check-opacity-dur) var(--check-ease-opacity) forwards,
+      t-check-rotate var(--check-rotate-dur) var(--check-ease-rotate) forwards,
+      t-check-blur var(--check-blur-dur) var(--check-ease-out) forwards,
+      t-check-bob var(--check-bob-dur) var(--check-ease-bob) forwards;
+  }
+
+  .t-success-check[data-state="in"] svg path {
+    animation: t-check-draw var(--check-path-dur) var(--check-ease-path) var(--check-path-delay)
+      forwards;
+  }
+
+  @keyframes t-check-fade {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes t-check-rotate {
+    from {
+      transform: rotate(var(--check-rotate-from));
+    }
+
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes t-check-blur {
+    from {
+      filter: blur(var(--check-blur-from));
+    }
+
+    to {
+      filter: blur(0);
+    }
+  }
+
+  @keyframes t-check-bob {
+    from {
+      translate: 0 var(--check-y-amount);
+    }
+
+    to {
+      translate: 0 0;
+    }
+  }
+
+  @keyframes t-check-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-success-check {
+      animation: none !important;
+      opacity: 1;
+    }
+
+    :root:not([data-motion="full"]) .t-success-check svg path {
+      animation: none !important;
+      stroke-dashoffset: 0 !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-success-check {
+    animation: none !important;
+    opacity: 1;
+  }
+
+  :root[data-motion="reduce"] .t-success-check svg path {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+}

@@ -1,0 +1,68 @@
+@layer ui {
+  .dialog {
+    width: min(480px, calc(100vw - var(--space-8)));
+    max-height: calc(100dvh - var(--space-10) * 2);
+    margin: auto;
+    border-radius: var(--radius-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-overlay);
+    color: var(--text);
+  }
+
+  .dialog[data-size="sm"] {
+    width: min(400px, calc(100vw - var(--space-8)));
+  }
+
+  /* Without showModal() the open attribute alone has to centre it above the page. */
+  .dialog[open]:not(:modal) {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+  }
+
+  .dialog-surface {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-height: inherit;
+    padding: var(--space-5) var(--space-5) var(--space-4);
+  }
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-right: calc(var(--space-2) * -1);
+  }
+
+  .dialog-title {
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+  }
+
+  .dialog-description {
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .dialog-body {
+    min-height: 0;
+    margin-top: var(--space-2);
+    overflow: auto;
+    font-size: var(--text-ui);
+  }
+
+  .dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  :root:has(.dialog[open]) {
+    overflow: hidden;
+    scrollbar-gutter: stable;
+  }
+}

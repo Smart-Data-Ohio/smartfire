@@ -1,0 +1,79 @@
+/*
+ * Number pop-in: adapted from the free "Number pop-in" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add number-pop-in`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the pop
+ * spring, --distance-rise, --duration-stagger). AnimatedNumber (src/motion) re-keys the digit spans
+ * on every change, so React remounts them and the keyframes replay without the recipe's
+ * remove-reflow-add dance; only digits that changed animate.
+ */
+
+@layer recipes {
+  :root {
+    --digit-dur: var(--duration-spring);
+    --digit-distance: var(--distance-rise);
+    --digit-stagger: var(--duration-stagger);
+    --digit-blur: var(--blur-small);
+    --digit-ease: var(--ease-spring);
+    --digit-dir-x: 0;
+    --digit-dir-y: 1;
+  }
+
+  @keyframes t-digit-pop-in {
+    0% {
+      transform: translate(
+        calc(var(--digit-distance) * var(--digit-dir-x)),
+        calc(var(--digit-distance) * var(--digit-dir-y))
+      );
+      opacity: 0;
+      filter: blur(var(--digit-blur));
+    }
+
+    100% {
+      transform: translate(0, 0);
+      opacity: 1;
+      filter: blur(0);
+    }
+  }
+
+  .t-digit-group {
+    display: inline-flex;
+    align-items: baseline;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .t-digit {
+    display: inline-block;
+  }
+
+  .t-digit-group.is-animating .t-digit[data-changed] {
+    animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+  }
+
+  .t-digit-group.is-animating .t-digit[data-stagger="1"] {
+    animation-delay: var(--digit-stagger);
+  }
+
+  .t-digit-group.is-animating .t-digit[data-stagger="2"] {
+    animation-delay: calc(var(--digit-stagger) * 2);
+  }
+
+  /* Counting down drops the new digits in from above. */
+  .t-digit-group[data-direction="down"] {
+    --digit-dir-y: -1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-digit-group .t-digit {
+      animation: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-digit-group .t-digit {
+    animation: none !important;
+  }
+}

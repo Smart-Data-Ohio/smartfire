@@ -1,0 +1,113 @@
+/*
+ * Skeleton loader and reveal: adapted from the free "Skeleton loader and reveal" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add skeleton-reveal`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the
+ * large step for the reveal, --blur-small, --ease-move), the pulse keeps going while loading
+ * (`--pulse-count: infinite`) on a quiet linear 1.6 s breath, and the skeleton layer leaves the
+ * accessibility tree once revealed. Skeleton and SkeletonReveal (src/ui) drive the states.
+ */
+
+@layer recipes {
+  :root {
+    --pulse-dur: calc(var(--duration-spring) * 4);
+    --pulse-count: infinite;
+    --pulse-min: 0.55;
+    --reveal-dur: var(--duration-large);
+    --reveal-blur: var(--blur-small);
+    --reveal-ease: var(--ease-move);
+  }
+
+  .t-skel {
+    display: grid;
+  }
+
+  /* Both layers share one grid cell, so the swap never changes layout. */
+  .t-skel-skeleton,
+  .t-skel-content {
+    grid-area: 1 / 1;
+  }
+
+  .t-skel-skeleton {
+    z-index: 1;
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      opacity var(--reveal-dur) var(--reveal-ease),
+      filter var(--reveal-dur) var(--reveal-ease),
+      visibility 0s linear 0s;
+  }
+
+  .t-skel-content {
+    z-index: 2;
+    opacity: 0;
+    filter: blur(var(--reveal-blur));
+    transition:
+      opacity var(--reveal-dur) var(--reveal-ease),
+      filter var(--reveal-dur) var(--reveal-ease);
+  }
+
+  .t-skel.is-revealed .t-skel-skeleton {
+    opacity: 0;
+    filter: blur(var(--reveal-blur));
+    visibility: hidden;
+    transition:
+      opacity var(--reveal-dur) var(--reveal-ease),
+      filter var(--reveal-dur) var(--reveal-ease),
+      visibility 0s linear var(--reveal-dur);
+  }
+
+  .t-skel.is-revealed .t-skel-content {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  .t-skel.is-resetting .t-skel-skeleton,
+  .t-skel.is-resetting .t-skel-content {
+    transition: none !important;
+  }
+
+  .t-skel-skeleton.is-pulsing > *,
+  .t-skel-bone.is-pulsing {
+    animation: t-skel-pulse var(--pulse-dur) ease-in-out var(--pulse-count);
+  }
+
+  @keyframes t-skel-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: var(--pulse-min);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-skel-skeleton,
+    :root:not([data-motion="full"]) .t-skel-content {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-skel-skeleton,
+  :root[data-motion="reduce"] .t-skel-content {
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-skel-skeleton.is-pulsing > *,
+    :root:not([data-motion="full"]) .t-skel-bone.is-pulsing {
+      animation: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-skel-skeleton.is-pulsing > *,
+  :root[data-motion="reduce"] .t-skel-bone.is-pulsing {
+    animation: none !important;
+  }
+}

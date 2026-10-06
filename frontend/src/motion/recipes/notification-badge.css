@@ -1,0 +1,100 @@
+/*
+ * Notification badge: adapted from the free "Notification badge" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add notification-badge`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens: the pop
+ * rides the pop spring (--ease-spring over --duration-spring) instead of a cubic overshoot, the
+ * fade lasts the spring step like the recipe's, the slide uses the medium step, the close uses the
+ * small exit. Badge (src/ui) positions
+ * itself; `.t-badge` is only absolute when it decorates a trigger (`data-floating`).
+ */
+
+@layer recipes {
+  :root {
+    --badge-slide-dur: var(--duration-medium);
+    --badge-pop-dur: var(--duration-spring);
+    --badge-pop-close-dur: var(--duration-small-exit);
+    --badge-fade-dur: var(--duration-spring);
+    --badge-fade-close-dur: var(--duration-small-exit);
+    --badge-blur: var(--blur-small);
+    --badge-offset-x: calc(var(--distance-rise) * -1);
+    --badge-offset-y: calc(var(--distance-pane));
+    --badge-slide-ease: var(--ease-enter);
+    --badge-pop-ease: var(--ease-spring);
+    --badge-close-ease: var(--ease-exit);
+  }
+
+  @keyframes t-badge-slide-in {
+    from {
+      transform: translate(var(--badge-offset-x), var(--badge-offset-y));
+    }
+
+    to {
+      transform: translate(0, 0);
+    }
+  }
+
+  .t-badge {
+    display: inline-flex;
+    pointer-events: none;
+  }
+
+  .t-badge[data-floating] {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+  }
+
+  .t-badge[data-floating][data-open="true"] {
+    animation: t-badge-slide-in var(--badge-slide-dur) var(--badge-slide-ease);
+  }
+
+  .t-badge-dot {
+    display: inline-flex;
+    transform-origin: center;
+    transform: scale(1);
+    opacity: 1;
+    filter: blur(0);
+    transition:
+      transform var(--badge-pop-dur) var(--badge-pop-ease),
+      opacity var(--badge-fade-dur) var(--badge-slide-ease),
+      filter var(--badge-pop-dur) var(--badge-slide-ease);
+    will-change: transform, opacity, filter;
+  }
+
+  @starting-style {
+    .t-badge[data-open="true"] .t-badge-dot {
+      transform: scale(0);
+      opacity: 0;
+      filter: blur(var(--badge-blur));
+    }
+  }
+
+  .t-badge[data-open="false"] .t-badge-dot {
+    transform: scale(0);
+    opacity: 0;
+    filter: blur(var(--badge-blur));
+    transition:
+      transform var(--badge-pop-close-dur) var(--badge-close-ease),
+      opacity var(--badge-fade-close-dur) var(--badge-close-ease),
+      filter var(--badge-pop-close-dur) var(--badge-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-badge,
+    :root:not([data-motion="full"]) .t-badge-dot {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-badge,
+  :root[data-motion="reduce"] .t-badge-dot {
+    animation: none !important;
+    transition: none !important;
+  }
+}

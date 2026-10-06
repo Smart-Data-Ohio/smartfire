@@ -1,0 +1,16 @@
+@layer ui {
+  .skeleton {
+    display: block;
+    flex-shrink: 0;
+    border-radius: var(--radius-xs);
+    background: var(--bg-skeleton);
+  }
+
+  .skeleton[data-radius="md"] {
+    border-radius: var(--radius-md);
+  }
+
+  .skeleton[data-radius="pill"] {
+    border-radius: var(--radius-pill);
+  }
+}

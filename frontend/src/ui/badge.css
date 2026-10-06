@@ -1,0 +1,52 @@
+@layer ui {
+  .badge {
+    --badge-bg: var(--danger-solid);
+    --badge-fg: var(--on-danger);
+    --badge-ring: transparent;
+  }
+
+  .badge[data-tone="accent"] {
+    --badge-bg: var(--accent-solid);
+    --badge-fg: var(--on-accent);
+  }
+
+  .badge[data-tone="neutral"] {
+    --badge-bg: var(--bg-active);
+    --badge-fg: var(--text);
+  }
+
+  .badge[data-tone="mention"] {
+    --badge-bg: var(--mention);
+    --badge-fg: oklch(26% 0.04 70);
+  }
+
+  .badge[data-floating] {
+    --badge-ring: var(--bg-sidebar);
+
+    top: -4px;
+    right: -6px;
+  }
+
+  .badge-pill {
+    min-width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    padding-inline: 5px;
+    border-radius: var(--radius-pill);
+    background: var(--badge-bg);
+    box-shadow: 0 0 0 3px var(--badge-ring);
+    color: var(--badge-fg);
+    font-size: 11px;
+    font-weight: var(--weight-semibold);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .badge[data-dot] .badge-pill {
+    min-width: 8px;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+  }
+}

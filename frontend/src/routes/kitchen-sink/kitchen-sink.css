@@ -1,0 +1,849 @@
+@layer app {
+  /* ── Page ───────────────────────────────────────────────────────────────── */
+
+  .ks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 var(--space-6) var(--space-10);
+  }
+
+  .ks-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3) var(--space-6);
+    margin: 0 calc(var(--space-6) * -1);
+    padding: var(--space-3) var(--space-6);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-app);
+  }
+
+  .ks-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .ks-version {
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-xs);
+    background: var(--bg-active);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+  }
+
+  .ks-switches {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-5);
+  }
+
+  .ks-choice {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0;
+    border: 0;
+  }
+
+  .ks-choice-label {
+    float: left;
+    margin-right: var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+  }
+
+  .ks-choice .button {
+    text-transform: capitalize;
+  }
+
+  .ks-toggle .field-row {
+    gap: var(--space-2);
+    font-size: var(--text-sidebar);
+  }
+
+  /* ── Gallery ────────────────────────────────────────────────────────────── */
+
+  .ks-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+    gap: var(--space-4);
+    align-items: start;
+  }
+
+  .ks-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+
+  .ks-split .ks-gallery {
+    grid-template-columns: 1fr;
+  }
+
+  .ks-scheme {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--bg-app);
+    color: var(--text);
+  }
+
+  .ks-scheme[data-scheme="light"] {
+    color-scheme: light;
+  }
+
+  .ks-scheme[data-scheme="dark"] {
+    color-scheme: dark;
+  }
+
+  .ks-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+    background: var(--bg-pane);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+
+  .ks-section-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+    margin-bottom: var(--space-1);
+  }
+
+  .ks-section-title {
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .ks-section-note {
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+  }
+
+  .ks-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .ks-row-label {
+    flex-shrink: 0;
+    width: 76px;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .ks-row-items {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .ks-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .ks-stack-tight {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-1);
+  }
+
+  .ks-narrow {
+    max-width: 380px;
+  }
+
+  .ks-indent {
+    padding-left: var(--space-6);
+  }
+
+  .ks-form {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .ks-form .field {
+    flex: 1;
+  }
+
+  .ks-form > .button {
+    margin-top: calc(var(--leading-ui) + var(--space-1-5));
+    height: var(--control-lg);
+  }
+
+  .ks-message-skeleton {
+    display: flex;
+    gap: var(--space-3);
+    min-height: 64px;
+  }
+
+  .ks-floating-demo {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    margin-left: var(--space-2);
+    border-radius: var(--radius-lg);
+    background: var(--bg-hover);
+    color: var(--text-muted);
+  }
+
+  .ks-number {
+    min-width: 72px;
+    font-size: var(--text-page);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-page);
+  }
+
+  .ks-success {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--success-text);
+  }
+
+  .ks-card {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: 44px;
+    padding: 0 var(--space-4) 0 var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow:
+      0 0 0 1px var(--border),
+      var(--shadow-control);
+    font-size: var(--text-ui);
+    text-align: start;
+  }
+
+  .ks-profile {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3);
+    align-items: center;
+  }
+
+  .ks-profile-name {
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+  }
+
+  .ks-profile-actions {
+    display: flex;
+    grid-column: 1 / -1;
+    gap: var(--space-2);
+  }
+
+  .ks-profile-actions .button {
+    flex: 1;
+  }
+
+  /* ── Mock app ───────────────────────────────────────────────────────────── */
+
+  .ks-mock {
+    margin-top: var(--space-2);
+  }
+
+  .mock-app {
+    display: grid;
+    grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(0, 1fr) 0;
+    height: 600px;
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--bg-app);
+    box-shadow: var(--shadow-raised);
+    transition: grid-template-columns var(--duration-medium) var(--ease-move);
+  }
+
+  .mock-app[data-thread] {
+    grid-template-columns: var(--rail-width) var(--sidebar-width) minmax(0, 1fr) 340px;
+  }
+
+  /* Rail: Discord's spatial model. */
+  .mock-rail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) 0;
+  }
+
+  .mock-rail-item {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .mock-rail-pill {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 4px;
+    height: 36px;
+    border-radius: 0 4px 4px 0;
+    background: var(--text);
+    translate: 0 -50%;
+    /* Discord's pill grows dot → hover → selected; scaled, not resized, so nothing reflows. */
+    scale: 1 0;
+    transition: scale var(--duration-small) var(--ease-move);
+  }
+
+  .mock-rail-item[data-unread] .mock-rail-pill {
+    scale: 1 calc(8 / 36);
+  }
+
+  .mock-rail-item:hover .mock-rail-pill {
+    scale: 1 calc(20 / 36);
+  }
+
+  .mock-rail-item[data-active] .mock-rail-pill {
+    scale: 1;
+  }
+
+  .mock-rail-button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-sidebar);
+    color: var(--text-muted);
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter);
+  }
+
+  .mock-rail-button:hover {
+    background: var(--bg-active);
+    color: var(--text);
+  }
+
+  .mock-rail-item[data-active] .mock-rail-button {
+    background: var(--accent-solid);
+    color: var(--on-accent);
+  }
+
+  .mock-rail-button .badge[data-floating] {
+    --badge-ring: var(--bg-app);
+  }
+
+  .mock-rail-divider {
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--border);
+  }
+
+  .mock-workspace-tile {
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Sidebar: Slack's calm. */
+  .mock-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    background: var(--bg-sidebar);
+  }
+
+  .mock-sidebar-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--pane-header-height);
+    padding: 0 var(--space-2) 0 var(--space-4);
+  }
+
+  .mock-workspace-name {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-1-5);
+    margin-left: calc(var(--space-1-5) * -1);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .mock-workspace-name:hover {
+    background: var(--bg-hover);
+  }
+
+  .mock-sidebar-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: var(--space-3);
+  }
+
+  .mock-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sidebar-row-gap);
+    margin: 0;
+    padding: 0 var(--space-2);
+    list-style: none;
+  }
+
+  .mock-section-label {
+    padding: var(--space-4) var(--space-4) var(--space-1);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  .mock-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--sidebar-row-height);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    text-decoration: none;
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter);
+  }
+
+  .mock-row:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  .mock-row:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .mock-row-icon {
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+
+  .mock-row-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mock-row[data-state="unread"] {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .mock-row[data-state="muted"] {
+    color: var(--text-faint);
+  }
+
+  .mock-row[data-state="selected"] {
+    background: var(--bg-selected);
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .mock-row-muted {
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+
+  .mock-mention-pill {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--danger-solid);
+    color: var(--on-danger);
+    font-size: 11px;
+    font-weight: var(--weight-semibold);
+    line-height: 18px;
+    text-align: center;
+  }
+
+  /* Pane */
+  .mock-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--bg-pane);
+  }
+
+  .mock-pane-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    height: var(--pane-header-height);
+    padding: 0 var(--space-3) 0 var(--space-5);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mock-channel-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+  }
+
+  .mock-pane-title {
+    color: var(--text);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .mock-pane-tools {
+    display: flex;
+    gap: var(--space-0-5);
+  }
+
+  .mock-messages {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 0;
+    padding: var(--space-2) 0;
+    overflow: auto;
+  }
+
+  .mock-day {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-3) var(--space-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  .mock-day::before,
+  .mock-day::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .mock-message {
+    position: relative;
+    display: grid;
+    grid-template-columns: var(--message-gutter) minmax(0, 1fr);
+    margin-top: var(--message-group-gap);
+    padding: var(--message-pad-y) var(--space-5);
+    transition: background-color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .mock-message[data-continued] {
+    margin-top: 0;
+  }
+
+  .mock-message:hover,
+  .mock-message:focus-within {
+    background: color-mix(in oklch, var(--bg-hover), transparent 40%);
+    transition-duration: 0s;
+  }
+
+  .mock-message[data-mention] {
+    background: var(--mention-bg);
+    box-shadow: inset 2px 0 0 var(--mention);
+  }
+
+  .mock-message-gutter {
+    padding-top: var(--space-0-5);
+  }
+
+  .mock-message-hover-time {
+    display: block;
+    padding-top: 3px;
+    color: var(--text-faint);
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .mock-message:hover .mock-message-hover-time {
+    opacity: 1;
+  }
+
+  .mock-message-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .mock-message-author {
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+  }
+
+  .mock-message-time {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .mock-agent-tag {
+    align-self: center;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
+    background: var(--agent-soft);
+    color: var(--agent-text);
+    font-size: 11px;
+    font-weight: var(--weight-semibold);
+    line-height: 16px;
+  }
+
+  .mock-message-body {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .mock-mention {
+    padding: 0 2px;
+    border-radius: var(--radius-xs);
+    background: var(--mention-chip-bg);
+    color: var(--mention-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .mock-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin-top: var(--space-1);
+  }
+
+  .mock-reaction {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 24px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      box-shadow var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .mock-reaction:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .mock-reaction:active {
+    scale: var(--scale-press);
+  }
+
+  .mock-reaction[aria-pressed="true"] {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 40%);
+    color: var(--accent);
+  }
+
+  .mock-reaction-add {
+    --button-height: 24px;
+
+    opacity: 0;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .mock-message:hover .mock-reaction-add,
+  .mock-reaction-add:focus-visible {
+    opacity: 1;
+  }
+
+  /* The hover action bar: commits after the hover-intent delay, leaves at once. */
+  .mock-actions {
+    position: absolute;
+    top: calc(var(--space-3) * -1);
+    right: var(--space-5);
+    z-index: 2;
+    display: flex;
+    gap: var(--space-0-5);
+    padding: var(--space-0-5);
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+    opacity: 0;
+    translate: 0 var(--distance-micro);
+    pointer-events: none;
+    transition:
+      opacity var(--duration-micro-exit) var(--ease-exit),
+      translate var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .mock-message:hover .mock-actions,
+  .mock-message:focus-within .mock-actions {
+    opacity: 1;
+    translate: 0 0;
+    pointer-events: auto;
+    transition:
+      opacity var(--duration-small) var(--ease-enter) var(--duration-intent),
+      translate var(--duration-small) var(--ease-enter) var(--duration-intent);
+  }
+
+  .mock-message:focus-within .mock-actions {
+    transition-delay: 0s;
+  }
+
+  .mock-typing {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    height: 24px;
+    padding: 0 var(--space-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .mock-composer {
+    flex-shrink: 0;
+    padding: 0 var(--space-5) var(--space-5);
+  }
+
+  .mock-composer-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+    border-radius: var(--radius-md);
+    background: var(--bg-pane);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    font-size: var(--text-composer);
+  }
+
+  .mock-composer-tools {
+    display: flex;
+    gap: var(--space-0-5);
+  }
+
+  /* Thread */
+  .mock-thread {
+    display: flex;
+    flex-direction: column;
+    width: 340px;
+    min-height: 0;
+    border-left: 1px solid var(--border);
+    background: var(--bg-pane);
+  }
+
+  .mock-thread-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .mock-thread-root {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .mock-thread-count {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .mock-thread-count::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Compact: IRC-style rows, no avatars, name and time inline with the text. */
+  :root[data-density="compact"] .mock-message-gutter:has(> .avatar) {
+    display: none;
+  }
+
+  :root[data-density="compact"] .mock-message {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :root[data-density="compact"] .mock-message[data-continued] .mock-message-gutter {
+    display: none;
+  }
+
+  /*
+   * IRC-style hanging indent: the time sits in a fixed column, and wrapped lines, continued
+   * messages and reactions all line up with the author's name after it.
+   */
+  :root[data-density="compact"] .mock-message-main {
+    --compact-time: 56px;
+    --compact-indent: calc(var(--compact-time) + var(--space-2));
+
+    display: block;
+    padding-left: var(--compact-indent);
+    text-indent: calc(var(--compact-indent) * -1);
+  }
+
+  :root[data-density="compact"] .mock-message-main > :not(.mock-message-header, .mock-message-body),
+  :root[data-density="compact"] .mock-message-header {
+    text-indent: 0;
+  }
+
+  :root[data-density="compact"] .mock-message[data-continued] .mock-message-main {
+    text-indent: 0;
+  }
+
+  :root[data-density="compact"] .mock-message-header {
+    display: inline-flex;
+    margin-right: var(--space-1-5);
+  }
+
+  :root[data-density="compact"] .mock-message-time {
+    order: -1;
+    min-width: var(--compact-time);
+  }
+
+  :root[data-density="compact"] .mock-message-author {
+    font-size: var(--text-ui);
+  }
+
+  :root[data-density="compact"] .mock-message-body,
+  :root[data-density="compact"] .mock-message-body > p {
+    display: inline;
+    font-size: var(--text-ui);
+  }
+}
