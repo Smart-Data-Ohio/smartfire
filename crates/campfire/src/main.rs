@@ -13,10 +13,12 @@ mod server;
 use campfire_app::{config, errors, net, queue, security};
 #[cfg(test)]
 use campfire_app::{cable, state, test_support};
+#[cfg(test)]
+use campfire_web::{authentication, messaging};
 
 // The web layer (crates/web), likewise. `concerns`, `mail` and `controllers::presenters` (mirrored
 // in `controllers`) also hold tests of theirs that boot the whole app.
-use campfire_web::{active_storage, authentication, messaging, rich_text};
+use campfire_web::{active_storage, rich_text};
 
 mod concerns {
     pub use campfire_web::concerns::*;
@@ -104,6 +106,7 @@ mod app {
     mod cutover_d_tests;
 }
 
+#[cfg(test)]
 mod huddle {
     pub(crate) use campfire_app::huddle::*;
 
@@ -240,6 +243,7 @@ mod integrations {
             mod tests;
         }
     }
+    #[cfg(test)]
     pub(crate) mod slack {
         pub(crate) use campfire_app::integrations::slack::*;
 

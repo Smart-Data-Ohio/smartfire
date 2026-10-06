@@ -1,18 +1,18 @@
-//! GitHub controllers: transport, authorization and rendering over the GitHub domain.
+//! `controllers::github` lives in the campfire_controllers crate (plans/crate-split-plan.md).
+//! This module re-exports it under its old path and mounts the tests that still need the whole
+//! app.
+
+pub use campfire_controllers::controllers::github::*;
+
 #[cfg(test)]
 mod card_tests;
+
 #[cfg(test)]
 mod subscription_tests;
-pub mod agent_actions;
-pub mod cards;
-pub mod connections;
-pub mod discussions;
-pub mod subscriptions;
-pub mod webhooks;
-pub mod writes;
 
 #[cfg(test)]
 mod connection_tests;
+
 #[cfg(test)]
 mod test_support;
 
@@ -39,3 +39,11 @@ mod room_card_tests;
 
 #[cfg(test)]
 mod cutover_d_tests;
+
+#[cfg(test)]
+pub(crate) mod webhooks {
+    pub(crate) use campfire_controllers::controllers::github::webhooks::*;
+    use crate::integrations::github::webhooks;
+
+    mod tests;
+}

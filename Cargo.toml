@@ -29,6 +29,7 @@ campfire_channels = { path = "crates/channels" }
 campfire_messages = { path = "crates/messages" }
 campfire_rooms    = { path = "crates/rooms" }
 campfire_people   = { path = "crates/people" }
+campfire_controllers = { path = "crates/controllers" }
 campfire_api_types = { path = "crates/api_types" }
 campfire_api      = { path = "crates/api" }
 mailparse        = "0.16"

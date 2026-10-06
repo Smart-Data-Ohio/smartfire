@@ -73,7 +73,7 @@ legal enforceability.
 The privacy page documents, in plain language corroborated against
 `docs/google-sign-in.md`, `docs/google-calendar.md`, `docs/google-drive.md`,
 and the Google integration code (`crates/campfire/src/integrations/google/`
-and `crates/campfire/src/controllers/google_connections.rs`):
+and `crates/controllers/src/controllers/google_connections.rs`):
 
 - Sign-in requests only `openid email profile`; the server keeps the
   stable subject, verified email/domain, and name for onboarding, and
@@ -101,7 +101,7 @@ and `crates/campfire/src/controllers/google_connections.rs`):
 
 ## Implementation notes
 
-- The public pages controller (`crates/campfire/src/controllers/public_pages.rs`)
+- The public pages controller (`crates/controllers/src/controllers/public_pages.rs`)
   skips the application's modern-browser gate, sign-in redirect, and all
   private-state concerns. Framework security
   defaults (default response headers, forgery protection, production

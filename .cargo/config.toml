@@ -11,7 +11,7 @@
 # (ci/llvm.toml names each crate below):
 #
 #   cargo test -p campfire -p campfire_app -p campfire_web -p campfire_channels -p campfire_messages \
-#     -p campfire_rooms -p campfire_people -p campfire_api --config ci/llvm.toml
+#     -p campfire_rooms -p campfire_people -p campfire_controllers -p campfire_api --config ci/llvm.toml
 #
 # Release builds always use LLVM: the release profile names it below, and the production image
 # (the Dockerfile's build stage) neither copies this file nor uses the nightly.
@@ -38,6 +38,9 @@ codegen-backend = "cranelift"
 codegen-backend = "cranelift"
 
 [profile.dev.package.campfire_people]
+codegen-backend = "cranelift"
+
+[profile.dev.package.campfire_controllers]
 codegen-backend = "cranelift"
 
 [profile.dev.package.campfire_api]

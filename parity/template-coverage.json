@@ -557,7 +557,7 @@
       "status": "not_reachable",
       "branch": "Retired HTML autocomplete renderer: no production call site. Pinned Rails has only JSON picker templates; fresh HTML GET returns 406. users/autocompletables/template has no Rails render reference in controllers/helpers/views.",
       "sources": [
-        "crates/campfire/src/controllers/autocompletable.rs"
+        "crates/controllers/src/controllers/autocompletable.rs"
       ],
       "scope": "rust_production"
     },
@@ -565,7 +565,7 @@
       "status": "not_reachable",
       "branch": "Retired HTML autocomplete renderer: no production call site. Pinned Rails has only JSON picker templates; fresh HTML GET returns 406. users/autocompletables/template has no Rails render reference in controllers/helpers/views.",
       "sources": [
-        "crates/campfire/src/controllers/autocompletable.rs"
+        "crates/controllers/src/controllers/autocompletable.rs"
       ],
       "scope": "rust_production"
     },
@@ -9154,7 +9154,7 @@
       "scenario": "actual avatar HTTP responses with complete SVG bytes and freshness semantics"
     },
     "public_pages": {
-      "test_file": "crates/campfire/src/controllers/public_pages.rs",
+      "test_file": "crates/campfire/src/controllers/public_pages/tests.rs",
       "test": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
       "oracles": [
         "vectors/users_public.json"

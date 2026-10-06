@@ -56,6 +56,7 @@ pub mod fizzy_connections;
 pub mod fizzy_message_cards;
 pub mod github;
 pub mod message_embed_suppressions;
+#[cfg(test)]
 pub(crate) mod message_features;
 mod message_forwards;
 #[cfg(test)]

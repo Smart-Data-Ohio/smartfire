@@ -571,7 +571,7 @@ pub async fn personal_undo(c: &mut Ctx) -> Result {
     mutate(c, false, true).await
 }
 
-pub(super) fn data(
+pub fn data(
     conn: &rusqlite::Connection,
     run: SlackImport,
     now: campfire_db::Timestamp,
@@ -739,7 +739,7 @@ pub async fn plan(c: &mut Ctx) -> Result {
     .await
 }
 
-pub(super) fn sample_htmls(
+pub fn sample_htmls(
     conn: &rusqlite::Connection,
     secrets: &rails_compat::Secrets,
     now: jiff::Timestamp,
