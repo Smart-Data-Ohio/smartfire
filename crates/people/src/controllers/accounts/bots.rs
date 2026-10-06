@@ -3,7 +3,7 @@
 pub mod credentials;
 pub mod github_connections;
 pub mod grants;
-pub(crate) use crate::controllers::presenters::bot_input_casts as input_casts;
+pub use crate::controllers::presenters::bot_input_casts as input_casts;
 pub mod keys;
 pub mod webhook_secrets;
 
@@ -583,7 +583,7 @@ async fn set_bot(c: &Ctx) -> Result<User> {
     find_active_bot(c, "id").await
 }
 
-pub(crate) async fn find_active_bot(c: &Ctx, key: &str) -> Result<User> {
+pub async fn find_active_bot(c: &Ctx, key: &str) -> Result<User> {
     let id = c
         .param_str(key)
         .and_then(cast_integer)
@@ -684,24 +684,3 @@ pub(super) async fn viewer_zone(c: &Ctx) -> Result<campfire_views::time::Zone> {
         .map_err(Error::internal)?;
     Ok(campfire_views::time::Zone::for_user(name.as_deref()))
 }
-
-#[cfg(test)]
-mod access_boundary_tests;
-
-#[cfg(test)]
-mod coercion_tests;
-
-#[cfg(test)]
-mod mutation_boundary_tests;
-
-#[cfg(test)]
-mod interleaving_tests;
-
-#[cfg(test)]
-mod normalized_tests;
-
-#[cfg(test)]
-mod render_replay_tests;
-
-#[cfg(test)]
-mod casting_followups_tests;

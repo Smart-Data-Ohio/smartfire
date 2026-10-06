@@ -87,11 +87,4 @@ impl SidebarData {
     }
 }
 
-#[cfg(test)]
-#[path = "sidebars_tests.rs"]
-mod tests;
-
-pub(crate) use crate::controllers::presenters::sidebar_composition as composition;
-#[cfg(test)]
-#[path="sidebars/tests.rs"]
-mod composition_tests;
+pub use crate::controllers::presenters::sidebar_composition as composition;

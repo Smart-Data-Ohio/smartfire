@@ -10,7 +10,7 @@ mod server;
 // The app layer (crates/app), at the paths its modules had in this crate. `app`, `huddle` and
 // `integrations` also hold the tests of theirs that boot the whole app or reach the layers
 // above, until the test crate takes them (plans/crate-split-plan.md, "Tests").
-use campfire_app::{account_security, config, errors, net, queue, security};
+use campfire_app::{config, errors, net, queue, security};
 #[cfg(test)]
 use campfire_app::{cable, state, test_support};
 

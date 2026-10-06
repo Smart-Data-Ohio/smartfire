@@ -187,7 +187,3 @@ async fn resolve_endpoint(
     }
     resolved
 }
-
-#[cfg(test)]
-#[path = "push_subscriptions/ws17_tests.rs"]
-mod ws17_tests;

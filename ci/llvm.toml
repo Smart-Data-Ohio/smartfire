@@ -21,3 +21,6 @@ codegen-backend = "llvm"
 
 [profile.dev.package.campfire_rooms]
 codegen-backend = "llvm"
+
+[profile.dev.package.campfire_people]
+codegen-backend = "llvm"

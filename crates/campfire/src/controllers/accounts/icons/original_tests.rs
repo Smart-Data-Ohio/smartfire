@@ -1,5 +1,6 @@
 //! The original named icon assertions, through the actual upload/list/delete endpoints.
-use super::*;
+use campfire_db::models::workspace_icon::WorkspaceIcon;
+use crate::controllers::presenters::attachments;
 use crate::controllers::presenters::test_support::*;
 use axum::http::{Method, StatusCode};
 use campfire_richtext::dom::Dom;

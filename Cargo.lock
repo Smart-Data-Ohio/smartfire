@@ -393,6 +393,7 @@ dependencies = [
  "campfire_kit",
  "campfire_mail",
  "campfire_messages",
+ "campfire_people",
  "campfire_richtext",
  "campfire_rooms",
  "campfire_routes",
@@ -708,6 +709,33 @@ dependencies = [
  "rails_compat",
  "serde_json",
  "tracing",
+]
+
+[[package]]
+name = "campfire_people"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "campfire_app",
+ "campfire_assets",
+ "campfire_channels",
+ "campfire_db",
+ "campfire_kit",
+ "campfire_richtext",
+ "campfire_routes",
+ "campfire_storage",
+ "campfire_views",
+ "campfire_web",
+ "jiff",
+ "rails_compat",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

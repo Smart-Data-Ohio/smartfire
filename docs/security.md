@@ -77,7 +77,7 @@ counters, under the prompt's own rate limit, and is audit-logged like
 every other verifier (`sudo.confirm.success`,
 `sudo.confirm.failure` with verifier `totp`). Backup codes are not
 accepted at the sudo prompt: they are single-use sign-in recovery.
-See `crates/campfire/src/controllers/sudos.rs` and
+See `crates/people/src/controllers/sudos.rs` and
 [two-step sign-in](two-factor.md).
 
 ## Sessions

@@ -21,6 +21,7 @@ campfire_web.workspace = true
 campfire_channels.workspace = true
 campfire_messages.workspace = true
 campfire_rooms.workspace = true
+campfire_people.workspace = true
 campfire_spa.workspace = true
 anyhow.workspace = true
 tikv-jemallocator.workspace = true
@@ -60,6 +61,7 @@ uuid.workspace = true
 campfire_app = { workspace = true, features = ["test-support"] }
 campfire_web = { workspace = true, features = ["test-support"] }
 campfire_channels = { workspace = true, features = ["test-support"] }
+campfire_people = { workspace = true, features = ["test-support"] }
 campfire_jobs = { workspace = true, features = ["test-support"] }
 campfire_cable = { workspace = true, features = ["test-support"] }
 tokio = { workspace = true, features = ["test-util"] }
