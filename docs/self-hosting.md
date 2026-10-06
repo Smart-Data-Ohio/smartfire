@@ -4,8 +4,9 @@ Smartfire's Docker image contains everything needed for a fully-functional, sing
 This includes the web app, background jobs, caching, file serving, and SSL.
 This guide covers running the Docker image by hand.
 
-We recommend using `ghcr.io/smart-data-ohio/smartfire:main`, which tracks the default branch.
+We recommend using `ghcr.io/smart-data-ohio/smartfire:main` (also tagged `latest`), which tracks the default branch.
 It changes with every merged pull request, so it's the newest - but least battle-tested - version of Smartfire.
+Images are published for `linux/amd64` and `linux/arm64`, and signed with cosign.
 
 Every push to the default branch also publishes a `sha-<short-sha>` tag for that exact commit,
 so you can pin your deployment to a specific version if you want to avoid unexpected changes:
@@ -15,7 +16,7 @@ so you can pin your deployment to a specific version if you want to avoid unexpe
 ghcr.io/smart-data-ohio/smartfire:sha-1a2b3c4
 ```
 
-Version tags (`v*`) additionally publish semver tags and `latest`.
+Version tags (`v*`) additionally publish semver tags (`1.5.0`, `1.5`, `1`).
 
 To run it you'll need three things:
 1. a machine that runs Docker
@@ -25,8 +26,10 @@ To run it you'll need three things:
 If you'd rather build the image yourself from your own copy of the source, you can do that too:
 
 ```sh
-docker build -t smartfire .
+docker build -t smartfire rust
 ```
+
+The image is built from [`rust/Dockerfile`](../rust/Dockerfile), with `rust/` as the build context.
 
 ### Mounting a storage volume
 
@@ -57,10 +60,14 @@ Smartfire needs a few secret values that are specific to your instance:
 - `SECRET_KEY_BASE` - the basis for cryptographic features like signed cookies. This should be a long, unguessable random string.
 - `VAPID_PRIVATE_KEY`/`VAPID_PUBLIC_KEY` - a key pair used for sending Web Push notifications.
 
-You can generate them by running:
+You can generate them with OpenSSL. The VAPID keys are a P-256 key pair, each half encoded as unpadded URL-safe Base64:
 
 ```sh
-docker run --rm ghcr.io/smart-data-ohio/smartfire:main script/admin/generate-secrets
+openssl ecparam -name prime256v1 -genkey -noout -out vapid.pem
+echo "SECRET_KEY_BASE=$(openssl rand -hex 64)"
+echo "VAPID_PRIVATE_KEY=$(openssl ec -in vapid.pem -outform DER 2>/dev/null | tail -c +8 | head -c 32 | base64 | tr '+/' '-_' | tr -d '=\n')"
+echo "VAPID_PUBLIC_KEY=$(openssl ec -in vapid.pem -pubout -outform DER 2>/dev/null | tail -c 65 | base64 | tr '+/' '-_' | tr -d '=\n')"
+rm vapid.pem
 ```
 
 It prints a fresh set of values ready to set as environment variables:
