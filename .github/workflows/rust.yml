@@ -426,7 +426,7 @@ jobs:
           key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   rust:
-    # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.
+    # Required by name in the branch ruleset, and deploy-gcp.yml looks this job up by name too.
     name: Rust port
     needs: [changes, seeds, test, clippy, llvm, stable]
     if: ${{ always() && inputs.scope != 'messaging-and-browsers' }}

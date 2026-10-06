@@ -102,14 +102,32 @@ class WorkflowTest(unittest.TestCase):
         print("WORKFLOW GATE: rust.yml push/schedule success with its 'Rust port' aggregate is the single gate")
 
     def test_image_workflow_publishes_from_main_only_with_pinned_actions(self):
-        image = yaml_json((ROOT / ".github/workflows/publish-rust-image.yml").read_text())
+        image = yaml_json((ROOT / ".github/workflows/publish-image.yml").read_text())
         on = image.get("on", image.get("true"))
-        self.assertEqual(set(on), {"push"})
+        self.assertEqual(set(on), {"push", "workflow_dispatch"})
         self.assertEqual(on["push"]["branches"], ["main"])
-        self.assertEqual(image["jobs"]["publish"]["if"].strip(), "github.event_name == 'push' && github.ref == 'refs/heads/main'")
+        self.assertIs(on["workflow_dispatch"]["inputs"]["dry_run"]["default"], True)
+        # Publishing runs are never cancelled, and a dry run has a group of its own.
+        self.assertIs(image["concurrency"]["cancel-in-progress"], False)
+        self.assertIn("github.sha", image["concurrency"]["group"])
+        self.assertIn("format('dry-run-{0}', github.run_id)", image["concurrency"]["group"])
+        # The deployable tag comes from the amd64 job alone: no needs, no GHCR.
+        amd64 = image["jobs"]["amd64"]
+        self.assertNotIn("needs", amd64)
+        self.assertNotIn("packages", amd64["permissions"])
+        plan = next(step["run"] for step in amd64["steps"] if step.get("id") == "plan")
+        self.assertIn('echo "tag=rust-git-${SHA}"', plan)
+        self.assertIn('[ "$PUBLISH" = true ] && [ "$REF" = refs/heads/main ]', plan)
+        build = next(step["with"] for step in amd64["steps"]
+                     if step.get("uses", "").startswith("docker/build-push-action@"))
+        self.assertEqual((build["context"], build["file"], build["platforms"]),
+                         ("rust", "rust/Dockerfile", "linux/amd64"))
+        self.assertIn("GIT_REVISION=${{ github.sha }}", build["build-args"])
+        self.assertFalse(build["provenance"])
+        self.assertEqual(sorted(image["jobs"]["ghcr"]["needs"]), ["amd64", "arm64"])
         for workflow in [image, yaml_json((ROOT / ".github/workflows/deploy-gcp.yml").read_text())]:
             self.assertGreater(audit_actions(workflow), 0)
-        print("WORKFLOW ACTIONS: all third-party actions pinned; images publish from main pushes only")
+        print("WORKFLOW ACTIONS: all third-party actions pinned; rust-git-<sha> comes from the amd64 job alone, on main")
 
     def test_action_audit_rejects_unpinned_references(self):
         with self.assertRaises(ValueError):

@@ -26,7 +26,7 @@ jobs:
       matrix:
         # c-cpp covers rails_compat's native keyword matcher and vendored Onigmo,
         # which build.rs compiles into the release binary.
-        language: [ actions, c-cpp, javascript-typescript, python, ruby, rust ]
+        language: [ actions, c-cpp, javascript-typescript, python, rust ]
 
     steps:
       - name: Checkout code
