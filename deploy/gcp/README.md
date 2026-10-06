@@ -36,11 +36,15 @@ That rule is the reason the recovery phase behaves the way it does:
 
 - If the live database is **byte-for-byte what it was at the freeze**, nothing was
   accepted. The previous image is restored automatically and nothing is lost.
-- If it is **byte-for-byte what the cutover's migration produced**, the migration ran
-  but nothing else wrote. The frozen copy kept at the freeze is put back, the previous
-  image is restored (`migration-reverted`), and nothing is lost. This is the one case
-  where recovery writes the database, and it is needed: the previous image refuses a
-  migrated database.
+- If **every row still matches the database the cutover's migration produced**, then
+  nothing but the migration and the new image's boot bookkeeping touched it. That
+  bookkeeping is its job queue and SQLite's AUTOINCREMENT counters, which change the
+  bytes even when the image never serves. The check is the previous image's
+  `verify-additive-sqlite-migration` on copies, requiring no added table or column.
+  The frozen copy kept at the freeze is put back and the previous image is restored
+  (`migration-reverted`), and nothing is lost. This is the one case where recovery
+  writes the database, and it is needed: the previous image refuses a migrated
+  database. With no migration, the database is left as it is (`image-rolled-back`).
 - If the live database has **changed in any other way** (a message, anything), the
   recovery phase **refuses to restore the database** and exits with an
   operator-action message and exit code `30`. Restoring the frozen copy there would
@@ -133,7 +137,7 @@ moment writes are frozen. Every invocation takes `flock` on
 | `preflight` | Discovers the ONCE app, container, storage volume and current digest; **records the feed timer state once** (a retry never overwrites it); checks free disk against the real volume and image sizes; refuses to run on top of an in-flight ONCE backup or inside the nightly backup window; authenticates to the registry from stdin; pulls the exact digest and asserts it is `linux/amd64`. A dry run stops here. |
 | `freeze` | **Refuses a release directory that already has `freeze-result.json` unless `RESUME=1`.** Pauses the feed timer and waits for the current feed run to finish; snapshots the database through the SQLite backup API; stops the app and **asserts no application container is still running**; fingerprints the live database; hashes every uploaded file; tags `campfire-rollback:before-<label>`; archives the ONCE application and the host feed state; keeps a byte-for-byte copy of the stopped live database (`frozen-live/`); then **rehearses the migration** on another copy. Any failure here restores the feed timer through a trap and, when the app had already been stopped, starts the previous container again and waits for `/up` (the rehearsal only ever touches copies, so a refused release must not become an outage). |
 | `cutover` | Requires a passed rehearsal for this exact image and frozen database, runs `campfire db-migrate` with the candidate on the stopped live database (`live-migration-result.json`; a failure, or a result that differs from the rehearsal, exits `10` before anything serves), then `once update <host> --image IMAGE@DIGEST --auto-update=false` (no `--env`, so ONCE keeps the whole existing environment map), waits for `/up` to return 200, then runs read-only checks: running digest, environment key names, volume identity, pre-existing uploaded file hashes, and required processes. Exits `10` if it never became healthy and `20` if it became healthy but a check failed. |
-| `rollback` | Refuses outright when the cutover already reported healthy and `/up` still returns 200: an interruption after a successful cutover must not downgrade a working deployment, so it records `refused-application-healthy` and exits `30` with the outstanding bookkeeping. Otherwise it stops the app, asserts it is stopped, removes any leftover migration container, then compares the live database fingerprint to the freeze and to the post-migration fingerprint. **The only database write it ever makes is putting the frozen copy back over bytes that are exactly the migration's output** (`migration-reverted`). Otherwise it returns ONCE to the previous image and gets it serving again — trying a plain `once start` first when the container left on the host still carries the previous image, then **checking what actually came up** and falling through to `once update --image <previous registry reference>` unless the previous image is really what is running. The label is a hint, not proof: ONCE keeps no state on disk, so an `once update` that failed after rewriting it can make a local start boot the candidate instead. What differs is the verdict: an unchanged or reverted database means nothing was lost and the phase exits `0`; a database that accepted writes is **not** restored over, and the run is recorded as `refused-database-changed` (previous image accepts it and is serving) or `refused-database-incompatible` (it doesn't, so the candidate is serving), exiting `30` to page an operator. Leaves the feed timer paused either way. |
+| `rollback` | Refuses outright when the cutover already reported healthy and `/up` still returns 200: an interruption after a successful cutover must not downgrade a working deployment, so it records `refused-application-healthy` and exits `30` with the outstanding bookkeeping. Otherwise it stops the app, asserts it is stopped, removes any leftover migration container, then compares the live database fingerprint to the freeze and to the post-migration fingerprint. **The only database write it ever makes is putting the frozen copy back when every row still matches what the migration produced** (`migration-reverted`), which the previous image's verifier checks on copies. Otherwise it returns ONCE to the previous image and gets it serving again — trying a plain `once start` first when the container left on the host still carries the previous image, then **checking what actually came up** and falling through to `once update --image <previous registry reference>` unless the previous image is really what is running. The label is a hint, not proof: ONCE keeps no state on disk, so an `once update` that failed after rewriting it can make a local start boot the candidate instead. What differs is the verdict: an unchanged or reverted database means nothing was lost and the phase exits `0`; a database that accepted writes is **not** restored over, and the run is recorded as `refused-database-changed` (previous image accepts it and is serving) or `refused-database-incompatible` (it doesn't, so the candidate is serving), exiting `30` to page an operator. Leaves the feed timer paused either way. |
 | `finish` | Restores the feed timer to its recorded state, drops registry credentials, writes `finish-result.json` and `writes-reopened-at`, then prunes old release directories. |
 | `logout` | Drops registry credentials only. Used to end a dry run. |
 | `timer-state` | Prints the recorded and current feed timer state as JSON. Read-only. |
@@ -179,8 +183,8 @@ moment writes are frozen. Every invocation takes `flock` on
 
 `preflight` checks the filesystem that actually holds `STATE_ROOT`, not
 `/var/lib/docker`, and sizes the requirement from measurements rather than a guess:
-`du -sm` of the storage volume × 2 (archives) plus the database × 5 (frozen copy,
-rehearsal copy, its two snapshots, `after.sqlite3`) + 512 MB on the `STATE_ROOT`
+`du -sm` of the storage volume × 2 (archives) plus the database × 6 (frozen and migrated
+copies, rehearsal copy, its two snapshots, `after.sqlite3`) + 512 MB on the `STATE_ROOT`
 filesystem, and the image size + the database (the live migration's write-ahead log)
 + 512 MB on `/var/lib/docker`. When
 both paths are on the same filesystem the two are summed and checked once.
@@ -304,12 +308,14 @@ prepare-host-result.json    swap file, fstab and vm.swappiness state after prepa
 attachment-hashes.json      per-file SHA-256 of storage/files before and after
 attachment-hashes-before.json / attachment-hashes-after.json
 frozen-live/db/             the stopped live database and -wal, byte for byte
+migrated-live/db/           the same right after the live migration (when it ran)
 migration-verification.txt  full output of the isolated rehearsal
 rehearsal-result.json       rehearsal pass/fail, image, frozen database SHA-256,
                             versions applied, preserved/additive counts
 live-migration.txt          output of db-migrate on the live database
 live-migration-result.json  versions applied live, whether they match the
                             rehearsal, database fingerprints before and after
+rollback-compare.txt        previous image's row comparison, when rollback needed it
 rollback-check.txt          previous image's db-check, when rollback needed it
 preflight-result.json       app, volume, current and target image and revision
 freeze-result.json          previous image and revision, rollback tag, archive
@@ -323,7 +329,7 @@ finish-result.json          feed timer state, registry logout proof, health
 writes-reopened-at          the moment chat reopened
 ```
 
-Treat `before.sqlite3`, `after.sqlite3`, `frozen-live/` and both archives as secret: they contain user
+Treat `before.sqlite3`, `after.sqlite3`, `frozen-live/`, `migrated-live/` and both archives as secret: they contain user
 data and application keys. The directory is `0700` and its files are `0600`. Nothing
 this script creates is left inside the live storage volume; a trap clears any stray
 copies on every path.

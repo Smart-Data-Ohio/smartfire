@@ -65,6 +65,18 @@ python3 -m unittest discover -s rust/ops/tests -p 'test_workflows.py'
 WS18_BINARY="$PWD/rust/target/debug/campfire" python3 -m unittest discover -s rust/ops/tests -p 'test_additive_reference.py'
 ```
 
+`rust/ops/tests/simulate_release.sh PREVIOUS CANDIDATE MIGRATING` runs the release
+script against real containers: real images served from a local registry, a real
+volume and the real `campfire` commands, with only ONCE, root, systemd and the TLS
+front door faked. It covers:
+
+- a plain release and a migrating release;
+- the downgrade refusal;
+- the three rollback outcomes.
+
+Run it before shipping the first release that carries a migration, with that
+release's image as MIGRATING.
+
 ## Image and release contract
 
 Build from the repository root, with the reference as a named context:
@@ -110,9 +122,19 @@ It runs `db-migrate` with the candidate on the stopped live database, and requir
 it to apply exactly what the rehearsal applied (`live-migration-result.json`).
 Only then does `once update` start the candidate.
 
-**Rollback.** If the database is still the bytes the migration produced, rollback
-puts the frozen copy back and returns to the previous image
-(`migration-reverted`).
+**Rollback.** A candidate always writes something when it boots, even if it never
+serves: its job queue and SQLite's AUTOINCREMENT counters. So rollback doesn't
+compare bytes. It runs the previous image's preservation verifier on copies of two
+databases: the live one, and the one the cutover left (kept as `migrated-live/`, or
+`frozen-live/` when nothing was migrated). The check passes only if every row of
+every table matches and no table or column was added.
+
+When that holds:
+
+- If a migration ran, rollback puts the frozen copy back and returns to the
+  previous image (`migration-reverted`).
+- If no migration ran, it returns to the previous image and leaves the database
+  as it is (`image-rolled-back`).
 
 If anything else has written since, rollback keeps those writes:
 
