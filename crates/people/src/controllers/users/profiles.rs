@@ -445,6 +445,3 @@ pub(super) async fn render_settings(
     c.set_current(RenderedErrors(errors));
     render_show(c, status, user, None, None, None).await
 }
-#[cfg(test)]
-#[path = "profiles/ws17_tests.rs"]
-mod ws17_tests;

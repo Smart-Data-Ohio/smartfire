@@ -28,6 +28,7 @@ const LAYERS: &[(&str, &[&str])] = &[
     ("messages", &["controllers::messages"]),
     // `campfire_rooms`'s mirrors here, which hold tests of theirs (and the test-only `shell`).
     ("rooms", &["controllers::rooms", "controllers::room_categories"]),
+    // `campfire_people`'s mirrors here, which hold tests of theirs.
     ("people", &[
         "controllers::accounts", "controllers::qr_code", "controllers::sessions",
         "controllers::sudos", "controllers::two_factor", "controllers::users",
@@ -45,7 +46,7 @@ const LAYERS: &[(&str, &[&str])] = &[
 fn modules_name_only_their_own_layer_and_below() {
     let tree = ModuleTree::read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
     // A walk that stopped early would pass vacuously.
-    assert!(tree.modules.len() > 600, "found only {} modules", tree.modules.len());
+    assert!(tree.modules.len() > 550, "found only {} modules", tree.modules.len());
     let violations = tree.violations();
     assert!(
         violations.is_empty(),

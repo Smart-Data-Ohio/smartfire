@@ -9146,7 +9146,7 @@
       "scenario": "real star toggle and stream bodies for active and inactive targets, viewer-specific form token"
     },
     "initials_avatar": {
-      "test_file": "crates/campfire/src/controllers/users/avatars.rs",
+      "test_file": "crates/campfire/src/controllers/users/avatars/tests.rs",
       "test": "default_initials_svg_matches_rails_bytes_and_cache_validation",
       "oracles": [
         "vectors/users_avatars.json"

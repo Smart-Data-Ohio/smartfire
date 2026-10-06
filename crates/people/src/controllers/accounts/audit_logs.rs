@@ -11,12 +11,12 @@ use campfire_db::{
 use campfire_kit::{Ctx, Error, Result, SendOptions, StatusCode, format};
 use campfire_views::{accounts::audit_logs as views, time::Zone};
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[derive(Clone)]
-struct TestExportLimit(i64);
+pub struct TestExportLimit(pub i64);
 
 pub async fn show(c: &mut Ctx) -> Result {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     if let Some(limit) = c.current::<TestExportLimit>().cloned() {
         return show_with_limit(c, limit.0, &limit.0.to_string()).await;
     }
@@ -98,7 +98,7 @@ async fn show_with_limit(c: &mut Ctx, csv_export_limit: i64, export_limit_label:
     .await
 }
 
-pub(super) fn filters(get: impl Fn(&str) -> Option<String>) -> views::Filters {
+pub fn filters(get: impl Fn(&str) -> Option<String>) -> views::Filters {
     use campfire_richtext::ruby::{is_blank, strip};
     views::Filters {
         actor: get("actor")
@@ -116,7 +116,7 @@ pub(super) fn filters(get: impl Fn(&str) -> Option<String>) -> views::Filters {
 }
 /// Date.parse's explicit full-date forms, including Ruby's day/month/year slash order.
 /// Relative and partial dates are tracked separately in the parity report.
-pub(super) fn parse_date(s: &str) -> Option<jiff::civil::Date> {
+pub fn parse_date(s: &str) -> Option<jiff::civil::Date> {
     let s = campfire_richtext::ruby::strip(s);
     let s = s.split_once('T').map_or(s, |(date, _)| date);
     if s.split_once('-').is_some_and(|(year, _)| year.len() == 2) {
@@ -136,7 +136,7 @@ pub(super) fn parse_date(s: &str) -> Option<jiff::civil::Date> {
     }
     jiff::civil::Date::strptime("%y-%m-%d", s).ok()
 }
-pub(super) fn selection(
+pub fn selection(
     filters: &views::Filters,
     zone: &Zone,
 ) -> campfire_kit::Result<browsing::Filters> {
@@ -166,7 +166,7 @@ pub(super) fn selection(
         to: bound(&filters.to, true)?,
     })
 }
-pub(super) fn entry(row: AuditLog) -> views::Entry {
+pub fn entry(row: AuditLog) -> views::Entry {
     fn label(s: Option<String>) -> String {
         s.filter(|s| !campfire_richtext::ruby::is_blank(s))
             .unwrap_or_else(|| "—".into())
@@ -180,7 +180,7 @@ pub(super) fn entry(row: AuditLog) -> views::Entry {
         ip_address: label(row.ip_address),
     }
 }
-pub(super) fn csv_body(entries: &[AuditLog], zone: &Zone) -> String {
+pub fn csv_body(entries: &[AuditLog], zone: &Zone) -> String {
     fn safe(s: Option<&str>) -> Option<String> {
         s.map(|s| {
             if s.starts_with(['=', '+', '-', '@', '\t', '\r']) {
@@ -216,12 +216,3 @@ pub(super) fn csv_body(entries: &[AuditLog], zone: &Zone) -> String {
     }
     csv
 }
-
-#[cfg(test)]
-mod tests;
-
-#[cfg(test)]
-mod original_tests;
-
-#[cfg(test)]
-mod original_caps_tests;

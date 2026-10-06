@@ -74,6 +74,3 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }
-
-#[cfg(test)]
-mod tests;

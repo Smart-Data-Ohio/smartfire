@@ -1,4 +1,10 @@
-use super::*;
+use campfire_db::models::workspace_icon::ImageFacts;
+use campfire_db::models::workspace_icon::NewIcon;
+use campfire_db::models::workspace_icon::WorkspaceIcon;
+use campfire_kit::StatusCode;
+use campfire_views::accounts::icons as views;
+use crate::controllers::presenters::attachments::Assignment;
+use crate::controllers::presenters::attachments;
 use crate::controllers::presenters::test_support::*;
 use askama::Template;
 use axum::http::Method;

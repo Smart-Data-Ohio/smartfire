@@ -178,9 +178,6 @@ fn string(value: &Param) -> Option<String> {
     }
 }
 
-#[cfg(test)]
-mod tests;
-
 pub fn after_save(c: &mut Ctx, id: i64) -> Result {
     if c.is_turbo_frame_request() {
         c.redirect_to_with(
