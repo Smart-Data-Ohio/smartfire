@@ -83,6 +83,8 @@ fi
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR"
 chmod 0700 "$WORK_DIR"
+# Absolute, because `docker run -v` reads a relative path as a volume name.
+WORK_DIR="$(cd "$WORK_DIR" && pwd)"
 
 log "decrypting $BACKUP ($ENCRYPTION)"
 plain="$WORK_DIR/backup.tar.gz"
