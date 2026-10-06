@@ -36,6 +36,3 @@ pub async fn create(c: &mut Ctx) -> Result {
 pub async fn not_found(_c: &mut Ctx) -> Result {
     Err(Error::NotFound)
 }
-
-#[cfg(test)]
-mod tests;

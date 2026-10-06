@@ -30,7 +30,7 @@ Storage, and asserts every entry is `/offline.html` or under `/assets/`.
 The worker's fetch, push, and click branches are additionally driven
 through a Node harness
 (`test-support/service_worker_original_harness.mjs`, run by the
-`pwa` controller tests in `crates/campfire/src/controllers/pwa.rs`)
+`pwa` controller tests in `crates/campfire/src/controllers/pwa/tests.rs`)
 against the served worker script.
 
 ## Notifications

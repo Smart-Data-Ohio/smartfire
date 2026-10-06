@@ -33,6 +33,7 @@ const LAYERS: &[(&str, &[&str])] = &[
         "controllers::accounts", "controllers::qr_code", "controllers::sessions",
         "controllers::sudos", "controllers::two_factor", "controllers::users",
     ]),
+    // `campfire_controllers`'s mirrors here, which hold tests of theirs.
     ("controllers", &["controllers::*"]),
     ("server", &[
         "", "admin", "controllers", "controllers::health", "controllers::mailbox",

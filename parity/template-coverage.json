@@ -9154,7 +9154,7 @@
       "scenario": "actual avatar HTTP responses with complete SVG bytes and freshness semantics"
     },
     "public_pages": {
-      "test_file": "crates/campfire/src/controllers/public_pages.rs",
+      "test_file": "crates/campfire/src/controllers/public_pages/tests.rs",
       "test": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
       "oracles": [
         "vectors/users_public.json"
