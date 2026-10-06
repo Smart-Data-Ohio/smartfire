@@ -72,7 +72,7 @@ legal enforceability.
 
 The privacy page documents, in plain language corroborated against
 `docs/google-sign-in.md`, `docs/google-calendar.md`, `docs/google-drive.md`,
-and the Google integration code (`crates/campfire/src/integrations/google/`
+and the Google integration code (`crates/app/src/integrations/google/`
 and `crates/controllers/src/controllers/google_connections.rs`):
 
 - Sign-in requests only `openid email profile`; the server keeps the

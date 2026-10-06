@@ -144,7 +144,7 @@ def prepare_source(root):
     contents = {}
     for relative in wanted:
         content = (root / relative).read_bytes()
-        if relative == Path("crates/campfire/src/controllers/presenters/test_support.rs"):
+        if relative == Path("crates/campfire_tests/src/controllers/presenters/test_support.rs"):
             # -2 already provides this helper. Prefer it when present.
             if b"async fn ws8bm_browser_host_without_jobs()" not in content:
                 content += (root / "reference-tools/messaging/browser-host.rs").read_bytes()
@@ -238,7 +238,7 @@ def build_host(root, env):
     host_env["CARGO_TARGET_DIR"] = str(host_target)
     jobs = env.get("WS8BM_HOST_BUILD_JOBS", "2")  # parallelism only; the output is the same
     command = shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["test", "--locked", f"-j{jobs}",
-               "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
+               "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire_tests", "--lib",
                "--no-run", "--message-format=json"]
     result = subprocess.run(command, cwd=root, env=host_env, stdout=subprocess.PIPE, text=True)
     if result.returncode:
@@ -250,7 +250,7 @@ def build_host(root, env):
     entries = [json.loads(line) for line in result.stdout.splitlines() if line.startswith("{")]
     audit_build(root, generated, entries, host_target)
     for entry in entries:
-        if (entry.get("reason") == "compiler-artifact" and entry.get("target", {}).get("name") == "campfire"
+        if (entry.get("reason") == "compiler-artifact" and entry.get("target", {}).get("name") == "campfire_tests"
                 and entry.get("profile", {}).get("test") and entry.get("executable")):
             return entry["executable"]
     raise RuntimeError("current-source browser test host executable missing")

@@ -1049,7 +1049,7 @@
         "messages/_composer_markup.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "\" type=\"checkbox\" name=\"message[reply_notify_author]\" value=\"1\" checked disabled data-composer-target=\"replyNotify\""
       }
@@ -1234,7 +1234,7 @@
         "messages/_template.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_shell_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_shell_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "$messageDatetime$"
       }
@@ -1573,7 +1573,7 @@
         "pwa/_browser_settings.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<details class=\"notifications-help\" data-notifications-target=\"details\">"
       }
@@ -1590,7 +1590,7 @@
         "pwa/_install_instructions.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<details class=\"notifications-help pwa__instructions hide-in-pwa\" data-controller=\"pwa-install\" data-pwa-install-prompting-class=\"pwa--can-install\" data-notifications-target=\"details\">"
       }
@@ -1607,7 +1607,7 @@
         "pwa/_system_settings.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<details class=\"notifications-help hide-in-browser\" data-notifications-target=\"details\">"
       }
@@ -1755,7 +1755,7 @@
         "rooms/calls/_edit.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/2/html",
         "needle": "style=\"view-transition-name: edit-room-"
       }
@@ -1770,7 +1770,7 @@
         "rooms/calls/_github_section.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/2/html",
         "needle": "Your linked GitHub account must be able to read the repository"
       }
@@ -1785,7 +1785,7 @@
         "rooms/calls/_header_identity.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<div class=\"room-header__identity room--current min-width\" id=\""
       }
@@ -1800,7 +1800,7 @@
         "rooms/calls/_inbound_section.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/2/html",
         "needle": "Inbound email is not configured for this workspace. Set <code>INBOUND_EMAIL_DOMAIN</code> and the relay ingress password to enable forward-to-room."
       }
@@ -1816,7 +1816,7 @@
         "rooms/calls/_new.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">"
       }
@@ -1831,7 +1831,7 @@
         "rooms/calls/_user.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/"
       }
@@ -1899,7 +1899,7 @@
         "rooms/composition/_composer_legacy.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_composition_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_composition_vectors.json",
         "pointer": "/cases/3/html",
         "needle": "<form id=\"composer\" class=\"margin-block flex-item-grow contain\" data-controller=\"composer drop-target\" data-action=\"dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop drop-target:drop@window-&gt;"
       }
@@ -1914,7 +1914,7 @@
         "rooms/composition/_composer_none.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_composition_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_composition_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<form id=\"composer\" class=\"margin-block flex-item-grow contain\" data-controller=\"composer drop-target\" data-action=\"dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop drop-target:drop@window-&gt;"
       }
@@ -1929,7 +1929,7 @@
         "rooms/composition/_composer_picker.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_composition_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_composition_vectors.json",
         "pointer": "/cases/4/html",
         "needle": "<form id=\"composer\" class=\"margin-block flex-item-grow contain\" data-controller=\"composer drop-target\" data-action=\"dragenter-&gt;drop-target#dragenter dragover-&gt;drop-target#dragover drop-&gt;drop-target#drop drop-target:drop@window-&gt;"
       }
@@ -1944,7 +1944,7 @@
         "rooms/composition/_member_panel.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_composition_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_composition_vectors.json",
         "pointer": "/cases/1/html",
         "needle": "id=\"channel-members\""
       }
@@ -1955,7 +1955,7 @@
       "branch": "Retained fallback in composition_page::Show, which is only constructed by full_room_tests. All 38 recorded cases supply navigation, so they do not render this fallback. Production uses rooms::Show and rooms/show/_nav.html or navigation::Navigation, both separately byte-compared.",
       "sources": [
         "crates/web/src/controllers/presenters/room_native.rs",
-        "crates/campfire/src/controllers/rooms/full_room_tests.rs",
+        "crates/campfire_tests/src/controllers/rooms/full_room_tests.rs",
         "crates/views/src/rooms/composition_page.rs"
       ]
     },
@@ -1971,7 +1971,7 @@
         "rooms/composition/_poll_builder.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "<input type=\"text\" name=\"poll[question]\" id=\"poll_question\" class=\"input\" required=\"required\" maxlength=\"1000\" autocomplete=\"off\" data-poll-builder-target=\"question\" />"
       }
@@ -1988,7 +1988,7 @@
         "rooms/composition/_thread_panel.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "<p>The person who started the thread, the channel's creator, or an administrator can turn tracking on and assign an owner. The assigned owner can update the status. Completing work keeps the conversation and its history.</p>"
       }
@@ -2003,7 +2003,7 @@
         "rooms/composition/show.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_room_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_room_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "id=\"message-area\""
       }
@@ -2228,7 +2228,7 @@
         "rooms/huddles/_participants.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/jobs/huddle_render_assertions.json",
+        "oracle": "crates/campfire_tests/src/jobs/huddle_render_assertions.json",
         "pointer": "/cases/0/steps/0/frames/Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages/0",
         "needle": "<span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">"
       }
@@ -2259,7 +2259,7 @@
         "rooms/involvements/_bell.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<dialog data-notifications-target=\"notAllowedNotice\" class=\"dialog pad center center-block border-radius border shadow\" style=\"--inline-space: var(--block-space)\">"
       }
@@ -2304,7 +2304,7 @@
         "rooms/layouts/_edit.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/2/html",
         "needle": "style=\"view-transition-name: edit-room-"
       }
@@ -2334,7 +2334,7 @@
         "rooms/layouts/_new.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">"
       }
@@ -2445,7 +2445,7 @@
         "rooms/pins/_panel.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "class=\"pins-panel-wrap\""
       }
@@ -2490,7 +2490,7 @@
         "rooms/shell/_ooo.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_shell_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_shell_vectors.json",
         "pointer": "/cases/26/html",
         "needle": "<div id=\"ooo-notices\" class=\"ooo-notices\">"
       }
@@ -2505,7 +2505,7 @@
         "rooms/shell/_ooo_line.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_shell_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_shell_vectors.json",
         "pointer": "/cases/28/html",
         "needle": "<p class=\"ooo-notice txt-small\" role=\"status\">"
       }
@@ -2520,7 +2520,7 @@
         "rooms/show.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "id=\"message-area\""
       }
@@ -2536,7 +2536,7 @@
         "rooms/show/_call_header_overflow.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<button type=\"button\" class=\"btn room-menu__item header-overflow__item header-overflow__item--phone-only\" role=\"menuitem\""
       }
@@ -2591,7 +2591,7 @@
         "rooms/show/_identity.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<div class=\"room-header__identity room--current min-width\" id=\""
       }
@@ -2655,7 +2655,7 @@
         "rooms/show/_nav.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "data-action=\"member-panel#toggle\""
       }
@@ -2701,7 +2701,7 @@
         "rooms/show/_pins_panel.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<button type=\"button\" class=\"btn room-header__action room-header__action--pins\""
       }
@@ -2716,7 +2716,7 @@
         "rooms/show/_workspace_nav.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<button type=\"button\" class=\"btn room-header__action room-header__action--switcher\" aria-label=\"Quick switcher (Control K)\" title=\"Quick switcher (Ctrl+K)\""
       }
@@ -2836,7 +2836,7 @@
         "rooms/stages/_form.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\""
       }
@@ -2862,7 +2862,7 @@
         "rooms/stages/new.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">"
       }
@@ -2877,7 +2877,7 @@
         "rooms/voices/_form.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<input name=\"room[name]\" id=\"room_name\" class=\"input full-width\" required=\"required\" autofocus=\"autofocus\" placeholder=\"Name the room\" data-turbo-permanent=\"true\" data-action=\"keydown.enter-&gt;form#submit:prevent\" type=\"text\""
       }
@@ -2903,7 +2903,7 @@
         "rooms/voices/new.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">"
       }
@@ -3984,7 +3984,7 @@
         "users/sidebars/_call_sections.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/sidebar_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/sidebar_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"sidebar-section sidebar-section--stage rooms\" aria-labelledby=\"stage-heading\">"
       }
@@ -4039,7 +4039,7 @@
         "users/sidebars/_workspace_destinations.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/users/full_sidebar_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"workspace-activity-count\" data-activity-indicator-target=\"count\" hidden></span>"
       }
@@ -4065,7 +4065,7 @@
         "users/sidebars/composition/_category.html"
       ],
       "witness": {
-        "oracle": "vectors/../crates/campfire/src/controllers/users/full_sidebar_vectors.json",
+        "oracle": "vectors/../crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "\" size=\"50\" type=\"text\" name=\"room_category[name]\" id=\"room_category_name\" />"
       }
@@ -4080,7 +4080,7 @@
         "users/sidebars/composition/_direct.html"
       ],
       "witness": {
-        "oracle": "vectors/../crates/campfire/src/controllers/users/full_sidebar_vectors.json",
+        "oracle": "vectors/../crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"for-screen-reader\">Ping with</span>"
       }
@@ -4095,7 +4095,7 @@
         "users/sidebars/composition/_favorites.html"
       ],
       "witness": {
-        "oracle": "vectors/../crates/campfire/src/controllers/users/full_sidebar_vectors.json",
+        "oracle": "vectors/../crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<header class=\"sidebar-section__header\">"
       }
@@ -4110,7 +4110,7 @@
         "users/sidebars/composition/_placeholder.html"
       ],
       "witness": {
-        "oracle": "vectors/../crates/campfire/src/controllers/users/full_sidebar_vectors.json",
+        "oracle": "vectors/../crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"for-screen-reader\">Start a ping with</span>"
       }
@@ -4125,7 +4125,7 @@
         "users/sidebars/composition/_shared.html"
       ],
       "witness": {
-        "oracle": "vectors/../crates/campfire/src/controllers/users/full_sidebar_vectors.json",
+        "oracle": "vectors/../crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"sidebar-item__label overflow-ellipsis\">"
       }
@@ -4140,7 +4140,7 @@
         "users/sidebars/composition/_shell.html"
       ],
       "witness": {
-        "oracle": "vectors/../crates/campfire/src/controllers/users/full_sidebar_vectors.json",
+        "oracle": "vectors/../crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "data-action=\"rooms-list:unread@window->badge-dot#update rooms-list:read@window->badge-dot#update turbo:submit-start->turbo-frame#unpermanize workspace-presence:connected@window->dm-presence#refresh\">"
       }
@@ -4238,7 +4238,7 @@
         "users/sidebars/rooms/_stage.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/sidebar_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/sidebar_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"sidebar-item__label overflow-ellipsis\">"
       }
@@ -4256,7 +4256,7 @@
         "users/sidebars/rooms/_voice.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/sidebar_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/sidebar_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"sidebar-item__label overflow-ellipsis\">"
       }
@@ -5785,7 +5785,7 @@
         "messages/_template.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_shell_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_shell_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "$messageDatetime$"
       }
@@ -6117,7 +6117,7 @@
         "polls/_builder.html.erb"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "<button type=\"button\" class=\"btn btn--borderless\" data-action=\"poll-builder#close\" aria-label=\"Close poll builder\">✕</button>"
       }
@@ -6194,7 +6194,7 @@
         "pwa/_browser_settings.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<details class=\"notifications-help\" data-notifications-target=\"details\">"
       }
@@ -6211,7 +6211,7 @@
         "pwa/_install_instructions.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<details class=\"notifications-help pwa__instructions hide-in-pwa\" data-controller=\"pwa-install\" data-pwa-install-prompting-class=\"pwa--can-install\" data-notifications-target=\"details\">"
       }
@@ -6228,7 +6228,7 @@
         "pwa/_system_settings.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<details class=\"notifications-help hide-in-browser\" data-notifications-target=\"details\">"
       }
@@ -6679,7 +6679,7 @@
         "rooms/huddles/_participants.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/jobs/huddle_render_assertions.json",
+        "oracle": "crates/campfire_tests/src/jobs/huddle_render_assertions.json",
         "pointer": "/cases/0/steps/0/frames/Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages/0",
         "needle": "<span class=\"voice-stack__avatars\" data-huddle-participants-target=\"avatars\">"
       }
@@ -6710,7 +6710,7 @@
         "rooms/involvements/_bell.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/page_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<dialog data-notifications-target=\"notAllowedNotice\" class=\"dialog pad center center-block border-radius border shadow\" style=\"--inline-space: var(--block-space)\">"
       }
@@ -6755,7 +6755,7 @@
         "rooms/layouts/_edit.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/2/html",
         "needle": "style=\"view-transition-name: edit-room-"
       }
@@ -6785,7 +6785,7 @@
         "rooms/layouts/_new.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"panel txt-align-center\" style=\"view-transition-name:"
       }
@@ -6896,7 +6896,7 @@
         "rooms/pins/_panel.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "class=\"pins-panel-wrap\""
       }
@@ -6941,7 +6941,7 @@
         "rooms/show.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "id=\"message-area\""
       }
@@ -6956,7 +6956,7 @@
         "rooms/show/_composer.html.erb"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/room_composition_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/room_composition_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "\" type=\"checkbox\" name=\"message[reply_notify_author]\" value=\"1\" checked disabled data-composer-target=\"replyNotify\""
       }
@@ -7036,7 +7036,7 @@
         "rooms/show/_nav.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "data-action=\"member-panel#toggle\""
       }
@@ -7081,7 +7081,7 @@
         "rooms/show/_thread_panel.html.erb"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/full_pages.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/full_pages.json",
         "pointer": "/rows/0/html",
         "needle": "<button type=\"button\" class=\"btn\" role=\"menuitem\" data-thread-panel-target=\"convertToWork\" data-action=\"thread-panel#convertToWork\" hidden>Track as work</button>"
       }
@@ -7201,7 +7201,7 @@
         "rooms/stages/_form.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<div data-filter-target=\"list\" contents>"
       }
@@ -7227,7 +7227,7 @@
         "rooms/stages/new.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">"
       }
@@ -7242,7 +7242,7 @@
         "rooms/voices/_form.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<div data-filter-target=\"list\" contents>"
       }
@@ -7268,7 +7268,7 @@
         "rooms/voices/new.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/form_page_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<section class=\"panel txt-align-center\" style=\"view-transition-name: new-room\">"
       }
@@ -8431,7 +8431,7 @@
         "users/sidebars/rooms/_stage.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/sidebar_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/sidebar_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"sidebar-item__label overflow-ellipsis\">"
       }
@@ -8449,7 +8449,7 @@
         "users/sidebars/rooms/_voice.html"
       ],
       "witness": {
-        "oracle": "crates/campfire/src/controllers/rooms/sidebar_view_vectors.json",
+        "oracle": "crates/campfire_tests/src/controllers/rooms/sidebar_view_vectors.json",
         "pointer": "/cases/0/html",
         "needle": "<span class=\"sidebar-item__label overflow-ellipsis\">"
       }
@@ -8874,7 +8874,7 @@
       "scenario": "all Drive attachment chip records, including MIME and link variants"
     },
     "auth_pages": {
-      "test_file": "crates/campfire/src/app/full_page_tests.rs",
+      "test_file": "crates/campfire_tests/src/app/full_page_tests.rs",
       "test": "complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks",
       "oracles": [
         "vectors/auth_full_pages.json"
@@ -8882,7 +8882,7 @@
       "scenario": "all fifteen captured seeded auth pages: sign-in/incompatible/transfer, enrollment QR, challenge, one-use backups, sessions_one/two and every sudo password/TOTP/Google combination"
     },
     "profile_full": {
-      "test_file": "crates/campfire/src/controllers/users/profile_page_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/profile_page_tests.rs",
       "test": "whole_profile_matches_rails_seed_without_masks",
       "oracles": [
         "vectors/users_profile_page.json"
@@ -8890,7 +8890,7 @@
       "scenario": "seeded David complete profile page; configured owner forms, membership lists, sessions, two-factor enrollment state and Chrome/macOS installation panels"
     },
     "status_popup": {
-      "test_file": "crates/campfire/src/controllers/users/status_popup_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/status_popup_tests.rs",
       "test": "complete_popup_bodies_match_post_pin_rails",
       "oracles": [
         "vectors/users_status_popup.json"
@@ -8898,15 +8898,15 @@
       "scenario": "every popup row, including selected presence/expiry, invalid emoji/text errors and status-popup field ID prefix"
     },
     "sidebar_composition": {
-      "test_file": "crates/campfire/src/controllers/users/sidebars/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/sidebars/tests.rs",
       "test": "full_sidebar_matches_seventeen_complete_post_fix_rails_renders",
       "oracles": [
-        "crates/campfire/src/controllers/users/full_sidebar_vectors.json"
+        "crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json"
       ],
       "scenario": "17 complete cases include favorites, categorized shared rooms, pair/group DMs, search, collapsed categories and empty venue placeholders"
     },
     "account_settings": {
-      "test_file": "crates/campfire/src/controllers/accounts/view_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/accounts/view_tests.rs",
       "test": "account_settings_body_navigation_and_footer_match_pinned_rails",
       "oracles": [
         "vectors/users_account_views.json"
@@ -8914,7 +8914,7 @@
       "scenario": "David administrator and member complete content/nav/footer; administrator list and paged member list populated"
     },
     "custom_styles": {
-      "test_file": "crates/campfire/src/controllers/accounts/view_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/accounts/view_tests.rs",
       "test": "custom_style_editor_matches_rails_bytes_including_escaped_css",
       "oracles": [
         "vectors/users_account_views.json"
@@ -8922,7 +8922,7 @@
       "scenario": "all recorded custom stylesheet editor states including escaped CSS and authorization checks"
     },
     "audit_log": {
-      "test_file": "crates/campfire/src/controllers/accounts/audit_logs/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/accounts/audit_logs/tests.rs",
       "test": "html_navigation_csv_and_filtered_order_match_rails",
       "oracles": [
         "vectors/users_audit_logs.json"
@@ -8930,7 +8930,7 @@
       "scenario": "filtered/populated HTML audit rows and navigation compared completely, plus CSV response ordering"
     },
     "icons_index": {
-      "test_file": "crates/campfire/src/controllers/accounts/icons/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/accounts/icons/tests.rs",
       "test": "index_body_and_navigation_match_rails_empty_populated_and_error_pages",
       "oracles": [
         "vectors/users_icons.json"
@@ -8938,47 +8938,47 @@
       "scenario": "empty, populated and invalid icon pages: uploaded icon rows and inline error branch rendered"
     },
     "call_forms": {
-      "test_file": "crates/campfire/src/controllers/rooms/call_page_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/call_page_tests.rs",
       "test": "complete_voice_and_stage_form_pages_match_fourteen_rails_renders",
       "oracles": [
-        "crates/campfire/src/controllers/rooms/form_page_vectors.json"
+        "crates/campfire_tests/src/controllers/rooms/form_page_vectors.json"
       ],
       "scenario": "14 new/edit voice/stage pages with creator/admin/member permissions, selected users, errors and configured edit sections"
     },
     "call_headers": {
-      "test_file": "crates/campfire/src/controllers/rooms/call_page_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/call_page_tests.rs",
       "test": "complete_call_headers_match_twenty_eight_rails_renders",
       "oracles": [
-        "crates/campfire/src/controllers/rooms/page_view_vectors.json"
+        "crates/campfire_tests/src/controllers/rooms/page_view_vectors.json"
       ],
       "scenario": "28 navigation cases include shared/direct/board/voice/stage kinds, current role, configured huddle and live stream facts"
     },
     "room_native": {
-      "test_file": "crates/campfire/src/controllers/rooms/full_page_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/full_page_tests.rs",
       "test": "full_native_room_pages_match_four_complete_rails_pages",
       "oracles": [
-        "crates/campfire/src/controllers/rooms/full_pages.json"
+        "crates/campfire_tests/src/controllers/rooms/full_pages.json"
       ],
       "scenario": "four complete populated native room pages, real DB presenter and Markdown composer; all owner children composed, with viewer permissions"
     },
     "room_composition": {
-      "test_file": "crates/campfire/src/controllers/rooms/room_composition_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/room_composition_tests.rs",
       "test": "room_composition_matches_thirty_complete_rails_partials",
       "oracles": [
-        "crates/campfire/src/controllers/rooms/room_composition_vectors.json"
+        "crates/campfire_tests/src/controllers/rooms/room_composition_vectors.json"
       ],
       "scenario": "30 selected composer/nav/panel partials: room kinds, permission states, Drive picker and no-composer branch are individually selected by partial name"
     },
     "sidebar_calls": {
-      "test_file": "crates/campfire/src/controllers/rooms/stage_page_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/stage_page_tests.rs",
       "test": "complete_sidebar_call_sections_match_eight_rails_renders",
       "oracles": [
-        "crates/campfire/src/controllers/rooms/sidebar_view_vectors.json"
+        "crates/campfire_tests/src/controllers/rooms/sidebar_view_vectors.json"
       ],
       "scenario": "eight complete sidebar call sections: populated and empty voice/stage rooms, configured/not configured and live stream facts"
     },
     "board_rows": {
-      "test_file": "crates/campfire/src/controllers/rooms/boards_read_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/boards_read_tests.rs",
       "test": "board_rows_match_both_rails_renderings",
       "oracles": [
         "vectors/boards_read.json"
@@ -8986,7 +8986,7 @@
       "scenario": "each captured thread row in list and column form, with populated status/assignee/activity facts"
     },
     "board_pages": {
-      "test_file": "crates/campfire/src/controllers/rooms/boards_read_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/boards_read_tests.rs",
       "test": "board_list_and_columns_match_complete_rails_http_responses",
       "oracles": [
         "vectors/boards_read.json"
@@ -8994,7 +8994,7 @@
       "scenario": "all captured board list/column/filter HTTP pages and real presenter facts"
     },
     "board_automations": {
-      "test_file": "crates/campfire/src/controllers/rooms/board_automation_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/board_automation_tests.rs",
       "test": "board_automation_settings_match_rails_response_bytes_and_audit_facts",
       "oracles": [
         "vectors/board_automation_settings.json"
@@ -9002,7 +9002,7 @@
       "scenario": "GET, valid PATCH and invalid settings responses; selected rules and error forms, complete bytes"
     },
     "message_states": {
-      "test_file": "crates/campfire/src/controllers/messages/state_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/messages/state_tests.rs",
       "test": "complete_message_states_match_rails_on_cache_misses_and_hits",
       "oracles": [
         "vectors/messaging/message-states.json"
@@ -9010,7 +9010,7 @@
       "scenario": "all recorded message states created as actual rows then rendered cold/warm; streaming, system notes, reply context, deleted source, reactions and populated agent steps"
     },
     "boost_pages": {
-      "test_file": "crates/campfire/src/controllers/messages/boosts_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/messages/boosts_tests.rs",
       "test": "boost_pages_match_complete_rails_forms_distinct_counts_and_escaped_reactors",
       "oracles": [
         "vectors/messaging/boost-pages.json"
@@ -9018,7 +9018,7 @@
       "scenario": "complete new/index boost forms with legacy boost and modern reaction collections, counts and escaped reactor names"
     },
     "message_lists": {
-      "test_file": "crates/campfire/src/controllers/messages/room_list_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/messages/room_list_tests.rs",
       "test": "room_list_places_unread_outside_shared_fragments_and_matches_rails_around_pages",
       "oracles": [
         "vectors/messaging/room-list.json"
@@ -9026,7 +9026,7 @@
       "scenario": "recorded around/cursor room lists with unread divider, complete body and cold/warm shared fragments"
     },
     "thread_pages": {
-      "test_file": "crates/campfire/src/controllers/channel_threads/page_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/channel_threads/page_tests.rs",
       "test": "complete_standalone_thread_templates_match_rails_layout_bytes",
       "oracles": [
         "vectors/messaging/thread-pages.json"
@@ -9034,7 +9034,7 @@
       "scenario": "all standalone active/closed/all thread templates, reply content and work metadata against complete Rails pages"
     },
     "human_work": {
-      "test_file": "crates/campfire/src/controllers/human_work_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/human_work_tests.rs",
       "test": "human_work_http_matches_complete_rails_responses",
       "oracles": [
         "vectors/human_work_http.json"
@@ -9042,7 +9042,7 @@
       "scenario": "full human work list/handoff/link HTTP matrix, populated thread rows, link summaries and invalid link forms"
     },
     "saved_pages": {
-      "test_file": "crates/campfire/src/controllers/message_features/saved_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/saved_tests.rs",
       "test": "saved_partials_match_rails_for_reminders_statuses_zones_and_empty_page",
       "oracles": [
         "vectors/messaging/saved.json"
@@ -9050,7 +9050,7 @@
       "scenario": "every recorded reminder/status/zone item plus empty saved page; complete fragments and owner-specific controls"
     },
     "scheduled_pages": {
-      "test_file": "crates/campfire/src/controllers/message_features/scheduled_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/scheduled_tests.rs",
       "test": "scheduled_row_partials_match_rails_and_empty_page_bytes",
       "oracles": [
         "vectors/messaging/scheduled.json"
@@ -9058,7 +9058,7 @@
       "scenario": "upcoming and past row partials and empty page, with full timestamp/room/cancel controls"
     },
     "schedule_button": {
-      "test_file": "crates/campfire/src/controllers/message_features/scheduled_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/scheduled_tests.rs",
       "test": "scheduled_composer_controls_match_rails_for_room_and_thread",
       "oracles": [
         "vectors/messaging/scheduled.json"
@@ -9066,7 +9066,7 @@
       "scenario": "explicit room/thread composer buttons with corresponding root/thread scheduling targets"
     },
     "files": {
-      "test_file": "crates/campfire/src/controllers/message_features/links_files_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/links_files_tests.rs",
       "test": "files_sections_match_pinned_rails_exact_bytes",
       "oracles": [
         "vectors/messaging/links_files.json"
@@ -9074,7 +9074,7 @@
       "scenario": "15 full file sections with file-type filters, attached blob metadata and message/author references"
     },
     "quotes": {
-      "test_file": "crates/campfire/src/controllers/message_features/links_files_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/links_files_tests.rs",
       "test": "quote_responses_match_pinned_rails_exact_bytes",
       "oracles": [
         "vectors/messaging/links_files.json"
@@ -9082,7 +9082,7 @@
       "scenario": "five actual quote HTTP responses and complete public/private quote card fragments"
     },
     "slack_setup": {
-      "test_file": "crates/campfire/src/controllers/slack/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/slack/tests.rs",
       "test": "slack_setup_views_are_byte_identical_to_rails_and_write_only",
       "oracles": [
         "vectors/slack/setup_views.json"
@@ -9090,7 +9090,7 @@
       "scenario": "all admin/personal Slack setup and credential/error states, complete rendered fragments"
     },
     "slack_runs": {
-      "test_file": "crates/campfire/src/controllers/slack/run_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/slack/run_tests.rs",
       "test": "slack_run_views_match_every_rails_body_byte",
       "oracles": [
         "vectors/slack/run_views.json"
@@ -9098,7 +9098,7 @@
       "scenario": "every admin/personal run, preview plan, selected/importing/completed/failed/undoing status and issue list; full body bytes"
     },
     "fizzy_new": {
-      "test_file": "crates/campfire/src/controllers/fizzy_message_cards/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/fizzy_message_cards/tests.rs",
       "test": "ws15e_fizzy_message_form_matches_pinned_rails_bytes",
       "oracles": [
         "vectors/ws15e_fizzy_message_form.json"
@@ -9106,7 +9106,7 @@
       "scenario": "recorded Fizzy message-card creation form body with seeded room and draft values"
     },
     "user_join": {
-      "test_file": "crates/campfire/src/controllers/users/joining_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/joining_tests.rs",
       "test": "join_page_matches_complete_rails_body_and_access_checks",
       "oracles": [
         "vectors/users_joining.json"
@@ -9114,7 +9114,7 @@
       "scenario": "real invite/join page body, seeded join-code checks and member actions"
     },
     "people_pages": {
-      "test_file": "crates/campfire/src/controllers/users/people_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/people_tests.rs",
       "test": "directories_match_complete_rails_body_and_starred_order",
       "oracles": [
         "vectors/users_people.json"
@@ -9122,7 +9122,7 @@
       "scenario": "all captured directory pages with populated active members and ordered starred subsets"
     },
     "people_card": {
-      "test_file": "crates/campfire/src/controllers/users/people_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/people_tests.rs",
       "test": "card_shows_identity_presence_role_and_actions_for_a_peer",
       "oracles": [
         "vectors/users_people.json"
@@ -9130,7 +9130,7 @@
       "scenario": "peer card case with full Rails bytes and role/action facts from actual seeded viewer"
     },
     "people_extras": {
-      "test_file": "crates/campfire/src/controllers/users/people_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/people_tests.rs",
       "test": "additional_presence_star_and_mention_states_match_rails",
       "oracles": [
         "vectors/users_people.json"
@@ -9138,7 +9138,7 @@
       "scenario": "explicit extra presence, star and mention fragments with full recorded bytes"
     },
     "status_star": {
-      "test_file": "crates/campfire/src/controllers/users/stars_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/stars_tests.rs",
       "test": "ws12_stars_toggle_and_stream_match_every_rails_byte",
       "oracles": [
         "vectors/users_stars.json"
@@ -9146,7 +9146,7 @@
       "scenario": "real star toggle and stream bodies for active and inactive targets, viewer-specific form token"
     },
     "initials_avatar": {
-      "test_file": "crates/campfire/src/controllers/users/avatars/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/avatars/tests.rs",
       "test": "default_initials_svg_matches_rails_bytes_and_cache_validation",
       "oracles": [
         "vectors/users_avatars.json"
@@ -9154,7 +9154,7 @@
       "scenario": "actual avatar HTTP responses with complete SVG bytes and freshness semantics"
     },
     "public_pages": {
-      "test_file": "crates/campfire/src/controllers/public_pages/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/public_pages/tests.rs",
       "test": "public_page_bodies_match_rails_with_operator_escaping_and_email_uri_encoding",
       "oracles": [
         "vectors/users_public.json"
@@ -9162,7 +9162,7 @@
       "scenario": "all operator/contact escaping and email URI cases; complete public response bodies"
     },
     "board_posts": {
-      "test_file": "crates/campfire/src/controllers/channel_threads/board_read_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/channel_threads/board_read_tests.rs",
       "test": "board_post_forms_pages_and_panes_match_complete_rails_http_responses",
       "oracles": [
         "vectors/boards_post_read.json"
@@ -9170,7 +9170,7 @@
       "scenario": "new board post, standalone board post and pane GET responses for recorded permissions and statuses"
     },
     "message_edit": {
-      "test_file": "crates/campfire/src/controllers/messages/root_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/messages/root_tests.rs",
       "test": "edit_forms_and_actions_menu_match_rails_bytes",
       "oracles": [
         "vectors/messaging/root.json"
@@ -9178,7 +9178,7 @@
       "scenario": "all captured edit form and action-menu bodies for root messages"
     },
     "search_empty": {
-      "test_file": "crates/campfire/src/controllers/searches/ports.rs",
+      "test_file": "crates/campfire_tests/src/controllers/searches/ports.rs",
       "test": "search_parser_chips_and_empty_page_match_pinned_rails_bytes",
       "oracles": [
         "vectors/messaging/search.json"
@@ -9186,7 +9186,7 @@
       "scenario": "explicit filter fragments, empty index and clear streams, all exact Rails bytes"
     },
     "search_sections": {
-      "test_file": "crates/campfire/src/controllers/searches/ports.rs",
+      "test_file": "crates/campfire_tests/src/controllers/searches/ports.rs",
       "test": "search_sections_load_older_and_older_stream_match_pinned_rails_bytes",
       "oracles": [
         "vectors/messaging/search.json"
@@ -9194,7 +9194,7 @@
       "scenario": "populated boards/work/events sections, next cursor and older Turbo stream exact Rails bytes"
     },
     "search_history": {
-      "test_file": "crates/campfire/src/controllers/searches/ports.rs",
+      "test_file": "crates/campfire_tests/src/controllers/searches/ports.rs",
       "test": "search_history_http_matches_pinned_rails_responses",
       "oracles": [
         "vectors/messaging/search.json"
@@ -9202,7 +9202,7 @@
       "scenario": "real HTTP create/clear recents matrix with populated recents in page and header"
     },
     "pins": {
-      "test_file": "crates/campfire/src/controllers/message_features/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/tests.rs",
       "test": "pin_partials_match_rails_list_count_badge_frame_and_empty_bytes",
       "oracles": [
         "vectors/messaging/features.json"
@@ -9210,7 +9210,7 @@
       "scenario": "all populated pinned-message list/count/frame and empty controls"
     },
     "poll": {
-      "test_file": "crates/campfire/src/controllers/message_features/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/tests.rs",
       "test": "poll_partials_match_rails_open_voted_anonymous_closed_and_error_bytes",
       "oracles": [
         "vectors/messaging/features.json"
@@ -9218,7 +9218,7 @@
       "scenario": "open/voted/anonymous/closed/error poll fragments, all option and voter branches"
     },
     "providers": {
-      "test_file": "crates/campfire/src/controllers/message_features/provider_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/provider_tests.rs",
       "test": "populated_github_and_embed_containers_match_actual_rails",
       "oracles": [
         "vectors/messaging/providers.json"
@@ -9226,7 +9226,7 @@
       "scenario": "populated GitHub, LinkedIn and link embed containers from real persisted reference rows"
     },
     "embeds": {
-      "test_file": "crates/campfire/src/controllers/presenters/link_embeds/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/presenters/link_embeds/tests.rs",
       "test": "ws15e_link_containers_match_rails_and_view_requests_are_single_flight",
       "oracles": [
         "vectors/ws15e_link_embed.json"
@@ -9234,7 +9234,7 @@
       "scenario": "populated link cards, metadata/image/description branches in recorded containers"
     },
     "linkedin": {
-      "test_file": "crates/campfire/src/controllers/presenters/link_embeds/linkedin_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/presenters/link_embeds/linkedin_tests.rs",
       "test": "ws15e_linkedin_containers_match_pinned_rails_bytes",
       "oracles": [
         "vectors/ws15e_linkedin_cards.json"
@@ -9242,7 +9242,7 @@
       "scenario": "populated LinkedIn card containers with recorded metadata/error states"
     },
     "x_cards": {
-      "test_file": "crates/campfire/src/controllers/message_features/provider_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/provider_tests.rs",
       "test": "preloaded_x_cards_match_actual_rails_numeric_order_and_warm_refresh",
       "oracles": [
         "vectors/messaging/twitter_preloads.json"
@@ -9250,7 +9250,7 @@
       "scenario": "populated X cards, exact cold/warm containers and numeric ordering"
     },
     "refresh": {
-      "test_file": "crates/campfire/src/controllers/rooms/refreshes_rails_cases.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/refreshes_rails_cases.rs",
       "test": "pin_only_refresh_matches_rails_bytes_and_request_token_ownership",
       "oracles": [
         "vectors/../crates/views/tests/golden/rooms/pin_refresh.json"
@@ -9258,7 +9258,7 @@
       "scenario": "actual pin-only refresh HTTP response, empty message list still emits pinned panel"
     },
     "autocomplete": {
-      "test_file": "crates/campfire/src/controllers/message_features/slash_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/message_features/slash_tests.rs",
       "test": "slash_and_picker_responses_match_pinned_rails_exact_bytes",
       "oracles": [
         "vectors/messaging/slash.json"
@@ -9266,7 +9266,7 @@
       "scenario": "captured mention-picker HTML responses include populated matching users and prompt templates"
     },
     "welcome": {
-      "test_file": "crates/campfire/src/controllers/welcome/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/welcome/tests.rs",
       "test": "empty_workspace_body_sidebar_and_frame_match_rails",
       "oracles": [
         "vectors/users_welcome.json"
@@ -9274,7 +9274,7 @@
       "scenario": "no memberships: full welcome content/sidebar bytes and HTTP Turbo-frame inclusion"
     },
     "first_run": {
-      "test_file": "crates/campfire/src/controllers/first_runs/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/first_runs/tests.rs",
       "test": "signup_body_matches_rails_and_is_available_until_account_exists",
       "oracles": [
         "vectors/users_first_run.json"
@@ -9282,7 +9282,7 @@
       "scenario": "empty first_run seed: complete signup content; real GET remains available until first account"
     },
     "inbox": {
-      "test_file": "crates/campfire/src/controllers/activity_items/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/activity_items/tests.rs",
       "test": "ws11ui_inbox_http_matches_pinned_rails_bytes_and_permissions",
       "oracles": [
         "vectors/inbox-http.json"
@@ -9290,7 +9290,7 @@
       "scenario": "all seeded inbox HTTP cases: populated actionable approvals, read state, pagination and filters"
     },
     "health": {
-      "test_file": "crates/campfire/src/controllers/github/health_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/github/health_tests.rs",
       "test": "integration_health_snapshots_and_complete_body_match_rails_and_http_never_renders_secrets",
       "oracles": [
         "vectors/github_health_page.json"
@@ -9298,7 +9298,7 @@
       "scenario": "all configured/unconfigured integrations snapshots and exact complete health page body"
     },
     "thread_content": {
-      "test_file": "crates/campfire/src/controllers/channel_threads/content_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/channel_threads/content_tests.rs",
       "test": "conversation_and_room_composer_match_rails_bytes_through_http",
       "oracles": [
         "vectors/messaging/thread-content.json"
@@ -9306,24 +9306,24 @@
       "scenario": "actual seeded thread content GET bodies; pending template compared separately to Rails pending_template"
     },
     "sidebar_children": {
-      "test_file": "crates/campfire/src/controllers/users/sidebars/tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/users/sidebars/tests.rs",
       "test": "full_sidebar_matches_seventeen_complete_post_fix_rails_renders",
       "oracles": [
-        "vectors/../crates/campfire/src/controllers/users/full_sidebar_vectors.json"
+        "vectors/../crates/campfire_tests/src/controllers/users/full_sidebar_vectors.json"
       ],
       "scenario": "17 complete sidebar composition cases: favorite populated/empty, category expanded/collapsed, shared/direct populated and missing venue placeholder branches"
     },
     "stage_grants": {
-      "test_file": "crates/campfire/src/jobs/huddle_render_tests.rs",
+      "test_file": "crates/campfire_tests/src/jobs/huddle_render_tests.rs",
       "test": "issue_stage",
       "oracles": [
-        "crates/campfire/src/jobs/huddle_render_assertions.json"
+        "crates/campfire_tests/src/jobs/huddle_render_assertions.json"
       ],
       "scenario": "cases!(issue_stage): real grant callbacks, complete WebSocket frame payloads with populated stage roster and role event",
       "test_macro": "cases"
     },
     "fresh_http": {
-      "test_file": "crates/campfire/src/controllers/template_coverage_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/template_coverage_tests.rs",
       "test": "uncovered_controller_branches_match_fresh_pinned_rails_bytes",
       "oracles": [
         "vectors/template_coverage_http.json"
@@ -9331,7 +9331,7 @@
       "scenario": "20 fresh real HTTP responses: board_new/edit, human self/peer/banned/deactivated, involvement_everything/mentions/nothing, users_page_one/two (501 inserted users), missing_creator, root_create/thread_create room_not_found and original_room_invitation (empty original room), original_create and original_room_invitation_populated; output includes recorded ActionView template traces"
     },
     "root_destroy": {
-      "test_file": "crates/campfire/src/controllers/messages/paging_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/messages/paging_tests.rs",
       "test": "root_formats_and_destroy_side_effects_match_rails",
       "oracles": [
         "vectors/messaging/paging.json"
@@ -9339,15 +9339,15 @@
       "scenario": "formats destroy.turbo_stream compares exact remove stream body for actual message deletion"
     },
     "room_shell": {
-      "test_file": "crates/campfire/src/controllers/rooms/room_shell_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/room_shell_tests.rs",
       "test": "room_shell_matches_thirty_eight_complete_rails_renders",
       "oracles": [
-        "crates/campfire/src/controllers/rooms/room_shell_vectors.json"
+        "crates/campfire_tests/src/controllers/rooms/room_shell_vectors.json"
       ],
       "scenario": "38 complete shell partials: ooo cases include populated notices, dates, notes and empty control; test selects ooo and constructs shell::Notices"
     },
     "two_factor_profile": {
-      "test_file": "crates/campfire/src/app/two_factor_tests.rs",
+      "test_file": "crates/campfire_tests/src/app/two_factor_tests.rs",
       "test": "two_factor_views_match_rails_seed_bytes_including_inline_qr",
       "oracles": [
         "vectors/two_factor_views.json"
@@ -9355,7 +9355,7 @@
       "scenario": "explicit profile, profile_devices and profile_disabled comparisons; enrolled profile renders reauthentication field for reset/disable/device-revoke forms"
     },
     "github_cards": {
-      "test_file": "crates/campfire/src/controllers/github/card_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/github/card_tests.rs",
       "test": "github_viewer_card_http_frames_statuses_permissions_and_bodies_match_rails",
       "oracles": [
         "vectors/github_card_http.json"
@@ -9371,7 +9371,7 @@
       "scenario": "Populated Fizzy cards/chips sorted by numeric reference and complete Rails container bytes"
     },
     "github_section": {
-      "test_file": "crates/campfire/src/controllers/github/subscription_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/github/subscription_tests.rs",
       "test": "github_subscription_sections_match_rails_bytes_and_real_edit_page_permissions",
       "oracles": [
         "vectors/github_subscription_sections.json"
@@ -9379,7 +9379,7 @@
       "scenario": "All recorded repository subscriptions, configured/unconfigured app, admin/member edit permissions, complete section bytes"
     },
     "bot_messages": {
-      "test_file": "crates/campfire/src/controllers/bot_http_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/bot_http_tests.rs",
       "test": "bot_http_message_contracts",
       "oracles": [
         "vectors/agent_bot_http.json"
@@ -9387,7 +9387,7 @@
       "scenario": "Real bot API create/update/index bodies, complete raw response bytes and header/state checks"
     },
     "bot_boosts": {
-      "test_file": "crates/campfire/src/controllers/bot_http_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/bot_http_tests.rs",
       "test": "bot_http_boost_contracts",
       "oracles": [
         "vectors/agent_bot_http.json"
@@ -9411,7 +9411,7 @@
       "scenario": "Every sign-in and lockout message compares HTML, text and entire encoded multipart email to Rails"
     },
     "github_thread_header": {
-      "test_file": "crates/campfire/src/controllers/channel_threads/page_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/channel_threads/page_tests.rs",
       "test": "seeded_pull_request_thread_header_matches_rails_bytes_through_http",
       "oracles": [
         "vectors/github_seed_fragments.json"
@@ -9419,7 +9419,7 @@
       "scenario": "Real seeded PR-linked thread HTTP header, full reference bytes"
     },
     "fizzy_container": {
-      "test_file": "crates/campfire/src/integrations/fizzy/cards/tests.rs",
+      "test_file": "crates/campfire_tests/src/integrations/fizzy/cards/tests.rs",
       "test": "ws15e_fizzy_containers_match_rails_bytes_sorted_and_use_numeric_frame_message_id",
       "oracles": [
         "vectors/ws15e_fizzy.json"
@@ -9427,7 +9427,7 @@
       "scenario": "Populated numeric-ordered Fizzy container frames, exact Rails output"
     },
     "github_write": {
-      "test_file": "crates/campfire/src/controllers/github/write_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/github/write_tests.rs",
       "test": "github_write_http_results_payloads_own_token_prompts_retry_text_and_streams_match_rails",
       "oracles": [
         "vectors/github_write_http.json"
@@ -9435,7 +9435,7 @@
       "scenario": "Actual GitHub write controls and responses, all configured/unlinked/error/result branches"
     },
     "root_show": {
-      "test_file": "crates/campfire/src/controllers/messages/root_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/messages/root_tests.rs",
       "test": "standalone_message_wrapper_matches_rails_bytes",
       "oracles": [
         "vectors/messaging/root.json"
@@ -9451,10 +9451,10 @@
       "scenario": "50 seeded Rails stage configurations × eight explicitly selected fragments: host/speaker/listener, raised hands, muted/administrator, live streams and empty/populated rosters; every fragment byte-compared"
     },
     "full_room": {
-      "test_file": "crates/campfire/src/controllers/rooms/full_room_tests.rs",
+      "test_file": "crates/campfire_tests/src/controllers/rooms/full_room_tests.rs",
       "test": "full_room_pages_match_thirty_eight_complete_rails_pages",
       "oracles": [
-        "crates/campfire/src/controllers/rooms/full_room_vectors.json"
+        "crates/campfire_tests/src/controllers/rooms/full_room_vectors.json"
       ],
       "scenario": "38 complete Rails room pages explicitly rendered by composition_page::Show: room kinds, viewers, configured/unconfigured huddle, populated DB presenters and unread/OOO branches"
     }

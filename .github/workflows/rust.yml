@@ -220,7 +220,7 @@ jobs:
           list() { bash ci/cargo.sh nextest list --locked --message-format json "${llvm[@]}" "$@"; }
           list --workspace --exclude html5ever --profile ci -E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))" \
             > "$RUNNER_TEMP/results/list-shards.json"
-          list -p campfire -p campfire_app --profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS" \
+          list -p campfire_tests -p campfire_app --profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS" \
             > "$RUNNER_TEMP/results/list-llvm.json"
 
       # Lists ignored tests from the harnesses compiled above, with no partition or filter.
@@ -375,7 +375,7 @@ jobs:
         shell: bash
         run: |
           status=0
-          bash ci/cargo.sh nextest run --locked -p campfire -p campfire_app --profile ci-llvm -j 4 --no-fail-fast --no-tests fail \
+          bash ci/cargo.sh nextest run --locked -p campfire_tests -p campfire_app --profile ci-llvm -j 4 --no-fail-fast --no-tests fail \
             "$CAMPFIRE_LLVM" -E "$CAMPFIRE_LLVM_ONLY_TESTS" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
           cp target/nextest/ci-llvm/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
@@ -595,7 +595,7 @@ jobs:
           parity: seeds
           cargo-cache: correctness
       # The prerequisite image only adds browsers and tools to the toolchain image, so the
-      # server binary and campfire's test harnesses (what correctness.sh builds first)
+      # server binary and campfire_tests' test harness (what correctness.sh builds first)
       # compile under the toolchain image meanwhile. Both images share the Cargo home and
       # target directory, so correctness.sh's own builds then find them fresh.
       - name: Build pinned correctness prerequisites while compiling
@@ -603,7 +603,7 @@ jobs:
           RUST_CORRECTNESS_IMAGE: campfire-toolchain
         run: |
           bash ci/exec.sh bash -c 'cargo build --locked -p campfire --bin campfire &&
-            cargo test --locked -p campfire --no-run -j 4' &
+            cargo test --locked -p campfire_tests --no-run -j 4' &
           compile=$!
           docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
           wait "$compile"
@@ -622,7 +622,7 @@ jobs:
           if-no-files-found: error
       # Correctness builds run on the image's stable toolchain and LLVM (exec.sh), unlike the
       # test shards' nightly and Cranelift, so they keep their own cache of
-      # dependency artifacts. This shard has built the server binary and campfire's test harness.
+      # dependency artifacts. This shard has built the server binary and campfire_tests' test harness.
       - name: Keep only dependency artifacts for the cache
         if: ${{ matrix.shard == '2/4' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         run: python3 ci/prune-target.py target

@@ -11,5 +11,5 @@ if ! docker image inspect "$image" >/dev/null 2>&1; then
 fi
 python3 parity/bin/frozen-seeds restore >/dev/null
 WS13_PLAYWRIGHT_IMAGE="$image" CI=1 DRIVE_BROWSER_SCRATCH="${DRIVE_BROWSER_SCRATCH:-${XDG_CACHE_HOME:-$HOME/.cache}/rust-port/drive-browser}" \
-  parity/system/stable-cargo test --locked -j 4 -p campfire --bin campfire \
+  parity/system/stable-cargo test --locked -j 4 -p campfire_tests --lib \
   "${1:-controllers::drive_browser_tests::}" -- --ignored --test-threads="${DRIVE_BROWSER_THREADS:-2}"

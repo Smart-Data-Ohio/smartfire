@@ -23,14 +23,14 @@ export WS11UI_BROWSER_BINARY
 WS11UI_BROWSER_BINARY=$(parity/system/stable-cargo metadata --locked --no-deps --format-version=1 |
   python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"] + "/debug/campfire")')
 # --show-output preserves both libtest pass receipts and the real-browser traces.
-parity/system/stable-cargo test --locked -p campfire \
+parity/system/stable-cargo test --locked -p campfire_tests \
   controllers::ws12_browser_remaining_tests -- --ignored --show-output --test-threads=1
 
 # Ledger follow-up: the original individual people/tour/star/worker assertions.
 # Shares the normal binary above and the full-gate pinned browser image.
-parity/system/stable-cargo test --locked -p campfire \
+parity/system/stable-cargo test --locked -p campfire_tests \
   controllers::ws11ui_original_browser_tests -- --ignored --show-output --test-threads=1
 
 # Remaining WS8br/WS17 originals use the same pinned transport and leased hosts.
-parity/system/stable-cargo test --locked -p campfire \
+parity/system/stable-cargo test --locked -p campfire_tests \
   controllers::ledger_browser_tests -- --ignored --show-output --test-threads=1 --skip original_ledger_injected_clock_host

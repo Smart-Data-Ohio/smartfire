@@ -116,7 +116,7 @@ cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnin
 ruby parity/coverage/check-templates
 ```
 
-The nine screen follow-ups are reconciled below (`src/` paths are relative to `crates/campfire/`). Template coverage establishes server output;
+The nine screen follow-ups are reconciled below (`src/` paths are relative to `crates/campfire_tests/`). Template coverage establishes server output;
 it does not close a named browser/release declaration merely by citing a domain test. Existing
 behavior scripts and domain ledgers remain the acceptance source for those declarations.
 Pure pixel/geometry-only work is excluded.

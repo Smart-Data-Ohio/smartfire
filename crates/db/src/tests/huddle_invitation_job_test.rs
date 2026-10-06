@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 
 fn run(name: &str) {
     let vectors: Value = serde_json::from_str(include_str!(
-        "../../../campfire/src/huddle/huddle_job_contract_vectors.json"
+        "../../../campfire_tests/src/huddle/huddle_job_contract_vectors.json"
     ))
     .unwrap();
     assert_eq!(vectors["invitations"].as_array().unwrap().len(), 4);
