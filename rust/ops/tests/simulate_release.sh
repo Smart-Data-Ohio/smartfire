@@ -45,7 +45,7 @@ cleanup() {
   "$REAL_DOCKER" ps -aq --filter label=once-sim | xargs -r "$REAL_DOCKER" rm -f >/dev/null
   "$REAL_DOCKER" rm -f "$REGISTRY" >/dev/null 2>&1 || true
   "$REAL_DOCKER" volume rm -f "$VOLUME" >/dev/null 2>&1 || true
-  for label in a b c d e f; do
+  for label in a0 a b c d e f; do
     "$REAL_DOCKER" rmi "campfire-rollback:before-$label" >/dev/null 2>&1 || true
   done
   echo "simulation state kept in $SIM"
@@ -169,8 +169,12 @@ echo kept > "$SIM/volume/files/sim-upload"
 [ "$(sqlite3 "$(db)" 'select count(*) from users')" = 1 ] || fail "first run did not create the administrator"
 
 # ------------------------------------------------------------ scenarios --
-say "A: release CANDIDATE over PREVIOUS (no migrations)"
-expect a 0 "$CANDIDATE" preflight freeze cutover finish
+say "A: release CANDIDATE over PREVIOUS (no migrations); a wrong GIT_REVISION is refused first"
+EXPECTED_GIT_REVISION=0000000000000000000000000000000000000000 expect a0 1 "$CANDIDATE" preflight
+grep -q 'not the requested 0000000000000000000000000000000000000000' "$SIM/a0.log" || fail "A0 refused for another reason"
+candidate_revision="$("$REAL_DOCKER" image inspect "$CANDIDATE_TAG" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^GIT_REVISION=//p')"
+EXPECTED_GIT_REVISION="$candidate_revision" expect a 0 "$CANDIDATE" preflight
+expect a 0 "$CANDIDATE" freeze cutover finish
 [ "$(result a '.applied | length' live-migration-result.json)" = 0 ] || fail "A applied migrations"
 serving "$CANDIDATE" "A is not serving the candidate"
 
@@ -187,14 +191,37 @@ grep -q 'unknown migrations' "$SIM/state/campfire-e/migration-verification.txt" 
 serving "$MIGRATING" "E did not bring MIGRATING back"
 [ "$(sqlite3 -readonly "$(db)" 'select count(*) from schema_migrations')" = "$migrated_versions" ] || fail "E touched the schema"
 
-say "C: MIGRATING never becomes healthy; its boot only did bookkeeping -> migration-reverted"
-reset_to "$SIM/state/campfire-b/frozen-live" "$CANDIDATE"
+say "C: MIGRATING never becomes healthy over PREVIOUS; its boot fails a due job -> migration-reverted"
+# PREVIOUS is the deployed image, so its own verifier decides the rollback. A
+# job of a class nobody registered falls due after the freeze stopped PREVIOUS:
+# the candidate's runner claims it and marks it failed, changing only
+# background_jobs. Its other boot writes are whatever the real image does.
+reset_to "$SIM/state/campfire-b/frozen-live" "$PREVIOUS"
+due_at=$(( $(date +%s) + 45 ))
+sqlite3 "$(db)" "PRAGMA busy_timeout=5000;
+  INSERT INTO background_jobs (queue_name, job_class, arguments, created_at, updated_at, run_at)
+  VALUES ('default', 'ReleaseSimulation::ProbeJob', '[]', strftime('%Y-%m-%d %H:%M:%f', 'now'), strftime('%Y-%m-%d %H:%M:%f', 'now'),
+          strftime('%Y-%m-%d %H:%M:%f', $due_at, 'unixepoch'));" >/dev/null
 expect c 0 "$MIGRATING" preflight freeze
+# Read a copy: opening the kept frozen copy itself would add a -shm/-wal beside
+# it, and rollback rightly refuses a frozen copy that no longer matches.
+cp "$SIM/state/campfire-c/frozen-live/db/"* "$SIM/" && mv "$SIM/production.sqlite3" "$SIM/c-frozen.sqlite3"
+if [ -f "$SIM/production.sqlite3-wal" ]; then mv "$SIM/production.sqlite3-wal" "$SIM/c-frozen.sqlite3-wal"; fi
+[ "$(sqlite3 "$SIM/c-frozen.sqlite3" \
+     "select status from background_jobs where job_class = 'ReleaseSimulation::ProbeJob'")" = ready ] \
+  || fail "C: PREVIOUS ran the probe job before the freeze; rerun on a less loaded machine"
 SIM_UNHEALTHY=1 HEALTH_TIMEOUT=10 expect c 10 "$MIGRATING" cutover
+while [ "$(date +%s)" -lt $(( due_at + 15 )) ]; do sleep 2; done
+[ "$(sqlite3 -readonly "$(db)" "PRAGMA busy_timeout=5000; select status from background_jobs where job_class = 'ReleaseSimulation::ProbeJob'" | tail -n1)" = failed ] \
+  || fail "C: the candidate did not run the due probe job"
 expect c 0 "$MIGRATING" rollback
 [ "$(result c .action rollback-result.json)" = migration-reverted ] || fail "C did not revert the migration"
-serving "$CANDIDATE" "C is not serving CANDIDATE"
+[ "$(result c .job_queue_changes_discarded rollback-result.json)" = true ] || fail "C did not record the discarded job-queue changes"
+grep -qx 'background_jobs: preexisting row data changed MISMATCH' "$SIM/state/campfire-c/rollback-compare.txt" \
+  || fail "C: the previous image's verifier did not see the job-queue change"
+serving "$PREVIOUS" "C is not serving PREVIOUS"
 cmp -s "$(db)" "$SIM/state/campfire-c/frozen-live/db/production.sqlite3" || fail "C database is not the frozen one"
+echo "C: $(result c .reason rollback-result.json)"
 
 say "D: MIGRATING never becomes healthy but a message got written -> refused-database-incompatible"
 expect d 0 "$MIGRATING" preflight freeze
@@ -213,7 +240,23 @@ expect f 0 "$CANDIDATE" preflight freeze
 SIM_UNHEALTHY=1 HEALTH_TIMEOUT=10 expect f 10 "$CANDIDATE" cutover
 expect f 0 "$CANDIDATE" rollback
 [ "$(result f .action rollback-result.json)" = image-rolled-back ] || fail "F wrong action"
-[ "$(result f .database_restored rollback-result.json)" = false ] || fail "F wrote the database"
 serving "$PREVIOUS" "F is not serving PREVIOUS"
+echo "F: database_restored=$(result f .database_restored rollback-result.json) job_queue_changes_discarded=$(result f .job_queue_changes_discarded rollback-result.json)"
+
+say "G: /hooks/post-restore migrates an older backup and refuses a newer one"
+restore="$SIM/restore"
+mkdir -p "$restore/db" "$restore/backups" "$restore/files"
+cp "$SIM/state/campfire-b/frozen-live/db/production.sqlite3" "$restore/backups/production.sqlite3"
+"$REAL_DOCKER" run --rm --network none -v "$restore:/rails/storage" "$MIGRATING" /hooks/post-restore \
+  > "$SIM/g-older.log" 2>&1 || fail "G: MIGRATING's post-restore failed on an older backup (see $SIM/g-older.log)"
+"$REAL_DOCKER" run --rm --network none -v "$restore:/rails/storage" "$MIGRATING" \
+  campfire db-check /rails/storage/db/production.sqlite3 >/dev/null || fail "G: MIGRATING refuses the restored database"
+cp "$restore/db/production.sqlite3" "$restore/backups/production.sqlite3"
+rm -f "$restore/db/production.sqlite3"
+if "$REAL_DOCKER" run --rm --network none -v "$restore:/rails/storage" "$CANDIDATE" /hooks/post-restore \
+     > "$SIM/g-newer.log" 2>&1; then
+  fail "G: CANDIDATE's post-restore accepted a backup with a migration it doesn't know"
+fi
+grep -q 'post-restore: campfire db-migrate refused' "$SIM/g-newer.log" || fail "G: refused for another reason (see $SIM/g-newer.log)"
 
 say "all scenarios behaved"
