@@ -18,6 +18,7 @@ Run from `frontend/`, with Node 24 or later and pnpm (pnpm switches itself to th
 | `pnpm dev` | Vite dev server on http://localhost:5173/app/; it proxies `/api`, `/cable`, `/rails` and `/session` to `cargo run` on :3000 |
 | `pnpm build` | Production build into `dist/` (asset URLs under `/app/`) |
 | `pnpm preview` | Serve `dist/` |
+| `pnpm gen` | Regenerate `src/gen/` from the Rust API types (`crates/api_types`, through `cargo test -p campfire_api_types export_bindings`; needs the Rust toolchain). Commit the result: CI fails if it differs |
 | `pnpm lint` | Biome lint and format check (`pnpm format` applies fixes) |
 | `pnpm lint:anti-slop` | The anti-slop Oxlint rules |
 | `pnpm typecheck` | `tsc --noEmit` for the app, then for the vendored plugin |
@@ -31,8 +32,17 @@ Run from `frontend/`, with Node 24 or later and pnpm (pnpm switches itself to th
 `src/main.tsx` mounts the app. `src/api/` is the HTTP client and `src/sync/` the live-update
 engine and the shared Effect runtime; `src/store/` holds client state, `src/routes/` the routes,
 `src/features/` one folder per product area, `src/ui/` the design system, and `src/motion/`,
-`src/styles/` and `src/lib/` the shared pieces. `src/gen/` will hold the TypeScript types
-generated from the Rust API structs; never edit it by hand. `e2e/` holds the Playwright specs.
+`src/styles/` and `src/lib/` the shared pieces. `e2e/` holds the Playwright specs.
+
+## API types
+
+`src/gen/` holds the TypeScript types ts-rs generates from the Rust DTOs in `crates/api_types`
+(`pnpm gen`); never edit it by hand. The Effect Schemas that decode the API's JSON are written by
+hand in `src/api/schema/` and `src/api/errors.ts`, and each exports a
+`...Pin = Assert<Pinned<typeof Schema, GeneratedType>>` type: `tsc` fails until a schema's wire
+(encoded) side matches its generated type both ways. The decoded side adds branded ids
+(`UserId`, `RoomId`, ...) and `DateTime.Utc` timestamps. After changing a Rust DTO, run
+`pnpm gen`, then update the schema until `pnpm typecheck` passes.
 
 ## Design system
 
