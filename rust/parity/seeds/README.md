@@ -1,6 +1,9 @@
 # Smartfire deterministic seeds
 
-Seeds come from the **root Smartfire Rails app** and its current fixtures/models. Each is a
+The seeds the Rust tests use are committed and frozen (see "Frozen seeds" at the end); the
+rest of this file records how the Rails app built them.
+
+Seeds came from the **root Smartfire Rails app** and its current fixtures/models. Each is a
 SQLite database, Active Storage tree and flat labels.json. Both targets copy the same snapshot.
 Content/IDs/times/password digests/blob keys are stable; encrypted columns and pending browser
 cookies use real random IVs. Rebuilds are semantically deterministic, not claimed to be
@@ -75,34 +78,30 @@ libfaketime is built without FAKE_PTHREAD so waits remain real and Puma/Resque d
 Namespace images/containers/network with PARITY_NAMESPACE and ownership with PARITY_OWNER.
 Native/host-browser modes are conveniences, not acceptance runs.
 
-## Rust CI seeds
+## Frozen seeds (what the Rust tests and CI use)
 
-The Rust test workflow builds `default`, `first_run` and `agents_ui` from the full Rails SHA in
-`parity/reference.sha` (currently `78b9b1546`). `parity/bin/ci-seed prepare` archives that commit
-into ignored `parity/.ci/reference`, then overlays the checkout's `db/schema.rb` and
-`db/migrate/` so seeds match the schema required by the Rust build. Rails behavior,
-fixtures and bundle stay pinned; migrations still run only through Rails.
-The overlay must remain compatible with the pinned application and Rails runtime.
-Incompatible changes, such as removed or renamed columns, new required values, or
-migrations that need newer application code, require a pin bump and revalidation.
-`ci-seed image` builds or loads the canonical reference image, `ci-seed build` creates all three
-seeds, and `ci-seed validate` runs the Rails validator at the frozen seed clock every time.
-The same four commands can be run locally from any directory.
+Rails no longer runs anywhere in the Rust workflow. The `default`, `first_run`, `agents_ui` and
+`ledger_originals` seeds were built once by the Rails app as described above (from the pin in
+`parity/reference.sha`, validated by its seed validator at the frozen clock) and committed
+under `frozen/`, with `frozen/manifest.json` recording every file's SHA-256, a digest of the
+test keys in `parity/.env.reference` and each seed's `schema_migrations`.
 
-The image cache holds a Docker archive. Its exact identity includes the Rails pin (covering
-reference code, fixtures, Dockerfile and bundle inputs), the checkout's schema and migrations,
-parity Docker inputs and the build/cache tooling. The seed identity also includes all seed scripts, the fixed environment
-and the Rails validator. There are no fallback keys. Local image archives are reused only
-when their recorded image cache key matches all current inputs and their SHA-256 checksum
-matches the receipt; stale archives or missing receipts trigger a rebuild.
-The image's embedded Rails revision is
-checked after load, and cached seeds still undergo Rails validation in every run: the `Rust seeds`
-job validates the exact cache entry the test and correctness jobs restore, and both gates
-(`Rust port`, `Rust correctness`) fail unless it succeeded. A job whose exact entry is missing
-builds and validates its own seeds.
-Only pushes to main save caches; PRs read them and use no application secrets.
+```sh
+python3 rust/parity/bin/frozen-seeds check              # hashes, keys and schema match this checkout
+python3 rust/parity/bin/frozen-seeds restore            # check, then copy them to parity/.seed/NAME
+python3 rust/parity/bin/frozen-seeds migrate CAMPFIRE   # run CAMPFIRE db-migrate on each, then record
+python3 rust/parity/bin/frozen-seeds record             # rewrite the manifest after a deliberate change
+```
+
+`check` fails when a seed file changed, appeared or disappeared, when the keys changed, when
+`crates/db/src/schema_migrations.txt` has a migration the seeds lack, or when the seeds have one
+the build doesn't know. After adding a migration, build `campfire` and run `migrate` with it:
+the seeds get the schema change the same way production databases do, and the manifest is
+rewritten. The `Rust seeds` job runs `check` and its unit tests (`parity/test_frozen_seeds.py`);
+every other job restores the seeds through the setup action's `parity: seeds`.
 
 Every app seed loader fails if its seed is missing and `CI` is set, even to an empty value.
-Locally it may return early with a clear skip message. `first_run` is required by the account
-creation test, `agents_ui` by the navigation/inbox tests, and `default` by the other request and cable tests. The CI setup summary
-prints elapsed time and both cache-hit flags for cold/warm comparisons.
+Locally it may return early with a clear skip message, so run `frozen-seeds restore` first.
+`first_run` is required by the account creation test, `agents_ui` by the navigation/inbox
+tests, `ledger_originals` by the ledger browser tests, and `default` by the other request,
+browser and cable tests.

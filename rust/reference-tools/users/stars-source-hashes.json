@@ -1,6 +1,0 @@
-{
-  "app/models/user_star.rb": "ea19574f7d9bcb63ac93b558d95e21e7cb3924c24f945d0144549e817f945ab2",
-  "app/models/user/starring.rb": "d75cdb9337b566c406c4e4de53ea0a34bab407ae3289e150838eaddfcbf2a8b3",
-  "app/controllers/users/stars_controller.rb": "f21c3620d7afb49759086fc0d6532e72e03d0f9c9d3dd5289310f9741688f08e",
-  "app/views/users/stars/_toggle.html.erb": "82663da2fb15ad71365255ba87c1c029281ccd34a35ff9779c4ae91dffa0febc"
-}

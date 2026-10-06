@@ -116,10 +116,6 @@ fn ws17_review_board_tag_matches_fixed_rails_without_oracle_repair() {
         serde_json::to_value(actual.tag).unwrap(),
         row["deliveries"][0]["payload"]["tag"]
     );
-    assert!(
-        !include_str!("../../../../reference-tools/ws17_notification_push.rb")
-            .contains("reverse_merge")
-    );
 }
 
 #[test]

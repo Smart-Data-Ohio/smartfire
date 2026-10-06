@@ -1,0 +1,547 @@
+require "test_helper"
+
+class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    host! "smartfire.test"
+    @room = rooms(:designers)
+    @creator = users(:jz)
+    @thread = ChannelThread.create!(room: @room, creator: @creator, name: "Design discussion")
+    ThreadMembership.join!(@thread, @creator)
+  end
+
+  test "creation accepts nested thread message parameters and joins only the creator" do
+    sign_in :jz
+
+    assert_difference -> { ChannelThread.count }, 1 do
+      assert_difference -> { Message.thread_messages.count }, 1 do
+        post room_threads_url(@room, format: :json), params: {
+          thread: { name: "Nested start", message: { markdown_source: "First thread post", client_message_id: "nested-thread-start" } }
+        }
+      end
+    end
+
+    assert_response :created
+    created = ChannelThread.find(response.parsed_body.dig("thread", "id"))
+    assert_equal [ users(:jz).id ], created.memberships.pluck(:user_id)
+    assert_equal "First thread post", created.messages.sole.plain_text_body
+  end
+
+  test "retried creation with the same first-message client id returns the existing thread" do
+    sign_in :jz
+    params = {
+      thread: { name: "Retried start", message: { markdown_source: "First", client_message_id: "retry-thread-start" } }
+    }
+
+    post room_threads_url(@room, format: :json), params: params
+    assert_response :created
+    original_id = response.parsed_body.dig("thread", "id")
+
+    assert_no_difference -> { ChannelThread.count } do
+      assert_no_difference -> { Message.thread_messages.count } do
+        post room_threads_url(@room, format: :json), params: params
+        assert_response :created
+      end
+    end
+
+    assert_equal original_id, response.parsed_body.dig("thread", "id")
+  end
+
+  test "creator settings, joined-member reopening, and moderator lifecycle powers stay distinct" do
+    joined_user = users(:kevin)
+    ThreadMembership.join!(@thread, joined_user)
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { name: "Renamed", auto_archive_after_minutes: 1_440 } }
+    assert_response :success
+    assert_equal "Renamed", @thread.reload.name
+
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "closed" } }
+    assert_response :success
+    assert_predicate @thread.reload, :closed?
+
+    sign_in :kevin
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :success
+    assert_predicate @thread.reload, :active?
+
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "locked" } }
+    assert_response :forbidden
+
+    sign_in :david
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "locked" } }
+    assert_response :success
+    assert_predicate @thread.reload, :locked?
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :forbidden
+
+    sign_in :david
+    delete room_thread_url(@room, @thread, format: :json)
+    assert_response :no_content
+  end
+
+  test "browsing does not join and stale threads show as closed without writes" do
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_not @thread.memberships.exists?(user: users(:kevin))
+
+    sign_in :kevin
+    assert_no_changes -> { @thread.reload.closed_at } do
+      get room_threads_url(@room, state: "all", format: :json)
+    end
+
+    assert_response :success
+    assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
+    assert_not @thread.memberships.exists?(user: users(:kevin))
+
+    get room_threads_url(@room, format: :json)
+    assert_response :success
+    assert_empty response.parsed_body["threads"].select { |row| row["id"] == @thread.id }
+
+    get room_threads_url(@room, state: "closed", format: :json)
+    assert_response :success
+    assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
+  end
+
+  test "explicitly closing an already-stale thread persists closed_at" do
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_predicate @thread.reload, :closed?
+    assert_nil @thread.closed_at
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "closed" } }
+    assert_response :success
+    assert_not_nil @thread.reload.closed_at
+    assert_equal "closed", response.parsed_body.dig("thread", "status")
+    assert_not_nil response.parsed_body.dig("thread", "closed_at")
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Model close")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_nil stale.reload.closed_at
+    stale.close!
+    assert_not_nil stale.reload.closed_at
+    assert_predicate stale, :closed?
+  end
+
+  test "reopening a time-stale thread restarts its archive clock instead of leaving it closed" do
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_predicate @thread.reload, :closed?
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :success
+    assert_predicate @thread.reload, :active?
+    assert @thread.last_activity_at > 1.minute.ago
+
+    get room_threads_url(@room, format: :json)
+    assert_response :success
+    assert_includes response.parsed_body.fetch("threads").pluck("id"), @thread.id
+
+    get room_threads_url(@room, state: "closed", format: :json)
+    assert_response :success
+    assert_not_includes response.parsed_body.fetch("threads").pluck("id"), @thread.id
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Model reopen")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    stale.reopen!
+    assert_predicate stale.reload, :active?
+  end
+
+  test "unlocking a time-stale thread reopens it instead of leaving it closed" do
+    @thread.lock_conversation!
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+
+    sign_in :david
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :success
+    assert_predicate @thread.reload, :active?
+    assert @thread.last_activity_at > 1.minute.ago
+
+    locked = ChannelThread.create!(room: @room, creator: @creator, name: "Model unlock")
+    locked.lock_conversation!
+    locked.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    locked.unlock_conversation!
+    assert_predicate locked.reload, :active?
+  end
+
+  test "posting to a thread persists closed_at for its stale siblings" do
+    sign_in :jz
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Stale sibling")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_nil stale.reload.closed_at
+
+    live = ChannelThread.create!(room: @room, creator: @creator, name: "Live sibling")
+    live.post_message!(creator: @creator, attributes: { body: "Hello", client_message_id: "sweep-trigger" })
+
+    assert_predicate stale.reload, :closed?
+  end
+
+  test "thread index costs a constant number of queries as threads grow" do
+    sign_in :jz
+    create_index_threads(2, offset: 0)
+
+    get room_threads_url(@room)
+    assert_response :success
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
+    small = count_queries { get room_threads_url(@room) }
+
+    create_index_threads(4, offset: 2)
+    Icons.expire_custom_cache!
+    large = count_queries { get room_threads_url(@room) }
+    assert_response :success
+
+    assert_equal small, large,
+      "thread index should be O(1) in queries, got #{small} then #{large}"
+  end
+
+  test "joining accepts only thread notification preferences and preserves an existing preference when omitted" do
+    sign_in :kevin
+
+    assert_no_difference -> { ThreadMembership.count } do
+      post join_room_thread_url(@room, @thread, format: :json), params: { involvement: "loud" }
+    end
+    assert_response :unprocessable_content
+    assert_not @thread.memberships.exists?(user: users(:kevin))
+
+    post join_room_thread_url(@room, @thread, format: :json), params: { involvement: "everything" }
+    assert_response :success
+    membership = @thread.memberships.find_by!(user: users(:kevin))
+    assert_equal "everything", membership.involvement
+    membership_id = membership.id
+
+    post join_room_thread_url(@room, @thread, format: :json)
+    assert_response :success
+    membership.reload
+    assert_equal membership_id, membership.id
+    assert_equal "everything", membership.involvement
+  end
+
+  test "closed state contains locked threads and direct rooms reject thread creation" do
+    @thread.lock_conversation!
+    sign_in :jz
+    get room_threads_url(@room, state: "closed", format: :json)
+    assert_response :success
+    assert_includes response.parsed_body.fetch("threads").pluck("id"), @thread.id
+
+    direct = rooms(:david_and_kevin)
+    sign_in :david
+    assert_no_difference -> { ChannelThread.count } do
+      post room_threads_url(direct, format: :json), params: { thread: { name: "Not permitted" } }
+    end
+    assert_response :forbidden
+  end
+
+  test "closed listing finds stale threads in SQL with one threads query" do
+    @thread.update_columns(last_activity_at: 1.hour.ago, closed_at: 30.minutes.ago)
+
+    old_closed = ChannelThread.create!(room: @room, creator: @creator, name: "Old closed")
+    old_closed.update_columns(last_activity_at: 4.hours.ago, closed_at: 3.hours.ago)
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Gone quiet")
+    stale.update_columns(last_activity_at: 3.hours.ago, auto_archive_after_minutes: 60)
+
+    locked = ChannelThread.create!(room: @room, creator: @creator, name: "Moderated")
+    locked.lock_conversation!
+    locked.update_columns(last_activity_at: 2.hours.ago)
+
+    ChannelThread.create!(room: @room, creator: @creator, name: "Still going")
+
+    sign_in :jz
+    selects = channel_thread_selects { get room_threads_url(@room, state: "closed", format: :json) }
+    assert_response :success
+    assert_equal 1, selects.size, "expected a single channel_threads query, ran: #{selects.inspect}"
+    assert_equal [ @thread.id, locked.id, stale.id, old_closed.id ],
+      response.parsed_body.fetch("threads").pluck("id")
+
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) }, users: [ users(:david), users(:jz) ])
+    board_post = ChannelThread.create!(room: board, creator: @creator, name: "Launch post", work_status: "planned")
+    board_post.update_columns(last_activity_at: 3.hours.ago, auto_archive_after_minutes: 60)
+
+    get room_threads_url(board, state: "closed", format: :json)
+    assert_response :success
+    assert_empty response.parsed_body.fetch("threads")
+  end
+
+  test "a deleted starter is represented explicitly so open clients clear its preview" do
+    parent = messages(:third)
+    @thread.update!(parent_message: parent)
+    parent.destroy!
+    sign_in :jz
+
+    get room_thread_url(@room, @thread, format: :json)
+
+    assert_response :success
+    payload = response.parsed_body
+    assert payload.fetch("thread").key?("parent_message_id")
+    assert_nil payload.dig("thread", "parent_message_id")
+    assert_nil payload.fetch("parent_message")
+    assert_not_includes response.body, "Third time's a charm."
+  end
+
+  test "content anchors only a message in the requested thread" do
+    first = @thread.post_message!(creator: @creator, attributes: { markdown_source: "First", client_message_id: "content-first" })
+    second = @thread.post_message!(creator: @creator, attributes: { markdown_source: "Second", client_message_id: "content-second" })
+    other_thread = ChannelThread.create!(room: @room, creator: @creator, name: "Other thread")
+    ThreadMembership.join!(other_thread, @creator)
+    other_message = other_thread.post_message!(creator: @creator, attributes: { markdown_source: "Elsewhere", client_message_id: "other-content" })
+
+    sign_in :jz
+    get content_room_thread_url(@room, @thread, message_id: first.id)
+    assert_response :success
+    assert_equal "false", response.headers["X-Thread-Content-At-Latest"]
+    assert_select "#message_#{first.client_message_id}", 1
+    assert_select "#message_#{second.client_message_id}", 1
+    assert_select "#message_#{other_message.client_message_id}", 0
+
+    assert_raises ActiveRecord::RecordNotFound do
+      get content_room_thread_url(@room, @thread, message_id: other_message.id)
+    end
+  end
+
+  test "converts a thread to work, assigns an eligible owner, and keeps an audit trail" do
+    message = @thread.post_message!(creator: @creator, attributes: { markdown_source: "Keep this history", client_message_id: "work-history" })
+    sign_in :jz
+
+    assert_difference -> { WorkThreadEvent.count }, 1 do
+      patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_status: "planned" } }
+    end
+    assert_response :success
+    assert_equal true, response.parsed_body.dig("thread", "work")
+    assert_equal "planned", response.parsed_body.dig("thread", "work_status")
+
+    assert_difference -> { WorkThreadEvent.count }, 1 do
+      patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_owner_id: users(:kevin).id } }
+    end
+    assert_response :success
+    assert_equal users(:kevin).id, response.parsed_body.dig("thread", "work_owner", "id")
+
+    event = @thread.work_thread_events.ordered.first
+    assert_equal "work_assignment", event.event_type
+    assert_nil event.from_owner_id
+    assert_equal users(:kevin).id, event.to_owner_id
+    assert_equal "planned", event.from_status
+    assert_equal "planned", event.to_status
+    assert_equal users(:jz).id, event.actor_id
+    assert_equal message.id, @thread.messages.find_by!(client_message_id: "work-history").id
+  end
+
+  test "work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable" do
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_status: "planned", work_owner_id: users(:kevin).id } }
+    assert_response :success
+
+    assert_no_difference -> { WorkThreadEvent.count } do
+      patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_owner_id: users(:bender).id } }
+    end
+    assert_response :unprocessable_content
+    assert_includes response.parsed_body.fetch("error"), "active agent member"
+    assert_equal users(:kevin).id, @thread.reload.work_owner_id
+
+    users(:kevin).deactivate
+    assert_not @thread.reload.work_owner_active?
+
+    get room_thread_url(@room, @thread, format: :json)
+    assert_response :success
+    assert_equal false, response.parsed_body.dig("thread", "work_owner", "active")
+    assert_equal "Kevin", response.parsed_body.dig("thread", "work_owner", "name")
+
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_owner_id: "" } }
+    assert_response :success
+    assert_nil @thread.reload.work_owner_id
+  end
+
+  test "assigned owner can change work status but cannot reassign it" do
+    @thread.update!(work_status: "planned", work_owner_id: users(:kevin).id)
+    sign_in :kevin
+
+    assert_difference -> { WorkThreadEvent.count }, 1 do
+      patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_status: "in_progress" } }
+    end
+    assert_response :success
+    assert_equal "in_progress", @thread.reload.work_status
+
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_owner_id: users(:jz).id } }
+    assert_response :forbidden
+    assert_equal users(:kevin).id, @thread.reload.work_owner_id
+
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_status: "" } }
+    assert_response :forbidden
+    assert_equal "in_progress", @thread.reload.work_status
+  end
+
+  test "only a thread manager can remove work tracking" do
+    @thread.update!(work_status: "planned", work_owner_id: users(:kevin).id)
+    sign_in :jz
+
+    assert_difference -> { WorkThreadEvent.count }, 1 do
+      patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_status: "", work_owner_id: "" } }
+    end
+    assert_response :success
+    assert_nil @thread.reload.work_status
+    assert_nil @thread.work_owner_id
+  end
+
+  test "the work model also protects conversion when the owner field is omitted" do
+    @thread.update!(work_status: "planned", work_owner_id: users(:kevin).id)
+
+    assert_raises ChannelThread::WorkUpdateForbidden do
+      @thread.update_work!(actor: users(:kevin), work_status: nil)
+    end
+
+    assert_equal "planned", @thread.reload.work_status
+    assert_equal users(:kevin).id, @thread.work_owner_id
+  end
+
+  test "work status updates from separate stale instances produce one event per real change" do
+    @thread.update!(work_status: "planned")
+    first = ChannelThread.find(@thread.id)
+    second = ChannelThread.find(@thread.id)
+    actor = users(:jz)
+
+    assert_difference -> { WorkThreadEvent.count }, 2 do
+      first.update_work!(actor:, work_status: "in_progress")
+      second.update_work!(actor:, work_status: "blocked")
+    end
+
+    assert_equal "blocked", @thread.reload.work_status
+    assert_equal [ "blocked", "in_progress" ], @thread.work_thread_events.ordered.limit(2).pluck(:to_status)
+  end
+
+  test "a manager can assign an eligible agent and the agent is notified" do
+    bot = User.create_bot!(name: "Owner Agent")
+    agent = bot.create_agent!(kind: :workspace, owner: users(:david))
+    @room.memberships.grant_to(bot)
+    AgentGrant.create!(agent: agent, room: @room, granted_by: users(:david), capability: "post_messages")
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_status: "planned" } }
+    assert_response :success
+
+    assert_difference -> { agent.agent_events.where(event_type: "work_assigned").count }, 1 do
+      patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_owner_id: bot.id } }
+    end
+
+    assert_response :success
+    assert_equal bot.id, response.parsed_body.dig("thread", "work_owner", "id")
+    assert_equal true, response.parsed_body.dig("thread", "work_owner", "agent")
+    assert_equal bot.id, @thread.reload.work_owner_id
+  end
+
+  test "the owner picker lists eligible agents with profiles and excludes ineligible ones" do
+    eligible = User.create_bot!(name: "Eligible Owner Agent")
+    eligible_agent = eligible.create_agent!(kind: :workspace, owner: users(:david))
+    eligible_agent.update!(provider: "TestLab", description: "Does the work")
+    @room.memberships.grant_to(eligible)
+    AgentGrant.create!(agent: eligible_agent, room: @room, granted_by: users(:david), capability: "post_messages")
+
+    suspended = User.create_bot!(name: "Suspended Owner Agent")
+    suspended_agent = suspended.create_agent!(kind: :workspace, owner: users(:david))
+    @room.memberships.grant_to(suspended)
+    AgentGrant.create!(agent: suspended_agent, room: @room, granted_by: users(:david), capability: "post_messages")
+    suspended_agent.suspend!
+
+    stranger = User.create_bot!(name: "Outside Owner Agent")
+    stranger_agent = stranger.create_agent!(kind: :workspace, owner: users(:david))
+    AgentGrant.create!(agent: stranger_agent, granted_by: users(:david), capability: "post_messages")
+
+    reader = User.create_bot!(name: "Reader Owner Agent")
+    reader_agent = reader.create_agent!(kind: :workspace, owner: users(:david))
+    @room.memberships.grant_to(reader)
+    AgentGrant.create!(agent: reader_agent, room: @room, granted_by: users(:david), capability: "read_messages")
+
+    botless = User.create_bot!(name: "Botless Owner Bot")
+    @room.memberships.grant_to(botless)
+
+    @thread.update!(work_status: "planned")
+
+    sign_in :jz
+    get room_thread_url(@room, @thread, format: :json)
+
+    assert_response :success
+    options = response.parsed_body.dig("thread", "work_owner_options")
+    assert_includes options.map { |option| option["name"] }, "Kevin"
+
+    entry = options.find { |option| option["id"] == eligible.id }
+    assert entry, "expected the eligible agent in #{options.inspect}"
+    assert_equal true, entry["agent"]
+    assert_equal "TestLab", entry["provider"]
+    assert_equal "Does the work", entry["description"]
+
+    ids = options.map { |option| option["id"] }
+    assert_not_includes ids, suspended.id
+    assert_not_includes ids, stranger.id
+    assert_not_includes ids, reader.id
+    assert_not_includes ids, botless.id
+  end
+
+  test "a member who cannot manage the thread cannot assign an agent" do
+    bot = User.create_bot!(name: "Forbidden Owner Agent")
+    agent = bot.create_agent!(kind: :workspace, owner: users(:david))
+    @room.memberships.grant_to(bot)
+    AgentGrant.create!(agent: agent, room: @room, granted_by: users(:david), capability: "post_messages")
+    @thread.update!(work_status: "planned")
+
+    sign_in :kevin
+    assert_no_difference -> { agent.agent_events.where(event_type: "work_assigned").count } do
+      patch room_thread_url(@room, @thread, format: :json), params: { thread: { work_owner_id: bot.id } }
+    end
+
+    assert_response :forbidden
+    assert_nil @thread.reload.work_owner_id
+  end
+
+  test "ordinary thread fields remain separate from work tracking" do
+    sign_in :jz
+    get room_thread_url(@room, @thread, format: :json)
+
+    assert_response :success
+    payload = response.parsed_body.fetch("thread")
+    assert_equal false, payload.fetch("work")
+    assert_nil payload.fetch("work_status")
+    assert_nil payload.fetch("work_owner")
+    assert_empty @thread.work_thread_events
+  end
+
+  private
+    def create_index_threads(count, offset:)
+      count.times do |i|
+        number = offset + i
+        thread = ChannelThread.create!(room: @room, creator: @creator, name: "Index thread #{number}")
+        thread.post_message!(creator: @creator,
+          attributes: { body: "Index message #{number}", client_message_id: "index-thread-#{number}" })
+      end
+    end
+
+    def count_queries
+      count = 0
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 unless payload[:name] == "SCHEMA" || payload[:cached]
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
+
+    # Every uncached SELECT against channel_threads in the block, so the
+    # closed listing can prove it filters in SQL instead of loading
+    # active threads into Ruby.
+    def channel_thread_selects
+      selects = []
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        sql = payload[:sql].to_s
+        selects << sql if !payload[:cached] && sql.match?(/FROM "channel_threads"/)
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      selects
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
+end

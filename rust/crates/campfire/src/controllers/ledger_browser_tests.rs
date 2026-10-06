@@ -6,27 +6,27 @@ fn replay(mode: &str) {
         .arg(mode)
         .env("WS11UI_LEDGER_TEST_HOST", std::env::current_exe().unwrap())
         .output()
-        .expect("paired original browser runner must start");
+        .expect("original browser runner must start");
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(output.status.success(), "{mode}: {stdout}\n{}", String::from_utf8_lossy(&output.stderr));
-    assert!(stdout.contains(&format!("Original browser {mode}:")), "missing paired assertion receipt");
+    assert!(stdout.contains(&format!("Original browser {mode}:")), "missing original assertion receipt");
     print!("{stdout}");
 }
 
 #[test]
-#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
 fn original_ledger_navigation_assertions() { replay("navigation"); }
 
 #[test]
-#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
 fn original_ledger_member_assertions() { replay("members"); }
 
 #[test]
-#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
 fn original_ledger_surface_assertions() { replay("surfaces"); }
 
 #[test]
-#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
 fn original_ledger_lifecycle_assertions() { replay("lifecycle"); }
 
 static FORGERY_DISABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);

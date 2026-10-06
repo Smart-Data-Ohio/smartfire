@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Break a served asset per case and require the cited original assertion to fail.
+
+Each mutation is applied by the test browser's route handler (DRIVE_BROWSER_MUTATION in
+drive-support.mjs), so no source file changes. Pass case ids to run a subset.
+"""
+import json
+import os
+import pathlib
+import re
+import subprocess
+import sys
+
+rust = pathlib.Path(__file__).resolve().parents[2]
+cases = [
+    # The original harness's checks (reference-tools/users/ws14_original_browser_mutations.py).
+    ('WS14g-232', 'drive_share_test.rb', 139,
+     ['controllers/drive_share_controller-', 'include_granted_scopes: false', 'include_granted_scopes: true']),
+    ('WS14g-233', 'drive_share_test.rb', 157,
+     ['controllers/drive_share_controller-', 'const result = pinDriveAttachment(this.attachmentsStrip, review)', 'const result = "pinned"']),
+    ('WS14g-238', 'drive_share_test.rb', 296,
+     ['controllers/drive_share_controller-', 'target?.focus({ preventScroll: true })\n  }\n\n  #armOutsideDismiss()', 'this.form?.querySelector("textarea")?.focus({ preventScroll: true })\n  }\n\n  #armOutsideDismiss()']),
+    ('WS14g-252', 'drive_share_test.rb', 583,
+     ['drive-', '.drive-share-dialog {', '.drive-share-dialog { transform: translateX(-30px) !important;']),
+    ('WS14g-262', 'drive_share_test.rb', 849,
+     ['drive-', '.drive-share-dialog__recipient-name {', '.drive-share-dialog__recipient-name { overflow-wrap: normal !important;']),
+    # Suite A: the chip's 24px target and the sudo replay's auto-submit.
+    ('WS14g-224', 'drive_attachments_test.rb', 41,
+     ['drive-', '.drive-attachment-chip__remove {', '.drive-attachment-chip__remove { inline-size: 12px !important; min-inline-size: 0 !important;']),
+    ('WS14g-272', 'sudo_mode_test.rb', 21,
+     ['controllers/auto_submit_controller-', 'this.element.requestSubmit()', 'this.element']),
+]
+selected = set(sys.argv[1:])
+logs = pathlib.Path(os.environ.get('DRIVE_MUTATION_LOGS', pathlib.Path.home() / '.cache/rust-port/drive-mutations'))
+logs.mkdir(parents=True, exist_ok=True)
+for key, source, line, mutation in cases:
+    if selected and key not in selected:
+        continue
+    log = logs / f'{key.lower()}.log'
+    env = dict(os.environ, DRIVE_BROWSER_MUTATION=json.dumps(mutation))
+    with log.open('w') as out:
+        run = subprocess.run([rust / 'parity/system/drive', 'drive_browser_' + key.lower().replace('-', '_')],
+                             env=env, stdout=out, stderr=subprocess.STDOUT)
+    text = log.read_text()
+    applied = [int(count) for count in re.findall(r'DRIVE_BROWSER_MUTATION applied=(\d+)', text)]
+    failure = text.split('\nnot ok ', 1)[1] if '\nnot ok ' in text else ''
+    cited = re.search(r'(\w+_test\.rb):(\d+)', failure)
+    ok = run.returncode != 0 and applied and min(applied) > 0 and cited and cited.groups() == (source, str(line))
+    print(f'{key}: exit={run.returncode} applied={applied} first failure={cited.group(0) if cited else None} '
+          f'expected={source}:{line} {"KILLED" if ok else "SURVIVED"} ({log})', flush=True)
+    if not ok:
+        sys.exit(1)

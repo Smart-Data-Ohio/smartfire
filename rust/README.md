@@ -63,8 +63,9 @@ These contracts supersede the imported upstream operational claims:
 
 ### Verification and CI
 
-[`../.github/workflows/rust.yml`](../.github/workflows/rust.yml) builds or restores and validates
-**`default`, `first_run` and `agents_ui`** seeds from the pinned Rails reference. Missing seeds
+[`../.github/workflows/rust.yml`](../.github/workflows/rust.yml) restores the committed
+**`default`, `first_run`, `agents_ui` and `ledger_originals`** seeds (built once by Rails, now
+frozen) and checks them against this build's migrations; it never runs Rails. Missing seeds
 fail seed-dependent tests when `CI` is set; local tests can skip with a message. Report which
 seeds and test groups actually ran. See [`parity/seeds/README.md`](parity/seeds/README.md).
 Some workspace/doctest steps remain advisory (`continue-on-error`), so a successful CI run alone
@@ -81,19 +82,15 @@ From `rust/`, with the Dockerfile's Rust toolchain:
 
 ```sh
 export CARGO_BUILD_JOBS=4
-parity/bin/reference build
-parity/bin/seed build default first_run agents_ui
+python3 parity/bin/frozen-seeds restore
 cargo nextest run --locked --workspace --exclude html5ever -j 4
 cargo test --locked --workspace --exclude html5ever --doc -- --test-threads=4
 cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
 ```
 
-For canonical pinned CI seeds, use `parity/bin/ci-seed prepare`, `image`, `build` and `validate`
-in order. The screen matrix uses its own additional seeds and commands in `parity/SCREENS.md`.
-Golden vectors are generated from Rails by `reference-tools/`; for slash vectors,
-`reference-tools/db/ws8-slash-vectors.sh` builds a default image keyed by `parity/reference.sha`
-when absent. An explicit `PARITY_IMAGE` must match the pin's `Gemfile.lock`. After regeneration,
-run the consuming crates' tests. See [`AGENTS.md`](AGENTS.md) for layout and working rules.
+After adding a migration, `python3 parity/bin/frozen-seeds migrate target/debug/campfire`
+applies it to the committed seeds. The screen matrix uses its own additional seeds and commands
+in `parity/SCREENS.md`. Golden vectors and fixtures were recorded from Rails and are frozen. See [`AGENTS.md`](AGENTS.md) for layout and working rules.
 
 ## Building and deploying
 

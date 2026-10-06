@@ -64,16 +64,6 @@ pub fn reference_path(path: &str) -> PathBuf {
     }
 }
 
-/// The Rails app itself (`CAMPFIRE_REFERENCE`, else the repository root that contains `rust/`), for
-/// the checks that compare the port with Rails source it doesn't copy: `db/schema.rb`,
-/// `db/migrate`, `app/models`, `app/views`, `config/icons.yml`.
-pub fn rails_root() -> PathBuf {
-    match option_env!("CAMPFIRE_REFERENCE") {
-        Some(root) => PathBuf::from(root),
-        None => rust_root().join(".."),
-    }
-}
-
 /// `rust/` (crates/db -> crates -> rust).
 fn rust_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")

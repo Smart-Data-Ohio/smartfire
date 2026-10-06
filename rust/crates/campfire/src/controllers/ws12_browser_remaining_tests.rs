@@ -262,7 +262,7 @@ async fn compare_cutover(scenario: &str) {
     println!("{}", String::from_utf8_lossy(&output.stdout));
     assert!(
         output.status.success(),
-        "{scenario}: paired Rails/Rust sequence or writer control failed\n{}\n{}",
+        "{scenario}: Rust sequence or writer control failed\n{}\n{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );

@@ -1,5 +1,5 @@
-//! Differential test against the Rails pipeline: tests/corpus/expected.json is produced by
-//! reference-tools/richtext/run.sh in the campfire-reference image. Every output is also checked
+//! Differential test against the Rails pipeline: tests/corpus/expected.json was recorded from the
+//! Rails app before it was removed, and is frozen. Every output is also checked
 //! against security properties that don't depend on the oracle.
 
 use std::collections::BTreeMap;
@@ -17,10 +17,10 @@ struct Corpus {
 
 impl Corpus {
     fn load() -> Corpus {
-        // RICHTEXT_CORPUS points at a larger, uncommitted corpus (see reference-tools/richtext/run.sh)
+        // RICHTEXT_CORPUS points at another corpus in the same format
         let path = std::env::var("RICHTEXT_CORPUS")
             .unwrap_or_else(|_| concat!(env!("CARGO_MANIFEST_DIR"), "/tests/corpus/expected.json").to_string());
-        let text = std::fs::read_to_string(&path).expect("run reference-tools/richtext/run.sh to generate the corpus");
+        let text = std::fs::read_to_string(&path).expect("read the richtext corpus");
         Corpus { json: serde_json::from_str(&text).unwrap() }
     }
 

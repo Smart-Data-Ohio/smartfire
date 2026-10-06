@@ -1,8 +1,5 @@
 """Isolated fixtures and persisted observations for the pinned member originals."""
 import hashlib
-import subprocess
-import tempfile
-from pathlib import Path
 
 CASES = [
     'member-inline', 'member-plain', 'member-modifiers', 'member-range',
@@ -39,30 +36,7 @@ CONTROL_CASES = list(dict.fromkeys(MUTATIONS.values()))
 
 def environment(labels, root):
     # MotionTest pins the server's test-environment marker, rather than a DOM edit.
-    return {'RAILS_ENV': 'test', 'DATABASE_URL': 'sqlite3:/rails/storage/db/production.sqlite3'}
-
-
-def reference_image(base, root):
-    # ChannelMembersTest enables forgery protection after Rails' test boot.
-    # Fixture media retains the copied seed's disk layout in this test server.
-    initializer = '''if Rails.env.test?
-  Rails.application.config.active_storage.service = :local
-  Rails.application.config.action_controller.allow_forgery_protection = true
-  Rails.application.config.after_initialize do
-    ActionController::Base.allow_forgery_protection = true
-  end
-end
-'''
-    dockerfile = 'FROM ' + base + '\nCOPY members.rb /rails/config/initializers/ledger_members.rb\n'
-    base_id = subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{.Id}}', base], text=True).strip()
-    tag = 'ws11ui-members-reference:' + hashlib.sha256((base_id + dockerfile + initializer).encode()).hexdigest()[:12]
-    if subprocess.run(['docker', 'image', 'inspect', tag], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
-        with tempfile.TemporaryDirectory(prefix='ledger-members-image-', dir=root / '.scratch') as directory:
-            path = Path(directory)
-            (path / 'Dockerfile').write_text(dockerfile)
-            (path / 'members.rb').write_text(initializer)
-            subprocess.run(['docker', 'build', '-t', tag, str(path)], check=True)
-    return tag
+    return {'RAILS_ENV': 'test'}
 
 
 def prepare(db, labels, root):
@@ -102,5 +76,4 @@ def check_state(db, requests, labels, root):
             raise AssertionError(request)
 
 # The tools-only host also clears the real renderer cache between originals.
-from ledger_browser_lifecycle import host_command, start_bridge, stop
-after_start = start_bridge
+from ledger_browser_lifecycle import host_command

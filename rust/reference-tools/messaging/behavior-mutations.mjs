@@ -5,19 +5,19 @@ import {workControllerCases} from './behavior-work-controllers.mjs';
 import {mutationTarget} from './behavior-discrimination.mjs';
 import {WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motionCases} from './behavior-motion.mjs';
-import {actionMutations} from './behavior-action-mutations.mjs';
-import {RELEASE_SCOPE_MUTATION} from './behavior-native-release.mjs';
+import {actionMutations,RELEASE_SCOPE_MUTATION} from './behavior-action-mutations.mjs';
+import {VIDEO_CASE,PROGRESS_CASE} from './behavior-uploads.mjs';
 const list='controllers/message_list_controller-';
 const actions='controllers/message_actions_controller-';
 const composer='controllers/composer_controller-';
 const live='helpers/live_region_helpers-';
 const mutations=new Map([
-  ['uploading a fresh video in the thread composer',['native-upload']],
-  ['late upload progress preserves a delivered attachment and reply preview',['native-upload']],
+  // The processed video never shows its poster; a late progress callback
+  // overwrites the delivered row again (the pre-#231 defect).
+  [VIDEO_CASE,['models/client_message-','import { escapeHTML } from "helpers/string_helpers"',`import { escapeHTML } from "helpers/string_helpers"\nwindow.__ws8bmVideoFault=true; new MutationObserver(() => { document.querySelectorAll('#thread-panel video[poster]').forEach(video=>{window.__ws8bmVideoFaultSeen=true; video.removeAttribute('poster')}) }).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:['poster']});`]],
+  [PROGRESS_CASE,['models/client_message-','return element?.hasAttribute("data-message-id") ? null : element','window.__ws8bmProgressFault = { delivered: element?.hasAttribute("data-message-id"), id: clientMessageId }; return element']],
   ...actionMutations,
   ['From Google Drive starts the legacy picker flow',['messages-','.message__quick-reaction {','.drive-picker__item { opacity: 0 !important; }\n.message__quick-reaction {']],
-  ...['attach Drive files from the picker, send textless, and remove through edit','edit a room message in the composer and remove one of two attachments'].map(name=>[name,['messages-','.message__quick-reaction {','.drive-attachments .drive-chip__name { opacity: 0 !important; }\n.message__quick-reaction {']]),
-  ['attach a Drive file from the thread composer',['messages-','.message__quick-reaction {','#thread-panel a.drive-attachment { opacity: 0 !important; }\n.message__quick-reaction {']],
   ['motion is off by default in the test environment',['controllers/messages_controller-','connect() {','connect() { window.__ws8bmMotionMutation={before:document.documentElement.dataset.testMotion}; document.documentElement.removeAttribute("data-test-motion"); window.__ws8bmMotionMutation.after=document.documentElement.dataset.testMotion;']],
   ['From Google Drive starts the enhanced share flow when sharing is configured',['messages-','.message__quick-reaction {','.drive-share-dialog__file { opacity: 0 !important; }\n.message__quick-reaction {']],
   [WORKSPACE_CASE,['messages-','.message__quick-reaction {','#sidebar .sidebar__tools { margin-left: 20px !important; }\n.message__quick-reaction {']],
@@ -124,7 +124,6 @@ const missingKeyword=keyword=>['models/code_highlighter-','span.className = "cod
 const reviewMutations=new Map([
   ['a release click landing on the just-opened menu does not activate it',new Map([['unrelated-hidden-context',RELEASE_SCOPE_MUTATION]])],
   ...['assigned owner can change work status but cannot reassign it','a member who cannot manage the thread cannot assign an agent'].map(name=>[name,new Map([['wrong-permission-status',['work-controller-permission-response']]])]),
-  ['work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable',new Map([['wrong-validation-status',['work-controller-permission-response']]])],
   ['search results highlight code on initial load and after returning to the channel',new Map([['missing-const',missingKeyword('const')]])],
   ['editing a code block replaces its language colors and copied source',new Map([['missing-const',missingKeyword('const')],['missing-def',missingKeyword('def')]])],
   ['opens message actions from context menu and keyboard, and cancels a moving long press',new Map([
@@ -373,6 +372,18 @@ export async function installMutation(page,caseName,probe,variant='default') {
   if(caseName==='Markdown replies and file attachments remain usable'&&variant==='default') {
     probe.requiresAttachmentReplyFault=true;
     (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmAttachmentReplyFault?[window.__ws8bmAttachmentReplyFault]:[]).catch(()=>[]));
+  }
+  if(caseName===VIDEO_CASE&&variant==='default') {
+    probe.requiresVideoFault=true;
+    (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmVideoFaultSeen?[{videoFaultSeen:true}]:[]).catch(()=>[]));
+  }
+  if(caseName===PROGRESS_CASE&&variant==='default') {
+    probe.requiresProgressFault=true;
+    (probe.observers??=[]).push(()=>page.evaluate(()=>window.__ws8bmProgressFault?[{progressFault:window.__ws8bmProgressFault}]:[]).catch(()=>[]));
+  }
+  if(caseName==='a release click landing on the just-opened menu does not activate it'&&variant==='unrelated-hidden-context') {
+    probe.requiresContextScopes=true;
+    (probe.observers??=[]).push(()=>page.evaluate(()=>[{contextScopes:[...document.querySelectorAll('[data-composer-target="context"]')].map(node=>({form:node.closest('form')?.id,hidden:node.hidden}))}]).catch(()=>[]));
   }
   if(caseName==='motion is off by default in the test environment') {
     probe.requiresMotionAttribute=true;
