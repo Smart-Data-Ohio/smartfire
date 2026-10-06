@@ -266,9 +266,6 @@ async fn render_attendance(
     page::content(c, StatusCode::OK, |_| Attendance { view: &view }.render()).await
 }
 
-#[cfg(test)]
-mod tests;
-
 async fn render_form(
     c: &mut Ctx,
     room: campfire_db::Room,

@@ -10,7 +10,8 @@
 # panic recovery fail and a failing test can leave a lock held. For those, rebuild with LLVM
 # (ci/llvm.toml names each crate below):
 #
-#   cargo test -p campfire -p campfire_app -p campfire_web -p campfire_channels -p campfire_messages --config ci/llvm.toml
+#   cargo test -p campfire -p campfire_app -p campfire_web -p campfire_channels -p campfire_messages \
+#     -p campfire_rooms --config ci/llvm.toml
 #
 # Release builds always use LLVM: the release profile names it below, and the production image
 # (the Dockerfile's build stage) neither copies this file nor uses the nightly.
@@ -31,6 +32,9 @@ codegen-backend = "cranelift"
 codegen-backend = "cranelift"
 
 [profile.dev.package.campfire_messages]
+codegen-backend = "cranelift"
+
+[profile.dev.package.campfire_rooms]
 codegen-backend = "cranelift"
 
 [profile.release]

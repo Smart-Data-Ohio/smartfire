@@ -27,6 +27,7 @@ campfire_web      = { path = "crates/web" }
 campfire_spa      = { path = "crates/spa" }
 campfire_channels = { path = "crates/channels" }
 campfire_messages = { path = "crates/messages" }
+campfire_rooms    = { path = "crates/rooms" }
 mailparse        = "0.16"
 lettre           = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1-rustls", "ring", "rustls-native-certs", "hostname", "builder"] }
 

@@ -18,3 +18,6 @@ codegen-backend = "llvm"
 
 [profile.dev.package.campfire_messages]
 codegen-backend = "llvm"
+
+[profile.dev.package.campfire_rooms]
+codegen-backend = "llvm"

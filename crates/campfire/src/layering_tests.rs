@@ -26,6 +26,7 @@ const LAYERS: &[(&str, &[&str])] = &[
     // `campfire_messages`'s mirrors here, which hold tests of theirs.
     ("message_features", &["controllers::message_features"]),
     ("messages", &["controllers::messages"]),
+    // `campfire_rooms`'s mirrors here, which hold tests of theirs (and the test-only `shell`).
     ("rooms", &["controllers::rooms", "controllers::room_categories"]),
     ("people", &[
         "controllers::accounts", "controllers::qr_code", "controllers::sessions",

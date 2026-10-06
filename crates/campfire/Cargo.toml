@@ -20,6 +20,7 @@ campfire_app.workspace = true
 campfire_web.workspace = true
 campfire_channels.workspace = true
 campfire_messages.workspace = true
+campfire_rooms.workspace = true
 campfire_spa.workspace = true
 anyhow.workspace = true
 tikv-jemallocator.workspace = true

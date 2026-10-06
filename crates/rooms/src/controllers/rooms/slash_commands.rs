@@ -8,7 +8,7 @@ use campfire_db::{
 };
 use campfire_kit::{Ctx, Error, Result, StatusCode};
 
-pub(crate) async fn thread_id(c: &Ctx, room: &Room) -> Result<Option<i64>> {
+pub async fn thread_id(c: &Ctx, room: &Room) -> Result<Option<i64>> {
     let Some(raw) = c.param("thread_id").filter(|p| p.is_present()) else {
         return Ok(None);
     };
@@ -30,7 +30,7 @@ pub(crate) async fn thread_id(c: &Ctx, room: &Room) -> Result<Option<i64>> {
         .map_err(db_error)
 }
 /// App media adapter for built-in posts; kept in the same writer as dispatch.
-pub(crate) fn dispatch(
+pub fn dispatch(
     tx: &mut campfire_db::Tx<'_>,
     context: &Context,
     text: &str,
