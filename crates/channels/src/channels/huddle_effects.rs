@@ -4,7 +4,7 @@ use crate::app::App;
 use campfire_db::models::huddle_grant::HuddleGrant;
 use campfire_db::{Membership, Room};
 
-pub(crate) use crate::controllers::presenters::calls::stage_model;
+pub use crate::controllers::presenters::calls::stage_model;
 
 pub(crate) fn stream_changed(app: &App, room_id: i64) -> anyhow::Result<()> {
     let data = app.db.read_blocking(|conn| {
@@ -92,7 +92,7 @@ pub(crate) fn role_event(app: &App, room_id: i64, membership_id: i64) -> anyhow:
     Ok(())
 }
 
-pub(crate) fn presence(app: &App, room_id: i64) -> anyhow::Result<()> {
+pub fn presence(app: &App, room_id: i64) -> anyhow::Result<()> {
     if !app.config.huddle.configured() {
         return Ok(());
     }
@@ -155,7 +155,7 @@ pub(crate) fn stage_panel(app:&App,room_id:i64,membership_id:i64)->anyhow::Resul
 }
 
 // Stage owns this quiet note; the general WS8b message descriptor remains its own seam.
-pub(crate) fn stage_note_html(app:&App,conn:&campfire_db::Connection,message_id:i64)->campfire_db::Result<Option<(Room,String)>> {
+pub fn stage_note_html(app:&App,conn:&campfire_db::Connection,message_id:i64)->campfire_db::Result<Option<(Room,String)>> {
     let Some(message)=campfire_db::Message::find_by_id(conn,message_id)? else {return Ok(None);};
     let Some(room)=Room::find_by_id(conn,message.room_id)?.filter(|r|r.stage() && r.deleted_at.is_none()) else {return Ok(None);};
     if !message.system_note {return Ok(None);}

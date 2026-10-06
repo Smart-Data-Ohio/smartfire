@@ -5,7 +5,6 @@ edition.workspace = true
 
 [dependencies]
 bnum.workspace = true
-httpdate.workspace = true
 rails_compat.workspace = true
 campfire_kit.workspace = true
 campfire_routes.workspace = true
@@ -19,6 +18,7 @@ campfire_assets.workspace = true
 campfire_views.workspace = true
 campfire_app.workspace = true
 campfire_web.workspace = true
+campfire_channels.workspace = true
 campfire_spa.workspace = true
 anyhow.workspace = true
 tikv-jemallocator.workspace = true
@@ -29,7 +29,6 @@ serde.workspace = true
 serde_json.workspace = true
 jiff.workspace = true
 tracing.workspace = true
-async-trait.workspace = true
 regex.workspace = true
 indexmap = { workspace = true, features = ["serde"] }
 askama.workspace = true
@@ -58,9 +57,12 @@ uuid.workspace = true
 [dev-dependencies]
 campfire_app = { workspace = true, features = ["test-support"] }
 campfire_web = { workspace = true, features = ["test-support"] }
+campfire_channels = { workspace = true, features = ["test-support"] }
 campfire_jobs = { workspace = true, features = ["test-support"] }
 campfire_cable = { workspace = true, features = ["test-support"] }
 tokio = { workspace = true, features = ["test-util"] }
+httpdate.workspace = true
+async-trait.workspace = true
 hmac.workspace = true
 rcgen.workspace = true
 campfire_kit = { workspace = true, features = ["test-support"] }

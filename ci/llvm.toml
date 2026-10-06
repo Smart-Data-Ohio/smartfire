@@ -12,3 +12,6 @@ codegen-backend = "llvm"
 
 [profile.dev.package.campfire_web]
 codegen-backend = "llvm"
+
+[profile.dev.package.campfire_channels]
+codegen-backend = "llvm"

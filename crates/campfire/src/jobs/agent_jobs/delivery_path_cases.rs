@@ -1,6 +1,15 @@
 //! Pinned DeliveryJobTest and DeliveryConcurrencyTest through real app writes/HTTP.
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use campfire_channels::jobs::integrations as jobs;
+use campfire_db::Message;
+use campfire_db::Room;
+use campfire_db::User;
+use campfire_db::models::agent_delivery as domain;
+use campfire_db::models::agent_delivery::AgentEvent;
+use campfire_jobs::Execution;
+use crate::app::App;
+use crate::net::Network;
 use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, SEED_NOW, TestApp};
 use campfire_db::{Agent, NewMessage};
 use serde_json::{Value, json};

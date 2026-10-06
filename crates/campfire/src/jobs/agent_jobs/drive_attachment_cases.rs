@@ -1,6 +1,11 @@
 //! WS14g consumes WS11's real delivery/poll/presenter APIs. Google metadata never enters payloads.
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use campfire_db::Message;
+use campfire_db::Room;
+use campfire_db::models::agent_delivery as domain;
+use campfire_db::models::agent_delivery::AgentEvent;
+use campfire_jobs::Execution;
 use crate::controllers::presenters::test_support::Req;
 use crate::controllers::presenters::{
     Presenter,

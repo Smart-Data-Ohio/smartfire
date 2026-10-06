@@ -1,6 +1,11 @@
 //! Actual HTTP bodies/headers compared byte-for-byte with pinned WebhookAgentKeyTest probes.
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use campfire_channels::jobs::integrations as jobs;
+use campfire_db::models::agent_delivery as domain;
+use campfire_db::models::agent_delivery::AgentEvent;
+use campfire_db::models::agent_delivery::AttemptOutcome;
+use crate::app::App;
 use crate::controllers::presenters::test_support::{
     ALL_TALK, BENDER, BENDER_KEY, SEED_NOW, TestApp,
 };

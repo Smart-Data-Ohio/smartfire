@@ -130,5 +130,5 @@ Pure pixel/geometry-only work is excluded.
 | Agent execution | `src/controllers/agent_http_tests.rs`, bot contracts and agent runtime/event/job tests | Provider execution lifecycle remains with the API/runtime ledger. |
 | RTC | `src/controllers/rooms/remaining_call_tests.rs`, `src/channels/huddle_effects_tests.rs`, stage/participant render matrices | Microphone/camera permission and real media transport are not template bytes. |
 | OAuth and Picker | `src/app/google_api_tests.rs`, Google profile/login receipts | External consent and the real Picker SDK require provider/browser acceptance. |
-| Periodic jobs | `src/controllers/message_features/periodic_delivery_tests.rs`, `src/jobs/periodic.rs`; scheduled behavior script | Scheduler lifecycle remains with its durable queue/job acceptance. |
+| Periodic jobs | `src/controllers/message_features/periodic_delivery_tests.rs`, `crates/channels/src/jobs/periodic.rs`; scheduled behavior script | Scheduler lifecycle remains with its durable queue/job acceptance. |
 | Installed/offline PWA | `src/controllers/pwa.rs`, exact manifest/worker receipts | Installed service-worker lifecycle needs a real browser, beyond static endpoint bytes. |
