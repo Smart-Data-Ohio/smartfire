@@ -236,7 +236,7 @@ mod tests {
         assert!(build.contains("cargo::rerun-if-env-changed=CAMPFIRE_MIGRATIONS_DIGEST"));
         assert!(build.contains("cargo::rerun-if-changed={}\", dir.display()"));
         let dockerfile = std::fs::read_to_string(root.join("../../Dockerfile")).unwrap();
-        let build_step = dockerfile.split("RUN --mount=type=cache").nth(1).unwrap();
+        let build_step = dockerfile.split("RUN --mount=type=cache").find(|step| step.contains("cargo build")).unwrap();
         assert!(
             build_step.contains("export CAMPFIRE_MIGRATIONS_DIGEST=") && build_step.contains("crates/db/migrations"),
             "Dockerfile's cargo build must export CAMPFIRE_MIGRATIONS_DIGEST from crates/db/migrations"

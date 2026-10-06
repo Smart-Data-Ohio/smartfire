@@ -287,3 +287,17 @@ fn theme_and_text_size_fall_back_like_the_layout() {
     );
     assert_eq!(text_size(None), "default");
 }
+
+/// The image's cargo build keeps target/ in a cache mount, so `build.rs` reruns on a digest of the
+/// dist's contents rather than trusting mtimes, and the dist it embeds is the one built in-image.
+#[test]
+fn the_image_build_embeds_its_own_dist_and_tracks_it_by_content() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let build = std::fs::read_to_string(root.join("build.rs")).unwrap();
+    assert!(build.contains("cargo:rerun-if-env-changed=SPA_DIST_DIGEST"));
+    let dockerfile = std::fs::read_to_string(root.join("../../Dockerfile")).unwrap();
+    assert!(dockerfile.contains("COPY --from=spa /src/frontend/dist frontend/dist\nENV SPA_DIST=/src/frontend/dist\n"));
+    let build_step = dockerfile.split("RUN --mount=type=cache").find(|step| step.contains("cargo build")).unwrap();
+    let digest = build_step.find("export SPA_DIST_DIGEST=").expect("the cargo build step exports SPA_DIST_DIGEST");
+    assert!(Some(digest) < build_step.find("cargo build"));
+}
