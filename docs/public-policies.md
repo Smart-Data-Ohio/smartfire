@@ -16,7 +16,7 @@ wording before public rollout and Google verification.
 
 ## Configuration
 
-The public policy configuration (`rust/crates/campfire/src/public_policy.rs`) reads the operator identity
+The public policy configuration (`crates/campfire/src/public_policy.rs`) reads the operator identity
 from the environment. There are no company defaults.
 
 | Variable | Purpose |
@@ -72,8 +72,8 @@ legal enforceability.
 
 The privacy page documents, in plain language corroborated against
 `docs/google-sign-in.md`, `docs/google-calendar.md`, `docs/google-drive.md`,
-and the Google integration code (`rust/crates/campfire/src/integrations/google/`
-and `rust/crates/campfire/src/controllers/google_connections.rs`):
+and the Google integration code (`crates/campfire/src/integrations/google/`
+and `crates/campfire/src/controllers/google_connections.rs`):
 
 - Sign-in requests only `openid email profile`; the server keeps the
   stable subject, verified email/domain, and name for onboarding, and
@@ -101,19 +101,19 @@ and `rust/crates/campfire/src/controllers/google_connections.rs`):
 
 ## Implementation notes
 
-- The public pages controller (`rust/crates/campfire/src/controllers/public_pages.rs`)
+- The public pages controller (`crates/campfire/src/controllers/public_pages.rs`)
   skips the application's modern-browser gate, sign-in redirect, and all
   private-state concerns. Framework security
   defaults (default response headers, forgery protection, production
   `force_ssl`) still apply. Non-HTML formats answer 404, so no JSON or
   private data is reachable; HEAD works; pages carry no `noindex`.
-- The `layouts/public` template (`rust/crates/views/templates/layouts/public.html`)
+- The `layouts/public` template (`crates/views/templates/layouts/public.html`)
   is a minimal standalone layout: no
   importmap/JS, no Turbo/Action Cable/PWA/private meta tags, no
   signed-in user state, and no CSRF meta tags (emitting one would create a
   session cookie). Zoom stays enabled. Analytics and Google scripts are
   absent.
-- `rust/web/app/assets/stylesheets/public.css` is self-contained and scoped under
+- `web/app/assets/stylesheets/public.css` is self-contained and scoped under
   `body.public`, so the app's `:all` bundle gains no global side effects.
   Light/dark follows `prefers-color-scheme`; keyboard focus is visible;
   `prefers-reduced-motion` disables transitions.

@@ -12,7 +12,7 @@ parser.add_argument('--verify-rendering', action='store_true',
 args = parser.parse_args()
 coverage = json.loads((ROOT / 'parity/template-coverage.json').read_text())
 names = sorted({receipt['test'] for receipt in coverage['evidence'].values()
-                if not receipt['test_file'].startswith('rust/crates/views/')})
+                if not receipt['test_file'].startswith('crates/views/')})
 expression = 'package(campfire_views) | ' + ' | '.join(f'test({name})' for name in names)
 command = ['cargo', 'nextest', 'run', '--locked', '-p', 'campfire_views', '-p', 'campfire',
            '-p', 'campfire_mail', '-p', 'campfire_richtext', '-j', '4', '-E', expression]

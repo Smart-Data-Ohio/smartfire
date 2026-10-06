@@ -42,7 +42,7 @@ jobs:
           advanced-security: false
 
   # The release, backup and host scripts production runs, and the workflows that drive them:
-  # the rust/ops release contract (fake Docker/ONCE/cloud boundaries), the GCP configuration
+  # the ops/ release contract (fake Docker/ONCE/cloud boundaries), the GCP configuration
   # helpers, and the backup contract (real sqlite, tar, gzip and gpg against a fake volume).
   # Tests that need a locally built image skip unless one is named.
   ops-scripts:
@@ -59,8 +59,8 @@ jobs:
           filter: blob:none
           persist-credentials: false
 
-      - name: Test the release contract and workflows (rust/ops)
-        run: python3 -m unittest discover -s rust/ops/tests -p 'test_*.py' -v
+      - name: Test the release contract and workflows (ops)
+        run: python3 -m unittest discover -s ops/tests -p 'test_*.py' -v
 
       - name: Test the GCP deployment configuration (deploy/gcp)
         run: python3 -m unittest discover -s deploy/gcp -p 'test_*.py' -v
@@ -86,10 +86,10 @@ jobs:
           package-manager-cache: false
 
       - name: Install gateway dependencies
-        run: npm ci --ignore-scripts --prefix rust/web/script/livekit-gateway
+        run: npm ci --ignore-scripts --prefix web/script/livekit-gateway
 
       - name: Test authorization and connection races
-        run: npm test --prefix rust/web/script/livekit-gateway
+        run: npm test --prefix web/script/livekit-gateway
 
       - name: Test the media container runtime
         run: node --test deploy/huddles/runtime/*.test.mjs
@@ -103,8 +103,8 @@ jobs:
           docker compose -f deploy/huddles/compose.yaml build media
 
   # Known advisories against the dependencies production ships: the Rust binary's crates
-  # (rust/Cargo.lock) and the huddle gateway's npm runtime dependencies. Fails on any
-  # vulnerability advisory that rust/.cargo/audit.toml doesn't list, with its reason;
+  # (Cargo.lock) and the huddle gateway's npm runtime dependencies. Fails on any
+  # vulnerability advisory that .cargo/audit.toml doesn't list, with its reason;
   # unmaintained/unsound notices are printed as warnings. Dependabot raises the update PRs.
   dependency-audit:
     name: Dependency audit
@@ -157,12 +157,11 @@ jobs:
 
       # Yanked-crate lookups query the crates.io index per crate and are left out: they
       # aren't advisories, and a registry hiccup shouldn't fail the check.
-      - name: Audit Rust crates (rust/Cargo.lock)
-        working-directory: rust
+      - name: Audit Rust crates (Cargo.lock)
         run: cargo-audit audit --no-fetch --no-yanked --db "$ADVISORY_DB" --file Cargo.lock
 
       - name: Audit huddle gateway runtime dependencies
-        working-directory: rust/web/script/livekit-gateway
+        working-directory: web/script/livekit-gateway
         run: |
           set -euo pipefail
           report="$RUNNER_TEMP/npm-audit.json"

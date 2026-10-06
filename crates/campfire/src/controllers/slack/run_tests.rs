@@ -123,7 +123,7 @@ async fn slack_run_views_match_every_rails_body_byte() {
         let expected = case["html"].as_str().unwrap();
         if actual != expected {
             let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../.scratch/ws16-http");
+                .join("../../.scratch/ws16-http");
             std::fs::write(dir.join("run.actual.html"), &actual).unwrap();
             std::fs::write(dir.join("run.expected.html"), expected).unwrap();
         }
@@ -187,7 +187,7 @@ async fn slack_run_http_actions_sessions_csrf_rows_audits_and_jobs_match_rails()
         let expected = case["response_body"].as_str().unwrap();
         if actual != expected {
             let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../.scratch/ws16-http");
+                .join("../../.scratch/ws16-http");
             std::fs::write(scratch.join("full.actual.html"), &actual).unwrap();
             std::fs::write(scratch.join("full.expected.html"), expected).unwrap();
         }

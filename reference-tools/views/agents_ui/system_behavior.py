@@ -6,8 +6,8 @@ The pinned Playwright Docker image supplies its committed browser dependencies.
 No images are captured or compared.
 """
 import argparse, json, os, pathlib, shutil, signal, sqlite3, subprocess, sys, tempfile, time, urllib.request
-root = pathlib.Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(root/'rust/reference-tools/users'))
+root = pathlib.Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(root/'reference-tools/users'))
 from browser_port_leases import reserve_system_ports
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary', type=pathlib.Path, required=True)
@@ -26,8 +26,8 @@ if args.scenario == 'all':
     print(f'Agent behavior scenarios: {len(codes) - sum(bool(c) for c in codes)} completed; {sum(bool(c) for c in codes)} failed; 0 deferred', flush=True)
     raise SystemExit(1 if any(codes) else 0)
 frozen_time = '2026-03-03T16:00:00Z' if args.scenario == 'budget' else '2026-03-02T16:00:00Z'
-seed = root / 'rust/parity/.seed/agents_ui'
-fixtures = root / 'rust/test-support/agents-ui-fixtures' / args.scenario
+seed = root / 'parity/.seed/agents_ui'
+fixtures = root / 'test-support/agents-ui-fixtures' / args.scenario
 labels = json.loads((seed / 'labels.json').read_text())
 store = root / '.scratch/system-behavior'
 store.mkdir(parents=True, exist_ok=True)
@@ -70,7 +70,7 @@ try:
         with sqlite3.connect(candidate/'db/production.sqlite3') as target:
             target.execute("CREATE TRIGGER ws11ui_broken_preference AFTER UPDATE OF inbox_preferences ON users BEGIN UPDATE users SET inbox_preferences='{}' WHERE id=NEW.id; END")
     candidate_env = dict(os.environ)
-    for line in (root/'rust/parity/.env.reference').read_text().splitlines():
+    for line in (root/'parity/.env.reference').read_text().splitlines():
         if line and not line.startswith('#') and '=' in line:
             key,value=line.split('=',1);candidate_env[key]=value.strip('"\'')
     candidate_env.update({'CAMPFIRE_STORAGE_PATH':str(candidate),'CAMPFIRE_FROZEN_TIME':frozen_time,'DISABLE_SSL':'true','HTTP_PORT':str(candidate_port),'TARGET_PORT':str(target_port),'APP_VERSION':'parity','GIT_REVISION':'parity'})
@@ -83,7 +83,7 @@ try:
         wait_up(candidate_port)
         print('Rust system behavior:',flush=True)
         browser_env = dict(os.environ, WS11UI_ACTIVITY_CONTROL=str(control))
-        result=subprocess.run(['bash',str(root/'rust/reference-tools/views/agents_ui/system_browser.sh'),f'http://127.0.0.1:{candidate_port}',str(labels_file),str(candidate/'db/production.sqlite3'),args.scenario],cwd=root,env=browser_env)
+        result=subprocess.run(['bash',str(root/'reference-tools/views/agents_ui/system_browser.sh'),f'http://127.0.0.1:{candidate_port}',str(labels_file),str(candidate/'db/production.sqlite3'),args.scenario],cwd=root,env=browser_env)
         raise SystemExit(result.returncode and 1)
 finally:
     failure = sys.exc_info()[1]

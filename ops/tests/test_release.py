@@ -8,7 +8,7 @@ candidate can change, either with real writes ("+write"), with only its own
 bookkeeping ("+bookkeeping": bytes move, every row stays the same), or with
 changes to its job queue alone ("+jobs": background_jobs rows differ). The fake
 verifier answers in the real verifier's output format. The real-Docker
-rehearsal of the same flow is rust/ops/tests/simulate_release.sh.
+rehearsal of the same flow is ops/tests/simulate_release.sh.
 """
 import hashlib
 import json
@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "deploy/gcp/campfire-release.sh"
 CANDIDATE = "fixture/image@sha256:" + "1" * 64
 PREVIOUS = "fixture/image@sha256:" + "2" * 64

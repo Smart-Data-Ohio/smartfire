@@ -500,7 +500,7 @@ async fn google_callback_slack_opt_in_claim_matches_rails_over_real_http() {
         );
         if reply.body != row["body"].as_str().unwrap().as_bytes() {
             let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../.scratch/claim-diff");
+                .join("../../.scratch/claim-diff");
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join(format!("{name}.actual")), reply.body.clone()).unwrap();
             std::fs::write(

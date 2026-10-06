@@ -10,12 +10,12 @@ branch lands.
 
 ## Behavior
 
-- The `tour` Stimulus controller (`rust/web/app/javascript/controllers/tour_controller.js`,
-  shell in `rust/crates/views/templates/layouts/_tour.html`) auto-starts when
+- The `tour` Stimulus controller (`web/app/javascript/controllers/tour_controller.js`,
+  shell in `crates/views/templates/layouts/_tour.html`) auto-starts when
   `users.tour_completed_at` is null. Skipping or finishing `PATCH`es
   `users/tours#update`, which stamps the column; the tour never
   auto-starts again afterwards.
-- The help menu (`rust/crates/views/templates/layouts/_help_menu.html`,
+- The help menu (`crates/views/templates/layouts/_help_menu.html`,
   `help_menu_controller.js`) restarts the tour on demand with a
   `tour:start` window event, without clearing the stamp. It sits in the
   top bar on desktop (80rem and up); below that its shortcuts and

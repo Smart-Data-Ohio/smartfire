@@ -4,29 +4,30 @@ name: Smartfire CodeQL
 # vectors) that do not describe shipped behavior. Product sources, including
 # inline #[cfg(test)] modules, are still analyzed.
 #
-# Vendored browser libraries under rust/web/vendor/javascript/ and
-# rust/crates/assets/vendor/ ARE served to users (Turbo, Stimulus, Trix, Action
+# Vendored browser libraries under web/vendor/javascript/ and
+# crates/assets/vendor/ ARE served to users (Turbo, Stimulus, Trix, Action
 # Cable, Rails UJS, Highlight.js, LiveKit, RNNoise). They are excluded
 # deliberately: their alerts describe upstream code we update by version rather
 # than patch, so track them through upstream advisories and dependency updates
 # instead. Keep these patterns specific: CodeQL matches a bare vendor/** at any
 # depth, which would also drop the vendored Onigmo C under
-# rust/crates/rails_compat/vendor/ that build.rs compiles into the binary.
+# crates/rails_compat/vendor/ that build.rs compiles into the binary.
 #
-# rust/crates/db/src/tests/ws17_settings_zones.json is runtime data embedded by
+# crates/db/src/tests/ws17_settings_zones.json is runtime data embedded by
 # models/user_status_settings/writes.rs. JSON is not analyzed, so excluding it
 # hides nothing; its Rust consumer is still scanned.
 paths-ignore:
-  - rust/web/vendor/javascript/**
-  - rust/fixtures/**
-  - rust/crates/assets/vendor/**
-  - rust/reference-tools/**
-  - rust/vectors/**
-  - rust/plans/**
-  - rust/**/tests/**
-  - rust/**/*_tests/**
-  - rust/**/tests.rs
-  - rust/**/*_test.rs
-  - rust/**/*_tests.rs
-  - rust/**/test_support.rs
-  - rust/**/test_support/**
+  - web/vendor/javascript/**
+  - fixtures/**
+  - crates/assets/vendor/**
+  - reference-tools/**
+  - vectors/**
+  - plans/**
+  - ops/tests/**
+  - crates/**/tests/**
+  - crates/**/*_tests/**
+  - crates/**/tests.rs
+  - crates/**/*_test.rs
+  - crates/**/*_tests.rs
+  - crates/**/test_support.rs
+  - crates/**/test_support/**

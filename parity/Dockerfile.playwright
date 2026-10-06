@@ -1,4 +1,4 @@
-# The one image every browser suite runs Playwright in (rust/ci/correctness.sh, parity/system,
+# The one image every browser suite runs Playwright in (ci/correctness.sh, parity/system,
 # reference-tools). Pinned by digest: browsers, fonts, fontconfig and Node all come from these
 # exact bytes, so a run never depends on the host. No GPU: Chromium falls back to SwiftShader.
 FROM mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27

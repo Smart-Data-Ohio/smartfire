@@ -20,7 +20,7 @@ struct Fresh {
 impl Fresh {
     async fn new(secret: Option<&str>) -> Self {
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
         let config = Config::from_lookup(|name| match name {
@@ -347,7 +347,7 @@ async fn webhook_claims_prune_strictly_older_rows_only_on_a_winning_claim() {
     // Freeze the write's clock through an independent domain fixture below; the HTTP app clock
     // advances, so its retention boundary cannot be used for an exact equality assertion.
     let clock = std::sync::Arc::new(campfire_db::TestClock::frozen_at(fixed));
-    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     let domain = tokio::task::spawn_blocking(move || {
         crate::integrations::test_support::TestDb::in_dir(clock, &scratch)
     })

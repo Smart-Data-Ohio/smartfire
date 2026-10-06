@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
-repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo"
 suite=${1:?Expected acme, browsers, drive, livekit, messaging, or agents-ui}
 # CI splits the longest suites across parallel jobs. CORRECTNESS_SHARD=K/N runs one
-# deterministic slice; rust/ci/correctness_gate.py then requires the slices' receipts to
+# deterministic slice; ci/correctness_gate.py then requires the slices' receipts to
 # cover every selected test exactly once.
 shard=${CORRECTNESS_SHARD:-}
 if [[ -n "$shard" && ! "$shard" =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]]; then
@@ -14,32 +14,32 @@ fi
 tag=$suite
 [[ -z "$shard" ]] || tag+="-${shard/\//of}"
 first_shard() { [[ -z "$shard" || "$shard" == 1/* ]]; }
-receipts="$repo/rust/target/ci-receipts"
+receipts="$repo/target/ci-receipts"
 mkdir -p "$receipts"
 started=$(date +%s)
 
 ignored() {
   local filter package selection=()
   [[ -z "$shard" ]] || selection=(--shard "$shard")
-  filter=$(python3 rust/ci/ignored_tests.py --filter "$suite" "${selection[@]}")
-  package=$(python3 rust/ci/ignored_tests.py --filter "$suite" --package)
-  cargo nextest run --manifest-path rust/Cargo.toml --locked -p "$package" \
+  filter=$(python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}")
+  package=$(python3 ci/ignored_tests.py --filter "$suite" --package)
+  cargo nextest run --locked -p "$package" \
     --profile ci --build-jobs 4 -j 4 --no-fail-fast --success-output final --run-ignored only --no-tests fail -E "$filter"
-  cp rust/target/nextest/ci/junit.xml "$receipts/$tag-junit.xml"
-  python3 rust/ci/ignored_tests.py --filter "$suite" "${selection[@]}" --junit "$receipts/$tag-junit.xml"
+  cp target/nextest/ci/junit.xml "$receipts/$tag-junit.xml"
+  python3 ci/ignored_tests.py --filter "$suite" "${selection[@]}" --junit "$receipts/$tag-junit.xml"
 }
 
 browser_images() {
   local ws12_hash ws13_hash
-  ws12_hash=$(cat rust/parity/Dockerfile.playwright rust/parity/package.json rust/parity/package-lock.json | sha256sum | cut -c1-12)
-  ws13_hash=$(cat rust/parity/Dockerfile.playwright rust/parity/package-lock.json | sha256sum | cut -c1-12)
-  docker build -f rust/parity/Dockerfile.playwright -t "ws12-playwright:$ws12_hash" \
-    -t "ws13-parity-playwright:$ws13_hash" -t "ws11ui-system-parity-playwright:$ws13_hash" rust/parity
+  ws12_hash=$(cat parity/Dockerfile.playwright parity/package.json parity/package-lock.json | sha256sum | cut -c1-12)
+  ws13_hash=$(cat parity/Dockerfile.playwright parity/package-lock.json | sha256sum | cut -c1-12)
+  docker build -f parity/Dockerfile.playwright -t "ws12-playwright:$ws12_hash" \
+    -t "ws13-parity-playwright:$ws13_hash" -t "ws11ui-system-parity-playwright:$ws13_hash" parity
   export WS13_PLAYWRIGHT_IMAGE="ws13-parity-playwright:$ws13_hash"
 }
 
 run_suite() {
-  python3 rust/ci/ignored_tests.py
+  python3 ci/ignored_tests.py
   case "$suite" in
     acme)
       local pebble="campfire-ci-pebble-$$"
@@ -61,13 +61,13 @@ run_suite() {
       browser_images
       if first_shard; then
         docker run --rm --init --network none --ipc host --cpus 2 \
-          --volume "$repo:/work:ro" "ws12-playwright:$(cat rust/parity/Dockerfile.playwright rust/parity/package.json rust/parity/package-lock.json | sha256sum | cut -c1-12)" \
-          node --test /work/rust/reference-tools/users/browser_navigation.test.mjs
+          --volume "$repo:/work:ro" "ws12-playwright:$(cat parity/Dockerfile.playwright parity/package.json parity/package-lock.json | sha256sum | cut -c1-12)" \
+          node --test /work/reference-tools/users/browser_navigation.test.mjs
       fi
       # The paired original-assertion wrappers launch the normal server, which
       # nextest's cfg(test) harness does not build.
-      cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire
-      export WS11UI_BROWSER_BINARY="$repo/rust/target/debug/campfire"
+      cargo build --locked -p campfire --bin campfire
+      export WS11UI_BROWSER_BINARY="$repo/target/debug/campfire"
       export CABLE_TEST_PORT_RANGE=53420-53449 MAIL_TEST_PORT_RANGE=53400-53419 GITHUB_TEST_PORT_RANGE=53450-53499
       ignored
       ;;
@@ -81,13 +81,13 @@ run_suite() {
       browser_images
       # Start the private media server after the cold compile so its lifetime
       # and logs cover the browser run rather than several minutes of rustc.
-      cargo test --manifest-path rust/Cargo.toml --locked -p campfire --no-run -j 4
-      rust/web/bin/livekit-local setup
+      cargo test --locked -p campfire --no-run -j 4
+      web/bin/livekit-local setup
       # Only this job's private signaling server is needed; the test owns its gateway.
-      rust/web/bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
+      web/bin/livekit-local start >"$receipts/livekit-server.log" 2>&1 &
       local livekit_pid=$!
       trap "kill $livekit_pid 2>/dev/null || true; wait $livekit_pid 2>/dev/null || true" EXIT
-      source rust/web/.bundle/livekit/env
+      source web/.bundle/livekit/env
       local ready=0
       for _ in $(seq 1 100); do
         if curl -fsS http://127.0.0.1:7880/ >/dev/null 2>&1; then ready=1; break; fi
@@ -95,8 +95,8 @@ run_suite() {
       done
       [[ "$ready" == 1 ]] || { cat "$receipts/livekit-server.log"; return 1; }
       docker run --rm --init --network none --ipc host --cpus 2 --user "$(id -u):$(id -g)" \
-        --volume "$repo/rust/parity:$repo/rust/parity:ro" --volume "$TMPDIR:$TMPDIR" \
-        --env TMPDIR="$TMPDIR" --workdir "$repo/rust/parity" \
+        --volume "$repo/parity:$repo/parity:ro" --volume "$TMPDIR:$TMPDIR" \
+        --env TMPDIR="$TMPDIR" --workdir "$repo/parity" \
         "$WS13_PLAYWRIGHT_IMAGE" node --test --test-concurrency=4 \
         system/ws13-browser-poll.test.mjs system/ws13-media-network.test.mjs system/ws13-gateway-readiness.test.mjs
       ignored
@@ -106,22 +106,22 @@ run_suite() {
       # case's recorded Rails fixture. These listeners stay outside Linux's ephemeral
       # outbound-client range.
       export WS8BM_BROWSER_PORT_BASE=22020 WS8BM_CHROMEDRIVER_PORT=22023
-      node rust/ci/native-network-smoke.mjs
+      node ci/native-network-smoke.mjs
       if first_shard; then
-        python3 -m unittest discover -s rust/reference-tools/messaging -p '*_test.py'
-        npm ci --prefix rust/parity
-        node --test --test-concurrency=4 rust/reference-tools/messaging/*.test.mjs
+        python3 -m unittest discover -s reference-tools/messaging -p '*_test.py'
+        npm ci --prefix parity
+        node --test --test-concurrency=4 reference-tools/messaging/*.test.mjs
       fi
       local selection=()
       [[ -z "$shard" ]] || selection=(--shard "$shard")
-      python3 rust/reference-tools/messaging/behavior-check.py --keep-going "${selection[@]}" \
+      python3 reference-tools/messaging/behavior-check.py --keep-going "${selection[@]}" \
         --receipt "$receipts/$tag-cases.json"
       ;;
     agents-ui)
       browser_images
-      cargo build --manifest-path rust/Cargo.toml --locked -j 4 -p campfire --bin campfire
-      python3 rust/reference-tools/views/agents_ui/system_behavior.py \
-        --binary "$repo/rust/target/debug/campfire" --scenario all
+      cargo build --locked -j 4 -p campfire --bin campfire
+      python3 reference-tools/views/agents_ui/system_behavior.py \
+        --binary "$repo/target/debug/campfire" --scenario all
       ;;
     *) echo "Unknown correctness suite: $suite" >&2; return 1 ;;
   esac

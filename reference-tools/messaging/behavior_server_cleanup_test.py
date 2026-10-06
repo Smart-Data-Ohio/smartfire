@@ -11,7 +11,7 @@ import tempfile
 import unittest
 
 TOOLS=Path(__file__).resolve().parent
-ROOT=TOOLS.parents[2]
+ROOT=TOOLS.parents[1]
 spec=importlib.util.spec_from_file_location('work_producer_cleanup',TOOLS/'work-producer-discrimination.py')
 producer=importlib.util.module_from_spec(spec);spec.loader.exec_module(producer)
 
@@ -26,7 +26,7 @@ class DriverCleanupTest(unittest.TestCase):
         scratch=ROOT/'.scratch';scratch.mkdir(exist_ok=True)
         self.temp=tempfile.TemporaryDirectory(prefix='ws8bm-cleanup-test-',dir=scratch)
         self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
-        source=self.root/'rust/reference-tools/messaging/behavior-check.py'
+        source=self.root/'reference-tools/messaging/behavior-check.py'
         source.parent.mkdir(parents=True);shutil.copyfile(TOOLS/'behavior-check.py',source)
         out=self.root/'generated';out.mkdir();producer.driver_source(self.root,out)
         nodes=[node for node in ast.walk(ast.parse((out/'driver-body.py').read_text()))

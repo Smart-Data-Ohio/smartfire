@@ -7,7 +7,7 @@ LIVEKIT_ARCHIVE="livekit_${LIVEKIT_VERSION}_linux_amd64.tar.gz"
 LIVEKIT_SHA256="6634aeeb2fb1366b6723708ae4320b9d5408106a4c63457c5e845ae3979c90e2"
 LIVEKIT_DOWNLOAD_URL="https://github.com/livekit/livekit/releases/download/v${LIVEKIT_VERSION}/${LIVEKIT_ARCHIVE}"
 
-# rust/web: runtime state in .bundle/livekit, the gateway's code in script/livekit-gateway.
+# web/: runtime state in .bundle/livekit, the gateway's code in script/livekit-gateway.
 ROOT_DIR=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)
 RUNTIME_DIR="$ROOT_DIR/.bundle/livekit"
 BINARY="$RUNTIME_DIR/livekit-server"

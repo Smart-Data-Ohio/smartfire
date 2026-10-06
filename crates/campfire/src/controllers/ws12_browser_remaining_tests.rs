@@ -209,7 +209,7 @@ async fn ws12_browser_c227_original_named_system_assertions() {
 
 async fn compare_cutover(scenario: &str) {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../..")
+        .join("../..")
         .canonicalize()
         .unwrap();
     let test_host = std::env::current_exe().unwrap();
@@ -225,7 +225,7 @@ async fn compare_cutover(scenario: &str) {
                     "build", "--locked", "-j", "4", "-p", "campfire", "--bin", "campfire",
                 ])
                 .arg("--manifest-path")
-                .arg(root.join("rust/Cargo.toml"))
+                .arg(root.join("Cargo.toml"))
                 .arg("--target-dir")
                 .arg(target.parent().unwrap())
                 .kill_on_drop(true)
@@ -247,7 +247,7 @@ async fn compare_cutover(scenario: &str) {
         .unwrap_or_else(|_| format!("ws11ui-ci-{}", std::process::id()));
     let mut command = tokio::process::Command::new("python3");
     command
-        .arg(root.join("rust/reference-tools/views/agents_ui/check_cutover_browser.py"))
+        .arg(root.join("reference-tools/views/agents_ui/check_cutover_browser.py"))
         .arg("--binary")
         .arg(binary)
         .arg("--test-host")

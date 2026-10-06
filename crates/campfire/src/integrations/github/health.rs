@@ -51,7 +51,7 @@ mod tests {
         ));
         let now = clock.now();
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         let fixture =
             tokio::task::spawn_blocking(move || TestDb::in_dir(Arc::new(clock), &scratch))
                 .await

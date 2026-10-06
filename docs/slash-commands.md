@@ -15,7 +15,7 @@ messages; the rest answer ephemerally — visible to the invoker only,
 never posted — or open UI.
 
 Commands live in one registry (`registry()` in
-`rust/crates/db/src/slash_commands.rs`, dispatched by `handle` in the
+`crates/db/src/slash_commands.rs`, dispatched by `handle` in the
 same file): each entry has a name, a description, an argument hint, and
 a `takes_arguments` flag that decides the picker behavior above.
 Adding a command means adding one registry entry plus its branch in

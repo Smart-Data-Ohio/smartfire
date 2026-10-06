@@ -12,9 +12,9 @@ import time
 import unittest
 import urllib.request
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 IMAGE = os.environ.get("WS18_IMAGE")
-SEED = ROOT / "rust/parity/.seed/default"
+SEED = ROOT / "parity/.seed/default"
 
 
 def docker(*args):
@@ -81,7 +81,7 @@ class ImageTest(unittest.TestCase):
             shutil.copytree(SEED / "storage", work / "files")
             name = "ws18-image-server"
             docker("run", "-d", "--name", name, "--memory", "768m", "--cpus", "2",
-                   "-p", "127.0.0.1:51800:80", "--env-file", str(ROOT / "rust/parity/.env.reference"),
+                   "-p", "127.0.0.1:51800:80", "--env-file", str(ROOT / "parity/.env.reference"),
                    "-v", f"{work}:/rails/storage", IMAGE)
             try:
                 base = "http://127.0.0.1:51800"

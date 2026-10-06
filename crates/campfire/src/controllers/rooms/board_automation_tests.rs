@@ -153,7 +153,7 @@ async fn check_settings(golden: Value) {
         };
         if response.status.as_u16() != expected_status || response.text() != expected_body {
             let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../.scratch/board-automations-2/diffs");
+                .join("../../.scratch/board-automations-2/diffs");
             std::fs::create_dir_all(&dir).unwrap();
             std::fs::write(dir.join(format!("{name}-actual.html")), response.text()).unwrap();
             std::fs::write(

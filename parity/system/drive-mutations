@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 
-rust = pathlib.Path(__file__).resolve().parents[2]
+root = pathlib.Path(__file__).resolve().parents[2]
 cases = [
     # The original harness's checks (reference-tools/users/ws14_original_browser_mutations.py).
     ('WS14g-232', 'drive_share_test.rb', 139,
@@ -39,7 +39,7 @@ for key, source, line, mutation in cases:
     log = logs / f'{key.lower()}.log'
     env = dict(os.environ, DRIVE_BROWSER_MUTATION=json.dumps(mutation))
     with log.open('w') as out:
-        run = subprocess.run([rust / 'parity/system/drive', 'drive_browser_' + key.lower().replace('-', '_')],
+        run = subprocess.run([root / 'parity/system/drive', 'drive_browser_' + key.lower().replace('-', '_')],
                              env=env, stdout=out, stderr=subprocess.STDOUT)
     text = log.read_text()
     applied = [int(count) for count in re.findall(r'DRIVE_BROWSER_MUTATION applied=(\d+)', text)]

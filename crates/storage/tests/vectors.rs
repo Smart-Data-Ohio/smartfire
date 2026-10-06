@@ -30,7 +30,7 @@ fn vectors() -> J {
     serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))).unwrap()
 }
 
-/// The Rails app's `test/fixtures/files`: the port's copy in `rust/fixtures/files`, as
+/// The Rails app's `test/fixtures/files`: the port's copy in `fixtures/files`, as
 /// `campfire_db::fixtures::reference_dir` finds them.
 fn fixture(name: &str) -> PathBuf {
     repo_root().join("fixtures/files").join(name)

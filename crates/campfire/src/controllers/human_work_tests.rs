@@ -467,7 +467,7 @@ async fn human_work_http_matches_complete_rails_responses() {
         let expected = row["body"].as_str().unwrap();
         if actual != expected {
             let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../.scratch/human-work/diffs");
+                .join("../../.scratch/human-work/diffs");
             std::fs::create_dir_all(&directory).unwrap();
             std::fs::write(directory.join(format!("{name}-actual.html")), actual).unwrap();
             std::fs::write(directory.join(format!("{name}-expected.html")), expected).unwrap();

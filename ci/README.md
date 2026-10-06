@@ -8,8 +8,8 @@ the tests `cargo nextest list` selects for their filter, each passed once, with 
 `#[ignore]` test reported; the same for the LLVM job's four; and libtest's doctest logs
 account for every doctest they ran. Both gates run `check_gate_needs.py`, which fails if
 any job in `rust.yml` is missing from their `needs`. It reports on every pull request:
-`Rust changes` checks the PR's diff, and when it touches no Rust input (`rust/`, this
-workflow or its setup action) the jobs
+`Rust changes` checks the PR's diff, and when it touches no Rust input (anything outside `docs/`,
+`deploy/`, other workflows and the root prose files) the jobs
 below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
 nightly and manual runs, empty diffs and unavailable history always run everything:
 
@@ -19,10 +19,11 @@ nightly and manual runs, empty diffs and unavailable history always run everythi
 | `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (campfire on Cranelift; the nightly run builds campfire with LLVM). Shard 1 also lists the tests the shards and the LLVM job must run, and runs `verify-ignored.sh`, against the harnesses it compiled. |
 | `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with campfire on LLVM: Cranelift can't unwind. Fails unless exactly those four ran and passed. |
 | `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with, from its own `stable` Cargo cache. |
-| `Rust clippy, binaries and doctests` | rust/ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
+| `Rust clippy, binaries and doctests` | ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
 
-Correctness builds run from the repository root, where neither `rust-toolchain.toml` nor
-`.cargo/config.toml` applies, so they use the stable toolchain and LLVM and restore their
+Correctness builds run through `ci/exec.sh`, which selects the Dockerfile's stable release
+(`RUSTUP_TOOLCHAIN`) and hides `.cargo/config.toml`, so they use the stable toolchain and LLVM
+and restore their
 own `correctness` Cargo cache (saved on main by browsers shard 2/4); the test shards' cache
 holds nightly artifacts. Cargo caches hold only registry dependencies, so their keys are the
 toolchains, build inputs and `Cargo.lock`, not the commit: a push to main saves one only when
@@ -84,14 +85,14 @@ separate reproducibility change before claiming every transitive build input is 
 Run from the repository root with Docker available:
 
 ```sh
-python3 -m unittest discover -s rust/ci -p 'test_*.py'
-python3 -m unittest discover -s rust/parity -p test_frozen_seeds.py
-python3 rust/parity/bin/frozen-seeds check
-python3 rust/parity/bin/frozen-seeds restore
-docker build --target toolchain -f rust/Dockerfile -t campfire-toolchain rust
-docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
-RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/verify-ignored.sh
-RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/exec.sh bash rust/ci/correctness.sh acme
+python3 -m unittest discover -s ci -p 'test_*.py'
+python3 -m unittest discover -s parity -p test_frozen_seeds.py
+python3 parity/bin/frozen-seeds check
+python3 parity/bin/frozen-seeds restore
+docker build --target toolchain -t campfire-toolchain .
+docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
+RUNNER_TEMP=/tmp/campfire-ci bash ci/verify-ignored.sh
+RUNNER_TEMP=/tmp/campfire-ci bash ci/exec.sh bash ci/correctness.sh acme
 # Repeat the last command for browsers, drive, livekit, messaging, and agents-ui.
 # CI's slices: CORRECTNESS_SHARD=2/4 ... correctness.sh browsers (exec.sh passes it through).
 ```

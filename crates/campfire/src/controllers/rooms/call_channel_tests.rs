@@ -222,7 +222,7 @@ async fn call_forms_rows_and_huddle_layouts_match_parity_seed_rails_bytes() {
                 .unwrap_or_else(|| {
                     std::path::PathBuf::from(concat!(
                         env!("CARGO_MANIFEST_DIR"),
-                        "/../../../.scratch"
+                        "/../../.scratch"
                     ))
                 });
             std::fs::create_dir_all(&scratch).unwrap();

@@ -93,7 +93,7 @@ now preserve Rails' exact bytes; the reference outputs are generated, not edited
 receipts used different rooms, more than 40 messages, or an explicitly false invitation input.
 The new requests cover the original room both empty and after posting a real message.
 
-Validation commands as run then (from `rust/`, with `CI=1`, all three seeds present and nextest on
+Validation commands as run then (from the workspace root, then `rust/`, with `CI=1`, all three seeds present and nextest on
 `PATH`). The reference image, the pinned-media runner and `check-templates` have since been
 removed with the Rails app:
 

@@ -53,7 +53,7 @@ is required; it is not a serializer rewrite or a corpus normalization.
 
 ## Verification
 
-From `rust/`:
+From the repository root:
 
 ```sh
 reference-tools/markdown/build-reference.sh

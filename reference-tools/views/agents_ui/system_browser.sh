@@ -9,8 +9,7 @@ if [[ "${WS11UI_BROKEN_HOST_NETWORK:-}" == 1 ]]; then
   exit "$?"
 fi
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-# system_cases.mjs resolves rust/parity/package.json from its working directory.
-REPO=$(cd "$ROOT/.." && pwd)
+# system_cases.mjs resolves parity/package.json from its working directory.
 PARITY=$ROOT/parity
 die() { echo "system_browser: $*" >&2; exit 1; }
 wait_for_socket() {
@@ -52,5 +51,5 @@ docker run --rm --init --name "$name" --network none --cpus 2 --shm-size 256m \
   -u "$(id -u):$(id -g)" -e TMPDIR="$net_dir" -e TZ=UTC \
   -e WS11UI_ACTIVITY_CONTROL="${WS11UI_ACTIVITY_CONTROL:-}" \
   -e WS11UI_HOST_NETWORK="$(readlink /proc/self/ns/net)" -e PARITY_UPSTREAM_SOCKET="$socket" \
-  -v "$REPO:$REPO" -v "$net_dir:$net_dir" --tmpfs "$PARITY/node_modules" \
-  -w "$REPO" "$image" node "$ROOT/reference-tools/views/agents_ui/system_cases.mjs" "$@"
+  -v "$ROOT:$ROOT" -v "$net_dir:$net_dir" --tmpfs "$PARITY/node_modules" \
+  -w "$ROOT" "$image" node "$ROOT/reference-tools/views/agents_ui/system_cases.mjs" "$@"

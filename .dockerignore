@@ -1,30 +1,45 @@
 # The Rust app image (Dockerfile) builds from Cargo.toml, Cargo.lock and crates/ in this context,
-# plus the parts of web/ that crates/assets/build.rs embeds. Everything else stays out.
+# plus the parts of web/ that crates/assets/build.rs embeds, the ops/ hooks it installs and, for
+# the CI toolchain stage, rust-toolchain.toml. ci/Dockerfile (the CI correctness prerequisites)
+# builds from the same context and copies from ci/. Everything else stays out.
+# deploy/huddles/Dockerfile has its own Dockerfile.dockerignore.
 
 /.git
+/.github
 /.gitignore
+/.gitattributes
 # Cargo config: Cranelift for dev/test builds. The production build stays on LLVM.
 /.cargo
+/.cargo-home
 /.claude
 /target
+/.scratch
+/storage
+/log
+/tmp
+/Dockerfile
+/.dockerignore
+
+# Documentation, deployment scripts and agent notes: none is built into an image.
+/*.md
+/MIT-LICENSE
+/docs
+/deploy
+
+# Test, benchmark and parity inputs.
+/bench
 /parity
 /plans
 /vectors
 /reference-tools
-/NOTES.md
-/AGENTS.md
-/CLAUDE.md
-/ops/tests
 /fixtures
 /test-support
+/ops/tests
+/ops/README.md
 /web/bin
 /web/script
 /web/.bundle
 /web/public/assets
-/ops/README.md
-/.scratch
-/Dockerfile
-/.dockerignore
 
 # crates: test data isn't compiled into the binary
 /crates/*/target

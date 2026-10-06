@@ -107,7 +107,7 @@ try:
   for case in cases[args.mode]:
    fixture(case)
    script='original_browser_assertions.mjs'
-   cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root.parent}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{ports[1]}','-e',f'WS11UI_BROWSER_LABELS=/work/{(run/"labels.json").relative_to(root.parent)}','-e',f'WS11UI_BROWSER_DATABASE=/work/{database.relative_to(root.parent)}','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/rust/reference-tools/users/'+script]
+   cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{ports[1]}','-e',f'WS11UI_BROWSER_LABELS=/work/{(run/"labels.json").relative_to(root)}','-e',f'WS11UI_BROWSER_DATABASE=/work/{database.relative_to(root)}','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/reference-tools/users/'+script]
    result=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
    print(f'Original Rust {case}:',flush=True);print(result.stdout,flush=True)
    if args.controls:

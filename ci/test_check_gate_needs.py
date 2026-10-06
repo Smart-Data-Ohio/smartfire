@@ -6,7 +6,7 @@ spec = importlib.util.spec_from_file_location("gate_needs", Path(__file__).with_
 gate_needs = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gate_needs)
 
-WORKFLOW = Path(__file__).resolve().parents[2] / ".github/workflows/rust.yml"
+WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/rust.yml"
 
 
 class GateNeedsTest(unittest.TestCase):

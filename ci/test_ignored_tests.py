@@ -17,7 +17,7 @@ class IgnoredTestCoverage(unittest.TestCase):
             '#[test]\n#[cfg_attr(all(test, unix), cfg_attr(test, ignore = r#"requires prerequisite"#))] fn unowned() {}',
             '#[test]\n#[cfg_attr(any(), ignore)] fn unowned() {}',
         )
-        workflow = 'suite: [server]\nbash rust/ci/correctness.sh "$SUITE"'
+        workflow = 'suite: [server]\nbash ci/correctness.sh "$SUITE"'
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
             for source in mutations:
@@ -55,7 +55,7 @@ class IgnoredTestCoverage(unittest.TestCase):
 
     def test_repository_has_no_unowned_ignored_correctness(self):
         check(ROOT, json.loads((ROOT / "ci/ignored-tests.json").read_text()),
-              (ROOT.parent / ".github/workflows/rust.yml").read_text())
+              (ROOT / ".github/workflows/rust.yml").read_text())
 
     def test_new_ignored_test_and_missing_job_fail_closed(self):
         with tempfile.TemporaryDirectory() as scratch:
@@ -64,7 +64,7 @@ class IgnoredTestCoverage(unittest.TestCase):
             source = root / "crates/tests.rs"
             source.write_text('// #[ignore]\n// fn prose() {}\n#[test]\n#[ignore = "requires a server"]\nasync fn correctness() {}\n')
             record = {"path": "crates/tests.rs", "test": "correctness"}
-            workflow = 'suite: [server]\nbash rust/ci/correctness.sh "$SUITE"'
+            workflow = 'suite: [server]\nbash ci/correctness.sh "$SUITE"'
             self.assertEqual(len(inventory(root)), 1)
             with self.assertRaisesRegex(ValueError, "no CI job"):
                 check(root, {}, workflow)
@@ -117,7 +117,7 @@ class IgnoredTestCoverage(unittest.TestCase):
             verify_junit(records, [first, second])
 
     def test_workflow_shards_must_cover_one_to_n(self):
-        runner = 'bash rust/ci/correctness.sh "$SUITE"\n'
+        runner = 'bash ci/correctness.sh "$SUITE"\n'
         self.assertEqual(workflow_suites(runner + 'suite: [a, b]\nsuite: [c]\n        shard: ["1/2", "2/2"]'),
                          {"a": [[]], "b": [[]], "c": [["1/2", "2/2"]]})
         for shards in ('["1/2"]', '["1/3", "2/3", "2/3"]', '["0/1"]', '["2/2", "1/2"]'):

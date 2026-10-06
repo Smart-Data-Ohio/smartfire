@@ -25,7 +25,7 @@ impl Fresh {
     async fn new(role: i64, routes: Vec<Route>) -> Self {
         let (server, network): (FakeServer, Network) = fake(routes).await;
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws16-http");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws16-http");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
         let environment = std::fs::read_to_string(concat!(
@@ -320,7 +320,7 @@ async fn slack_setup_views_are_byte_identical_to_rails_and_write_only() {
         let expected = case["html"].as_str().unwrap();
         if actual != expected {
             let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../.scratch/ws16-http");
+                .join("../../.scratch/ws16-http");
             std::fs::write(dir.join("setup.actual.html"), &actual).unwrap();
             std::fs::write(dir.join("setup.expected.html"), expected).unwrap();
         }

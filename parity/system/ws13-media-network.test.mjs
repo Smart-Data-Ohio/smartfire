@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {hostMedia,browserMedia} from './ws13-media-network.mjs';
 
 test('local media relay preserves opaque datagrams and independent peer replies',async t=>{
-  const scratch=process.env.TMPDIR||fileURLToPath(new URL('../../../.scratch/',import.meta.url));
+  const scratch=process.env.TMPDIR||fileURLToPath(new URL('../../.scratch/',import.meta.url));
   await fs.mkdir(scratch,{recursive:true});
   const dir=await fs.mkdtemp(path.join(scratch,'ws13-media-relay-'));
   // Linux Unix-domain socket addresses have a 108-byte limit. A fresh clone's

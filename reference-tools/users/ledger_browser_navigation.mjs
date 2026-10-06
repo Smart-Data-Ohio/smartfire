@@ -1,4 +1,4 @@
-// Exact navigation declarations at rust/parity/reference.sha. The browser acts
+// Exact navigation declarations at parity/reference.sha. The browser acts
 // through the shipped controllers; direct SQLite writes below are Rails fixtures.
 import assert from 'node:assert/strict'
 import fs from 'node:fs'

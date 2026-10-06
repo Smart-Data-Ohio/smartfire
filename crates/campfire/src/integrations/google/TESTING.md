@@ -18,6 +18,6 @@ OIDC tokens and JWKS come from `vectors/rails_compat_smartfire.json`, generated 
 our Rails reference at the pin. OAuth redirects and PKCE/state encodings come from
 `vectors/google_sign_in.json` (`reference-tools/google/generate-sign-in.sh`).
 
-Run `python3 reference-tools/google/prove-sign-in.py` from `rust/` to prove state,
+Run `python3 reference-tools/google/prove-sign-in.py` from the repository root to prove state,
 ID-token, email-trust, and split save timestamps fail the tests. It restores each mutated source
 in `finally` and writes its logs under the worktree's `.scratch/ws14g/mutations/`.

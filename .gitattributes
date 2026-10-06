@@ -1,10 +1,10 @@
 # See https://git-scm.com/docs/gitattributes for more about git attribute files.
 
-# Generated from the migrations (CAMPFIRE_SCHEMA_DUMP=write; see rust/AGENTS.md).
-rust/crates/db/src/schema.sql linguist-generated
+# Generated from the migrations (CAMPFIRE_SCHEMA_DUMP=write; see AGENTS.md).
+crates/db/src/schema.sql linguist-generated
 
 # Vendored JavaScript and gem assets, and the recorded test data.
-rust/web/vendor/** linguist-vendored
-rust/crates/assets/vendor/** linguist-vendored
-rust/crates/richtext/vendor/** linguist-vendored
-rust/vectors/** linguist-generated
+web/vendor/** linguist-vendored
+crates/assets/vendor/** linguist-vendored
+crates/richtext/vendor/** linguist-vendored
+vectors/** linguist-generated

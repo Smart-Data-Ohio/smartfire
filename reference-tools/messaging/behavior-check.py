@@ -3,7 +3,7 @@
 
 Each case asserts the fixed expectations of its original Rails system/controller declaration.
 Its fixture is the frozen default seed plus the Rails fixture step recorded for it
-(rust/test-support/behavior-fixtures, recorded from Rails before it was removed). Each writing case gets an
+(test-support/behavior-fixtures, recorded from Rails before it was removed). Each writing case gets an
 independent copy; read-only message-list regressions share one verified fixture/server but get
 fresh viewer contexts. All cases exercise real HTTP/Action Cable. No screenshot or response mask.
 """
@@ -29,14 +29,13 @@ from behavior_server_cleanup import stop_behavior_server
 from behavior_mutation_jobs import probe_jobs
 from browser_host import build_host, prepare_source
 
-ROOT = Path(__file__).resolve().parents[3]
-RUST = ROOT / "rust"
+ROOT = Path(__file__).resolve().parents[2]
 SCRATCH = ROOT / ".scratch"
 # The pinned Rails sources the cases are named in and read literals from (see its manifest.json).
-SOURCES = RUST / "test-support/behavior-sources"
-FIXTURES = RUST / "test-support/behavior-fixtures"
-SEED = RUST / "parity/.seed/default"
-# Retired with the Rails-paired run (rust/plans/rails-free-ci-coverage.md, "behavior-check.py"):
+SOURCES = ROOT / "test-support/behavior-sources"
+FIXTURES = ROOT / "test-support/behavior-fixtures"
+SEED = ROOT / "parity/.seed/default"
+# Retired with the Rails-paired run (plans/rails-free-ci-coverage.md, "behavior-check.py"):
 # - drive_attachments_test.rb's three declarations duplicate WS14g-224..226, which are ported once,
 #   as originals, in the Rust-only Drive browser suite.
 # - channel_threads_controller_test.rb's "work owner must be an eligible parent-room member and a
@@ -232,7 +231,7 @@ if args.mutant_set:
     diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations", "hidden-scopes": "hiddenScopeProbes", "categories": "categoryMutations", "labels": "labelMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
     diagnostic_variants = json.loads(subprocess.check_output([
         "node", "--input-type=module", "-e",
-        f"import {{{diagnostic_export}}} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
+        f"import {{{diagnostic_export}}} from './reference-tools/messaging/behavior-mutations.mjs'; "
         f"console.log(JSON.stringify(Object.fromEntries([...{diagnostic_export}].map(([name,variants])=>[name,[...variants.keys()]]))))"
     ], cwd=ROOT, text=True))
 if args.case:
@@ -249,7 +248,7 @@ if args.mutant:
     env["WS8BM_MUTANT"] = args.mutant
 else:
     env.pop("WS8BM_MUTANT", None)
-subprocess.run([str(RUST / "parity/bin/frozen-seeds"), "restore"], cwd=ROOT, check=True)
+subprocess.run([str(ROOT / "parity/bin/frozen-seeds"), "restore"], cwd=ROOT, check=True)
 # Build every host this invocation uses, including on a cold target. A
 # paused-only case uses TestApp's real binary and needs no second app build.
 VIDEO_CASE = "uploading a fresh video in the thread composer"
@@ -272,9 +271,9 @@ prebuilt_host = os.environ.get("WS8BM_PREBUILT_TEST_HOST")
 if args.prepare_only:
     pass
 elif os.environ.get("WS8BM_PREBUILT_APP") == "1":
-    assert (Path(env.get("CARGO_TARGET_DIR", RUST / "target")) / "debug/campfire").is_file(), "prebuilt campfire binary is missing"
+    assert (Path(env.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/campfire").is_file(), "prebuilt campfire binary is missing"
 elif args.slice or any(name not in paused_job_cases for name in selected_names):
-    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
+    subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["build", "--locked", "-j2", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
 if args.prepare_only or not (needs_paused_jobs or needs_drive or needs_test_environment):
     test_host = None
 elif prebuilt_host:
@@ -284,18 +283,18 @@ elif prebuilt_host:
     test_host = prebuilt_host
 else:
     test_host = build_host(ROOT, env)
-subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
+subprocess.run(["npm", "ci", "--prefix", "parity"], cwd=ROOT, check=True)
 # CI supplies Chromium from its pinned image.
 if os.environ.get("WS8BM_PINNED_BROWSER") != "1":
-    subprocess.run(["npm", "exec", "--prefix", "rust/parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
+    subprocess.run(["npm", "exec", "--prefix", "parity", "--", "playwright", "install", "chromium"], cwd=ROOT, check=True)
 if args.prepare_only:
     raise SystemExit(0)
-for line in (RUST / "parity/.env.reference").read_text().splitlines():
+for line in (ROOT / "parity/.env.reference").read_text().splitlines():
     if line and not line.startswith("#"):
         key, value = line.split("=", 1)
         env[key] = value
 env.update(CAMPFIRE_FROZEN_TIME="2026-03-02T16:00:00Z", CAMPFIRE_LOG="error", TARGET_BIND="127.0.0.1")
-target = Path(env.get("CARGO_TARGET_DIR", RUST / "target"))
+target = Path(env.get("CARGO_TARGET_DIR", ROOT / "target"))
 # Keep the historical default, while allowing a worker to choose slots outside
 # its OS ephemeral-client range. No application wait or retry is changed.
 port_base = int(env.get("WS8BM_BROWSER_PORT_BASE", "52020"))
@@ -329,11 +328,11 @@ invalid_attempts=0
 retry_attempts={}
 mutation_names = set(json.loads(subprocess.check_output([
     "node", "--input-type=module", "-e",
-    "import {mutationNames} from './rust/reference-tools/messaging/behavior-mutations.mjs'; console.log(JSON.stringify(mutationNames))"
+    "import {mutationNames} from './reference-tools/messaging/behavior-mutations.mjs'; console.log(JSON.stringify(mutationNames))"
 ], cwd=ROOT, text=True))) if args.negative else set()
 mutation_variants = json.loads(subprocess.check_output([
     "node", "--input-type=module", "-e",
-    "import {mutationNames,mutationVariants} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
+    "import {mutationNames,mutationVariants} from './reference-tools/messaging/behavior-mutations.mjs'; "
     "console.log(JSON.stringify(Object.fromEntries(mutationNames.map(name=>[name,mutationVariants(name)]))))"
 ], cwd=ROOT, env=env, text=True)) if args.negative else {}
 
@@ -492,7 +491,7 @@ for file in files:
                         if time.monotonic() > deadline:
                             raise TimeoutError("app not ready")
                         time.sleep(.2)
-                    command = ["node", str(RUST / "reference-tools/messaging/behavior.mjs"), base, file, json.dumps(batch), json.dumps(metadata)]
+                    command = ["node", str(ROOT / "reference-tools/messaging/behavior.mjs"), base, file, json.dumps(batch), json.dumps(metadata)]
                     result = subprocess.run(command, cwd=ROOT, env=run_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
                     print(result.stdout, end="", flush=True)
                     if drive_calls is not None:
@@ -520,7 +519,7 @@ for file in files:
                         raise subprocess.CalledProcessError(result.returncode, command)
                     if args.negative:
                         variants = json.loads(subprocess.check_output(["node", "--input-type=module", "-e",
-                            "import {mutationVariants} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
+                            "import {mutationVariants} from './reference-tools/messaging/behavior-mutations.mjs'; "
                             f"console.log(JSON.stringify({json.dumps(batch)}.map(name=>mutationVariants(name))))"], cwd=ROOT, env=run_env, text=True))
                         succeeded = [name for name, names in zip(batch, variants) if names and not any(
                             (file, name, registered) in escaped_cases for registered in names) and all(

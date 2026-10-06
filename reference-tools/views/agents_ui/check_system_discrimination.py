@@ -7,7 +7,7 @@ import subprocess
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--binary',type=Path,required=True)
 args=p.parse_args()
-root=Path(__file__).resolve().parents[4]
+root=Path(__file__).resolve().parents[3]
 runner=Path(__file__).with_name('system_behavior.py')
 cases = [
  ('work','--inject-work-status','agent_work_assignment_test.rb',0,'committed work status remained planned'),

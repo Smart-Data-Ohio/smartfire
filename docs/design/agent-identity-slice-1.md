@@ -1,6 +1,6 @@
 # Agents as first-class participants: first slice design
 
-Status: proposal, September 15, 2026. Implements the first slice of [roadmap milestone 3](../../ROADMAP.md#3-ai-agents-as-first-class-participants). Open decisions are listed at the end; nothing here is approved scope until they are settled. Written against the Rails app, which has since been removed; its file paths, class names and test files are design history (see the git history before October 2026), and the Rust port in `rust/` implements the shipped behavior.
+Status: proposal, September 15, 2026. Implements the first slice of [roadmap milestone 3](../../ROADMAP.md#3-ai-agents-as-first-class-participants). Open decisions are listed at the end; nothing here is approved scope until they are settled. Written against the Rails app, which has since been removed; its file paths, class names and test files are design history (see the git history before October 2026), and the Rust port at the repository root implements the shipped behavior.
 
 ## Assessment of the current bot model
 

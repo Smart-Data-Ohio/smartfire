@@ -60,7 +60,7 @@ fn routes(case: &Value) -> Vec<Route> {
     .collect()
 }
 async fn database() -> TestDb {
-    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     let clock = Arc::new(TestClock::frozen_at(Timestamp::from_jiff(
         "2026-01-01T12:00:00Z".parse().unwrap(),
     )));
@@ -219,7 +219,7 @@ async fn github_fetch_runtime_performs_discards_missing_and_does_not_retry_failu
         let case = &cases()["cases"][0];
         let (server, network) = fake(routes(case)).await;
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let config = crate::config::Config::from_lookup(|name| match name {

@@ -59,10 +59,10 @@ The compatibility preview endpoint remains available at `POST /rooms/:room_id/me
 
 ## Local validation
 
-The browser coverage, ported from the Rails system tests into the messaging behaviour and ledger browser correctness suites (see [`rust/ci/README.md`](../rust/ci/README.md)), exercises send and receive, editing, keyboard input, sanitization, replies, attachments, mentions, system theme changes, and mobile navigation, plus channel access, workspace presence across channels and tabs, sign-out, mobile member navigation, and composer alignment. The messaging and huddle browser cases provide regression coverage for the shared workspace.
+The browser coverage, ported from the Rails system tests into the messaging behaviour and ledger browser correctness suites (see [`ci/README.md`](../ci/README.md)), exercises send and receive, editing, keyboard input, sanitization, replies, attachments, mentions, system theme changes, and mobile navigation, plus channel access, workspace presence across channels and tabs, sign-out, mobile member navigation, and composer alignment. The messaging and huddle browser cases provide regression coverage for the shared workspace.
 
 The code highlighting cases in the same suite cover language aliases, exact code text and copying, plain-text fallbacks, search results, threads, theme colors, and narrow-screen scrolling.
 
-The highlighter loads lazily in a background worker, independently of channel navigation and composition. Code stays readable and copyable if highlighting is unavailable. The worker, grammars, and two themes are served locally; no code is sent to an external service. Rebuild the checked-in worker with `npm ci && npm run build` in `rust/web/script/code-highlighter`, and run its grammar/theme checks with `npm test`. Highlight.js provides detection for unlabelled blocks; Shiki supplies the syntax tokens and colors.
+The highlighter loads lazily in a background worker, independently of channel navigation and composition. Code stays readable and copyable if highlighting is unavailable. The worker, grammars, and two themes are served locally; no code is sent to an external service. Rebuild the checked-in worker with `npm ci && npm run build` in `web/script/code-highlighter`, and run its grammar/theme checks with `npm test`. Highlight.js provides detection for unlabelled blocks; Shiki supplies the syntax tokens and colors.
 
 See [huddles.md](huddles.md) for the separately configured huddle services.

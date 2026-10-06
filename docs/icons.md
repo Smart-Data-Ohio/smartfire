@@ -8,7 +8,7 @@ search keep working on the typed text.
 
 ## The set
 
-The workspace ships 33 built-in brand icons, registered in `rust/crates/campfire/vendor/icons.yml`
+The workspace ships 33 built-in brand icons, registered in `crates/campfire/vendor/icons.yml`
 with a `name`, `file`, `title`, and optional `aliases` (for example `gpt` for
 `openai`, `gemini` for `googlegemini`, `hf` for `huggingface`):
 
@@ -38,11 +38,11 @@ shares its reaction chip. The eight quick reactions are unchanged.
 ## Adding an icon
 
 1. Copy the `<slug>.svg` from the pinned Simple Icons release (see below) into
-   `rust/web/app/assets/images/icons/brands/`, unmodified.
+   `web/app/assets/images/icons/brands/`, unmodified.
 2. Add a `name`, `file`, and `title` entry to
-   `rust/crates/campfire/vendor/icons.yml`, plus any `aliases`. Names are
+   `crates/campfire/vendor/icons.yml`, plus any `aliases`. Names are
    lowercase `[a-z0-9_]+`. Add the name and its aliases to
-   `rust/crates/db/data/icon-names.json` too, which validates room and bot
+   `crates/db/data/icon-names.json` too, which validates room and bot
    icon names.
 3. Rebuild and restart the server: the catalog and assets are compiled into
    the binary.
@@ -60,10 +60,10 @@ free-text boost input offers the same `:` completions.
 
 A brand icon renders as
 `<img class="icon icon--brand" src="<digested asset path>" alt=":name:" title="<title>" draggable="false">`.
-The `.icon--brand` rule in `rust/web/app/assets/stylesheets/icons.css` sizes it to
+The `.icon--brand` rule in `web/app/assets/stylesheets/icons.css` sizes it to
 `1.2em` inline, so icons scale with emoji-only messages. Simple Icons ship
 black, so the dark theme inverts them through the `--icon-filter` custom
-property defined in `rust/web/app/assets/stylesheets/colors.css`. The presentation
+property defined in `web/app/assets/stylesheets/colors.css`. The presentation
 sanitizer rewrites each icon's `src` from the `:name:` in its alt text, so
 stored bodies keep rendering across digest changes and asset host moves, and
 drops any image that is neither a known icon nor a mention avatar.
@@ -124,7 +124,7 @@ the icon registry resolves. A workspace icon deleted
 afterwards leaves the stored name resolving to nil, and every renderer falls
 back to its default marker instead of raising.
 
-`icon_avatar_tag` in `rust/crates/views/src/helpers/icons.rs`
+`icon_avatar_tag` in `crates/views/src/helpers/icons.rs`
 renders any resolvable icon at avatar sizes: brand and workspace icons as
 `<img>` from their existing paths with `alt` set to the icon title, emoji as
 a `<span>` glyph with an accessible name. It returns nil for an unresolvable
@@ -155,7 +155,7 @@ the `message_payload` creator and room hashes.
 ## License
 
 The SVGs come from two sources; see
-`rust/web/app/assets/images/icons/brands/LICENSE.md` for provenance. Twenty-seven are
+`web/app/assets/images/icons/brands/LICENSE.md` for provenance. Twenty-seven are
 from [Simple Icons](https://github.com/simple-icons/simple-icons), vendored
 from version **15.22.0** of the `simple-icons` npm package under the
 [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/)
@@ -164,6 +164,6 @@ The other six (`microsoft`, `azure`, `aws`, `xai`, `grok`, `deepseek`) are the
 monochrome files from version **1.95.0** of the `@lobehub/icons-static-svg`
 npm package, published under the
 [MIT license](https://github.com/lobehub/lobe-icons) by LobeHub; see
-`rust/web/app/assets/images/icons/brands/LICENSE-lobehub.md`. Amazon (retail) exists in
+`web/app/assets/images/icons/brands/LICENSE-lobehub.md`. Amazon (retail) exists in
 neither source and has no icon. The depicted logos remain trademarks of their
 respective owners.

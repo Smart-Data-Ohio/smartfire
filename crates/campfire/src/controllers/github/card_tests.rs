@@ -46,10 +46,10 @@ impl Fresh {
     ) -> Self {
         let (server, network) = fake(routes).await;
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g"),
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g"),
         )
         .unwrap();
         let secret: Value =

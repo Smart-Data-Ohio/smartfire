@@ -14,19 +14,19 @@ fn replay(mode: &str) {
 }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_ledger_navigation_assertions() { replay("navigation"); }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_ledger_member_assertions() { replay("members"); }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_ledger_surface_assertions() { replay("surfaces"); }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_ledger_lifecycle_assertions() { replay("lifecycle"); }
 
 use crate::test_support::FORGERY_DISABLED;

@@ -98,7 +98,7 @@ async fn database(case: &Value) -> (TestDb, Sink) {
 
     };
     let directory =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     let fixture = tokio::task::spawn_blocking(move || TestDb::with_env(env, &directory))
         .await
         .unwrap();
@@ -335,7 +335,7 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             .unwrap()
             .clone();
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let secret: Value =
@@ -505,7 +505,7 @@ async fn github_notifier_runtime_uses_default_retry_policy_and_fails_nontransien
     for mode in ["shape", "post"] {
         let case = &vectors()["cases"][0];
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let secret: Value =

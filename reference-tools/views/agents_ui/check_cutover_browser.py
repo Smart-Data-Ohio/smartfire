@@ -9,7 +9,7 @@ p.add_argument('--binary', type=Path, required=True)
 p.add_argument('--test-host', type=Path, required=True)
 p.add_argument('--scenario', choices=['all', 'inbox', 'inbox-filter', 'work'], default='all')
 args = p.parse_args()
-root = Path(__file__).resolve().parents[4]
+root = Path(__file__).resolve().parents[3]
 runner = Path(__file__).with_name('system_behavior.py')
 cases = [
     ('inbox', '--inject-inbox-handle', 'activity_inbox_test.rb: handles an item', '#activity-unread-count[hidden]'),

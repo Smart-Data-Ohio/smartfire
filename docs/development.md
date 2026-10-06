@@ -1,17 +1,17 @@
 ## Development
 
-Smartfire is a Rust workspace in [`rust/`](../rust). Work from that directory unless a command
-says otherwise. [`rust/README.md`](../rust/README.md) and [`rust/AGENTS.md`](../rust/AGENTS.md)
-describe the layout and working rules, [`rust/ci/README.md`](../rust/ci/README.md) the CI jobs, and
-[`rust/ops/README.md`](../rust/ops/README.md) the image, migrations and release contract.
+Smartfire is a Rust workspace at the repository root. Run commands from there unless they say
+otherwise. [`docs/rust-port.md`](rust-port.md) and [`AGENTS.md`](../AGENTS.md)
+describe the layout and working rules, [`ci/README.md`](../ci/README.md) the CI jobs, and
+[`ops/README.md`](../ops/README.md) the image, migrations and release contract.
 
 ### Prerequisites
 
-- **Rust via rustup.** [`rust/rust-toolchain.toml`](../rust/rust-toolchain.toml) pins a nightly
+- **Rust via rustup.** [`rust-toolchain.toml`](../rust-toolchain.toml) pins a nightly
   with the Cranelift, clippy and rustfmt components; rustup installs it the first time you run
-  `cargo` in `rust/`. Use rustup's `cargo`: a stable toolchain (or anything that sets
+  `cargo` in the repository. Use rustup's `cargo`: a stable toolchain (or anything that sets
   `RUSTUP_TOOLCHAIN`) rejects the Cranelift settings in
-  [`rust/.cargo/config.toml`](../rust/.cargo/config.toml).
+  [`.cargo/config.toml`](../.cargo/config.toml).
 - **[cargo-nextest](https://nexte.st)** for the test suite.
 - **libvips** (the app links it) and **ffmpeg/ffprobe** (file analysis and video previews).
   Storage tests compare media bytes only when your local libvips and ffmpeg match the image's
@@ -19,15 +19,13 @@ describe the layout and working rules, [`rust/ci/README.md`](../rust/ci/README.m
 - **Python 3** for the seed and CI helper scripts.
 - **Docker** to build the image and to run the correctness suites the way CI does.
 - **Node.js** for the huddle authorization gateway, the vendored JavaScript builders in
-  `rust/web/script/`, and the browser and messaging harnesses.
+  `web/script/`, and the browser and messaging harnesses.
 
 Dev, test and CI builds compile the `campfire` crate with Cranelift for speed; every other crate,
 and every release build, uses LLVM. Cranelift can't unwind, so the few panic-recovery tests need
 campfire rebuilt with LLVM (see [Running tests](#running-tests)).
 
 ### Running the server
-
-From `rust/`:
 
 ```sh
 SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 \
@@ -50,7 +48,7 @@ account, and you can sign in with that account from then on.
   process.
 
 Other settings (Google, GitHub, mail, LiveKit, public policy pages) are environment variables
-read by [`rust/crates/campfire/src/config.rs`](../rust/crates/campfire/src/config.rs); the
+read by [`crates/campfire/src/config.rs`](../crates/campfire/src/config.rs); the
 [self-hosting guide](self-hosting.md) lists the ones operators set.
 
 ### Web Push notifications
@@ -63,11 +61,11 @@ off and carries on. Generate a pair as described under "Secrets" in the
 ### Frontend assets
 
 The stylesheets, JavaScript (Stimulus controllers, Turbo, the import map), vendored JavaScript and
-`public/` files live in [`rust/web/`](../rust/web). The `campfire_assets` crate digests them at
+`public/` files live in [`web/`](../web). The `campfire_assets` crate digests them at
 build time, so a change shows up after the next `cargo run`. Templates are Askama files under
-`rust/crates/views/templates/`. The checked-in bundles in `rust/web/vendor/javascript/` are built by
-the Node projects in `rust/web/script/` (`livekit-client`, `code-highlighter`); rebuild them only
-when changing their pinned packages (see [`rust/web/script/livekit-client/README.md`](../rust/web/script/livekit-client/README.md)).
+`crates/views/templates/`. The checked-in bundles in `web/vendor/javascript/` are built by
+the Node projects in `web/script/` (`livekit-client`, `code-highlighter`); rebuild them only
+when changing their pinned packages (see [`web/script/livekit-client/README.md`](../web/script/livekit-client/README.md)).
 For local huddles, see [huddles](huddles.md).
 
 ### Running tests
@@ -75,8 +73,7 @@ For local huddles, see [huddles](huddles.md).
 The app's integration tests read committed SQLite seeds. Restore them first:
 
 ```sh
-cd rust
-python3 parity/bin/frozen-seeds restore   # copies the seeds to rust/parity/.seed/
+python3 parity/bin/frozen-seeds restore   # copies the seeds to parity/.seed/
 ```
 
 `frozen-seeds` finds the seeds relative to its own location, so it works from any directory;
@@ -103,19 +100,19 @@ cargo test --workspace --exclude html5ever --doc
 Beyond the ordinary tests, the correctness suites drive Rust in real browsers and against recorded
 fixtures: ACME (Pebble), the UI browser suites, Google Drive browser declarations, project-local
 LiveKit, the 139 messaging behaviour cases and the agents UI. They are `#[ignore]` tests and
-Python/Node harnesses run by [`rust/ci/correctness.sh`](../rust/ci/correctness.sh) inside the CI
+Python/Node harnesses run by [`ci/correctness.sh`](../ci/correctness.sh) inside the CI
 container. They run on pushes to `main`, nightly and on manual dispatch, not on pull requests. To
 run one locally (from the repository root, with Docker):
 
 ```sh
-python3 rust/parity/bin/frozen-seeds restore
-docker build --target toolchain -f rust/Dockerfile -t campfire-toolchain rust
-docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
-RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/exec.sh bash rust/ci/correctness.sh acme
+python3 parity/bin/frozen-seeds restore
+docker build --target toolchain -t campfire-toolchain .
+docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
+RUNNER_TEMP=/tmp/campfire-ci bash ci/exec.sh bash ci/correctness.sh acme
 ```
 
 Replace `acme` with `browsers`, `drive`, `livekit`, `messaging` or `agents-ui`.
-[`rust/ci/README.md`](../rust/ci/README.md) has the sharding variables and the full job list.
+[`ci/README.md`](../ci/README.md) has the sharding variables and the full job list.
 
 ### Lint
 
@@ -129,13 +126,12 @@ cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnin
 
 ### Migrations
 
-Schema changes are SQL files in `rust/crates/db/migrations/<VERSION>_<name>.sql`, with a 14-digit
+Schema changes are SQL files in `crates/db/migrations/<VERSION>_<name>.sql`, with a 14-digit
 UTC timestamp version. They are compiled into the binary and applied only by
 `campfire db-migrate DATABASE`, which the release script runs while writes are frozen; the server
 never migrates on boot. After adding one:
 
 ```sh
-cd rust
 CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files
 cargo build -p campfire
 python3 parity/bin/frozen-seeds migrate target/debug/campfire
@@ -144,20 +140,20 @@ python3 parity/bin/frozen-seeds migrate target/debug/campfire
 The first command regenerates the schema files the server boots from; the last migrates the
 committed test seeds. To migrate a local development database, stop the server and run
 `cargo run -p campfire -- db-migrate PATH/TO/db/production.sqlite3`. Migrations must be additive
-for a normal release; see [`rust/ops/README.md`](../rust/ops/README.md#writing-a-migration).
+for a normal release; see [`ops/README.md`](../ops/README.md#writing-a-migration).
 
 ### Continuous integration
 
 - **Rust** ([`rust.yml`](../.github/workflows/rust.yml)): on every pull request, the required
   `Rust port` check aggregates the frozen-seed check, twelve nextest shards, clippy with the binary
   build and doctests, the LLVM panic-recovery tests, and a stable-toolchain check. A pull request
-  that touches nothing under `rust/` (or the workflow and its setup action) skips the build and
-  passes. Pushes to `main`, the nightly schedule and manual runs also run the correctness suites
+  that touches only `docs/`, `deploy/`, other workflows or the root prose files skips the build
+  and passes. Pushes to `main`, the nightly schedule and manual runs also run the correctness suites
   behind `Rust correctness`.
 - **Repository checks** ([`repo.yml`](../.github/workflows/repo.yml)): `GitHub Actions audit`
   (actionlint, zizmor and the Google deployment configuration tests),
   `Huddle authorization gateway` (the Node gateway's tests) and `Dependency audit`
-  (cargo-audit over `rust/Cargo.lock` and npm audit of the gateway).
+  (cargo-audit over `Cargo.lock` and npm audit of the gateway).
 - **CodeQL** ([`codeql.yml`](../.github/workflows/codeql.yml)): code scanning for Rust,
   JavaScript, Python, C and the workflows.
 
@@ -173,10 +169,10 @@ gh workflow run rust.yml --ref YOUR-BRANCH -f scope=full
 ### Building the image
 
 ```sh
-docker build -t smartfire rust
+docker build -t smartfire .
 ```
 
-The image is built from [`rust/Dockerfile`](../rust/Dockerfile) with `rust/` as the context. See
+The image is built from the [`Dockerfile`](../Dockerfile) with the repository root as the context. See
 the [self-hosting guide](self-hosting.md) to run it and [deploy/README.md](../deploy/README.md) for
 production releases.
 

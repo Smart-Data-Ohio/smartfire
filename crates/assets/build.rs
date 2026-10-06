@@ -1,6 +1,6 @@
 //! Digests and compiles the reference's assets the way `bin/rails assets:precompile` does
 //! (Propshaft), renders the import map, and embeds the results plus the reference's public/ into the
-//! crate as `$OUT_DIR/embedded.rs`. The inputs are the port's own copy in `rust/web/`.
+//! crate as `$OUT_DIR/embedded.rs`. The inputs are the port's own copy in `web/`.
 
 #[path = "build/importmap.rs"]
 mod importmap;
@@ -167,7 +167,7 @@ fn main() {
     fs::write(out_dir.join("embedded.rs"), code).unwrap();
 }
 
-/// The Rails-shaped root of the frontend inputs: `rust/web/` (crates/assets -> rust -> web).
+/// The Rails-shaped root of the frontend inputs: `web/` (crates/assets -> workspace root -> web).
 fn reference_root(crate_dir: &Path) -> PathBuf {
     let root = crate_dir.join("../../web");
     root.canonicalize()

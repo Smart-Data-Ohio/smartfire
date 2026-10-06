@@ -330,7 +330,7 @@ fn ws15e_fizzy_reads_rails_encrypted_token_and_sweep_constants() {
         v["sweep"]["age"].as_i64().unwrap()
     );
     let output = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../.scratch/fizzy_rust_token.json");
+        .join("../../.scratch/fizzy_rust_token.json");
     std::fs::write(output,serde_json::to_vec(&json!({"ciphertext":crypto.encrypt(v["account"]["token"].as_str().unwrap()),"token":v["account"]["token"]})).unwrap()).unwrap();
 }
 

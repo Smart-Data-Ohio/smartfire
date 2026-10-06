@@ -1,4 +1,4 @@
-# Smartfire in Rust (`rust/`)
+# Smartfire
 
 Smartfire is this Rust app. It started as 37signals' port of stock ONCE Campfire
 ([basecamp/once-campfire-rust](https://github.com/basecamp/once-campfire-rust), MIT, imported here
@@ -6,7 +6,7 @@ with its history by `git subtree`; we don't track it), which we extended until i
 Smartfire's original Rails app (a fork of [basecamp/once-campfire](https://github.com/basecamp/once-campfire),
 MIT). Production has run on it since 2026-10-05, and the Rails app has been removed from the
 repository; it survives in the git history and as the recorded vectors, fixtures and seeds the
-tests pin. See `README.md` for where things stand.
+tests pin. See `README.md` and `docs/rust-port.md` for where things stand.
 
 - **Behavior is defined by this code and its tests.** The golden vectors, frozen seeds and
   recorded fixtures pin what Rails did; change them only together with the behavior they pin.
@@ -19,7 +19,7 @@ tests pin. See `README.md` for where things stand.
 
 ## Frontend and fixture inputs
 
-The app's static inputs live in `rust/`:
+The app's static inputs live at the repository root:
 
 - `web/`, laid out like the Rails app it came from: `app/assets`, `app/javascript`,
   `vendor/javascript`, `public/`, `config/importmap.rb`, `config/initializers/assets.rb`, the JS
@@ -30,8 +30,8 @@ The app's static inputs live in `rust/`:
 - `test-support/`: data the tests read that reference tools once held (attachment analyzer inputs,
   agents UI cast inputs, the post-pin status files, Node test adapters).
 
-In the tests, `campfire_db::fixtures::reference_root()` is `rust/web`, `reference_dir()` is
-`rust/fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")`
+In the tests, `campfire_db::fixtures::reference_root()` is `web`, `reference_dir()` is
+`fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")`
 maps a Rails-relative path to its copy here.
 
 ## Layout
@@ -52,11 +52,14 @@ maps a Rails-relative path to its copy here.
 | `reference-tools/` | — | The browser and behaviour harnesses the correctness suites run against Rust |
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
+| `ci/` | — | CI scripts, the correctness suites and their toolchain image (`ci/README.md`) |
+| `ops/` | — | The image's backup and restore hooks, and the release tests (`ops/README.md`) |
+| `deploy/` | — | Production deploy, GCP and backup scripts (`deploy/README.md`) |
+| `docs/` | — | User, operator and developer documentation |
 
-CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on
-every pull request, building only when `rust/`, the workflow or its setup action changed, and
-never runs Ruby, Rails or a reference image. Every ordinary nextest group and runnable doctest is
-required; tests run as twelve nextest partitions beside the frozen-seed check, clippy/doctest,
+CI for this tree is `.github/workflows/rust.yml`. It runs on every pull request, building unless
+only `docs/`, `deploy/`, other workflows or the root prose files changed, and never runs Ruby,
+Rails or a reference image. Every ordinary nextest group and runnable doctest is required; tests run as twelve nextest partitions beside the frozen-seed check, clippy/doctest,
 LLVM panic-recovery and stable-toolchain jobs, and the `Rust port` job fails unless all of
 them succeeded.
 `ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold, and the CI-only
@@ -67,7 +70,7 @@ seeds and the toolchain image.
 Dev, test and CI builds use the nightly in `rust-toolchain.toml`, and `.cargo/config.toml` builds
 the `campfire` crate with the Cranelift backend (everything else, and every release build, uses
 LLVM; the production image stays on the Dockerfile's stable toolchain, and so do the CI
-correctness suites, which build from the repository root). Cranelift can't unwind:
+correctness suites: `ci/exec.sh` selects that stable release and hides `.cargo/config.toml`). Cranelift can't unwind:
 tests of panic recovery need `--config 'profile.dev.package.campfire.codegen-backend="llvm"'`.
 Measurements and rejected options: `plans/build-speed-report.md`.
 
@@ -88,14 +91,14 @@ by `campfire db-migrate DATABASE`, which the release script runs; boot never mig
 one, regenerate `crates/db/src/schema.sql`, `schema_migrations.txt` and `schema_sequences.txt` with
 `CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files` (the test
 fails while they're stale), and migrate the committed test seeds with
-`python3 parity/bin/frozen-seeds migrate target/debug/campfire` (from `rust/`). `crates/db/baseline/` is the frozen
+`python3 parity/bin/frozen-seeds migrate target/debug/campfire`. `crates/db/baseline/` is the frozen
 Rails-era schema those start from, generated from the Rails app before it was removed. The Ruby
 differential and rollback comparisons are retired; their recorded results
 (`crates/db/src/tests/message_save_touches.json`, the differential test's expected rows) are frozen.
 
 ## Working rules
 
-- Work from `rust/`, with rustup's `cargo` (`~/.cargo/bin`): `rust-toolchain.toml` selects the
+- Work from the repository root, with rustup's `cargo` (`~/.cargo/bin`): `rust-toolchain.toml` selects the
   nightly. Stable cargo, including `mise exec rust@1.98.1` (it sets `RUSTUP_TOOLCHAIN`), rejects
   `.cargo/config.toml`'s Cranelift settings.
 - `cargo nextest run --workspace --exclude html5ever -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))"`
@@ -108,7 +111,7 @@ differential and rollback comparisons are retired; their recorded results
   locally they skip with a message, so say whether the seeds were restored when reporting
   results. The `Rust seeds` job checks them against their manifest and this build's migrations;
   after adding a migration, run `python3 parity/bin/frozen-seeds migrate target/debug/campfire` from
-  `rust/` (the binary path is relative to the working directory; the script finds the seeds itself). See
+  the repository root (the binary path is relative to the working directory; the script finds the seeds itself). See
   `parity/seeds/README.md`. Storage vectors compare media bytes only when the
   local libvips/ffmpeg match the ones that produced `vectors/storage.json`.
 - `cargo clippy --workspace --exclude html5ever --all-targets` should stay clean. (`html5ever` is a

@@ -67,11 +67,11 @@ any such data. Backfills of existing rows are fine.
 Local checks use fake Docker/ONCE/cloud boundaries:
 
 ```sh
-python3 -m unittest discover -s rust/ops/tests -p 'test_release.py'
-python3 -m unittest discover -s rust/ops/tests -p 'test_workflows.py'
+python3 -m unittest discover -s ops/tests -p 'test_release.py'
+python3 -m unittest discover -s ops/tests -p 'test_workflows.py'
 ```
 
-`rust/ops/tests/simulate_release.sh PREVIOUS CANDIDATE MIGRATING` runs the release
+`ops/tests/simulate_release.sh PREVIOUS CANDIDATE MIGRATING` runs the release
 script against real containers: real images served from a local registry, a real
 volume and the real `campfire` commands, with only ONCE, root, systemd and the TLS
 front door faked. It covers:
@@ -85,10 +85,10 @@ release's image as MIGRATING.
 
 ## Image and release contract
 
-Build with `rust/` as the context; it carries its own frontend inputs in `rust/web/`:
+Build with the repository root as the context; it carries its own frontend inputs in `web/`:
 
 ```sh
-docker build -f rust/Dockerfile -t smartfire-rust rust
+docker build -t smartfire-rust .
 ```
 
 The image:
@@ -96,7 +96,7 @@ The image:
 - has uid/gid 1000, `/rails`, `/rails/storage/{db,files,backups}`, ports 80/443,
   `bin/boot`, and both ONCE hooks;
 - has no `HEALTHCHECK`;
-- embeds assets digested from `rust/web/` at build time;
+- embeds assets digested from `web/` at build time;
 - uses `CARGO_BUILD_JOBS` (default 4) and `CARGO_PROFILE` (default release; a
   developer can select dev, but measurements meant to represent deployment use
   release). `CARGO_CACHE_SCOPE` separates a worker's Docker target/registry caches.

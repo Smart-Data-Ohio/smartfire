@@ -8,13 +8,13 @@
 # the real binaries and databases.
 #
 # Usage:
-#   rust/ops/tests/simulate_release.sh PREVIOUS CANDIDATE MIGRATING
+#   ops/tests/simulate_release.sh PREVIOUS CANDIDATE MIGRATING
 #
 #   PREVIOUS   a deployed Rust image (local tag), e.g. the current production one
 #   CANDIDATE  an image built from this checkout with no pending migrations
 #   MIGRATING  the same, built with one extra example migration and its blessed
 #              schema files (never committed). For example:
-#                cp -r rust /tmp/mig && cd /tmp/mig   # without target/
+#                git worktree add ../mig && cd ../mig
 #                $EDITOR crates/db/migrations/<VERSION>_<name>.sql
 #                CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files
 #                docker build -t smartfire:migrating .
@@ -28,7 +28,7 @@ set -euo pipefail
 [ "$#" -eq 3 ] || { sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 PREVIOUS_TAG="$1" CANDIDATE_TAG="$2" MIGRATING_TAG="$3"
 [ "$(id -u)" = 1000 ] || { echo "run as uid 1000: the containers write the volume as 1000" >&2; exit 2; }
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPT="$ROOT/deploy/gcp/campfire-release.sh"
 REAL_DOCKER="$(command -v docker)"
 REAL_CURL="$(command -v curl)"
@@ -107,7 +107,7 @@ cat > "$SIM/bin/id" <<'EOF'
 if [ "${1:-}" = -u ]; then echo 0; else exec /usr/bin/id "$@"; fi
 EOF
 chmod +x "$SIM/bin/"*
-grep -v '^#' "$ROOT/rust/parity/.env.reference" | grep . > "$SIM/app.env"
+grep -v '^#' "$ROOT/parity/.env.reference" | grep . > "$SIM/app.env"
 
 export PATH="$SIM/bin:$PATH" REGISTRY_HOST=127.0.0.1:5000 STATE_ROOT="$SIM/state" \
   LOCK_FILE="$SIM/release.lock" ALLOW_BACKUP_WINDOW=1 FEED_DRAIN_TIMEOUT=5 \

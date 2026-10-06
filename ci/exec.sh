@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
-repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 : "${RUNNER_TEMP:?Set RUNNER_TEMP to a disk-backed scratch directory}"
 scratch="$RUNNER_TEMP/rust-correctness"
 mkdir -p "$scratch"
 # The same CI profile and Cargo home as cargo.sh (see cargo-config.toml).
-mkdir -p "$repo/rust/.cargo-home"
-install -m 644 "$repo/rust/ci/cargo-config.toml" "$repo/rust/.cargo-home/config.toml"
+mkdir -p "$repo/.cargo-home"
+install -m 644 "$repo/ci/cargo-config.toml" "$repo/.cargo-home/config.toml"
+# Correctness builds use the image's stable toolchain and LLVM, as production does, not the
+# nightly and Cranelift the test shards use: RUSTUP_TOOLCHAIN overrides rust-toolchain.toml, and
+# an empty file hides .cargo/config.toml's Cranelift settings (stable Cargo rejects them).
+stable=$(sed -nE 's/^ARG RUST_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' "$repo/Dockerfile")
+[[ -n "$stable" ]] || { echo "RUST_VERSION not found in $repo/Dockerfile" >&2; exit 1; }
+: > "$scratch/no-cargo-config.toml"
 git_mount=()
 git_common=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)
 if [[ "$git_common" != "$repo/"* ]]; then
@@ -24,10 +30,12 @@ docker run --rm --init --network host --user "$(id -u):$(id -g)" \
   --group-add "$(stat -c %g /var/run/docker.sock)" \
   --volume /var/run/docker.sock:/var/run/docker.sock \
   "${git_mount[@]}" \
-  --volume "$repo:$repo" --volume "$scratch:$scratch" --volume "$scratch:/ci-home" --workdir "$repo" \
+  --volume "$repo:$repo" --volume "$scratch/no-cargo-config.toml:$repo/.cargo/config.toml:ro" \
+  --volume "$scratch:$scratch" --volume "$scratch:/ci-home" --workdir "$repo" \
   --env HOME=/ci-home --env TMPDIR="$scratch" --env CI=true \
   --env CAMPFIRE_CARGO=cargo --env RUST_TEST_THREADS=4 --env CARGO_BUILD_JOBS=4 \
-  --env CARGO_HOME="$repo/rust/.cargo-home" --env CARGO_TARGET_DIR="$repo/rust/target" \
+  --env RUSTUP_TOOLCHAIN="$stable" \
+  --env CARGO_HOME="$repo/.cargo-home" --env CARGO_TARGET_DIR="$repo/target" \
   --env CARGO_INCREMENTAL=0 --env CARGO_PROFILE_DEV_DEBUG=line-tables-only \
   --env CARGO_PROFILE_TEST_DEBUG=line-tables-only --env RUSTFLAGS='-C link-arg=-fuse-ld=mold' \
   --env WS12_BROWSER_SCRATCH="$scratch/ws12" --env WS13_BROWSER_SCRATCH="$scratch/ws13" \

@@ -6,7 +6,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module'; import { fillThreadName } from '../../users/thread_form.mjs';
 // Reject the broken host path before looking for any browser dependencies.
 if (process.env.WS11UI_HOST_NETWORK === fs.readlinkSync('/proc/self/ns/net')) throw new Error('browser must have an isolated network namespace');
-const require = createRequire(path.resolve('rust/parity/package.json'));
+const require = createRequire(path.resolve('parity/package.json'));
 const { chromium } = require('playwright');
 // Playwright's assertion library lives in @playwright/test, which this harness
 // deliberately does not add. Poll the same selector/text predicates directly.

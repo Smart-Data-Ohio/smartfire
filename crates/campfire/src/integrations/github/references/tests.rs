@@ -4,10 +4,10 @@ use crate::{app, config::Config};
 use campfire_db::{Message, MessageChanges, NewMessage, fixtures};
 
 pub(crate) async fn application() -> (app::App, tempfile::TempDir) {
-    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g"),
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g"),
     )
     .unwrap();
     let root = dir.path().to_string_lossy().into_owned();

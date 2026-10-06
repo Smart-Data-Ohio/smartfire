@@ -8,7 +8,7 @@
 #
 #   docker build -t campfire-rust --build-arg APP_VERSION=... --build-arg GIT_REVISION=... .
 #
-# The build context is rust/, including web/, the port's copy of the Rails app's assets and public/
+# The build context is the repository root, including web/, the port's copy of the Rails app's assets and public/
 # files that the binary embeds. Runtime hooks live in this tree and honor the storage overrides.
 #
 # Media: variants and video posters must be byte-identical to the reference's, so libvips and

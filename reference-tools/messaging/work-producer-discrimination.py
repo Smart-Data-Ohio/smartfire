@@ -84,10 +84,10 @@ READBACK = '''                finally:
 
 
 def driver_source(root, output):
-    source = root / 'rust/reference-tools/messaging/behavior-check.py'
+    source = root / 'reference-tools/messaging/behavior-check.py'
     text = source.read_text()
     # Bootstrap above actually ran these unchanged setup commands in this invocation.
-    starts = ('subprocess.run([str(RUST / "parity/bin/frozen-seeds")', 'subprocess.run(["npm",')
+    starts = ('subprocess.run([str(ROOT / "parity/bin/frozen-seeds")', 'subprocess.run(["npm",')
     text = '\n'.join('pass # inputs built by this invocation\n' if line.startswith(starts) else line for line in text.splitlines())
     text = text.replace('str(target / "debug/campfire")', 'str(ROOT / ".scratch/ws8bm-work-producers/producer-campfire")')
     needle = '                finally:\n                    stop_behavior_server('
@@ -113,7 +113,7 @@ def intended_failure(text, marker):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--root', type=Path, default=TOOLS.parents[2])
+    parser.add_argument('--root', type=Path, default=TOOLS.parents[1])
     parser.add_argument('--mutant', action='append', choices=CASES)
     parser.add_argument('--expect-escapes', action='store_true', help='baseline proof for the two reviewed escaping producers only')
     args = parser.parse_args()
@@ -122,14 +122,14 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, CARGO_BUILD_JOBS='2', RUST_TEST_THREADS='8',
                TMPDIR=str(root / '.scratch'))
-    target = Path(env.get('CARGO_TARGET_DIR', root / 'rust/target')).resolve()
+    target = Path(env.get('CARGO_TARGET_DIR', root / 'target')).resolve()
     env['CARGO_TARGET_DIR'] = str(target)
-    bootstrap = ['python3', str(root / 'rust/reference-tools/messaging/behavior-check.py'),
+    bootstrap = ['python3', str(root / 'reference-tools/messaging/behavior-check.py'),
                  'channel_threads_controller', '--case', CASES['missing-history'], '--keep-going']
     with (output / 'bootstrap.log').open('w') as log:
         control = subprocess.run(bootstrap, cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT)
     assert control.returncode == 0, 'normal producer control failed; see ' + str(output / 'bootstrap.log')
-    sys.path.insert(0, str(root / 'rust/reference-tools/messaging'))
+    sys.path.insert(0, str(root / 'reference-tools/messaging'))
     from browser_host import prepare_source
     generated = prepare_source(root)
     source = generated / 'crates/db/src/models/channel_thread/work.rs'

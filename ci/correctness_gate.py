@@ -3,7 +3,7 @@
 
 Usage: correctness_gate.py RECEIPTS_DIR [--scope full|messaging-and-browsers] [--head SHA]
 
-Each job uploads rust/target/ci-receipts (correctness.sh): TAG.json with its exit code, the
+Each job uploads target/ci-receipts (correctness.sh): TAG.json with its exit code, the
 nextest JUnit for its ignored selection, and for messaging behaviour shards the named cases
 it ran. This requires that every job exited 0 on the expected commit, that for each suite
 with ignored tests the shards' JUnit receipts together contain exactly the registry's

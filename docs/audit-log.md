@@ -1,7 +1,7 @@
 # Audit log
 
 Security-relevant actions across the workspace are recorded in an
-append-only audit log (`rust/crates/db/src/models/audit_log.rs`), which
+append-only audit log (`crates/db/src/models/audit_log.rs`), which
 administrators browse and export at `/account/audit_log`. Rows are kept for
 one year, then pruned by the daily retention prune job.
 

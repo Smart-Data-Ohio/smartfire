@@ -44,7 +44,7 @@ async fn database(case: &Value) -> TestDb {
         ..Default::default()
     };
     let directory =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     let fixture = tokio::task::spawn_blocking(move || TestDb::with_env(env, &directory))
         .await
         .unwrap();
@@ -323,7 +323,7 @@ async fn github_agent_runtime_performs_discards_and_leaves_terminal_claim_on_wri
         ])
         .await;
         let scratch =
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(scratch).unwrap();
         let fixture_secret: Value =

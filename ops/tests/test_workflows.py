@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 REVISION = "a2fbe296f0675b1a657cf81c1f537b6687451403"
 
 
@@ -129,7 +129,7 @@ class WorkflowTest(unittest.TestCase):
         build = next(step["with"] for step in amd64["steps"]
                      if step.get("uses", "").startswith("docker/build-push-action@"))
         self.assertEqual((build["context"], build["file"], build["platforms"]),
-                         ("rust", "rust/Dockerfile", "linux/amd64"))
+                         (".", "Dockerfile", "linux/amd64"))
         self.assertIn("GIT_REVISION=${{ github.sha }}", build["build-args"])
         self.assertFalse(build["provenance"])
         self.assertEqual(sorted(image["jobs"]["ghcr"]["needs"]), ["amd64", "arm64"])

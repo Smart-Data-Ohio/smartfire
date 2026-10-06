@@ -592,7 +592,7 @@ async fn test_database() -> TestDb {
 async fn test_database_with_clock(clock: Arc<campfire_db::TestClock>) -> TestDb {
     tokio::task::spawn_blocking(move || {
         let dir =
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         TestDb::in_dir(clock, &dir)
     })
     .await

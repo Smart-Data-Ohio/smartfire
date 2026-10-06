@@ -29,7 +29,7 @@ If you'd rather build the image yourself from your own copy of the source, you c
 docker build -t smartfire rust
 ```
 
-The image is built from [`rust/Dockerfile`](../rust/Dockerfile), with `rust/` as the build context.
+The image is built from the [`Dockerfile`](../Dockerfile), with the repository root as the build context.
 
 ### Mounting a storage volume
 
@@ -131,7 +131,7 @@ identity already linked by mistake can be unlinked on the account page.
 #### Content Security Policy
 
 Every page sends an enforced `Content-Security-Policy` header (see
-`content_security_policy` in `rust/crates/campfire/src/security.rs` for
+`content_security_policy` in `crates/campfire/src/security.rs` for
 each allowed source). Browsers report violations to `POST /csp_reports`, which logs one
 `CSP violation:` line per report (directive, blocked origin, and document
 path; never query strings), rate-limited to 20 reports per client per

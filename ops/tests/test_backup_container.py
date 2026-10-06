@@ -10,7 +10,7 @@ import tempfile
 import threading
 import unittest
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 IMAGE = os.environ.get("WS18_IMAGE")
 
 FAKE_DOCKER = r'''#!/usr/bin/env python3
@@ -45,7 +45,7 @@ class BackupContainerTest(unittest.TestCase):
             volume = work / "volume"
             (volume / "db").mkdir(parents=True)
             (volume / "files").mkdir()
-            shutil.copy2(ROOT / "rust/parity/.seed/default/db/production.sqlite3", volume / "db/production.sqlite3")
+            shutil.copy2(ROOT / "parity/.seed/default/db/production.sqlite3", volume / "db/production.sqlite3")
             (volume / "files/sentinel").write_text("ws18 upload preserved")
             with closing(sqlite3.connect(volume / "db/production.sqlite3")) as conn:
                 conn.execute("CREATE TABLE ws18_backup_writes(id INTEGER PRIMARY KEY)")
@@ -62,7 +62,7 @@ class BackupContainerTest(unittest.TestCase):
             (bin_dir / "gcloud").chmod(0o755)
             real_docker = shutil.which("docker")
             subprocess.run([real_docker, "run", "-d", "--name", "ws18-nightly-backup", "--network", "none", "--memory", "768m",
-                "--env-file", str(ROOT / "rust/parity/.env.reference"), "-v", f"{volume}:/rails/storage", IMAGE], check=True, capture_output=True)
+                "--env-file", str(ROOT / "parity/.env.reference"), "-v", f"{volume}:/rails/storage", IMAGE], check=True, capture_output=True)
             stopping, started = threading.Event(), threading.Event()
             writer = None
             try:

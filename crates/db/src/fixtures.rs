@@ -1,4 +1,4 @@
-//! Loads the Rails app's `test/fixtures/*.yml` (now `rust/fixtures/`) the way `ActiveRecord::FixtureSet` does, so Rust
+//! Loads the Rails app's `test/fixtures/*.yml` (now `fixtures/`) the way `ActiveRecord::FixtureSet` does, so Rust
 //! tests run against the same rows as the Ruby tests:
 //!
 //! - ids are `Zlib.crc32(label) % (2**30 - 1)` unless given;
@@ -36,16 +36,16 @@ pub fn identify(label: &str) -> i64 {
     i64::from(crc32fast::hash(label.as_bytes()) % MAX_ID)
 }
 
-/// The app's static inputs: `rust/web/`, laid out like the Rails app they came from
+/// The app's static inputs: `web/`, laid out like the Rails app they came from
 /// (`app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`,
 /// `script/livekit-gateway`, ...).
 pub fn reference_root() -> PathBuf {
-    rust_root().join("web")
+    workspace_root().join("web")
 }
 
-/// The fixtures, the Rails app's `test/fixtures`: `rust/fixtures/`.
+/// The fixtures, the Rails app's `test/fixtures`: `fixtures/`.
 pub fn reference_dir() -> PathBuf {
-    rust_root().join("fixtures")
+    workspace_root().join("fixtures")
 }
 
 /// A file named by its path in the Rails app (`public/500.html`,
@@ -57,8 +57,8 @@ pub fn reference_path(path: &str) -> PathBuf {
     }
 }
 
-/// `rust/` (crates/db -> crates -> rust).
-fn rust_root() -> PathBuf {
+/// The workspace root (crates/db -> crates -> root).
+fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 

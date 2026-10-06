@@ -11,7 +11,7 @@ inputs:
     description: Build the toolchain image from the main-written Buildx cache
     default: 'true'
   cargo-cache:
-    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds from the repository root), stable (the production toolchain check), or none'
+    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds through ci/exec.sh), stable (the production toolchain check), or none'
     default: none
   free-disk:
     description: Delete unused preinstalled SDKs in the background
@@ -42,7 +42,7 @@ runs:
     - name: Restore the committed test seeds
       if: ${{ inputs.parity == 'seeds' }}
       shell: bash
-      run: python3 rust/parity/bin/frozen-seeds restore
+      run: python3 parity/bin/frozen-seeds restore
 
     - name: Set up Docker Buildx
       if: ${{ inputs.toolchain == 'true' }}
@@ -56,8 +56,8 @@ runs:
       if: ${{ inputs.toolchain == 'true' }}
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
-        context: rust
-        file: rust/Dockerfile
+        context: .
+        file: Dockerfile
         target: toolchain
         tags: campfire-toolchain
         load: true
@@ -67,7 +67,7 @@ runs:
 
     # One cache per kind of build: the nextest harnesses' dependencies, clippy's check-mode
     # dependencies plus the binaries' and doctests', or the correctness suites' stable-toolchain
-    # builds. Workspace crates are pruned before saving (rust/ci/prune-target.py): a fresh
+    # builds. Workspace crates are pruned before saving (ci/prune-target.py): a fresh
     # checkout's mtimes make Cargo rebuild them anyway. Every key, including the fallbacks, is
     # scoped to the toolchains (rust-toolchain.toml's nightly, the Dockerfile's stable release
     # and toolchain image), so an entry built by another compiler is never restored. The cache
@@ -78,9 +78,9 @@ runs:
       if: ${{ inputs.cargo-cache != 'none' }}
       shell: bash
       env:
-        TOOLCHAIN: rust-cargo-v4-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/rust-toolchain.toml', 'rust/Dockerfile') }}-
-        INPUTS: ${{ hashFiles('rust/Cargo.toml', 'rust/crates/*/Cargo.toml', 'rust/bench/*/Cargo.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
-        LOCK: ${{ hashFiles('rust/Cargo.lock') }}-
+        TOOLCHAIN: rust-cargo-v4-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust-toolchain.toml', 'Dockerfile') }}-
+        INPUTS: ${{ hashFiles('Cargo.toml', 'crates/*/Cargo.toml', 'bench/*/Cargo.toml', '.cargo/config.toml', 'ci/cargo.sh', 'ci/cargo-config.toml') }}-
+        LOCK: ${{ hashFiles('Cargo.lock') }}-
       run: |
         {
           echo "toolchain=$TOOLCHAIN"
@@ -95,8 +95,8 @@ runs:
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
-          rust/.cargo-home/registry
-          rust/target
+          .cargo-home/registry
+          target
         key: ${{ steps.cargo-key.outputs.prefix }}
         restore-keys: |
           ${{ steps.cargo-key.outputs.prefix }}

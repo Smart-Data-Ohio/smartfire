@@ -22,7 +22,7 @@ PROBES = {
 
 
 def run_receipts(checkout, receipts, env, log):
-    packages = sorted({Path(r['test_file']).parts[2] for r in receipts})
+    packages = sorted({Path(r['test_file']).parts[1] for r in receipts})
     package_names = {'views': 'campfire_views', 'campfire': 'campfire'}
     expression = ' | '.join(f'test({r["test"]})' for r in receipts)
     command = ['cargo', 'nextest', 'run', '--locked', '-j', '4',
@@ -31,7 +31,7 @@ def run_receipts(checkout, receipts, env, log):
         command += ['-p', package_names[package]]
     print(' '.join(command), flush=True)
     with log.open('w') as output:
-        result = subprocess.run(command, cwd=checkout / 'rust', env=env,
+        result = subprocess.run(command, cwd=checkout, env=env,
                                 stdout=output, stderr=subprocess.STDOUT)
     text = log.read_text()
     summary = next((line.strip() for line in text.splitlines()
@@ -51,15 +51,15 @@ def main():
     # Use current working files, including uncommitted fixes. No source file in
     # the real worktree is ever mutated, and no git stash or checkout is needed.
     tracked = subprocess.check_output(
-        ['git', 'ls-files', '-z', '--', 'rust'], cwd=ROOT.parent).decode().split('\0')
+        ['git', 'ls-files', '-z'], cwd=ROOT).decode().split('\0')
     with tempfile.TemporaryDirectory(prefix='template-rendering-', dir=target) as tmp:
         checkout = Path(tmp)
         for relative in filter(None, tracked):
-            source = ROOT.parent / relative
+            source = ROOT / relative
             destination = checkout / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
-        (checkout / 'rust/parity/.seed').symlink_to(ROOT / 'parity/.seed',
+        (checkout / 'parity/.seed').symlink_to(ROOT / 'parity/.seed',
                                                   target_is_directory=True)
         env = dict(os.environ, CI='1', CARGO_TARGET_DIR=str(target))
         (checkout / 'tmp').mkdir()
@@ -72,7 +72,7 @@ def main():
         if code or not re.search(fr'{len(controls)} tests run: {len(controls)} passed', summary):
             raise SystemExit(f'Clean receipt controls did not pass; see {logs}/control.log')
         for index, name in enumerate(PROBES):
-            template = checkout / 'rust/crates/views/templates' / name
+            template = checkout / 'crates/views/templates' / name
             original = template.read_bytes()
             template.write_bytes(original + f'\n<!-- TEMPLATE-RENDER-PROBE-{index} -->\n'.encode())
             try:

@@ -40,7 +40,7 @@ run=Path(tempfile.mkdtemp(prefix='ws11ui-originals-',dir=scratch))
 # state for these declarations.
 frozen=root/'parity/.seed/ledger_originals'
 if not (frozen/'db/production.sqlite3').is_file():
- shutil.rmtree(run);raise SystemExit(f'missing {frozen}: run python3 rust/parity/bin/frozen-seeds restore')
+ shutil.rmtree(run);raise SystemExit(f'missing {frozen}: run python3 parity/bin/frozen-seeds restore')
 seed=run/'seed';shutil.copytree(frozen,seed)
 labels=json.loads((seed/'labels.json').read_text())
 with sqlite3.connect(seed/'db/production.sqlite3') as db:
@@ -149,7 +149,7 @@ try:
    print('ORIGINAL_SERVER_CONFIGURATION '+json.dumps(settings,sort_keys=True),flush=True)
   fixture(case)
   script='ledger_browser_'+args.mode+'.mjs'
-  cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root.parent}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{ports[1]}','-e',f'WS11UI_BROWSER_LABELS=/work/{(seed/"labels.json").relative_to(root.parent)}','-v',f'{database.parent}:/database','-e','WS11UI_BROWSER_DATABASE=/database/production.sqlite3','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/rust/reference-tools/users/'+script]
+  cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{ports[1]}','-e',f'WS11UI_BROWSER_LABELS=/work/{(seed/"labels.json").relative_to(root)}','-v',f'{database.parent}:/database','-e','WS11UI_BROWSER_DATABASE=/database/production.sqlite3','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/reference-tools/users/'+script]
   result=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=getattr(module,'CASE_TIMEOUT',{}).get(case,90))
   print(f'Original Rust {case}:',flush=True);print(result.stdout,flush=True)
   if args.controls or args.mutation:

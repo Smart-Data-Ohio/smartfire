@@ -62,7 +62,7 @@ Basic-auth vectors store credential parts and mutation recipes; tests construct 
 at runtime to keep encoded authorization headers out of source fixtures.
 The corpus includes sanitized structures from 32 public real-email HTML parts and two
 archived Authentication-Results fields; their provenance and redaction rules are in the
-git history, under `rust/reference-tools/mail/corpus/`. Modern mail-client coverage remains limited.
+git history, under `reference-tools/mail/corpus/`. Modern mail-client coverage remains limited.
 
 Production MIME depth was recorded against the Rails app (`vectors/mail/mime-depth.json`, frozen).
 The recorder submitted an authenticated relay request, then ran the production `resque-pool`

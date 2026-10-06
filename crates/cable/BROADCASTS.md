@@ -246,7 +246,7 @@ signature-only, and the `user_<id>_*` names belong to their channels.
 
 ## Source index
 
-Checked by `python3 reference-tools/cable/broadcast_contract.py --check` from `rust/`.
+Checked by `python3 reference-tools/cable/broadcast_contract.py --check` from the repository root.
 Every primitive has a full source location here; call arguments and partials are in the tables above.
 
 | Source | Owner | State |

@@ -133,37 +133,36 @@ def include_inputs(root, contents, tracked, *, build_outputs=None, pending=None,
 
 
 def prepare_source(root):
-    source = root / "rust"
-    generated = root / ".scratch/ws8bm-browser-host/rust"
+    generated = root / ".scratch/ws8bm-browser-host/workspace"
     # Copy source inputs, never a target, seed, or prior generated tree. Stable
     # paths permit Cargo caching, while every input is refreshed on each run.
     paths = subprocess.check_output(["git", "ls-files", "-z"], cwd=root, text=True).split("\0")
     tracked = {Path(path) for path in paths if path}
     wanted = [Path(path) for path in paths
-              if path.startswith(("rust/crates/", "rust/vectors/", "rust/test-support/", "rust/web/", "rust/fixtures/")) or
-              path in ("rust/Cargo.toml", "rust/Cargo.lock", "rust/rust-toolchain.toml", "rust/parity/.env.reference", "rust/parity/reference.sha")]
+              if path.startswith(("crates/", "vectors/", "test-support/", "web/", "fixtures/")) or
+              path in ("Cargo.toml", "Cargo.lock", "rust-toolchain.toml", "parity/.env.reference", "parity/reference.sha")]
     contents = {}
     for relative in wanted:
         content = (root / relative).read_bytes()
-        if relative == Path("rust/crates/campfire/src/controllers/presenters/test_support.rs"):
+        if relative == Path("crates/campfire/src/controllers/presenters/test_support.rs"):
             # -2 already provides this helper. Prefer it when present.
             if b"async fn ws8bm_browser_host_without_jobs()" not in content:
-                content += (source / "reference-tools/messaging/browser-host.rs").read_bytes()
+                content += (root / "reference-tools/messaging/browser-host.rs").read_bytes()
             content = content.replace(b"    let front = campfire_kit::front::FrontConfig::from_env();", b"    ws8bm_install_drive_client(&app);\n    let front = campfire_kit::front::FrontConfig::from_env();")
             content = content.replace(b"        app.booted.router.clone(),", b"        app.booted.router.clone().merge(ws8bm_attachment_job_router(&app)),")
-            content += (source / "reference-tools/messaging/browser-drive-client.rs").read_bytes()
-            content += (source / "reference-tools/messaging/browser-attachment-jobs.rs").read_bytes()
+            content += (root / "reference-tools/messaging/browser-drive-client.rs").read_bytes()
+            content += (root / "reference-tools/messaging/browser-attachment-jobs.rs").read_bytes()
         contents[relative] = content
     pending = []
     for relative in include_inputs(root, contents, tracked, pending=pending):
         contents.setdefault(relative, (root / relative).read_bytes())
-    contents[Path("rust/include-audit-pending.json")] = json.dumps(pending, indent=2).encode()
-    if generated.parent.exists():
-        for path in generated.parent.rglob("*"):
-            if path.is_file() and path.relative_to(generated.parent) not in contents:
+    contents[Path("include-audit-pending.json")] = json.dumps(pending, indent=2).encode()
+    if generated.exists():
+        for path in generated.rglob("*"):
+            if path.is_file() and path.relative_to(generated) not in contents:
                 path.unlink()
     for relative, content in contents.items():
-        path = generated.parent / relative
+        path = generated / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists() or path.read_bytes() != content:
             path.write_bytes(content)
@@ -206,14 +205,14 @@ def audit_build(root, generated, entries, host_target):
             contents[path] = path.read_bytes()
     edges = []
     inputs = include_inputs(root, contents, tracked, build_outputs=outputs,
-                            generated_root=generated.parent, edges=edges)
+                            generated_root=generated, edges=edges)
     output_roots = tuple(outputs.values())
     for path in dependencies:
         if not path.is_file():
             raise RuntimeError(f"compiler include audit: dependency missing: {path}")
         if any(path.is_relative_to(output) for output in output_roots):
             continue
-        base = generated.parent if path.is_relative_to(generated.parent) else root
+        base = generated if path.is_relative_to(generated) else root
         if not path.is_relative_to(base) or path.relative_to(base) not in tracked:
             raise RuntimeError(f"compiler include audit: untracked dependency: {path}")
     def is_generated(path):
@@ -230,12 +229,11 @@ def audit_build(root, generated, entries, host_target):
 
 
 def build_host(root, env):
-    source = root / "rust"
     generated = prepare_source(root)
     # A generated package has the same Cargo identity as the workspace app.
     # Sharing its test executable with nextest replaces a running suite's
     # binary, despite different source roots. Keep this cache under target/.
-    host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
+    host_target = Path(env.get("CARGO_TARGET_DIR", root / "target")).resolve() / 'ws8bm-browser-host'
     host_env = dict(env)
     host_env["CARGO_TARGET_DIR"] = str(host_target)
     jobs = env.get("WS8BM_HOST_BUILD_JOBS", "2")  # parallelism only; the output is the same
@@ -261,5 +259,5 @@ def build_host(root, env):
 if __name__ == "__main__":
     # CI builds and audits this host once, then hands the executable to every sharded
     # behaviour job (.github/workflows/rust.yml); behavior-check.py otherwise builds it.
-    root = Path(__file__).resolve().parents[3]
+    root = Path(__file__).resolve().parents[2]
     print(build_host(root, dict(os.environ)))

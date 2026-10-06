@@ -30,8 +30,8 @@ class RestoreCheckWorkflowTest(unittest.TestCase):
 
     def test_builds_the_rust_image_from_the_checkout_without_pushing_before_the_check(self):
         text = WORKFLOW.read_text()
-        self.assertIn("file: rust/Dockerfile", text)
-        self.assertIn("context: rust", text)
+        self.assertIn("file: Dockerfile", text)
+        self.assertIn("context: .", text)
         self.assertNotIn("build-contexts:", text)
         self.assertIn("push: false", text)
         self.assertIn("load: true", text)

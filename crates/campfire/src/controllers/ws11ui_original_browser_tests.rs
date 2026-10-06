@@ -18,37 +18,37 @@ fn replay(mode: &str) {
     print!("{stdout}");
 }
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_people_assertions() {
     replay("people");
 }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_picker_assertions() {
     replay("pickers");
 }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_mobile_member_assertions() {
     replay("members");
 }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_group_lifecycle_assertions() {
     replay("group");
 }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_tour_assertions() {
     replay("tours");
 }
 
 #[test]
-#[ignore = "Rust Chromium gate: rust/parity/system/ws12"]
+#[ignore = "Rust Chromium gate: parity/system/ws12"]
 fn original_starred_people_assertions() {
     replay("stars");
 }

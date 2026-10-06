@@ -68,7 +68,7 @@ async fn database() -> (TestDb, TestClock, RecordingSink) {
         message_reference_syncs: vec![super::super::references::sync],
         ..Default::default()
     };
-    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     let db = tokio::task::spawn_blocking(move || TestDb::with_env(env, &dir))
         .await
         .unwrap();

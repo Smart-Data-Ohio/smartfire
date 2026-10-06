@@ -8,10 +8,7 @@ use serde_json::Value;
 const RAILS_TEMPLATES: usize = 284;
 
 fn resolve(path: &str) -> PathBuf {
-    let relative = path
-        .strip_prefix("rust/")
-        .unwrap_or_else(|| panic!("{path} is outside rust/"));
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(relative)
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").join(path)
 }
 
 fn files(directory: &Path) -> BTreeSet<String> {
@@ -37,21 +34,21 @@ fn files(directory: &Path) -> BTreeSet<String> {
 }
 
 fn map() -> Value {
-    serde_json::from_slice(&std::fs::read(resolve("rust/parity/template-coverage.json")).unwrap())
+    serde_json::from_slice(&std::fs::read(resolve("parity/template-coverage.json")).unwrap())
         .unwrap()
 }
 
 fn validate(map: &Value) -> Result<(), String> {
     let fresh: Value = serde_json::from_slice(
-        &std::fs::read(resolve("rust/vectors/template_coverage_http.json")).unwrap(),
+        &std::fs::read(resolve("vectors/template_coverage_http.json")).unwrap(),
     )
     .unwrap();
-    let pin = std::fs::read_to_string(resolve("rust/parity/reference.sha")).unwrap();
+    let pin = std::fs::read_to_string(resolve("parity/reference.sha")).unwrap();
     if map["reference_sha"] != pin.trim() || fresh["reference"] != pin.trim() {
         return Err("template map and fresh controller oracle must identify the parity pin".into());
     }
     for (key, directory) in [
-        ("templates", Some("rust/crates/views/templates")),
+        ("templates", Some("crates/views/templates")),
         ("rails_templates", None),
     ] {
         let entries = map[key]
@@ -96,10 +93,10 @@ fn validate(map: &Value) -> Result<(), String> {
                         .as_array()
                         .filter(|paths| !paths.is_empty())
                         .ok_or_else(|| format!("{name}: missing unreachable-source evidence"))?;
-                    // Sources outside rust/ were the Rails app's, removed with it.
+                    // Sources under app/ were the Rails app's, removed with it.
                     for source in sources {
                         let source_path = source.as_str().unwrap_or_default();
-                        if source_path.starts_with("rust/") && !resolve(source_path).is_file() {
+                        if !source_path.starts_with("app/") && !resolve(source_path).is_file() {
                             return Err(format!("{name}: missing source {source}"));
                         }
                     }
@@ -143,7 +140,7 @@ fn validate(map: &Value) -> Result<(), String> {
                         ));
                     }
                     if key == "rails_templates"
-                        && oracle == "rust/vectors/template_coverage_http.json"
+                        && oracle == "vectors/template_coverage_http.json"
                     {
                         let case_pointer = pointer.strip_suffix("/body").ok_or_else(|| {
                             format!("{name}: fresh controller witness must identify response body")
@@ -298,7 +295,7 @@ fn coverage_guard_rejects_missing_templates_and_unproven_receipts() {
 
     let mut wrong_controller_branch = map();
     wrong_controller_branch["rails_templates"]["users/show.html.erb"]["witness"] = serde_json::json!({
-        "oracle": "rust/vectors/template_coverage_http.json",
+        "oracle": "vectors/template_coverage_http.json",
         "pointer": "/cases/11/body",
         "needle": "Failed to load message content"
     });

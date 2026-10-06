@@ -35,7 +35,7 @@ async fn complete_search_headers_match_rails_when_both_include_the_production_de
         .await;
     let mut browser = app.david();
     let outputs = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../.scratch/ws8bm2-c/http-bodies");
+        .join("../../.scratch/ws8bm2-c/http-bodies");
     std::fs::create_dir_all(&outputs).unwrap();
     let mut bare_differences = 0;
     for (index, case) in vector["cases"].as_array().unwrap().iter().enumerate() {

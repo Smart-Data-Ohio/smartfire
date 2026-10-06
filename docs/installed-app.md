@@ -2,13 +2,13 @@
 
 Smartfire installs as a PWA (manifest and icons served by the app) and
 registers its service worker (`/service-worker.js`, rendered from
-`rust/crates/views/templates/pwa/service_worker.js`) on every page load, so both installed
+`crates/views/templates/pwa/service_worker.js`) on every page load, so both installed
 and tabbed use get push notifications and the offline shell.
 
 ## Offline shell and caching policy
 
 When a navigation fails because the network is unreachable, the worker
-serves the cached offline shell (`rust/web/public/offline.html`): "You're offline
+serves the cached offline shell (`web/public/offline.html`): "You're offline
 — reconnecting…", with a retry button and an automatic reload when the
 browser reports it is back online. The shell is a static file with
 everything inline — no sign-in, no session, no extra requests — so it
@@ -29,8 +29,8 @@ side: it browses rooms with a controlling worker, inventories Cache
 Storage, and asserts every entry is `/offline.html` or under `/assets/`.
 The worker's fetch, push, and click branches are additionally driven
 through a Node harness
-(`rust/test-support/service_worker_original_harness.mjs`, run by the
-`pwa` controller tests in `rust/crates/campfire/src/controllers/pwa.rs`)
+(`test-support/service_worker_original_harness.mjs`, run by the
+`pwa` controller tests in `crates/campfire/src/controllers/pwa.rs`)
 against the served worker script.
 
 ## Notifications

@@ -94,7 +94,7 @@ def inventory(root):
     found = {}
     # Every source directory, including tools-only copies; prune generated inputs/outputs.
     for directory, children, files in os.walk(root):
-        children[:] = sorted(set(children) - {"target", "node_modules", ".cargo-home", ".scratch", ".ci", ".native", ".seed"})
+        children[:] = sorted(set(children) - {".git", ".claude", "target", "node_modules", ".cargo-home", ".scratch", ".ci", ".native", ".seed"})
         for name in sorted(files):
             if not name.endswith(".rs"):
                 continue
@@ -134,7 +134,7 @@ def workflow_suites(workflow):
     A suite may appear in several matrices (for example two parts of one suite), but each
     matrix's shard list must be exactly 1/N..N/N so no slice of a suite is left unscheduled.
     """
-    if 'bash rust/ci/correctness.sh "$SUITE"' not in workflow:
+    if 'bash ci/correctness.sh "$SUITE"' not in workflow:
         raise ValueError("correctness runner is not invoked by the workflow")
     jobs = {}
     for match in re.finditer(r"suite: \[([^\]]+)\](?:\s*\n\s*shard: \[([^\]]+)\])?", workflow):
@@ -249,7 +249,7 @@ if __name__ == "__main__":
     parser.add_argument("--nextest-list", type=Path)
     args = parser.parse_args()
     manifest = json.loads((ROOT / "ci/ignored-tests.json").read_text())
-    correctness, utilities = check(ROOT, manifest, (ROOT.parent / ".github/workflows/rust.yml").read_text())
+    correctness, utilities = check(ROOT, manifest, (ROOT / ".github/workflows/rust.yml").read_text())
     if args.nextest_list:
         utilities = json.loads((ROOT / "ci/ignored-utilities.json").read_text())
         found = inventory(ROOT)

@@ -32,7 +32,7 @@ async fn database() -> TestDb {
         ..Env::default()
     };
     let directory =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
     tokio::task::spawn_blocking(move || TestDb::with_env(env, &directory))
         .await
         .unwrap()
@@ -238,7 +238,7 @@ fn github_claim_periodic_task_is_registered_every_thirty_seconds() {
 #[tokio::test]
 async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval() {
     for integration in [GITHUB, FIZZY] {
-        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.scratch/ws15g");
         std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let config = crate::config::Config::from_lookup(|name| match name {

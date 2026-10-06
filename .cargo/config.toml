@@ -11,7 +11,7 @@
 #   cargo test -p campfire --config 'profile.dev.package.campfire.codegen-backend="llvm"'
 #
 # Release builds always use LLVM: the release profile names it below, and the production image
-# (rust/Dockerfile's build stage) neither copies this file nor uses the nightly.
+# (the Dockerfile's build stage) neither copies this file nor uses the nightly.
 
 [unstable]
 codegen-backend = true

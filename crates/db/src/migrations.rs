@@ -239,7 +239,7 @@ mod tests {
         let build_step = dockerfile.split("RUN --mount=type=cache").nth(1).unwrap();
         assert!(
             build_step.contains("export CAMPFIRE_MIGRATIONS_DIGEST=") && build_step.contains("crates/db/migrations"),
-            "rust/Dockerfile's cargo build must export CAMPFIRE_MIGRATIONS_DIGEST from crates/db/migrations"
+            "Dockerfile's cargo build must export CAMPFIRE_MIGRATIONS_DIGEST from crates/db/migrations"
         );
         assert!(build_step.find("CAMPFIRE_MIGRATIONS_DIGEST") < build_step.find("cargo build"));
     }

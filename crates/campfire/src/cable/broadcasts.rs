@@ -1,6 +1,6 @@
 //! The broadcast layer: a typed API for every broadcast the Rails app makes, producing exactly
 //! the stream names, targets and `<turbo-stream>` markup its Turbo and Action Cable calls do.
-//! `rust/crates/cable/BROADCASTS.md` lists each of the app's broadcast calls and where it stands.
+//! `crates/cable/BROADCASTS.md` lists each of the app's broadcast calls and where it stands.
 //!
 //! - [`Stream`] names a stream the way `broadcast_*_to`/`turbo_stream_from` build it: records are
 //!   their GID param (`[@room, :messages]` is `<room gid param>:messages`), symbols themselves.

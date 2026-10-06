@@ -38,10 +38,10 @@ the test keys in `parity/.env.reference`, so those keys are part of the seeds' m
 `parity/.env.reference` and each seed's `schema_migrations`.
 
 ```sh
-python3 rust/parity/bin/frozen-seeds check              # hashes, keys and schema match this checkout
-python3 rust/parity/bin/frozen-seeds restore            # check, then copy them to parity/.seed/NAME
-python3 rust/parity/bin/frozen-seeds migrate CAMPFIRE   # run CAMPFIRE db-migrate on each, then record
-python3 rust/parity/bin/frozen-seeds record             # rewrite the manifest after a deliberate change
+python3 parity/bin/frozen-seeds check              # hashes, keys and schema match this checkout
+python3 parity/bin/frozen-seeds restore            # check, then copy them to parity/.seed/NAME
+python3 parity/bin/frozen-seeds migrate CAMPFIRE   # run CAMPFIRE db-migrate on each, then record
+python3 parity/bin/frozen-seeds record             # rewrite the manifest after a deliberate change
 ```
 
 `check` fails when a seed file changed, appeared or disappeared, when the keys changed, when
