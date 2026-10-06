@@ -184,7 +184,7 @@ export type XQuote = typeof XQuote.Type;
 
 export type XQuotePin = Assert<Pinned<typeof XQuote, GeneratedXQuote>>;
 
-/** A post on X, the same for every viewer. Server fill order: 2. */
+/** A post on X, the same for every viewer. Server fill order: 3. */
 export const XPostCard = Schema.Struct({
   fetch: CardFetch,
   postId: Schema.String,
@@ -205,7 +205,7 @@ export type XPostCard = typeof XPostCard.Type;
 
 export type XPostCardPin = Assert<Pinned<typeof XPostCard, GeneratedXPostCard>>;
 
-/** Any other page's preview; only pages with a title or description get one. Fill order: 3. */
+/** Any other page's preview; only pages with a title or description get one. Fill order: 4. */
 export const LinkCard = Schema.Struct({
   url: Schema.String,
   siteName: Schema.NullOr(Schema.String),
@@ -218,7 +218,7 @@ export type LinkCard = typeof LinkCard.Type;
 
 export type LinkCardPin = Assert<Pinned<typeof LinkCard, GeneratedLinkCard>>;
 
-/** A calendar event the message links to. Attendance is fetched per viewer. Fill order: 4. */
+/** A calendar event the message links to. Attendance is fetched per viewer. Fill order: 6. */
 export const EventCard = Schema.Struct({
   eventId: EventId,
   roomId: RoomId,
@@ -271,7 +271,7 @@ export type RespondToEvent = typeof RespondToEvent.Type;
 
 export type RespondToEventPin = Assert<Pinned<typeof RespondToEvent, GeneratedRespondToEvent>>;
 
-/** A pull request link; fetch its card per viewer. Server fill order: 5. */
+/** A pull request link; fetch its card per viewer. Server fill order: 7. */
 export const GithubCardRef = Schema.Struct({
   pullRequestId: GithubPullRequestId,
   owner: Schema.String,
@@ -366,7 +366,7 @@ export type GithubPullRequestCardPin = Assert<
   Pinned<typeof GithubPullRequestCard, GeneratedGithubPullRequestCard>
 >;
 
-/** A LinkedIn post; without a title or description it's a plain chip. Fill order: 6. */
+/** A LinkedIn post; without a title or description it's a plain chip. Fill order: 8. */
 export const LinkedinCard = Schema.Struct({
   url: Schema.String,
   title: Schema.NullOr(Schema.String),
@@ -379,7 +379,7 @@ export type LinkedinCard = typeof LinkedinCard.Type;
 
 export type LinkedinCardPin = Assert<Pinned<typeof LinkedinCard, GeneratedLinkedinCard>>;
 
-/** A Fizzy card link; fetch its preview per viewer. Server fill order: 7. */
+/** A Fizzy card link; fetch its preview per viewer. Server fill order: 9. */
 export const FizzyCardRef = Schema.Struct({
   fizzyCardId: FizzyCardId,
   accountId: Schema.String,
