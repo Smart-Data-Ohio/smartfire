@@ -11,12 +11,7 @@ import { toast } from "../../ui/toast-store.ts";
 import { useListMotion } from "../destinations/list-motion.ts";
 import { PageFrame } from "../destinations/page-frame.tsx";
 import { PagedList } from "../destinations/paged-list.tsx";
-import {
-  PointMenu,
-  type PointMenuRequest,
-  requestAtElement,
-  requestAtPoint,
-} from "../destinations/point-menu.tsx";
+import { PointMenu, type PointMenuRequest, requestMenu } from "../destinations/point-menu.tsx";
 import { PaneEmpty } from "../panes/pane-states.tsx";
 import { useNow } from "../threads/use-now.ts";
 import {
@@ -138,12 +133,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
   ) => {
     const id = (menu?.request.id ?? 0) + 1;
 
-    const request =
-      "clientX" in event && !(event.clientX === 0 && event.clientY === 0)
-        ? requestAtPoint(id, event.clientX, event.clientY)
-        : requestAtElement(id, event.currentTarget);
-
-    setMenu({ request, item });
+    requestMenu(id, event, (request) => setMenu({ request, item }));
   };
 
   const copy = emptyCopy(tab, status === "unread");

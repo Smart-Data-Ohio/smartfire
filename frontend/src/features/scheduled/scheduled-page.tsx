@@ -188,7 +188,7 @@ export function ScheduledPage() {
         id="stranded"
         title="Can't be sent"
         count={stranded.length}
-        hint="You left these conversations, or they were deleted. Each is dropped when it's due unless you get access back; cancel it or send it somewhere else."
+        hint="You left these conversations, or they were deleted. Each one is dropped when it's due unless you get access back."
       />,
     );
     children.push(...stranded.map(rowOf));

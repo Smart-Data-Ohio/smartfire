@@ -187,8 +187,7 @@ export function ScheduledRow({
           {section === "stranded" ? (
             <span className="scheduled-outcome" data-tone="warning">
               <Icon name="alert" size={12} />
-              Can't be sent: you're no longer in this conversation, or it was deleted. It will be
-              dropped when it's due unless that changes.
+              <span className="scheduled-outcome-text">You can't post here any more</span>
             </span>
           ) : null}
           {section === "past" ? (

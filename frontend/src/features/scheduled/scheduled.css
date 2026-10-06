@@ -91,7 +91,7 @@
   .scheduled-outcome {
     display: inline-flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: baseline;
     gap: var(--space-1);
     margin-top: var(--space-1);
     color: var(--text-muted);
@@ -101,6 +101,12 @@
 
   .scheduled-outcome > .icon {
     flex-shrink: 0;
+    align-self: center;
+  }
+
+  .scheduled-outcome-text {
+    flex: 1;
+    min-width: 0;
   }
 
   .scheduled-outcome[data-tone="success"] > .icon {

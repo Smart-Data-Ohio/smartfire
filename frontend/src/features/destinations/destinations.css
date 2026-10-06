@@ -109,6 +109,23 @@
     min-height: 0;
   }
 
+  /* The skeleton reveal fills the column, so the virtual list gets the height it scrolls in. */
+  .page-list > .t-skel {
+    flex: 1;
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .page-list .t-skel-content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .page-list .t-skel-skeleton {
+    align-self: start;
+  }
+
   .page-list-scroll {
     flex: 1;
     min-height: 0;
@@ -174,6 +191,7 @@
 
   .list-row {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 1fr;
     max-width: 880px;
     padding-inline: var(--space-3);

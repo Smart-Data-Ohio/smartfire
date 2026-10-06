@@ -1,4 +1,11 @@
-import { type ReactNode, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import { readDurationMs } from "../../motion/durations.ts";
 import { Menu, type MenuTriggerProps } from "../../ui/menu.tsx";
 
@@ -31,6 +38,44 @@ export function requestAtElement(id: number, element: Element): PointMenuRequest
     height: 28,
     keyboard: true,
   };
+}
+
+/** How long to wait for a pressed button's release before opening anyway. */
+const RELEASE_WAIT_MS = 600;
+
+/**
+ * Asks for a context menu from a right click or a menu key: at the pointer, or hanging from the
+ * row for a key (a menu key's click lands at 0, 0). A pressed button opens it only once released,
+ * as the message rows do, so the release can't light-dismiss the menu it just opened.
+ */
+export function requestMenu(
+  id: number,
+  event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>,
+  open: (request: PointMenuRequest) => void,
+): void {
+  const pointer = "clientX" in event && !(event.clientX === 0 && event.clientY === 0);
+
+  const request = pointer
+    ? requestAtPoint(id, event.clientX, event.clientY)
+    : requestAtElement(id, event.currentTarget);
+
+  if (!("buttons" in event) || event.buttons === 0) {
+    open(request);
+
+    return;
+  }
+
+  const done = () => {
+    window.removeEventListener("pointerup", done, true);
+    window.removeEventListener("pointercancel", done, true);
+    window.clearTimeout(fallback);
+    window.setTimeout(() => open(request), 0);
+  };
+
+  const fallback = window.setTimeout(done, RELEASE_WAIT_MS);
+
+  window.addEventListener("pointerup", done, true);
+  window.addEventListener("pointercancel", done, true);
 }
 
 interface AnchorProps {
