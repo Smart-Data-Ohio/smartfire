@@ -99,7 +99,11 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
 - Work from `rust/`, with rustup's `cargo` (`~/.cargo/bin`): `rust-toolchain.toml` selects the
   nightly. Stable cargo, including `mise exec rust@1.98.1` (it sets `RUSTUP_TOOLCHAIN`), rejects
   `.cargo/config.toml`'s Cranelift settings.
-- `cargo test --workspace --exclude html5ever` runs everything. The app's integration tests need
+- `cargo nextest run --workspace --exclude html5ever -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))"`
+  runs everything but four panic-recovery tests, which need campfire on LLVM:
+  `cargo nextest run -p campfire --config 'profile.dev.package.campfire.codegen-backend="llvm"' -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)"`
+  (`CAMPFIRE_LLVM_ONLY_TESTS` is in `.github/workflows/rust.yml`). Plain `cargo test --workspace`
+  exits 101 at the first of them under Cranelift. The app's integration tests need
   the `default`, `first_run` and `agents_ui` seeds (`parity/bin/seed build default first_run agents_ui`, which runs the
   reference). Missing seeds fail whenever `CI` is set; locally they skip with a message, so say
   which seeds were built when reporting results. CI archives `parity/reference.sha`, caches

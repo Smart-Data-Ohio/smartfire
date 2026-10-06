@@ -120,15 +120,15 @@ Note: `--config profile.dev.codegen-backend="llvm"` is **not** enough, because t
 
 Production is unaffected: release is LLVM with unwinding.
 
-## CI changes (made in this PR, kept small: `ci/fast-rust` owns sharding and caching)
+## CI changes (made in #256, then carried into `ci/fast-rust`'s sharded jobs)
 
-1. **Panic-recovery tests.** The Cranelift campfire run excludes the 4 tests above (`CAMPFIRE_LLVM_ONLY_TESTS` in `rust.yml`). A separate step, "Tests (campfire panic recovery, LLVM)", runs exactly those 4 with `--config=profile.dev.package.campfire.codegen-backend="llvm"`. It fails unless its JUnit report shows 4 tests run and passed. It shares the target dir, so only the campfire crate rebuilds. It runs after the test summary because it overwrites `target/nextest/ci/junit.xml`.
-2. **Scheduled run on LLVM.** On `schedule` the campfire suite runs whole with campfire on LLVM, and the 4-test step is skipped. Production's codegen gets a full test pass every day. That run rebuilds the campfire crate twice more: LLVM for the suite, then Cranelift again for the other-workspace step.
-3. **Cache key.** It hashes `rust/rust-toolchain.toml` and `rust/.cargo/config.toml`, both in `rust.yml` and in `.github/actions/rust-setup`.
-4. **Stable check.** "Check with the production toolchain" runs `cargo check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever` with `RUSTUP_TOOLCHAIN=1.98.1` from the repository root, where neither file applies. It uses a scratch target dir so that stable artifacts stay out of the cache. `ci/cargo.sh` gained two optional pass-throughs for this, `RUST_CI_WORKDIR` and `RUSTUP_TOOLCHAIN`. This catches code that compiles only on the nightly before `publish-rust-image.yml` builds production.
+1. **Panic-recovery tests.** The Cranelift campfire run excludes the 4 tests above (`CAMPFIRE_LLVM_ONLY_TESTS` in `rust.yml`). The twelve test shards leave them out, and a parallel job, "Rust tests (campfire panic recovery, LLVM)", runs exactly those 4 with `--config=profile.dev.package.campfire.codegen-backend="llvm"`. It fails unless its JUnit report shows 4 tests run and passed, and `Rust port` counts its report with the shards'. It restores the shards' Cargo cache: `-p campfire` and `--workspace` resolve identical dependency features, so only workspace crates rebuild.
+2. **Scheduled run on LLVM.** On `schedule` the shards build campfire with LLVM too, so with the 4-test job the whole campfire suite runs on production's codegen every day.
+3. **Cache key.** `.github/actions/rust-setup` hashes `rust/rust-toolchain.toml` and `rust/.cargo/config.toml`, and every restore key, down to the broadest fallback, is scoped to `rust-toolchain.toml` and the Dockerfile.
+4. **Stable check.** The parallel "Rust production toolchain check" job runs `cargo check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever` from the repository root, where neither file applies, with `RUSTUP_TOOLCHAIN` read from the Dockerfile's `RUST_VERSION`. It uses a scratch target dir so that stable artifacts stay out of the caches. `ci/cargo.sh` gained two optional pass-throughs for this, `RUST_CI_WORKDIR` and `RUSTUP_TOOLCHAIN`. This catches code that compiles only on the nightly before `publish-rust-image.yml` builds production.
 5. **Toolchain.** `rust/Dockerfile`'s toolchain stage installs the pinned nightly and components from `rust-toolchain.toml`. To bump the nightly, edit `rust-toolchain.toml` only.
 6. **Unchanged:**
-   - The correctness jobs run cargo from the repository root (`ci/correctness.sh`), so they build on the image's stable toolchain with LLVM, as production does.
+   - The correctness jobs run cargo from the repository root (`ci/correctness.sh`), so they build on the image's stable toolchain with LLVM, as production does. They restore their own stable `correctness` Cargo cache, since the test shards' holds nightly artifacts.
    - mold stays.
    - `line-tables-only` debuginfo stays.
    - `-Zthreads=4` is left out for now. In a CI-like run (`CARGO_INCREMENTAL=0`, `-j4`) it cut the campfire crate from 123.6s to 90.4s (−27%), with peak RSS 12.1GB instead of 10.1GB.
