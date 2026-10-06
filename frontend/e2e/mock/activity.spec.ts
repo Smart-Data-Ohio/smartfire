@@ -247,6 +247,38 @@ test("editing a scheduled message saves its new text", async ({ page }) => {
   await expect(rows(page).first()).toContainText("Moved to the new launch doc");
 });
 
+// --- loading and errors ---
+
+matrix(
+  "a list shows a skeleton while it loads, and Retry when it fails",
+  async ({ page, theme }) => {
+    const held = Promise.withResolvers<void>();
+    let fail = true;
+
+    await page.route("**/api/v1/saved?*", async (route) => {
+      await held.promise;
+
+      if (fail) {
+        await route.fulfill({ status: 500, body: "" });
+      } else {
+        await route.continue();
+      }
+    });
+    await openApp(page, "saved", theme);
+    await expect(page.locator(".page-list .t-skel")).toHaveAttribute("aria-busy", "true");
+    await page.mouse.move(0, 0);
+    await shot(page, "saved-loading", theme);
+
+    held.resolve();
+    await expect(page.getByText("Your saved messages couldn't be loaded.")).toBeVisible();
+    await shot(page, "saved-error", theme);
+
+    fail = false;
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect(rows(page).first()).toBeVisible();
+  },
+);
+
 // --- shell ---
 
 matrix("the rail and sidebar entries", async ({ page, theme, phone }) => {

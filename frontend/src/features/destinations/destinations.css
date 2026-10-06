@@ -177,10 +177,11 @@
     font-size: var(--text-sidebar);
   }
 
+  /* Its bones line up with the rows' avatars and text. */
   .page-skeleton {
     max-width: 880px;
     padding-top: var(--space-2);
-    padding-inline: var(--space-2);
+    padding-inline: var(--space-3);
   }
 
   .page .pane-empty {
@@ -229,6 +230,23 @@
       grid-template-rows: 0fr;
       opacity: 0;
     }
+  }
+
+  /* Under reduced motion it only fades: the rows below don't glide up into its place. */
+  @keyframes list-row-leave-fade {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .list-row[data-motion="leave"] {
+      animation-name: list-row-leave-fade;
+    }
+  }
+
+  :root[data-motion="reduce"] .list-row[data-motion="leave"] {
+    animation-name: list-row-leave-fade;
   }
 
   /* The open target: the whole row (content inside it), or a cover over decorated content. */
