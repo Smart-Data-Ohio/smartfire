@@ -450,6 +450,10 @@
       padding-inline: var(--space-1);
     }
 
+    .page-skeleton {
+      padding-inline: 0;
+    }
+
     .page-section-title,
     .page-section-hint {
       padding-inline: var(--space-4);
