@@ -396,7 +396,7 @@ snapshot stops being a complete checkpoint.
 1. Merge to `main`. `publish-image.yml` publishes `rust-git-<sha>` for every push;
    deploy a sha that has that tag.
 2. There is no staging host: the `validation` environment currently falls back to the
-   production VM, so don't use it. Rehearse locally instead: `rust/ops/tests` and, for
+   production VM, so don't use it. Rehearse locally instead: `ops/tests` and, for
    a release that ships migrations, the migration from the deployed schema.
 3. Run **Deploy to GCP** against `production` with `dry_run=true`, then
    `dry_run=false`, dispatched on `main`. A production deployment requires the revision

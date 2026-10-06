@@ -3,7 +3,7 @@
 People set a presence and custom status, silence push and sounds with Do
 Not Disturb or scheduled quiet hours, follow or mute channel threads,
 watch keywords, and pick a time zone and theme. One notification policy
-(`rust/crates/db/src/models/notification_policy.rs`) gates every push and sound; the pushers call
+(`crates/db/src/models/notification_policy.rs`) gates every push and sound; the pushers call
 it instead of re-deciding the rules, and the inbox recorder implements
 the same inbox rules in its own candidate flow.
 
@@ -48,7 +48,7 @@ the meeting label alike.
 ### Profile card integration
 
 The profile card renders status through one shared partial
-(`users/statuses/_badge`, in `rust/crates/views/templates/`) showing the
+(`users/statuses/_badge`, in `crates/views/templates/`) showing the
 presence dot, presence label, and custom status text, so it never queries
 leases itself.
 
@@ -160,7 +160,7 @@ keyword matching once per message
 (the candidates are the thread members for thread messages, and the
 mentionees plus the reply author plus the keyword matches for room
 messages), then asks the policy for each candidate's winner with the
-already-loaded memberships. The tests in `rust/crates/db/src/tests/`
+already-loaded memberships. The tests in `crates/db/src/tests/`
 (`notification_policy_test.rs`, `keyword_alert_test.rs` and the recorder
 tests) pin the rules, the recorder's identical behavior and its flat
 query cost.

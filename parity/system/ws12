@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+cd "$root"
+# Missing dependencies are errors here, rather than skipped coverage.
+command -v node >/dev/null
+docker info >/dev/null
+hash=$(cat parity/Dockerfile.playwright parity/package.json parity/package-lock.json | sha256sum | cut -c1-12)
+image="ws12-playwright:$hash"
+if ! docker image inspect "$image" >/dev/null 2>&1; then
+  docker build -q --label parity.owner=ws12 -f parity/Dockerfile.playwright -t "$image" parity
+fi
+export CI=1
+# Unix socket paths must fit sockaddr_un even in deeply nested worktrees.
+export WS12_BROWSER_SCRATCH="${WS12_BROWSER_SCRATCH:-${XDG_CACHE_HOME:-$HOME/.cache}/rust-port/ws12}"
+export CABLE_TEST_PORT_RANGE="${CABLE_TEST_PORT_RANGE:-53420-53449}"
+export MAIL_TEST_PORT_RANGE="${MAIL_TEST_PORT_RANGE:-53400-53419}"
+export GITHUB_TEST_PORT_RANGE="${GITHUB_TEST_PORT_RANGE:-53450-53499}"
+# The paired WS11-UI sequences use the current normal binary for work and this
+# test executable's ignored HTTP host for the interleaved inbox producer.
+parity/system/stable-cargo build --locked -p campfire --bin campfire
+export WS11UI_BROWSER_BINARY
+WS11UI_BROWSER_BINARY=$(parity/system/stable-cargo metadata --locked --no-deps --format-version=1 |
+  python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"] + "/debug/campfire")')
+# --show-output preserves both libtest pass receipts and the real-browser traces.
+parity/system/stable-cargo test --locked -p campfire \
+  controllers::ws12_browser_remaining_tests -- --ignored --show-output --test-threads=1
+
+# Ledger follow-up: the original individual people/tour/star/worker assertions.
+# Shares the normal binary above and the full-gate pinned browser image.
+parity/system/stable-cargo test --locked -p campfire \
+  controllers::ws11ui_original_browser_tests -- --ignored --show-output --test-threads=1
+
+# Remaining WS8br/WS17 originals use the same pinned transport and leased hosts.
+parity/system/stable-cargo test --locked -p campfire \
+  controllers::ledger_browser_tests -- --ignored --show-output --test-threads=1 --skip original_ledger_injected_clock_host

@@ -1,0 +1,8 @@
+# cargo-audit settings for the "Dependency audit" check (.github/workflows/repo.yml), which
+# runs `cargo-audit audit` from the repository root against Cargo.lock.
+#
+# Every ignored advisory needs a comment saying why it can't affect Campfire, or what is
+# blocking the upgrade, and when to look again. None are ignored today.
+
+[advisories]
+ignore = []

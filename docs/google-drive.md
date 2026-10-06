@@ -45,9 +45,9 @@ only. **Disconnect** removes the whole connection, as before.
 
 ## Link shapes
 
-The server's link parser (`rust/crates/db/src/models/google_drive_link.rs`)
+The server's link parser (`crates/db/src/models/google_drive_link.rs`)
 and `driveFileId`
-(`rust/web/app/javascript/controllers/drive_link_controller.js`) recognize the same
+(`web/app/javascript/controllers/drive_link_controller.js`) recognize the same
 URL shapes; keep the two lists in sync:
 
 - `https://docs.google.com/document/d/<id>/...`

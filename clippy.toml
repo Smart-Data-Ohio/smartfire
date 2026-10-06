@@ -1,0 +1,4 @@
+# Production builds the binary on the stable Rust that the Dockerfile pins (RUST_VERSION), while
+# development, tests and CI build on the nightly in rust-toolchain.toml for the Cranelift backend.
+# `incompatible_msrv` then flags standard library APIs newer than that stable release.
+msrv = "1.98.1"

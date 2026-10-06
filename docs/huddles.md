@@ -7,8 +7,8 @@ Smartfire huddles use a project-local LiveKit Server for development. The setup 
 From the repository root:
 
 ```sh
-rust/web/bin/livekit-local setup
-rust/web/bin/livekit-local serve
+web/bin/livekit-local setup
+web/bin/livekit-local serve
 ```
 
 `serve` is the normal way to run the huddle infrastructure. It keeps the private LiveKit server and the authorization gateway in one foreground process. If either exits, it stops the other. This prevents media from continuing after the gateway can no longer enforce access. Smartfire itself runs cleanup reconciliation in-process, so there is no separate reconciler to start.
@@ -16,14 +16,14 @@ rust/web/bin/livekit-local serve
 In another terminal, verify both endpoints:
 
 ```sh
-rust/web/bin/livekit-local status
-rust/web/bin/livekit-local gateway-status
+web/bin/livekit-local status
+web/bin/livekit-local gateway-status
 ```
 
-Setup stores the binary, archive, config, and credentials under the git-ignored `rust/web/.bundle/livekit/` directory. Source the generated mode-600 environment file before starting Smartfire or running integration tests:
+Setup stores the binary, archive, config, and credentials under the git-ignored `web/.bundle/livekit/` directory. Source the generated mode-600 environment file before starting Smartfire or running integration tests:
 
 ```sh
-source rust/web/.bundle/livekit/env
+source web/.bundle/livekit/env
 ```
 
 It exports the public `LIVEKIT_URL=ws://127.0.0.1:7883`, the private `LIVEKIT_INTERNAL_URL=http://127.0.0.1:7880`, and locally generated API and gateway secrets. Running setup again migrates an older local environment to this layout while preserving its existing LiveKit API key and secret. Setup never prints secret values. Do not copy these development credentials to a deployed environment.
@@ -31,13 +31,13 @@ It exports the public `LIVEKIT_URL=ws://127.0.0.1:7883`, the private `LIVEKIT_IN
 Keep `serve` running in the first terminal. In a second terminal, load its environment and start Smartfire as described in the [development guide](development.md#running-the-server):
 
 ```sh
-source rust/web/.bundle/livekit/env
-cd rust && SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 cargo run -p campfire -- server
+source web/.bundle/livekit/env
+SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 cargo run -p campfire -- server
 ```
 
-The real-media huddle browser test runs in the `livekit` correctness suite (`bash rust/ci/correctness.sh livekit`, see [`rust/ci/README.md`](../rust/ci/README.md)), which starts the private server with `livekit-local start` and its own gateway. The `start` and `gateway` commands run the private server or gateway separately for that kind of controlled test and for diagnosis. They are not safe substitutes for `serve` in normal operation because a separately launched LiveKit process can outlive gateway enforcement.
+The real-media huddle browser test runs in the `livekit` correctness suite (`bash ci/correctness.sh livekit`, see [`ci/README.md`](../ci/README.md)), which starts the private server with `livekit-local start` and its own gateway. The `start` and `gateway` commands run the private server or gateway separately for that kind of controlled test and for diagnosis. They are not safe substitutes for `serve` in normal operation because a separately launched LiveKit process can outlive gateway enforcement.
 
-Smartfire serves a checked-in LiveKit browser bundle. See the [browser SDK rebuild guide](../rust/web/script/livekit-client/README.md) when updating its pinned version.
+Smartfire serves a checked-in LiveKit browser bundle. See the [browser SDK rebuild guide](../web/script/livekit-client/README.md) when updating its pinned version.
 
 ## Behavior and access control
 
@@ -55,7 +55,7 @@ When signaling closes normally, the gateway retains the grant for a three-second
 
 Participant removal retries after a temporary LiveKit administration failure. If removal still cannot be confirmed after ten seconds, the gateway exits unsuccessfully. `serve` then stops LiveKit, interrupting every call on that local server rather than allowing media whose authorization cannot be enforced. See the [authorization boundary and acceptance checks](huddle-enforcement.md) for the full failure model.
 
-The huddle browser cases in the correctness suites (see [`rust/ci/README.md`](../rust/ci/README.md)) run headless browsers against the real server with synthetic media, and the gateway's own Node tests run against the Rust endpoints; the real-media case runs in the `livekit` suite against the project-local LiveKit server. They do not capture the operator's desktop or use their physical microphone.
+The huddle browser cases in the correctness suites (see [`ci/README.md`](../ci/README.md)) run headless browsers against the real server with synthetic media, and the gateway's own Node tests run against the Rust endpoints; the real-media case runs in the `livekit` suite against the project-local LiveKit server. They do not capture the operator's desktop or use their physical microphone.
 
 The local gateway listens on loopback TCP 7883. LiveKit's raw signaling and administration API listens on loopback TCP 7880, and the WebRTC UDP mux uses UDP 7882. The raw endpoint must remain private because reaching it directly bypasses admission checks. Embedded TURN is disabled. This is suitable for one-machine development and browser tests, but another computer cannot join it.
 

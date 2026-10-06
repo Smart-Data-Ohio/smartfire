@@ -9,7 +9,7 @@ from the Smartfire host with no cookies.
 ## How it works
 
 Every embed `<img>` points at the proxy with a signed source URL
-(`signed_path` in `rust/crates/campfire/src/integrations/image_proxy.rs`), rendered by the
+(`signed_path` in `crates/campfire/src/integrations/image_proxy.rs`), rendered by the
 rich-text OpenGraph embed renderer. The signature
 (`embed_image` message verifier) binds the exact remote URL, so the
 endpoint is not an open proxy: it serves only image URLs the server
@@ -17,7 +17,7 @@ itself rendered into an embed. Tampered signatures answer 404 without
 touching the network, and the endpoint requires a signed-in member.
 
 Fetches follow the same rules as the unfurl fetcher
-(`rust/crates/campfire/src/integrations/opengraph`):
+(`crates/campfire/src/integrations/opengraph`):
 
 - Each hop resolves through the private-network guard and the
   connection is pinned to the resolved public address. Loopback, private,
@@ -43,6 +43,6 @@ keep stable `src` attributes.
 ## Integration note
 
 [Link embed cards](link-embeds.md) still render their image directly from
-`embed.image_url` (`rust/crates/views/templates/link_embeds/_card.html`).
+`embed.image_url` (`crates/views/templates/link_embeds/_card.html`).
 Routing that image through `signed_path` too would close the per-viewer
 image disclosure documented in their [privacy section](link-embeds.md#privacy).

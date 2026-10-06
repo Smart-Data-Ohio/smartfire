@@ -10,12 +10,14 @@ with shell, network, and database access already. Anything requiring the adminis
 role grants nothing they do not already have, and is not a vulnerability.
 
 We do want reports of anything a **non-administrator** can reach, and of any credential or
-network path held by the Smartfire process but not by the operator's own shell.
+network path held by the Smartfire process but not by the operator's own shell. That includes
+anything that lets a member exhaust the server (CPU, memory, disk, connections) out of
+proportion to what they send.
 
 ## Intentional behavior
 
 Every webhook POST, legacy bot or agent delivery, resolves through the
-private-network guard (`rust/crates/campfire/src/integrations/net/guard.rs`)
+private-network guard (`crates/campfire/src/integrations/net/guard.rs`)
 and pins the connection to the resolved public address, like link
 unfurling: loopback and private destinations are refused instead of
 posted to. Operators who need bots

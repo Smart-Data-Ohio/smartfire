@@ -27,10 +27,10 @@ See [ROADMAP.md](ROADMAP.md) for direction and sequencing, and the [agent boards
 
 Smartfire is a single Rust binary: the web app, background jobs, real-time updates, file
 previews and TLS all run in one process over one SQLite database, with no Redis or separate
-worker. The source is the Cargo workspace in [`rust/`](rust).
+worker. The repository root is its Cargo workspace.
 
-To run it locally, from `rust/`, with [rustup](https://rustup.rs) (it installs the nightly pinned in
-`rust/rust-toolchain.toml`) and libvips and ffmpeg installed:
+To run it locally, with [rustup](https://rustup.rs) (it installs the nightly pinned in
+`rust-toolchain.toml`) and libvips and ffmpeg installed:
 
 ```sh
 SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 HTTP_PORT=3000 TARGET_PORT=3001 \
@@ -42,9 +42,9 @@ and open http://localhost:3000.
 
 - Developing and testing: [docs/development.md](docs/development.md) covers prerequisites,
   tests (`cargo nextest`), the correctness suites, lint, migrations and CI.
-  [rust/README.md](rust/README.md) describes the port's status and verification.
+  [docs/rust-port.md](docs/rust-port.md) describes the port's status and verification.
 - Self-hosting the Docker image (`ghcr.io/smart-data-ohio/smartfire`, or
-  `docker build -t smartfire rust`): [docs/self-hosting.md](docs/self-hosting.md).
+  `docker build -t smartfire .`): [docs/self-hosting.md](docs/self-hosting.md).
 
 When you start Smartfire for the first time, you'll be guided through a wizard to create an admin account. The email address that you enter for the admin account will be visible on the sign-in page, it's there so that people have someone to contact if they need help with their account. If that bothers you, put in any email address you want and create yourself a new admin account.
 
@@ -52,7 +52,7 @@ When you start Smartfire for the first time, you'll be guided through a wizard t
 
 - Production deploy runbook: [deploy/README.md](deploy/README.md).
 - GCP image publish and deploy workflows: [deploy/gcp/README.md](deploy/gcp/README.md).
-- Image, migration and release contract: [rust/ops/README.md](rust/ops/README.md).
+- Image, migration and release contract: [ops/README.md](ops/README.md).
 
 ## Docs
 
@@ -89,8 +89,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes, and [SECURITY
 ## License
 
 MIT. See [MIT-LICENSE](MIT-LICENSE), the license of the original Campfire
-([basecamp/once-campfire](https://github.com/basecamp/once-campfire)), and
-[rust/MIT-LICENSE](rust/MIT-LICENSE), the license of the Rust port it was built from
-([basecamp/once-campfire-rust](https://github.com/basecamp/once-campfire-rust)). Both are kept
-as published. Bundled third-party data and code are listed in
+([basecamp/once-campfire](https://github.com/basecamp/once-campfire)) and of the Rust port it was
+built from ([basecamp/once-campfire-rust](https://github.com/basecamp/once-campfire-rust)), which
+published the same text. It is kept as published. Bundled third-party data and code are listed in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

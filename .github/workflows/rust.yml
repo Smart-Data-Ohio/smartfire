@@ -1,8 +1,8 @@
 name: Rust
 
-# The Rust port in rust/: clippy, binary build and tests, in the toolchain stage of rust/Dockerfile (the
-# same libvips and ffmpeg builds as its image, so the storage vectors' byte checks run rather than
-# skip). The app reads only its own inputs under rust/: rust/web and rust/fixtures, and the seeds
+# The Rust workspace at the repository root: clippy, binary build and tests, in the toolchain stage
+# of the Dockerfile (the same libvips and ffmpeg builds as its image, so the storage vectors' byte
+# checks run rather than skip). The app reads only its own inputs: web/ and fixtures/, and the seeds
 # and recordings the original Rails app built once, which are committed and frozen.
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
@@ -49,7 +49,7 @@ env:
   CI: "true"
   RUST_CI_IMAGE: campfire-toolchain
   RUST_CI_CONTAINER_PREFIX: campfire-ci
-  # Dev/test builds compile campfire with Cranelift (rust/.cargo/config.toml), which can't
+  # Dev/test builds compile campfire with Cranelift (.cargo/config.toml), which can't
   # unwind, so these panic-recovery tests run in their own job with campfire on LLVM, as
   # production builds it. The scheduled run tests the whole campfire suite on LLVM.
   CAMPFIRE_LLVM: --config=profile.dev.package.campfire.codegen-backend="llvm"
@@ -60,7 +60,8 @@ env:
     test(=test_support::server_startup_panics_reach_the_reporter_and_join_handle)
 
 jobs:
-  # Rust-relevant inputs: rust/, its setup action and this workflow. A PR touching none of them (docs, deploy, other workflows) skips the build, and
+  # Rust-relevant inputs: everything but docs/, deploy/, the other workflows and the root's prose
+  # files; the setup action and this workflow count. A PR touching only those skips the build, and
   # "Rust port" passes on that intentional skip. Pushes, the nightly run, manual runs, empty
   # diffs and unavailable history all keep the full run.
   changes:
@@ -91,9 +92,19 @@ jobs:
           import os
           import subprocess
 
-          # The app reads only its own tree: changes elsewhere (docs, deploy) can't affect it.
-          PREFIXES = (b"rust/", b".github/actions/rust-setup/")
+          # The workspace is the repository root, and the app reads only its own tree: docs,
+          # deploy scripts, other workflows and the root's prose files can't affect it. Any other
+          # path, including a new top-level one, runs the gates.
+          OUTSIDE = (b"docs/", b"deploy/", b".github/")
+          PROSE = (b"README.md", b"ROADMAP.md", b"CONTRIBUTING.md", b"SECURITY.md",
+                   b"THIRD_PARTY_NOTICES.md", b"MIT-LICENSE")
+          SETUP = (b".github/actions/rust-setup/",)
           FILES = (b".github/workflows/rust.yml",)
+
+          def rust_input(path):
+              if path.startswith(SETUP) or path in FILES:
+                  return True
+              return not (path.startswith(OUTSIDE) or path in PROSE)
 
           rust = True
           try:
@@ -109,9 +120,7 @@ jobs:
                           f'{pr["base"]["sha"]}...{pr["head"]["sha"]}', "--",
                       ])
                       paths = [path for path in diff.split(b"\0") if path]
-                      rust = not paths or any(
-                          path.startswith(PREFIXES) or path in FILES for path in paths
-                      )
+                      rust = not paths or any(rust_input(path) for path in paths)
           except (OSError, KeyError, ValueError, TypeError, subprocess.CalledProcessError) as error:
               rust = True
               print(f"::warning::PR diff unavailable ({type(error).__name__}); running the full Rust gates.")
@@ -139,10 +148,10 @@ jobs:
           persist-credentials: false
 
       - name: Prove the seed check rejects changed or missing seeds
-        run: python3 -m unittest discover -s rust/parity -p test_frozen_seeds.py
+        run: python3 -m unittest discover -s parity -p test_frozen_seeds.py
 
       - name: Check the committed seeds
-        run: python3 rust/parity/bin/frozen-seeds check
+        run: python3 parity/bin/frozen-seeds check
 
   # Every ordinary nextest test but the four LLVM-only ones (the llvm job), split round-robin
   # by nextest into twelve slices.
@@ -184,11 +193,11 @@ jobs:
           status=0
           selection=(-E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))")
           if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then selection+=("$CAMPFIRE_LLVM"); fi
-          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
+          bash ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
             --profile ci -j 4 --no-fail-fast --no-tests fail --partition "slice:$SHARD" "${selection[@]}" 2>&1 |
             tee "$RUNNER_TEMP/nextest.log" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
-          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-${SHARD/\//of}.xml"
+          cp target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-${SHARD/\//of}.xml"
           exit "$status"
 
       # What the shards together, and the LLVM job, must run, listed from the harnesses compiled
@@ -202,7 +211,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/results"
           # Each list names the same packages its run does. -p campfire resolves the same
           # dependency features as --workspace, so the second list doesn't rebuild either.
-          list() { bash rust/ci/cargo.sh nextest list --locked --profile ci --message-format json "${llvm[@]}" "$@"; }
+          list() { bash ci/cargo.sh nextest list --locked --profile ci --message-format json "${llvm[@]}" "$@"; }
           list --workspace --exclude html5ever -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))" \
             > "$RUNNER_TEMP/results/list-shards.json"
           list -p campfire -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)" \
@@ -211,7 +220,7 @@ jobs:
       # Lists ignored tests from the harnesses compiled above, with no partition or filter.
       - name: Enumerate compiled ignored tests
         if: ${{ !cancelled() && matrix.shard == '1/12' }}
-        run: bash rust/ci/verify-ignored.sh
+        run: bash ci/verify-ignored.sh
 
       - name: Retain test results
         if: ${{ !cancelled() }}
@@ -230,15 +239,15 @@ jobs:
 
       - name: Keep only dependency artifacts for the cache
         if: ${{ matrix.shard == '1/12' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        run: python3 rust/ci/prune-target.py rust/target
+        run: python3 ci/prune-target.py target
 
       - name: Save cargo registry and target
         if: ${{ matrix.shard == '1/12' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            rust/.cargo-home/registry
-            rust/target
+            .cargo-home/registry
+            target
           key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   clippy:
@@ -257,7 +266,7 @@ jobs:
           persist-credentials: false
 
       - name: Check ignored-test coverage
-        run: python3 -m unittest discover -s rust/ci -p 'test_*.py'
+        run: python3 -m unittest discover -s ci -p 'test_*.py'
 
       - name: Prepare shared Rust CI inputs
         id: setup
@@ -267,19 +276,19 @@ jobs:
           cargo-cache: build
 
       - name: Clippy
-        run: bash rust/ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+        run: bash ci/cargo.sh clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
 
       # The app has no integration-test target, so nextest builds its test harness but not its
       # normal executable. Retain that cfg(not(test))/link coverage, without building extra targets.
       - name: Build application binaries with production inputs
-        run: bash rust/ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
+        run: bash ci/with-release-inputs.sh bash ./ci/cargo.sh build --locked --workspace --bins
 
       # nextest does not run doctests; database doctests remain part of the blocking gate.
       - name: Doctests (campfire_db)
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/results"
-          bash rust/ci/cargo.sh test --locked -p campfire_db --doc --no-fail-fast 2>&1 |
+          bash ci/cargo.sh test --locked -p campfire_db --doc --no-fail-fast 2>&1 |
             tee "$RUNNER_TEMP/results/db-doc.log"
 
       - name: Doctests (other workspace)
@@ -287,7 +296,7 @@ jobs:
         continue-on-error: true
         shell: bash
         run: |
-          bash rust/ci/cargo.sh test --locked --workspace --exclude html5ever --exclude campfire_db \
+          bash ci/cargo.sh test --locked --workspace --exclude html5ever --exclude campfire_db \
             --doc --no-fail-fast 2>&1 | tee "$RUNNER_TEMP/results/workspace-doc.log"
 
       - name: Retain doctest logs
@@ -307,15 +316,15 @@ jobs:
 
       - name: Keep only dependency artifacts for the cache
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        run: python3 rust/ci/prune-target.py rust/target
+        run: python3 ci/prune-target.py target
 
       - name: Save cargo registry and target
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            rust/.cargo-home/registry
-            rust/target
+            .cargo-home/registry
+            target
           key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   # The panic-recovery tests the shards leave out, with campfire built by LLVM.
@@ -346,10 +355,10 @@ jobs:
         shell: bash
         run: |
           status=0
-          bash rust/ci/cargo.sh nextest run --locked -p campfire --profile ci -j 4 --no-fail-fast --no-tests fail \
+          bash ci/cargo.sh nextest run --locked -p campfire --profile ci -j 4 --no-fail-fast --no-tests fail \
             "$CAMPFIRE_LLVM" -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
-          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
+          cp target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
           exit "$status"
 
       - name: Retain test results
@@ -375,8 +384,9 @@ jobs:
           sys.exit(0 if os.environ['OUTCOME'] == 'success' and len(ran) == len(passed) == 4 else 1)
           PY
 
-  # Production builds on the image's stable toolchain, not the nightly the tests use. From the
-  # repository root neither rust-toolchain.toml nor .cargo/config.toml applies; its check-mode
+  # Production builds on the image's stable toolchain, not the nightly the tests use.
+  # RUSTUP_TOOLCHAIN overrides rust-toolchain.toml, and Cargo runs from its scratch directory,
+  # outside the workspace, so .cargo/config.toml's Cranelift settings don't apply; its check-mode
   # dependencies have their own `stable` Cargo cache.
   stable:
     name: Rust production toolchain check
@@ -403,26 +413,26 @@ jobs:
       # The release the Dockerfile's production stages build with (its RUST_VERSION).
       - name: Check with the production toolchain
         env:
-          RUST_CI_WORKDIR: /src
+          RUST_CI_WORKDIR: /ci-tmp
         shell: bash
         run: |
-          RUSTUP_TOOLCHAIN=$(sed -nE 's/^ARG RUST_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' rust/Dockerfile)
-          [[ -n "$RUSTUP_TOOLCHAIN" ]] || { echo "::error::RUST_VERSION not found in rust/Dockerfile"; exit 1; }
+          RUSTUP_TOOLCHAIN=$(sed -nE 's/^ARG RUST_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' Dockerfile)
+          [[ -n "$RUSTUP_TOOLCHAIN" ]] || { echo "::error::RUST_VERSION not found in Dockerfile"; exit 1; }
           echo "Production toolchain: $RUSTUP_TOOLCHAIN"
           export RUSTUP_TOOLCHAIN
-          bash rust/ci/cargo.sh check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever
+          bash ci/cargo.sh check --locked --manifest-path /src/Cargo.toml --workspace --exclude html5ever
 
       - name: Keep only dependency artifacts for the cache
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        run: python3 rust/ci/prune-target.py rust/target
+        run: python3 ci/prune-target.py target
 
       - name: Save cargo registry and target
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            rust/.cargo-home/registry
-            rust/target
+            .cargo-home/registry
+            target
           key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   rust:
@@ -446,11 +456,11 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
           sparse-checkout: |
-            rust/ci
+            ci
             .github/workflows
 
       - name: Require every job to be gated
-        run: python3 rust/ci/check_gate_needs.py .github/workflows/rust.yml
+        run: python3 ci/check_gate_needs.py .github/workflows/rust.yml
 
       - name: Collect test results
         if: ${{ needs.changes.outputs.rust == 'true' && (needs.test.result != 'skipped' || needs.clippy.result != 'skipped' || needs.llvm.result != 'skipped') }}
@@ -477,7 +487,7 @@ jobs:
           # accounted for every doctest; any difference fails this job.
           args+=(--expect "$results/list-shards.json" "${shards[@]}")
           args+=(--expect "$results/list-llvm.json" "$results/junit-llvm.xml")
-          python3 rust/ci/summarize-tests.py "${args[@]}"
+          python3 ci/summarize-tests.py "${args[@]}"
 
       # When Rust inputs changed, every shard and prerequisite job must have succeeded:
       # failed, cancelled and skipped all fail this check. When none changed, every one of
@@ -524,12 +534,12 @@ jobs:
           cargo-cache: correctness
 
       - name: Build pinned correctness prerequisites
-        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
 
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}
-        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
 
       - name: Retain correctness receipts
         if: ${{ !cancelled() }}
@@ -537,7 +547,7 @@ jobs:
         with:
           overwrite: true
           name: rust-correctness-${{ matrix.suite }}
-          path: rust/target/ci-receipts/
+          path: target/ci-receipts/
           if-no-files-found: error
 
   correctness-browsers:
@@ -572,37 +582,37 @@ jobs:
         env:
           RUST_CORRECTNESS_IMAGE: campfire-toolchain
         run: |
-          bash rust/ci/exec.sh bash -c 'cargo build --manifest-path rust/Cargo.toml --locked -p campfire --bin campfire &&
-            cargo test --manifest-path rust/Cargo.toml --locked -p campfire --no-run -j 4' &
+          bash ci/exec.sh bash -c 'cargo build --locked -p campfire --bin campfire &&
+            cargo test --locked -p campfire --no-run -j 4' &
           compile=$!
-          docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+          docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
           wait "$compile"
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}
           CORRECTNESS_SHARD: ${{ matrix.shard }}
-        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
       - name: Retain correctness receipts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
           name: rust-correctness-browsers-${{ strategy.job-index }}
-          path: rust/target/ci-receipts/
+          path: target/ci-receipts/
           if-no-files-found: error
-      # Correctness builds run from the repository root on the image's stable toolchain and
-      # LLVM, unlike the test shards' nightly and Cranelift, so they keep their own cache of
+      # Correctness builds run on the image's stable toolchain and LLVM (exec.sh), unlike the
+      # test shards' nightly and Cranelift, so they keep their own cache of
       # dependency artifacts. This shard has built the server binary and campfire's test harness.
       - name: Keep only dependency artifacts for the cache
         if: ${{ matrix.shard == '2/4' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
-        run: python3 rust/ci/prune-target.py rust/target
+        run: python3 ci/prune-target.py target
       - name: Save cargo registry and target
         if: ${{ matrix.shard == '2/4' && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            rust/.cargo-home/registry
-            rust/target
+            .cargo-home/registry
+            target
           key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   # The paired messaging run's two Rust hosts, built once from this checkout with the same
@@ -636,8 +646,8 @@ jobs:
         env:
           RUST_CORRECTNESS_IMAGE: campfire-toolchain
         run: |
-          bash rust/ci/exec.sh cargo build --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire
-          tar -C rust/target -cf "$RUNNER_TEMP/messaging-host.tar" debug/campfire
+          bash ci/exec.sh cargo build --locked -j4 -p campfire --bin campfire
+          tar -C target -cf "$RUNNER_TEMP/messaging-host.tar" debug/campfire
 
       # browser_host.py builds the generated paused-jobs test host in target/ws8bm-browser-host
       # and audits its includes; the restored registry dependencies move there with it.
@@ -648,13 +658,13 @@ jobs:
           WS8BM_HOST_BUILD_JOBS: 4
         shell: bash
         run: |
-          mkdir -p rust/target/ws8bm-browser-host
-          if [[ -d rust/target/debug ]]; then mv rust/target/debug rust/target/ws8bm-browser-host/debug; fi
-          executable=$(bash rust/ci/exec.sh python3 rust/reference-tools/messaging/browser_host.py | tail -n 1)
-          relative=${executable#"$GITHUB_WORKSPACE"/rust/target/}
+          mkdir -p target/ws8bm-browser-host
+          if [[ -d target/debug ]]; then mv target/debug target/ws8bm-browser-host/debug; fi
+          executable=$(bash ci/exec.sh python3 reference-tools/messaging/browser_host.py | tail -n 1)
+          relative=${executable#"$GITHUB_WORKSPACE"/target/}
           [[ "$relative" != "$executable" && -x "$executable" ]] || { echo "::error::unexpected host path $executable"; exit 1; }
-          echo "$relative" > rust/target/ws8bm-browser-host/executable
-          tar -C rust/target -cf "$RUNNER_TEMP/messaging-host.tar" "$relative" \
+          echo "$relative" > target/ws8bm-browser-host/executable
+          tar -C target -cf "$RUNNER_TEMP/messaging-host.tar" "$relative" \
             ws8bm-browser-host/executable ws8bm-browser-host/include-audit.json
 
       - name: Retain the host
@@ -672,7 +682,7 @@ jobs:
         if: ${{ matrix.host == 'app' }}
         shell: bash
         run: |
-          docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+          docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
           docker save campfire-correctness | zstd -T0 -3 -q -o "$RUNNER_TEMP/correctness-image.tar.zst"
 
       - name: Retain the prerequisite image
@@ -721,9 +731,9 @@ jobs:
       - name: Install the Rust hosts
         shell: bash
         run: |
-          mkdir -p rust/target
-          for host in app test; do tar -C rust/target -xf "$RUNNER_TEMP/hosts/rust-messaging-host-$host/messaging-host.tar"; done
-          echo "WS8BM_PREBUILT_TEST_HOST=$GITHUB_WORKSPACE/rust/target/$(cat rust/target/ws8bm-browser-host/executable)" >> "$GITHUB_ENV"
+          mkdir -p target
+          for host in app test; do tar -C target -xf "$RUNNER_TEMP/hosts/rust-messaging-host-$host/messaging-host.tar"; done
+          echo "WS8BM_PREBUILT_TEST_HOST=$GITHUB_WORKSPACE/target/$(cat target/ws8bm-browser-host/executable)" >> "$GITHUB_ENV"
       - name: Collect pinned correctness prerequisites
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -735,21 +745,21 @@ jobs:
       - name: Permit native browser namespaces
         run: |
           if [[ -e /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]]; then
-            sudo apparmor_parser --replace rust/ci/native-browser.apparmor
+            sudo apparmor_parser --replace ci/native-browser.apparmor
             echo 'RUST_CI_APPARMOR_PROFILE=campfire-ci-native' >> "$GITHUB_ENV"
           fi
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}
           CORRECTNESS_SHARD: ${{ matrix.shard }}
-        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
       - name: Retain correctness receipts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
           name: rust-correctness-messaging-behavior-${{ strategy.job-index }}
-          path: rust/target/ci-receipts/
+          path: target/ci-receipts/
           if-no-files-found: error
 
   # The Drive attachment, share and sudo browser declarations (ignored-tests.json "drive"), each
@@ -777,18 +787,18 @@ jobs:
           parity: seeds
           cargo-cache: correctness
       - name: Build pinned correctness prerequisites
-        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
+        run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f ci/Dockerfile -t campfire-correctness .
       - name: Run prerequisite-backed correctness suite
         env:
           SUITE: ${{ matrix.suite }}
-        run: bash rust/ci/exec.sh bash rust/ci/correctness.sh "$SUITE"
+        run: bash ci/exec.sh bash ci/correctness.sh "$SUITE"
       - name: Retain correctness receipts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           overwrite: true
           name: rust-correctness-drive
-          path: rust/target/ci-receipts/
+          path: target/ci-receipts/
           if-no-files-found: error
 
   correctness-gate:
@@ -807,7 +817,7 @@ jobs:
           persist-credentials: false
 
       - name: Require every job to be gated
-        run: python3 rust/ci/check_gate_needs.py .github/workflows/rust.yml
+        run: python3 ci/check_gate_needs.py .github/workflows/rust.yml
 
       # The correctness matrix is skipped, not failed, for a messaging-and-browsers check.
       - name: Gate on every correctness job
@@ -832,4 +842,4 @@ jobs:
       - name: Check that the shards cover every suite
         env:
           SCOPE: ${{ inputs.scope || 'full' }}
-        run: python3 rust/ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$(git rev-parse HEAD)"
+        run: python3 ci/correctness_gate.py "$RUNNER_TEMP/receipts" --scope "$SCOPE" --head "$(git rev-parse HEAD)"

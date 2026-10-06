@@ -28,16 +28,20 @@ something to work on if you'd like to do so.
    from the comments. When in doubt, you can always comment on the issue to ask.
 3. Similarly, if you need any help or guidance on the issue, please comment on
    the issue as you go, and we'll do our best to help.
-4. When you have something ready for review or collaboration, open a PR.
+4. Read [`AGENTS.md`](AGENTS.md) for the layout and working rules: how to
+   build and test, and what has to stay compatible with existing installs.
+5. When you have something ready for review or collaboration, open a PR.
    Before you do, run the tests and clippy as described in the
    [development guide](docs/development.md); the required `Rust port` check
-   runs them again on the PR.
+   runs them again on the PR, beside the browser correctness suites (see
+   [`ci/README.md`](ci/README.md)).
 
 ### If you've found a bug...
 
 1. If you don't have steps to reproduce the problem, or you're not certain it's a
    bug, open a discussion.
-2. If you have steps to reproduce, open an issue.
+2. If you have steps to reproduce, open an issue. If it's a security issue, see
+   [`SECURITY.md`](SECURITY.md) instead.
 
 ### If you have an idea for a feature...
 

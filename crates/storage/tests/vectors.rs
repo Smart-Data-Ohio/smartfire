@@ -1,0 +1,472 @@
+//! Golden vectors from `reference-tools/storage/generate.rb` (`vectors/storage.json`).
+//!
+//! Set `CAMPFIRE_STORAGE_VECTORS=/path/to/storage.json` to check against another run (e.g. one
+//! generated on a host whose libvips/ffmpeg match the local ones). Processed media is compared
+//! byte for byte when the local libvips/ffmpeg versions match the ones that produced the
+//! vectors. CI requires that environment; locally a mismatch prints an explicit skip reason.
+
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use base64::Engine as _;
+use campfire_storage::marshal::Value;
+use campfire_storage::{
+    AppMessageVerifier, Blob, DiskService, Filename, Json, Storage, Variation, Verifier, disk, disposition, marcel,
+    paths,
+};
+use rusqlite::Connection;
+use serde_json::Value as J;
+
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+}
+
+fn vectors_path() -> PathBuf {
+    std::env::var_os("CAMPFIRE_STORAGE_VECTORS").map(PathBuf::from).unwrap_or_else(|| repo_root().join("vectors/storage.json"))
+}
+
+fn vectors() -> J {
+    let path = vectors_path();
+    serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))).unwrap()
+}
+
+/// The Rails app's `test/fixtures/files`: the port's copy in `fixtures/files`, as
+/// `campfire_db::fixtures::reference_dir` finds them.
+fn fixture(name: &str) -> PathBuf {
+    repo_root().join("fixtures/files").join(name)
+}
+
+/// `Rails.application.key_generator.generate_key("ActiveStorage")`: PBKDF2-HMAC-SHA1, 1000
+/// iterations, 64 bytes.
+fn verifier() -> AppMessageVerifier {
+    let env = std::fs::read_to_string(repo_root().join("parity/.env.reference")).unwrap();
+    let secret_key_base = env.lines().find_map(|l| l.strip_prefix("SECRET_KEY_BASE=")).unwrap();
+    let mut key = vec![0u8; 64];
+    pbkdf2::pbkdf2_hmac::<sha1::Sha1>(secret_key_base.as_bytes(), b"ActiveStorage", 1000, &mut key);
+    AppMessageVerifier::new(key)
+}
+
+fn typed(value: &J) -> Value {
+    match value {
+        J::Null => Value::Nil,
+        J::Bool(b) => Value::Bool(*b),
+        J::Number(n) => Value::Int(n.as_i64().unwrap()),
+        J::Array(items) => Value::Array(items.iter().map(typed).collect()),
+        J::Object(o) if o.contains_key("sym") => Value::Symbol(o["sym"].as_str().unwrap().into()),
+        J::Object(o) if o.contains_key("str") => Value::Str(o["str"].as_str().unwrap().into()),
+        J::Object(o) => Value::Hash(
+            o["hash"].as_array().unwrap().iter().map(|pair| (pair[0].as_str().unwrap().to_string(), typed(&pair[1]))).collect(),
+        ),
+        J::String(_) => panic!("untyped string"),
+    }
+}
+
+fn variation(value: &J) -> Variation {
+    match typed(value) {
+        Value::Hash(entries) => Variation::new(entries),
+        other => panic!("{other:?}"),
+    }
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn unhex(s: &str) -> Vec<u8> {
+    (0..s.len()).step_by(2).map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap()).collect()
+}
+
+fn now() -> jiff::Timestamp {
+    "2026-09-26T12:00:00Z".parse().unwrap()
+}
+
+#[test]
+fn variation_digests_and_keys() {
+    let verifier = verifier();
+    for v in vectors()["variations"].as_array().unwrap() {
+        let variation = variation(&v["typed"]);
+        assert_eq!(hex(&variation.marshal()), v["marshal_hex"], "{}", v["inspect"]);
+        assert_eq!(variation.digest(), v["digest"], "{}", v["inspect"]);
+        assert_eq!(variation.key(&verifier), v["key"], "{}", v["inspect"]);
+
+        let decoded = Variation::decode(&verifier, v["key"].as_str().unwrap(), now()).unwrap();
+        assert_eq!(decoded, self::variation(&v["decoded_typed"]), "{}", v["decoded_inspect"]);
+        assert_eq!(hex(&decoded.marshal()), v["decoded_marshal_hex"], "{}", v["decoded_inspect"]);
+        assert_eq!(decoded.digest(), v["decoded_digest"], "{}", v["decoded_inspect"]);
+    }
+}
+
+#[test]
+fn verifier_messages_and_disk_urls() {
+    let verifier = verifier();
+    let v = &vectors()["verifier"];
+    let expires_at: jiff::Timestamp = "2030-01-02T03:04:05.678Z".parse().unwrap();
+    assert_eq!(verifier.generate("\"x\"", "p", Some(expires_at)), v["expiring"]);
+    assert_eq!(verifier.verified(v["expiring"].as_str().unwrap(), "p", now()).as_deref(), Some("\"x\""));
+    assert_eq!(verifier.verified(v["expiring"].as_str().unwrap(), "p", expires_at), None);
+    assert_eq!(verifier.verified(v["expiring"].as_str().unwrap(), "q", now()), None);
+
+    let service = DiskService::new("/tmp/unused", "local");
+    let weird = Filename::new("weird & <name> ünï.png");
+    let key = "abcdefghijklmnopqrstuvwxyz12";
+    assert_eq!(service.url_path(&verifier, key, None, &weird, Some("image/png"), "inline"), v["disk_url_path"]);
+    assert_eq!(service.url_path(&verifier, key, None, &weird, None, "attachment"), v["disk_url_path_nil_type"]);
+
+    let encoded_key = v["disk_url_path"].as_str().unwrap().split('/').nth(4).unwrap();
+    let decoded = disk::decode_verified_key(&verifier, encoded_key, now()).unwrap();
+    assert_eq!(decoded.key, key);
+    assert_eq!(decoded.content_type.as_deref(), Some("image/png"));
+    assert_eq!(decoded.service_name, "local");
+
+    let token = v["direct_upload_path"].as_str().unwrap().rsplit('/').next().unwrap();
+    let issued: jiff::Timestamp = "2020-01-01T00:00:00Z".parse().unwrap();
+    let decoded = disk::decode_verified_token(&verifier, token, issued).unwrap();
+    assert_eq!((decoded.content_length, decoded.checksum.as_str()), (42, "abc=="));
+}
+
+#[test]
+fn marcel_identification() {
+    for sample in vectors()["marcel"].as_array().unwrap() {
+        let data = match sample["fixture"].as_str() {
+            Some(name) => std::fs::read(fixture(name)).unwrap(),
+            None => unhex(sample["data_hex"].as_str().unwrap()),
+        };
+        assert_eq!(
+            marcel::identify(&data, sample["name"].as_str(), sample["declared_type"].as_str()),
+            sample["content_type"].as_str().unwrap(),
+            "{} declared {:?}",
+            sample["name"],
+            sample["declared_type"]
+        );
+    }
+}
+
+#[test]
+fn filenames_and_dispositions() {
+    for f in vectors()["filenames"].as_array().unwrap() {
+        let filename = Filename::from_bytes(&unhex(f["input_hex"].as_str().unwrap()));
+        let sanitized = filename.sanitized();
+        assert_eq!(sanitized, f["sanitized"].as_str().unwrap());
+        // Invalid bytes are replaced on input, so compare base/extension only for valid names.
+        if std::str::from_utf8(&unhex(f["input_hex"].as_str().unwrap())).is_ok() {
+            assert_eq!(hex(filename.base().as_bytes()), f["base_hex"], "{sanitized}");
+            assert_eq!(hex(filename.extension().as_bytes()), f["extension_hex"], "{sanitized}");
+        }
+        assert_eq!(disposition::format("inline", &sanitized), f["inline"].as_str().unwrap());
+        assert_eq!(disposition::format("attachment", &sanitized), f["attachment"].as_str().unwrap());
+        assert_eq!(disposition::escape_path(&sanitized), f["escaped_path"].as_str().unwrap());
+    }
+}
+
+#[test]
+fn blob_filenames_match_pinned_rails() {
+    let vectors: J = serde_json::from_str(include_str!("../../../vectors/attachment_filenames.json")).unwrap();
+    assert_eq!(vectors["filename_count"], 141);
+    assert_eq!(vectors["cases"].as_array().unwrap().len(), 564);
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    for case in vectors["cases"].as_array().unwrap() {
+        let name = case["filename"].as_str().unwrap();
+        let label = format!("{name:?} {}", case["kind"]);
+        let bytes = base64::engine::general_purpose::STANDARD.decode(case["data_base64"].as_str().unwrap()).unwrap();
+        let filename = Filename::new(name);
+        assert_eq!(filename.sanitized(), case["sanitized"], "{label}");
+        // Direct uploads persist the declared type and no identification metadata.
+        let mut pending = campfire_storage::blob::NewBlob::unfurl(&bytes, filename.clone(), case["content_type"].as_str(), "local", false);
+        pending.metadata = Json::object();
+        storage.service.upload(&pending.key, bytes.as_slice(), Some(&pending.checksum)).unwrap();
+        let direct = pending.insert(&conn, now()).unwrap();
+        assert_eq!(direct.filename.raw(), case["stored_before"], "{label}");
+        let mut identified = storage.identify_blob(direct).unwrap();
+        assert_eq!(identified.content_type(), case["identified_content_type"], "{label} identified MIME");
+        assert_eq!(serde_json::from_str::<J>(&identified.metadata.encode()).unwrap(), case["metadata"], "{label}");
+        assert_eq!(campfire_storage::analyze::Analyzer::for_content_type(identified.content_type()).analyze_later(), case["analyze_later"].as_bool().unwrap(), "{label}");
+        conn.execute("UPDATE active_storage_blobs SET content_type = ?1 WHERE id = ?2", rusqlite::params![identified.content_type, identified.id]).unwrap();
+        identified.update_metadata(&conn, identified.metadata.clone()).unwrap();
+        assert_eq!(Blob::find(&conn, identified.id).unwrap().unwrap().filename.raw(), case["stored_after"], "{label}");
+
+        // Ordinary uploads and file staging use the same sanitized identification input.
+        let uploaded = storage.create_and_upload(&conn, &bytes, filename.clone(), case["content_type"].as_str(), now()).unwrap();
+        assert_eq!(uploaded.content_type(), case["identified_content_type"], "{label} upload MIME");
+        assert_eq!(uploaded.filename.raw(), case["uploaded_filename"], "{label}");
+        assert_eq!(serde_json::from_str::<J>(&uploaded.metadata.encode()).unwrap(), case["uploaded_metadata"], "{label}");
+        let source = root.path().join("source");
+        std::fs::write(&source, &bytes).unwrap();
+        let staged = storage.stage_file(&source, filename, case["content_type"].as_str()).unwrap();
+        assert_eq!(staged.blob().content_type.as_deref(), case["identified_content_type"].as_str(), "{label} staged MIME");
+        assert_eq!(staged.blob().filename.raw(), case["uploaded_filename"], "{label}");
+    }
+}
+
+#[test]
+fn forwarded_filenames_match_pinned_rails() {
+    let vectors: J = serde_json::from_str(include_str!("../../../vectors/attachment_filenames.json")).unwrap();
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    let mut checked = 0;
+    for case in vectors["cases"].as_array().unwrap() {
+        // Ruby Blob#open rejects the raw filename containing NUL, before a copy is possible.
+        let Some(expected_name) = case["copied_filename"].as_str() else { continue };
+        let name = case["filename"].as_str().unwrap();
+        let label = format!("{name:?} {}", case["kind"]);
+        let bytes = base64::engine::general_purpose::STANDARD.decode(case["data_base64"].as_str().unwrap()).unwrap();
+        let source = storage.create_and_upload(&conn, &bytes, Filename::new(name), case["content_type"].as_str(), now()).unwrap();
+        let staged = storage.stage_copy(&source).unwrap();
+        let copied = staged.insert(&conn, now()).unwrap();
+        assert_eq!(copied.filename.raw(), expected_name, "{label} stored copy filename");
+        assert_eq!(Blob::find(&conn, copied.id).unwrap().unwrap().filename.raw(), expected_name, "{label} persisted filename");
+        assert_eq!(copied.content_type(), case["identified_content_type"], "{label} retained MIME");
+        assert_eq!(serde_json::from_str::<J>(&copied.metadata.encode()).unwrap(), case["copied_metadata"], "{label}");
+        assert_eq!(std::fs::read(storage.path_for(&copied)).unwrap(), bytes, "{label} copied bytes");
+        checked += 1;
+    }
+    assert_eq!(checked, 560);
+}
+
+fn blob_from(row: &J) -> Blob {
+    Blob {
+        id: row["id"].as_i64().unwrap(),
+        key: row["key"].as_str().unwrap().into(),
+        filename: Filename::new(row["filename"].as_str().unwrap()),
+        content_type: row["content_type"].as_str().map(str::to_string),
+        metadata: Json::parse(row["metadata"].as_str().unwrap()).unwrap(),
+        service_name: row["service_name"].as_str().unwrap().into(),
+        byte_size: row["byte_size"].as_i64().unwrap(),
+        checksum: row["checksum"].as_str().map(str::to_string),
+        created_at: String::new(),
+    }
+}
+
+#[test]
+fn route_paths() {
+    let verifier = verifier();
+    let service = DiskService::new("/tmp/unused", "local");
+    for m in vectors()["messages"].as_array().unwrap() {
+        let blob = blob_from(&m["blob"]);
+        assert_eq!(paths::blob_redirect_path(&verifier, &blob, None), m["rails_blob_path"]);
+        assert_eq!(paths::blob_redirect_path(&verifier, &blob, Some("attachment")), m["rails_blob_download_path"]);
+        assert_eq!(paths::blob_proxy_path(&verifier, &blob, None), m["rails_blob_proxy_path"]);
+        assert_eq!(paths::verify_signed_blob_id(&verifier, m["rails_blob_path"].as_str().unwrap().split('/').nth(5).unwrap(), now()), Some(blob.id));
+
+        // `blob.url` → the disk service URL, with the forced disposition for non-inline types.
+        let content_type = blob.content_type();
+        let disposition = campfire_storage::content_types::forced_disposition(content_type).unwrap_or("inline");
+        let service_path = |disposition: &str| {
+            let d = campfire_storage::content_types::forced_disposition(content_type).unwrap_or(disposition);
+            format!(
+                "http://campfire.test{}",
+                service.url_path(&verifier, &blob.key, None, &blob.filename, Some(campfire_storage::content_types::for_serving(content_type)), d)
+            )
+        };
+        assert_eq!(service_path(disposition), m["service_url"]);
+        assert_eq!(service_path("attachment"), m["service_url_attachment"]);
+
+        if let Some(thumb_path) = m["thumb_path"].as_str() {
+            let thumb = variation(&m["variants"][0]["transformations_typed"]);
+            assert_eq!(paths::representation_redirect_path(&verifier, &blob, &thumb), thumb_path);
+            assert_eq!(paths::representation_proxy_path(&verifier, &blob, &thumb), m["thumb_proxy_path"]);
+        }
+        if let Some(poster_path) = m["poster_path"].as_str() {
+            let poster = Variation::new(vec![
+                ("format".into(), Value::Symbol("webp".into())),
+                ("resize_to_limit".into(), Value::Array(vec![Value::Int(1200), Value::Int(800)])),
+            ]);
+            assert_eq!(paths::representation_redirect_path(&verifier, &blob, &poster), poster_path);
+            assert_eq!(paths::representation_proxy_path(&verifier, &blob, &poster), m["poster_proxy_path"]);
+        }
+    }
+}
+
+// --- The upload → analyze → variant/preview pipeline -------------------------------------------
+
+const SCHEMA: &str = include_str!("../../db/src/schema.sql");
+
+#[test]
+fn blob_reads_and_metadata_writes_preserve_rails_processing_columns() {
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+    let mut blob = campfire_storage::blob::NewBlob::unfurl(
+        b"blob schema compatibility", Filename::new("schema.txt"), Some("text/plain"), "local", false,
+    ).insert(&conn, now()).unwrap();
+    let id = blob.id;
+    let processing_state = || conn.query_row(
+        "SELECT message_processing_token, message_processing_expires_at FROM active_storage_blobs WHERE id=?",
+        [id],
+        |row| Ok((row.get::<_, Option<String>>(0)?, row.get::<_, Option<String>>(1)?)),
+    ).unwrap();
+    assert_eq!(processing_state(), (None, None));
+    conn.execute(
+        "UPDATE active_storage_blobs SET message_processing_token='rails-lease', message_processing_expires_at='2026-10-03 18:00:00.000000' WHERE id=?",
+        [id],
+    ).unwrap();
+    let lease = processing_state();
+    campfire_storage::blob::insert_attachment(&conn, "attachment", "Message", 42, id, now()).unwrap();
+    assert_eq!(Blob::find(&conn, id).unwrap(), Some(blob.clone()));
+    assert_eq!(Blob::find_by_key(&conn, &blob.key).unwrap(), Some(blob.clone()));
+    assert_eq!(Blob::find_many(&conn, &[id]).unwrap()[&id], blob);
+    assert_eq!(Blob::attached(&conn, "Message", 42, "attachment").unwrap(), Some(blob.clone()));
+    assert_eq!(Blob::attached_messages(&conn, &[42]).unwrap()[&42], blob);
+    let mut metadata = blob.metadata.clone();
+    metadata.set("analyzed", Json::Bool(true));
+    blob.update_metadata(&conn, metadata).unwrap();
+    assert_eq!(Blob::find(&conn, id).unwrap(), Some(blob));
+    assert_eq!(processing_state(), lease);
+}
+
+struct Comparison {
+    mismatches: Vec<String>,
+    identical: Vec<String>,
+}
+
+impl Comparison {
+    fn new(versions: &J) -> Option<Self> {
+        let local_vips = campfire_storage::vips::version();
+        let local_ffmpeg = ffmpeg_version();
+        if versions["libvips"] != local_vips.as_str() || versions["ffmpeg"] != local_ffmpeg.as_str() {
+            let reason = format!(
+                "pinned media required: expected libvips {} / ffmpeg {}, found libvips {local_vips} / ffmpeg {local_ffmpeg}",
+                versions["libvips"], versions["ffmpeg"]
+            );
+            assert!(std::env::var_os("CI").is_none(), "pipeline_matches_the_reference: {reason}");
+            eprintln!("skipping pipeline_matches_the_reference locally: {reason}");
+            return None;
+        }
+        Some(Self { mismatches: vec![], identical: vec![] })
+    }
+
+    /// Every row, metadata and byte assertion runs in the pinned processing environment.
+    fn blob(&mut self, label: &str, actual: &Blob, expected: &J, _processed: bool, _video: bool) {
+        assert_eq!(actual.filename.raw(), expected["filename"], "{label} filename");
+        assert_eq!(actual.content_type.as_deref(), expected["content_type"].as_str(), "{label} content_type");
+        assert_eq!(actual.service_name, expected["service_name"], "{label} service_name");
+        {
+            assert_eq!(actual.metadata.encode(), expected["metadata"].as_str().unwrap(), "{label} metadata");
+            if actual.checksum.as_deref() == expected["checksum"].as_str() && actual.byte_size == expected["byte_size"].as_i64().unwrap() {
+                self.identical.push(label.to_string());
+            } else {
+                self.mismatches.push(format!(
+                    "{label}: {} bytes {:?}, expected {} bytes {}",
+                    actual.byte_size, actual.checksum, expected["byte_size"], expected["checksum"]
+                ));
+            }
+        }
+    }
+}
+
+fn ffmpeg_version() -> String {
+    match std::process::Command::new("ffmpeg").arg("-version").output() {
+        Ok(output) => String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string(),
+        Err(error) => format!("unavailable ({error})"),
+    }
+}
+
+#[test]
+fn pipeline_matches_the_reference() {
+    let vectors = vectors();
+    let Some(mut comparison) = Comparison::new(&vectors["versions"]) else { return };
+    let files = vectors_path().parent().unwrap().join("storage");
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let conn = Connection::open_in_memory().unwrap();
+    conn.execute_batch(SCHEMA).unwrap();
+
+    let check_variant = |comparison: &mut Comparison, conn: &Connection, source: &Blob, v: &J, image: Blob, video: bool| {
+        let label = v["label"].as_str().unwrap();
+        assert_eq!(variation(&v["transformations_typed"]).digest(), v["variation_digest"], "{label} digest");
+        comparison.blob(label, &image, &v["blob"], true, video);
+        assert_eq!(storage.path_for(&image), root.path().join(image.key.get(0..2).unwrap()).join(&image.key[2..4]).join(&image.key));
+        // The saved reference file is the variant blob's content, and ours is what we recorded.
+        let expected = std::fs::read(files.join(v["file"].as_str().unwrap())).unwrap();
+        assert_eq!(campfire_storage::key::checksum(&expected), v["blob"]["checksum"].as_str().unwrap(), "{label} vector file");
+        let actual = std::fs::read(storage.path_for(&image)).unwrap();
+        assert_eq!(campfire_storage::key::checksum(&actual), image.checksum.clone().unwrap(), "{label} stored file");
+        let record_id = campfire_storage::blob::find_variant_record(conn, source.id, v["variation_digest"].as_str().unwrap()).unwrap();
+        let attached = Blob::attached(conn, "ActiveStorage::VariantRecord", record_id.unwrap(), "image").unwrap();
+        assert_eq!(attached.map(|b| b.id), Some(image.id), "{label} variant record attachment");
+    };
+
+    for m in vectors["messages"].as_array().unwrap() {
+        let name = m["fixture"].as_str().unwrap();
+        let data = std::fs::read(fixture(name)).unwrap();
+        let mut blob = storage.create_and_upload(&conn, &data, Filename::new(name), m["declared_type"].as_str(), now()).unwrap();
+        campfire_storage::blob::insert_attachment(&conn, "attachment", "Message", 1, blob.id, now()).unwrap();
+        storage.analyze(&conn, &mut blob).unwrap();
+        comparison.blob(name, &blob, &m["blob"], false, false);
+        assert_eq!(blob.is_variable(), m["variable"].as_bool().unwrap(), "{name} variable?");
+        assert_eq!(blob.is_previewable(), m["previewable"].as_bool().unwrap(), "{name} previewable?");
+
+        if blob.is_video() {
+            let preview_image = storage.preview_image(&conn, &blob, now()).unwrap();
+            comparison.blob(&format!("{name} preview_image"), &preview_image, &m["preview_image"]["blob"], true, true);
+            for v in m["variants"].as_array().unwrap() {
+                let image = storage.process_preview(&conn, &blob, &variation(&v["transformations_typed"]), now()).unwrap();
+                check_variant(&mut comparison, &conn, &preview_image, v, image, true);
+            }
+        } else if blob.is_variable() {
+            let thumb = Variation::resize_to_limit(1200, 800, None);
+            let variation = storage.variation_for(&blob, &thumb).unwrap();
+            let v = &m["variants"][0];
+            assert_eq!(variation, self::variation(&v["transformations_typed"]));
+            let image = storage.process_variant(&conn, &blob, &variation, now()).unwrap();
+            // Processing again reuses the variant record.
+            assert_eq!(storage.process_variant(&conn, &blob, &variation, now()).unwrap().id, image.id);
+            check_variant(&mut comparison, &conn, &blob, v, image, false);
+        }
+    }
+
+    let named = [("avatars", Variation::resize_to_limit(512, 512, Some("webp"))), ("logos", Variation::resize_to_limit(512, 512, Some("png")))];
+    for (kind, first) in named {
+        for entry in vectors[kind].as_array().unwrap() {
+            let row = &entry["blob"];
+            let data = std::fs::read(fixture(entry["fixture"].as_str().unwrap())).unwrap();
+            let mut blob = storage.create_and_upload(&conn, &data, Filename::new(row["filename"].as_str().unwrap()), row["content_type"].as_str(), now()).unwrap();
+            storage.analyze(&conn, &mut blob).unwrap();
+            comparison.blob(row["filename"].as_str().unwrap(), &blob, row, false, false);
+            for (i, v) in entry["variants"].as_array().unwrap().iter().enumerate() {
+                let transformations = if i == 0 { first.clone() } else { Variation::resize_to_limit(192, 192, Some("png")) };
+                let variation = storage.variation_for(&blob, &transformations).unwrap();
+                assert_eq!(variation, self::variation(&v["transformations_typed"]), "{}", v["label"]);
+                let image = storage.process_variant(&conn, &blob, &variation, now()).unwrap();
+                check_variant(&mut comparison, &conn, &blob, v, image, false);
+            }
+        }
+    }
+
+    eprintln!("byte-identical: {:?}", comparison.identical);
+    assert!(comparison.mismatches.is_empty(), "not byte-identical:\n{}", comparison.mismatches.join("\n"));
+}
+
+#[test]
+fn staging_a_file_unfurls_it_as_its_bytes_would() {
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    for m in vectors()["messages"].as_array().unwrap() {
+        let name = m["fixture"].as_str().unwrap();
+        let declared = m["declared_type"].as_str();
+        let from_file = storage.stage_file(&fixture(name), Filename::new(name), declared).unwrap();
+        let from_bytes = storage.stage_bytes(&std::fs::read(fixture(name)).unwrap(), Filename::new(name), declared).unwrap();
+        let (a, b) = (from_file.blob(), from_bytes.blob());
+        assert_eq!((&a.content_type, &a.checksum, a.byte_size), (&b.content_type, &b.checksum, b.byte_size), "{name}");
+        assert_eq!(std::fs::read(storage.service.path_for(&a.key)).unwrap(), std::fs::read(fixture(name)).unwrap(), "{name}");
+    }
+}
+
+#[test]
+fn a_staged_file_is_deleted_unless_kept() {
+    let root = tempfile::tempdir().unwrap();
+    let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
+    let dropped = storage.stage_bytes(b"dropped", Filename::new("a.txt"), None).unwrap();
+    let dropped_path = storage.service.path_for(&dropped.blob().key);
+    assert!(dropped_path.exists());
+    drop(dropped);
+    assert!(!dropped_path.exists());
+
+    let kept = storage.stage_bytes(b"kept", Filename::new("b.txt"), None).unwrap();
+    let kept_path = storage.service.path_for(&kept.blob().key);
+    kept.keep();
+    assert!(kept_path.exists());
+}

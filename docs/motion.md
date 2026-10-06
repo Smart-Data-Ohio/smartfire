@@ -7,7 +7,7 @@ removing the node.
 
 ## Tokens
 
-`rust/web/app/assets/stylesheets/motion.css` holds the whole vocabulary:
+`web/app/assets/stylesheets/motion.css` holds the whole vocabulary:
 
 - `--motion-quick: 100ms` — hover and press color changes on buttons
   and rows.
