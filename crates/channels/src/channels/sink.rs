@@ -88,6 +88,7 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
                 let message = campfire_db::Message::find(conn, event.message_id)?;
                 let room = campfire_db::Room::find(conn, message.room_id)?;
                 let view = crate::controllers::presenters::Presenter::new(conn, &copy, None).message(&message)?;
+                copy.broadcasts.sync_message(conn, &message, false);
                 let html = crate::controllers::presenters::page::render_detached(&copy, None, |ctx| campfire_views::messages::MessagePartial {ctx,message:&view}.render().expect("messages/_message renders"));
                 copy.broadcasts.turbo(&super::broadcasts::Stream::conversation(&room, &message), Action::Replace,
                     &super::broadcasts::message_dom_id(&message, None), Some(&html), false);
@@ -219,6 +220,7 @@ fn agent_status(
 fn status_badge(cable: &Cable, b: campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast) -> anyhow::Result<()> {
     let html=campfire_views::users::statuses::StatusBadge{presence:&b.presence,status_text:b.status_text.as_deref()}.render()?;
     cable.broadcast_action_to(&[&user_gid(b.user_id).to_param(),"status"],Action::Update,Target::Target(&dom_id("user",b.user_id,Some("status_badge"))),Some(&html),&[]);
+    crate::cable::sync::status_badge(cable, b.user_id, &b.presence, b.status_text.as_deref());
     Ok(())
 }
 
@@ -241,6 +243,7 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
         let html=app.db.read_blocking(move|conn| {
             let message=campfire_db::Message::find(conn,message_id)?;
             let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
+            copy.broadcasts.sync_message(conn, &message, frame.action == TurboAction::Append);
             // APP_URL supplies route defaults. Without it ActionController's
             // renderer uses example.org, independent of mail's example.com fallback.
             let origin=crate::controllers::presenters::page::default_renderer_base_url(&copy);
@@ -260,7 +263,14 @@ pub(crate) fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_d
     }
     if let Some((stream, payload)) = template_free_broadcast(broadcast) {
         match broadcast {
-            Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
+            Broadcast::Cable { .. } => {
+                cable.broadcast(&stream, &payload);
+                crate::cable::sync::cable_stream(cable, &stream, &payload);
+            }
+            Broadcast::UnreadRoom { user_id, room_id, message_id } => {
+                cable.broadcast(&stream, &payload);
+                crate::cable::sync::unread_room(cable, app.map(|app| &app.db), *user_id, *room_id, *message_id);
+            }
             Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
         }
         return Ok(());
@@ -338,6 +348,7 @@ pub fn room_removal(cable: &Cable, broadcast: &RoomRemovalBroadcast, huddle_conf
         None,
         &[],
     );
+    crate::cable::sync::sidebar_row_removed(cable, broadcast.user_id, broadcast.room_id);
 }
 
 /// `Huddle.configured?` (reference/app/services/huddle.rb): the five LiveKit variables are set and
@@ -352,7 +363,7 @@ pub fn template_free_broadcast(
 ) -> Option<(String, serde_json::Value)> {
     use campfire_db::broadcasts::{Broadcast, TurboAction};
     match broadcast {
-        Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
+        Broadcast::Cable { .. } | Broadcast::UnreadRoom { .. } => broadcast.channel_frame(),
         Broadcast::Turbo(frame)
             if frame.action == TurboAction::Remove && frame.partial.is_none() =>
         {

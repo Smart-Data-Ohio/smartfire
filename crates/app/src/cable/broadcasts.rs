@@ -26,6 +26,7 @@ use serde::Serialize;
 
 use campfire_db::broadcasts::unread_rooms_stream_name;
 
+use super::sync::{self, RendererSlot, SyncRenderer};
 use super::{Cable, read_rooms_stream_name, room_gid, thread_gid, user_gid};
 
 /// The partials Turbo renders for broadcasts (`ApplicationController.render(partial:, locals:)`,
@@ -161,17 +162,34 @@ pub fn read_room(server: &Cable, user_id: i64, room_id: i64) -> usize {
     struct ReadRoom {
         room_id: i64,
     }
-    server.broadcast(&read_rooms_stream_name(user_id), &ReadRoom { room_id })
+    let reached = server.broadcast(&read_rooms_stream_name(user_id), &ReadRoom { room_id });
+    sync::room_read(server, user_id, room_id);
+    reached
 }
 
 #[derive(Clone)]
 pub struct Broadcasts {
     server: Cable,
+    sync: RendererSlot,
 }
 
 impl Broadcasts {
     pub fn new(server: Cable) -> Self {
-        Self { server }
+        Self {
+            server,
+            sync: RendererSlot::default(),
+        }
+    }
+
+    /// Lets the twins that carry rendered DTOs publish ([`sync`]).
+    pub fn install_sync_renderer(&self, renderer: std::sync::Arc<dyn SyncRenderer>) {
+        self.sync.install(renderer);
+    }
+
+    /// `message.created` (or `message.updated`) for a message a broadcast point outside this
+    /// type rendered.
+    pub fn sync_message(&self, conn: &Connection, message: &Message, created: bool) {
+        sync::message(&self.server, &self.sync, conn, message, created);
     }
 
     // The primitives
@@ -238,7 +256,9 @@ impl Broadcasts {
             #[serde(rename = "roomId")]
             room_id: i64,
         }
-        self.channel(&unread_rooms_stream_name(user_id), &UnreadRoom { room_id })
+        let reached = self.channel(&unread_rooms_stream_name(user_id), &UnreadRoom { room_id });
+        sync::room_unread(&self.server, user_id, room_id, None, false);
+        reached
     }
 
     // Message::Broadcasts (reference/app/models/message/broadcasts.rb)
@@ -259,6 +279,7 @@ impl Broadcasts {
             &conversation_messages_target(room, message),
             &html,
         );
+        self.sync_message(conn, message, true);
         if message.thread_id.is_none() && !message.system_note {
             self.unread_room(conn, room, message, rich_text)?;
         }
@@ -279,11 +300,28 @@ impl Broadcasts {
             #[serde(rename = "roomId")]
             room_id: i64,
         }
-        for user_id in unread_user_ids(conn, room, message, rich_text)? {
+        let user_ids = unread_user_ids(conn, room, message, rich_text)?;
+        for &user_id in &user_ids {
             self.channel(
                 &unread_rooms_stream_name(user_id),
                 &UnreadRoom { room_id: room.id },
             );
+        }
+        if self.server.sync_wanted() {
+            let mentioned: Vec<i64> = message
+                .mentionees(conn, rich_text)?
+                .iter()
+                .map(|user| user.id)
+                .collect();
+            for user_id in user_ids {
+                sync::room_unread(
+                    &self.server,
+                    user_id,
+                    room.id,
+                    Some(message.id),
+                    mentioned.contains(&user_id),
+                );
+            }
         }
         Ok(())
     }
@@ -295,6 +333,7 @@ impl Broadcasts {
             &Stream::conversation(room, message),
             &message_dom_id(message, None),
         );
+        sync::message_removed(&self.server, message);
     }
 
     /// MessagesController#update: replace `[message, :presentation]` on `[@room, :messages]` (the
@@ -316,6 +355,10 @@ impl Broadcasts {
             Some(html),
             true,
         );
+        // Every edit replaces the presentation; its other parts don't change the DTO.
+        if part == "presentation" {
+            sync::message_updated_later(&self.server, &self.sync, message.id);
+        }
     }
 
     /// `broadcast_reactions_replace`: `messages/boosts/_reactions` over `dom_id(message, :boosts)`
@@ -369,6 +412,7 @@ impl Broadcasts {
     /// RoomsController#destroy: remove `[room, :list]` from everyone's `:rooms`.
     pub fn room_remove(&self, room: &Room) {
         self.remove(&Stream::rooms(), &room_dom_id(room, "list"));
+        sync::room_removed(&self.server, room.id);
     }
 
     /// Rooms::OpensController#create: prepend to everyone's `shared_rooms`.
@@ -378,6 +422,7 @@ impl Broadcasts {
             "shared_rooms",
             &partials.shared_room(room),
         );
+        sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
     /// Rooms::OpensController#update: replace `[room, :list]` on `:rooms`, then `[room, :header]`
@@ -393,6 +438,7 @@ impl Broadcasts {
         if let Some(header) = header {
             self.replace(&Stream::rooms(), &room_dom_id(room, "header"), header);
         }
+        sync::sidebar_rows_later(&self.server, &self.sync, room.id, None);
     }
 
     /// Rooms::ClosedsController#create: render once, prepend to each member's own stream
@@ -404,9 +450,11 @@ impl Broadcasts {
         partials: &dyn Partials,
     ) -> campfire_db::Result<()> {
         let html = partials.shared_room(room);
-        for user_id in room.user_ids(conn)? {
+        let user_ids = room.user_ids(conn)?;
+        for &user_id in &user_ids {
             self.prepend(&Stream::user_rooms(user_id), "shared_rooms", &html);
         }
+        sync::sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
         Ok(())
     }
 
@@ -431,6 +479,7 @@ impl Broadcasts {
                 self.replace(&Stream::user_rooms(user_id), &target, header);
             }
         }
+        sync::sidebar_rows(&self.server, &self.sync, conn, room, Some(&user_ids));
         Ok(())
     }
 
@@ -450,6 +499,7 @@ impl Broadcasts {
                 &html,
             );
         }
+        sync::sidebar_rows(&self.server, &self.sync, conn, room, None);
         Ok(())
     }
 
@@ -462,6 +512,12 @@ impl Broadcasts {
         previous: Option<Involvement>,
         partials: &dyn Partials,
     ) {
+        sync::sidebar_rows_later(
+            &self.server,
+            &self.sync,
+            room.id,
+            Some(vec![membership.user_id]),
+        );
         let stream = Stream::user_rooms(membership.user_id);
         let was = |involvement| previous == Some(involvement);
         let muted_transition =

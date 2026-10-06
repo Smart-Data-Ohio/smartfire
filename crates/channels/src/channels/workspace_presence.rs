@@ -8,11 +8,11 @@
 //! re-establishing fails, and the subscription is rejected. As in Rails, a rejection inside an
 //! action sends no frame: the subscription just stops performing actions.
 use campfire_cable::{Channel, ChannelResult, Params, Subscription};
-use campfire_db::{Database, Session, User, WorkspacePresenceLease};
+use campfire_db::{Database, WorkspacePresenceLease};
 use jiff::SignedDuration;
 
 use super::CableUser;
-use crate::concerns::session_expired;
+use crate::concerns::expire_idle_timed_out_session;
 
 pub struct WorkspacePresenceChannel {
     db: Database,
@@ -63,21 +63,6 @@ impl WorkspacePresenceChannel {
         }
         self.establish(sub).await
     }
-}
-
-/// `expire_idle_timed_out_session!`: `Session.find_by(id:)`, destroyed if `expired?`. A session
-/// that's already gone is skipped.
-fn expire_idle_timed_out_session(tx: &mut campfire_db::Tx<'_>, session_id: i64, timeout: SignedDuration) -> campfire_db::Result<()> {
-    let fresh = match Session::find(tx.conn(), session_id) {
-        Ok(session) => session,
-        Err(campfire_db::Error::RecordNotFound(_)) => return Ok(()),
-        Err(error) => return Err(error),
-    };
-    let user = User::find(tx.conn(), fresh.user_id)?;
-    if session_expired(&fresh, &user, timeout, tx.now()) {
-        fresh.destroy(tx)?;
-    }
-    Ok(())
 }
 
 #[async_trait::async_trait]

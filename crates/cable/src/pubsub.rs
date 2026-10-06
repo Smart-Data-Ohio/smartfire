@@ -114,6 +114,14 @@ impl Hub {
         receivers
     }
 
+    /// Takes the next publication sequence for something published outside the broadcastings
+    /// (the sync ring), running `publish` under the same lock so it lands in sequence order.
+    pub(crate) fn sequenced<R>(&self, publish: impl FnOnce(u64) -> R) -> R {
+        let mut state = self.state.lock().unwrap();
+        state.sequence += 1;
+        publish(state.sequence)
+    }
+
     /// Subscribes to `broadcasting`, receiving each payload wrapped as a message frame for the
     /// encoded channel `identifier`, or raw when it's `None`.
     pub fn subscribe(self: &Arc<Self>, broadcasting: &str, identifier: Option<Arc<str>>) -> Subscriber {

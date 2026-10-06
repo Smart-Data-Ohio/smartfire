@@ -181,9 +181,6 @@ fn callback_rows(events: &[Event]) -> (Value, Value) {
                 broadcasts.push(json!({"method":"broadcast_update_to","streams":[crate::broadcasts::Streamable::User(notice.user_id).descriptor_name(),"ooo_notice"],"target":format!("ooo_notice_user_{}",notice.user_id),"partial":"rooms/show/ooo_notice_line"}));
             }
             Event::Broadcast(_) => match event.as_broadcast() {
-                Some(Broadcast::Cable { stream, payload }) => {
-                    broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload}))
-                }
                 Some(Broadcast::Turbo(s)) => {
                     let partial = match &s.partial {
                         Some(Partial::Message { .. }) => Some("messages/message"),
@@ -199,7 +196,12 @@ fn callback_rows(events: &[Event]) -> (Value, Value) {
                     };
                     broadcasts.push(json!({"method":method,"streams":s.streamables.iter().map(|s|s.descriptor_name()).collect::<Vec<_>>(),"target":s.target,"partial":partial}));
                 }
-                _ => {}
+                Some(broadcast) => {
+                    if let Some((stream, payload)) = broadcast.channel_frame() {
+                        broadcasts.push(json!({"method":"cable","stream":stream,"payload":payload}))
+                    }
+                }
+                None => {}
             },
             _ => {}
         }

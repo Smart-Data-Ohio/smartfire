@@ -384,6 +384,8 @@ dependencies = [
  "base64 0.22.1",
  "bnum",
  "bytes",
+ "campfire_api",
+ "campfire_api_types",
  "campfire_app",
  "campfire_assets",
  "campfire_cable",
@@ -439,6 +441,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "campfire_api"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "campfire_api_types",
+ "campfire_app",
+ "campfire_cable",
+ "campfire_db",
+ "campfire_kit",
+ "campfire_messages",
+ "campfire_storage",
+ "campfire_views",
+ "campfire_web",
+ "rails_compat",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "campfire_api_types"
 version = "0.1.0"
 dependencies = [
@@ -456,6 +481,7 @@ dependencies = [
  "axum",
  "base64 0.22.1",
  "bytes",
+ "campfire_api_types",
  "campfire_assets",
  "campfire_cable",
  "campfire_db",
@@ -517,6 +543,7 @@ dependencies = [
  "async-trait",
  "axum",
  "base64 0.22.1",
+ "campfire_api_types",
  "flate2",
  "futures-util",
  "html5ever 0.35.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -524,6 +551,7 @@ dependencies = [
  "hyper-util",
  "markup5ever_rcdom",
  "rails_compat",
+ "rand 0.9.5",
  "serde",
  "serde_json",
  "sha1",

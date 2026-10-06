@@ -82,6 +82,13 @@ impl TypingNotificationsChannel {
             let user = sub.current_user();
             let payload = Payload { action, user: UserAttributes { id: user.id, name: &user.name } };
             sub.broadcast_to(&[&gid.to_param()], &payload);
+            if sub.server().sync_wanted() {
+                let topic = match conversation {
+                    Conversation::Room => crate::cable::sync::room_topic(room_id),
+                    Conversation::Thread(thread_id) => format!("thread:{thread_id}"),
+                };
+                crate::cable::sync::typing(sub.server(), &topic, user.id, action == "start");
+            }
         }
         Ok(())
     }

@@ -13,6 +13,7 @@ use tokio::sync::{broadcast, watch};
 use crate::channel::Channel;
 use crate::pubsub::{Frame, Hub};
 use crate::socket::Handshake;
+use crate::sync::{Engine, Ring, SyncConfig, SyncHandler, SyncPublication};
 use crate::{connection, json, naming, protocol};
 
 /// `config.action_cable.*` as the production reference runs it.
@@ -99,6 +100,7 @@ impl<U: Identified + Send + Sync + 'static> ServerBuilder<U> {
                 channels: self.channels,
                 heartbeat: OnceLock::new(),
                 restart,
+                sync: OnceLock::new(),
             }),
         }
     }
@@ -144,6 +146,7 @@ struct Inner<U: Send + Sync + 'static> {
     channels: HashMap<String, ChannelFactory<U>>,
     heartbeat: OnceLock<watch::Receiver<Frame>>,
     restart: broadcast::Sender<()>,
+    sync: OnceLock<Arc<Engine<U>>>,
 }
 
 impl<U: Identified + Send + Sync + 'static> Server<U> {
@@ -187,6 +190,44 @@ impl<U: Identified + Send + Sync + 'static> Server<U> {
         axum::Router::new().route(path, axum::routing::any(move |request: Request| {
             let server = server.clone();
             async move { server.call(request).await }
+        }))
+    }
+
+    /// The single-page app's sync socket (`crate::sync`), once [`Server::install_sync`] has run.
+    /// Same origin rule as `/cable`; anything else is a 404.
+    pub async fn sync_call(&self, request: Request) -> Response {
+        let (mut parts, _body) = request.into_parts();
+        let Some(engine) = self.inner.sync.get().cloned() else {
+            return page_not_found();
+        };
+        if !websocket_request(&parts.method, &parts.headers) || !self.allow_request_origin(&parts.headers) {
+            return page_not_found();
+        }
+        let (Some(handshake), Some(on_upgrade)) =
+            (Handshake::accept(&parts.headers), parts.extensions.remove::<hyper::upgrade::OnUpgrade>())
+        else {
+            return page_not_found();
+        };
+        let mut response = Response::new(axum::body::Body::empty());
+        *response.status_mut() = StatusCode::SWITCHING_PROTOCOLS;
+        handshake.response_headers(response.headers_mut());
+        let request = ConnectRequest { uri: parts.uri, headers: parts.headers };
+        let server = self.clone();
+        connections_runtime().spawn(async move {
+            if let Ok(upgraded) = on_upgrade.await {
+                let io = hyper_util::rt::TokioIo::new(upgraded);
+                crate::sync::run(server, engine, io, handshake.deflate(), request).await;
+            }
+        });
+        response
+    }
+
+    /// An Axum router serving [`Server::sync_call`] at `path`.
+    pub fn sync_router<S: Clone + Send + Sync + 'static>(&self, path: &str) -> axum::Router<S> {
+        let server = self.clone();
+        axum::Router::new().route(path, axum::routing::any(move |request: Request| {
+            let server = server.clone();
+            async move { server.sync_call(request).await }
         }))
     }
 }
@@ -253,6 +294,51 @@ impl<U: Send + Sync + 'static> Server<U> {
     #[cfg(feature = "test-support")]
     pub fn capture_publications(&self) -> crate::pubsub::PublicationCapture {
         self.inner.hub.capture_publications()
+    }
+
+    /// Starts the sync engine: from here on [`Server::sync_publish`] records events and
+    /// [`Server::sync_call`] accepts sockets. Only the first call takes effect.
+    pub fn install_sync(&self, handler: impl SyncHandler<U>, config: SyncConfig) {
+        let _ = self.inner.sync.set(Arc::new(Engine {
+            ring: Ring::new(config),
+            handler: Arc::new(handler),
+            connections: std::sync::atomic::AtomicUsize::new(0),
+        }));
+    }
+
+    pub fn sync_enabled(&self) -> bool {
+        self.inner.sync.get().is_some()
+    }
+
+    /// Whether a sync event is worth building now: the engine is installed and a sync socket is
+    /// open. While none is, this records a gap in the ring instead, so a client resuming from
+    /// before it refetches rather than missing the events nobody built.
+    pub fn sync_wanted(&self) -> bool {
+        let Some(engine) = self.inner.sync.get() else {
+            return false;
+        };
+        if engine.connections.load(std::sync::atomic::Ordering::Acquire) > 0 {
+            return true;
+        }
+        if engine.ring.gap_needed() {
+            self.inner.hub.sequenced(|seq| engine.ring.skip(seq));
+        }
+        false
+    }
+
+    /// The sync engine's epoch and latest sequence, once installed.
+    pub fn sync_position(&self) -> Option<(String, u64)> {
+        self.inner.sync.get().map(|engine| (engine.ring.epoch().to_string(), engine.ring.head()))
+    }
+
+    /// Publishes a sync event, sequenced with the hub's broadcasts. Returns its sequence, or
+    /// `None` (doing nothing) while the sync engine isn't installed.
+    pub fn sync_publish(&self, publication: SyncPublication) -> Option<u64> {
+        let engine = self.inner.sync.get()?;
+        Some(self.inner.hub.sequenced(|seq| {
+            engine.ring.push(seq, publication);
+            seq
+        }))
     }
 
     /// `ActionCable.server.restart`: closes every connection with `server_restart`.

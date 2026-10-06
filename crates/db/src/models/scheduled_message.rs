@@ -382,9 +382,10 @@ impl ScheduledMessage {
                 if member.involvement != Some(crate::Involvement::Muted)
                     || mentioned_ids.contains(&member.user_id)
                 {
-                    tx.emit_after_commit(Event::broadcast(&Broadcast::Cable {
-                        stream: crate::broadcasts::unread_rooms_stream_name(member.user_id),
-                        payload: serde_json::json!({ "roomId": message.room_id }),
+                    tx.emit_after_commit(Event::broadcast(&Broadcast::UnreadRoom {
+                        user_id: member.user_id,
+                        room_id: message.room_id,
+                        message_id: Some(message.id),
                     }));
                 }
             }

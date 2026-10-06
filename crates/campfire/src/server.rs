@@ -198,6 +198,10 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
 
     app.sudo.install_google(Arc::new(app.google.clone()));
     app.two_factor.install_google(Arc::new(app.google.clone()));
+    // The SPA's sync socket and the broadcasts' JSON twins exist only alongside `/app`.
+    if app.config.spa_enabled {
+        campfire_api::install(&app);
+    }
 
     let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
@@ -289,6 +293,7 @@ fn router(app: &App, kit: Kit) -> Router {
         .route("/agents/mcp", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
         .route("/agents/mcp.{format}", axum::routing::any(campfire_kit::unparsed_action(dispatch_with_fragment_cache)))
         .merge(controllers::spa::routes(app.config.spa_enabled, IMMUTABLE_CACHE_CONTROL))
+        .merge(if app.config.spa_enabled { campfire_api::routes(app) } else { Router::new() })
         // DiskController reads params before the token, but file bytes remain spooled.
         .route("/rails/active_storage/disk/{encoded_token}", axum::routing::put(campfire_kit::spooled_action(dispatch_with_fragment_cache)).fallback(campfire_kit::action(dispatch_with_fragment_cache)))
         .route("/", dispatch())

@@ -289,6 +289,11 @@ fn drain_before_disconnect(deliveries: SelectAll<Deliveries>, sequence: u64) -> 
     (prior, lagged)
 }
 
+/// A remote disconnect's `reconnect`, as the sync socket reads it (anything but `false` reconnects).
+pub(crate) fn process_internal_reconnect(message: &str) -> Option<bool> {
+    process_internal_message(message).map(|close| close.reconnect != Value::Bool(false))
+}
+
 /// `InternalChannel#process_internal_message`.
 fn process_internal_message(message: &str) -> Option<Close> {
     let message: Value = serde_json::from_str(message).ok()?;
@@ -310,7 +315,7 @@ async fn reject_unauthorized(mut sink: Sink, mut incoming: mpsc::Receiver<Incomi
 
 /// Reads the socket until it closes or errors, handing each message to the connection. It stops
 /// after a close frame, as the connection does.
-fn spawn_reader(mut reader: Reader<ReadHalf<Io>>) -> (JoinHandle<()>, mpsc::Receiver<Incoming>) {
+pub(crate) fn spawn_reader(mut reader: Reader<ReadHalf<Io>>) -> (JoinHandle<()>, mpsc::Receiver<Incoming>) {
     let (sender, receiver) = mpsc::channel(INCOMING_CAPACITY);
     let reader = tokio::spawn(async move {
         loop {
@@ -330,7 +335,7 @@ fn spawn_reader(mut reader: Reader<ReadHalf<Io>>) -> (JoinHandle<()>, mpsc::Rece
 
 /// Sends a normal close (1000, no reason, as `ClientSocket#close` defaults) and waits briefly
 /// for the client to finish the handshake.
-async fn close_socket(sink: &mut Sink, incoming: &mut mpsc::Receiver<Incoming>, timeout: std::time::Duration) {
+pub(crate) async fn close_socket(sink: &mut Sink, incoming: &mut mpsc::Receiver<Incoming>, timeout: std::time::Duration) {
     if sink.close(1000).await.is_ok() {
         let _ = tokio::time::timeout(timeout, async {
             while let Some(message) = incoming.recv().await {

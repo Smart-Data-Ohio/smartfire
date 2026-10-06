@@ -363,6 +363,18 @@ impl Message {
         )
     }
 
+    /// [`Message::page_before`] for a cursor whose message is gone (deleted since it was handed
+    /// out): the page before its id. Messages created here get increasing ids, so this is the
+    /// page the cursor gave; elsewhere (imports) it's the nearest page by id.
+    pub fn page_before_id(conn: &Connection, timeline: Timeline, id: i64) -> Result<Vec<Self>> {
+        Self::page(conn, timeline, r#" AND ("messages"."id" < ?)"#, vec![id.into()], true)
+    }
+
+    /// [`Message::page_after`] for a cursor whose message is gone: the page after its id.
+    pub fn page_after_id(conn: &Connection, timeline: Timeline, id: i64) -> Result<Vec<Self>> {
+        Self::page(conn, timeline, r#" AND ("messages"."id" > ?)"#, vec![id.into()], false)
+    }
+
     /// `page_around(message)`: up to 40 before, the message, up to 40 after.
     pub fn page_around(
         conn: &Connection,

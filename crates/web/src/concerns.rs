@@ -401,6 +401,25 @@ pub fn session_expired(
     user.is_administrator() && session.last_active_at < now.ago(idle_timeout)
 }
 
+/// What a presence heartbeat does first (`WorkspacePresenceChannel#heartbeat`): end the session
+/// if it has idled past [`session_expired`]. A session that's already gone is left alone.
+pub fn expire_idle_timed_out_session(
+    tx: &mut campfire_db::Tx<'_>,
+    session_id: i64,
+    timeout: jiff::SignedDuration,
+) -> campfire_db::Result<()> {
+    let fresh = match Session::find(tx.conn(), session_id) {
+        Ok(session) => session,
+        Err(campfire_db::Error::RecordNotFound(_)) => return Ok(()),
+        Err(error) => return Err(error),
+    };
+    let user = User::find(tx.conn(), fresh.user_id)?;
+    if session_expired(&fresh, &user, timeout, tx.now()) {
+        fresh.destroy(tx)?;
+    }
+    Ok(())
+}
+
 /// `TwoFactorEnforcement#require_two_factor_enrollment`. The callback and every late restore
 /// share this gate. Verified sessions do not query the credential; key authentication is exempt.
 pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> {

@@ -26,6 +26,10 @@ pub enum Broadcast {
     /// `ActionCable.server.broadcast(stream, payload)`: a plain channel broadcast, such as
     /// `UnreadThreadsChannel`'s `user_<id>_unread_threads`.
     Cable { stream: String, payload: serde_json::Value },
+    /// `ActionCable.server.broadcast(UnreadRoomsChannel.stream_name_for(user), { roomId: })`:
+    /// the frame is the `Cable` one. The message that made the room unread (none for a board
+    /// update) stays with it for the single-page app's `room.unread` event.
+    UnreadRoom { user_id: i64, room_id: i64, message_id: Option<i64> },
 }
 
 /// One `<turbo-stream>` frame.
@@ -177,6 +181,17 @@ impl Broadcast {
         Broadcast::Turbo(TurboStream { streamables, action: TurboAction::Append, target, partial: Some(partial), maintain_scroll: false })
     }
 
+    /// The stream and payload of a plain channel broadcast (`Cable`, `UnreadRoom`).
+    pub fn channel_frame(&self) -> Option<(String, serde_json::Value)> {
+        match self {
+            Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
+            Broadcast::UnreadRoom { user_id, room_id, .. } => {
+                Some((unread_rooms_stream_name(*user_id), serde_json::json!({ "roomId": room_id })))
+            }
+            Broadcast::Turbo(_) => None,
+        }
+    }
+
     pub fn remove(streamables: Vec<Streamable>, target: String) -> Self {
         Broadcast::Turbo(TurboStream { streamables, action: TurboAction::Remove, target, partial: None, maintain_scroll: false })
     }
@@ -186,6 +201,7 @@ impl Broadcast {
         match self {
             Broadcast::Turbo(stream) => stream.streamables.iter().map(Streamable::to_param).collect::<Vec<_>>().join(":"),
             Broadcast::Cable { stream, .. } => stream.clone(),
+            Broadcast::UnreadRoom { user_id, .. } => unread_rooms_stream_name(*user_id),
         }
     }
 
@@ -193,7 +209,7 @@ impl Broadcast {
     pub fn target(&self) -> Option<&str> {
         match self {
             Broadcast::Turbo(stream) => Some(&stream.target),
-            Broadcast::Cable { .. } => None,
+            Broadcast::Cable { .. } | Broadcast::UnreadRoom { .. } => None,
         }
     }
 }

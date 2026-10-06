@@ -8,6 +8,8 @@ test-support = []
 
 [dependencies]
 rails_compat.workspace = true
+campfire_api_types.workspace = true
+rand.workspace = true
 tokio.workspace = true
 axum.workspace = true
 serde.workspace = true

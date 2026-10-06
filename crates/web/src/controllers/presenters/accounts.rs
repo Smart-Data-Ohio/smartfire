@@ -217,6 +217,12 @@ fn sidebar_direct_users(secrets:&Secrets,membership:&Membership,room:&Room,users
 /// `.including(Current.user.id)`: `including` appends even when the id is already there, and the
 /// limit counts that duplicate.
 fn direct_placeholder_users(conn: &Connection, secrets: &Secrets, user: &User, zone: &campfire_views::time::Zone) -> campfire_db::Result<Vec<UserSummary>> {
+    let users = direct_placeholder_user_rows(conn, user)?;
+    Ok(users.iter().map(|user| super::user_summary_in_zone(secrets, user, zone)).collect())
+}
+
+/// The users [`direct_placeholder_users`] shows, as rows.
+pub fn direct_placeholder_user_rows(conn: &Connection, user: &User) -> campfire_db::Result<Vec<User>> {
     let direct_room_ids: Vec<i64> = Room::for_user_of_type(conn, user.id, RoomType::Direct)?.iter().map(|room| room.id).collect();
     let mut exclude_user_ids: Vec<i64> = Vec::new();
     if !direct_room_ids.is_empty() {
@@ -242,8 +248,7 @@ fn direct_placeholder_users(conn: &Connection, secrets: &Secrets, user: &User, z
         r#"SELECT * FROM "users" WHERE "users"."status" = 0 AND "users"."id" NOT IN ({}) ORDER BY "users"."created_at" ASC LIMIT {limit}"#,
         placeholders(exclude_user_ids.len())
     );
-    let users = query_users(conn, &sql, rusqlite::params_from_iter(&exclude_user_ids))?;
-    Ok(users.iter().map(|user| super::user_summary_in_zone(secrets, user, zone)).collect())
+    query_users(conn, &sql, rusqlite::params_from_iter(&exclude_user_ids))
 }
 
 // --- Account ---------------------------------------------------------------------------------------
@@ -422,9 +427,14 @@ pub fn room_menu(room: &Room, membership: Option<&Membership>, viewer: Option<&U
 }
 
 pub fn sidebar_direct_label(name: Option<&str>, members: &[UserSummary]) -> String {
+    sidebar_direct_label_for_names(name, &members.iter().map(|m| m.name.as_str()).collect::<Vec<_>>())
+}
+
+/// [`sidebar_direct_label`] from the members' names alone.
+pub fn sidebar_direct_label_for_names(name: Option<&str>, member_names: &[&str]) -> String {
     if let Some(name)=name.filter(|s|!campfire_richtext::ruby::is_blank(s)){return name.into();}
-    if members.len()<=1 {return members.first().map(|u|sidebar_first_name(&u.name)).unwrap_or_default().to_string();}
-    let mut names: Vec<&str>=members.iter().map(|m|m.name.as_str()).collect();
+    if member_names.len()<=1 {return member_names.first().map(|n|sidebar_first_name(n)).unwrap_or_default().to_string();}
+    let mut names: Vec<&str>=member_names.to_vec();
     names.sort_by_key(|n|unicode::downcase(n));
     let label=names.iter().take(3).map(|n|sidebar_first_name(n)).collect::<Vec<_>>().join(", ");
     if names.len()>3 {format!("{label} +{}",names.len()-3)}else{label}

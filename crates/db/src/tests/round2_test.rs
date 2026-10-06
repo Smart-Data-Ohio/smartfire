@@ -199,13 +199,19 @@ fn successful_bookkeeping_and_callback_order_match_rails() {
     let events: Vec<Value> = t.events().into_iter().filter_map(|event| match event {
         Event::PushMessage { room_id, message_id } => Some(json!({"kind":"push", "class":"Room::PushMessageJob", "conversation_id":room_id, "message_id":message_id})),
         Event::Job(job) if job.class == "ChannelThread::PushMessageJob" => Some(json!({"kind":"push", "class":job.class, "conversation_id":job.arguments["thread_id"], "message_id":job.arguments["message_id"]})),
-        Event::Broadcast(request) => match request.decode::<Broadcast>()?.unwrap() {
-            Broadcast::Cable { stream, payload } => Some(json!({"kind":"cable", "stream":stream, "payload":payload})),
-            Broadcast::Turbo(stream) => match stream.partial {
-                Some(Partial::ThreadIndicator { message_id, reply_count }) => Some(json!({"kind":"indicator", "parent_message_id":message_id, "count":reply_count})),
+        Event::Broadcast(request) => {
+            let broadcast = request.decode::<Broadcast>()?.unwrap();
+            if let Some((stream, payload)) = broadcast.channel_frame() {
+                return Some(json!({"kind":"cable", "stream":stream, "payload":payload}));
+            }
+            match broadcast {
+                Broadcast::Turbo(stream) => match stream.partial {
+                    Some(Partial::ThreadIndicator { message_id, reply_count }) => Some(json!({"kind":"indicator", "parent_message_id":message_id, "count":reply_count})),
+                    _ => None,
+                },
                 _ => None,
-            },
-        },
+            }
+        }
         _ => None,
     }).collect();
     assert_eq!(json!(events), g["events"]);

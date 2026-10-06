@@ -136,3 +136,7 @@ pub(crate) fn served_response(kit: &Kit, served: campfire_spa::Served, immutable
 #[cfg(test)]
 #[path = "spa_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "spa_api_tests.rs"]
+mod api_tests;

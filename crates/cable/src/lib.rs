@@ -13,6 +13,7 @@ pub mod protocol;
 pub mod pubsub;
 mod server;
 pub mod socket;
+pub mod sync;
 pub mod turbo;
 
 pub use channel::{Channel, ChannelError, ChannelResult, EmptyChannel, Params, Subscription};

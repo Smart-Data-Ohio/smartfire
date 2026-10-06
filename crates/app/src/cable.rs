@@ -3,6 +3,7 @@
 //! broadcasts ([`broadcasts`]). The channels themselves are `crate::channels`.
 
 pub mod broadcasts;
+pub mod sync;
 
 use campfire_cable::{Identified, Server};
 use rails_compat::global_id::GlobalId;
