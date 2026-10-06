@@ -38,6 +38,13 @@ export const SHORTCUTS = [
     label: "Next unread conversation",
   },
   { id: "close-pane", group: "Navigation", keys: ["Esc"], label: "Close the side pane" },
+  { id: "search", group: "Navigation", keys: [MOD, "⇧", "F"], label: "Search messages" },
+  {
+    id: "search-slash",
+    group: "Navigation",
+    keys: ["/"],
+    label: "Search messages (outside a text field)",
+  },
   {
     id: "focus-messages",
     group: "Messages",
