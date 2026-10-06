@@ -5,6 +5,7 @@ import { actions } from "../../sync/runtime.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { PendingAttachmentView } from "../messages/attachments.tsx";
 import { MessageContent, MessageFlags, ReplyQuote } from "../messages/message-content.tsx";
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
@@ -198,7 +199,12 @@ export function PendingRow({ pending, groupStart }: PendingRowProps) {
         ) : null}
         <div className="message-body-row">
           <div className="message-body message-body-plain">
-            <InlineMarkdown source={pending.markdownSource} />
+            {pending.markdownSource.trim() === "" ? null : (
+              <InlineMarkdown source={pending.markdownSource} />
+            )}
+            {pending.attachment === null ? null : (
+              <PendingAttachmentView attachment={pending.attachment} />
+            )}
           </div>
           {failed ? null : (
             <span className="message-sending">

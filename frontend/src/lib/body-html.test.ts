@@ -13,8 +13,16 @@ describe("inlineMentions", () => {
     const html = inlineMentions(`<p>Thanks ${MENTION} for this</p>`);
 
     expect(html).toContain('<span class="mention mention--user-4" sgid="s1" data-user-id="4">');
-    expect(html).toContain('class="profile-card-name">Maya Okafor</button>\n</span>');
     expect(html).not.toContain("<div");
+  });
+
+  it("drops the avatar link and turns the name button into plain text", () => {
+    const host = document.createElement("div");
+
+    host.innerHTML = inlineMentions(`<p>Thanks ${MENTION} for this</p>`);
+
+    expect(host.querySelector("a, button")).toBeNull();
+    expect(host.querySelector(".mention .profile-card-name")?.textContent).toBe("Maya Okafor");
   });
 
   it("keeps the sentence in one paragraph once parsed", () => {

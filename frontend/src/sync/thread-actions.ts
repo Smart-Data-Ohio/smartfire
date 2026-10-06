@@ -16,16 +16,22 @@ import { Typing } from "./typing.ts";
 
 export const threadTopic = (threadId: number) => `thread:${threadId}`;
 
-/** Subscribes to the thread, then loads its header and newest replies. */
-export const open = Effect.fn("threads.open")(function* (threadId: number) {
-  const topics = yield* Topics;
-
-  yield* topics.acquire(threadTopic(threadId));
+/**
+ * Loads the thread's header and its newest replies (or those around `focusMessageId`, a reply's
+ * permalink) into the pane. Errors land in the store.
+ */
+const loadPane = Effect.fnUntraced(function* (threadId: number, focusMessageId: number | null) {
   mutations.setThreadPaneLoading(threadId);
   mutations.setThreadPageLoading(threadId, "newer");
+  mutations.setThreadPageReplacing(threadId);
 
   const [detail, page] = yield* Effect.all(
-    [Effect.result(api.thread(threadId)), Effect.result(api.threadMessages(threadId, null))],
+    [
+      Effect.result(api.thread(threadId)),
+      Effect.result(
+        api.threadMessages(threadId, focusMessageId === null ? null : { around: focusMessageId }),
+      ),
+    ],
     { concurrency: 2 },
   );
 
@@ -43,6 +49,25 @@ export const open = Effect.fn("threads.open")(function* (threadId: number) {
   } else {
     mutations.applyThreadPage(threadId, page.success, "replace");
   }
+});
+
+/** Subscribes to the thread, then loads its header and newest replies (or those around a reply). */
+export const open = Effect.fn("threads.open")(function* (
+  threadId: number,
+  focusMessageId: number | null = null,
+) {
+  const topics = yield* Topics;
+
+  yield* topics.acquire(threadTopic(threadId));
+  yield* loadPane(threadId, focusMessageId);
+});
+
+/** Loads an open pane again after an error; the subscription `open` took still holds. */
+export const reload = Effect.fn("threads.reload")(function* (
+  threadId: number,
+  focusMessageId: number | null = null,
+) {
+  yield* loadPane(threadId, focusMessageId);
 });
 
 /** Leaves the pane: releases the topic and stops typing there. */
@@ -90,19 +115,24 @@ export const loadNewer = Effect.fn("threads.loadNewer")(function* (threadId: num
 
 /**
  * Starts a thread on `parentMessageId` with its first reply; answers the new thread's id so the
- * pane can move to it.
+ * pane can move to it. Pass the same `clientMessageId` when retrying: the server answers the
+ * thread the first attempt made instead of starting a second one.
  */
 export const create = Effect.fn("threads.create")(function* (
   roomId: number,
   parentMessageId: number,
   markdown: string,
-  options: { readonly name?: string | null; readonly attachmentSignedId?: string | null } = {},
+  options: {
+    readonly name?: string | null;
+    readonly attachmentSignedId?: string | null;
+    readonly clientMessageId?: string;
+  } = {},
 ) {
   const created = yield* api.createThread(roomId, {
     parentMessageId,
     name: options.name ?? null,
     message: {
-      clientMessageId: uuid7(Date.now()),
+      clientMessageId: options.clientMessageId ?? uuid7(Date.now()),
       markdownSource: markdown,
       replyToMessageId: null,
       replyNotifyAuthor: null,
@@ -154,6 +184,6 @@ export const list = Effect.fn("threads.list")(function* (roomId: number, filter:
 
   yield* api.threads(roomId, filter).pipe(
     Effect.tap((threads) => Effect.sync(() => mutations.loadThreadList(roomId, filter, threads))),
-    Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId))),
+    Effect.catch(() => Effect.sync(() => mutations.setThreadListFailed(roomId, filter))),
   );
 });

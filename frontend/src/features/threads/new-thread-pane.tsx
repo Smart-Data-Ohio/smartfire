@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { uuid7 } from "../../lib/uuid7.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { TextField } from "../../ui/text-field.tsx";
@@ -41,6 +42,9 @@ export function NewThreadPane({
   const timelineReady = useStore((state) => state.timelines[roomId]?.status === "ready");
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const [name, setName] = useState("");
+  // One id for every attempt from this pane, so a retry after a lost reply can't start a second
+  // thread: the server answers the one the first attempt made.
+  const [clientMessageId] = useState(() => uuid7(Date.now()));
   // A link can name a message outside the loaded window: look it up once before giving up.
   const [lookedUp, setLookedUp] = useState(false);
   const missing = timelineReady && parent === undefined;
@@ -75,6 +79,7 @@ export function NewThreadPane({
       .create(roomId, parentId, draft.markdown, {
         name: name.trim() === "" ? null : name.trim(),
         attachmentSignedId: draft.attachmentSignedId,
+        clientMessageId,
       })
       .then(
         (threadId) => {

@@ -1,7 +1,18 @@
-import { Clock, Context, Effect, Layer, Queue, Ref, Schedule, type Scope, Stream } from "effect";
+import {
+  Clock,
+  Context,
+  Effect,
+  Layer,
+  Queue,
+  Ref,
+  Result,
+  Schedule,
+  type Scope,
+  Stream,
+} from "effect";
 import type { ApiClient } from "../api/client.ts";
 import { messages, sidebar, users } from "../api/endpoints.ts";
-import { threadMessages } from "../api/thread-endpoints.ts";
+import { thread, threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
@@ -15,18 +26,27 @@ import { Presence } from "./presence.ts";
 import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
 
-/** The server pings after 15 s idle; this long without any frame means the socket is dead. */
-
 /**
  * A loaded window that stops short of the present: a permalink, or a jump back. A resync's newest
- * page would replace it and yank the reader away; the pages towards the present load fresh as
- * they scroll down instead. (Checked when the page lands, so a permalink that loads while the
+ * page would replace it and yank the reader away, so the page around its middle is re-read in
+ * place instead (dropping what was deleted meanwhile); the pages towards the present load fresh as
+ * they scroll down. (Checked when the newest page lands, so a permalink that loads while the
  * refetch is in flight wins.)
  */
 function readingHistory(timeline: Timeline | undefined): boolean {
   return timeline !== undefined && timeline.status === "ready" && timeline.after !== null;
 }
 
+/** The message in the middle of a window away from the present, to re-read the page around. */
+function middleOf(timeline: Timeline | undefined): number | null {
+  if (timeline === undefined || !readingHistory(timeline)) {
+    return null;
+  }
+
+  return timeline.ids[Math.floor(timeline.ids.length / 2)] ?? null;
+}
+
+/** The server pings after 15 s idle; this long without any frame means the socket is dead. */
 export const SILENCE_LIMIT_MS = 30_000;
 
 /** A connection that lasted this long resets the reconnect backoff. */
@@ -113,7 +133,58 @@ export class Engine extends Context.Service<
       /** Replayed sidebar events up to this seq are already in the refetched sidebar. */
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
 
-      /** REST refetch for topics the server can't replay: the newest page, or the sidebar. */
+      /**
+       * A room's newest page as its window, or, for a window away from the present, the page
+       * around its middle re-read in place.
+       */
+      const resyncRoom = Effect.fnUntraced(function* (roomId: number) {
+        mutations.setPageReplacing(roomId);
+
+        const newest = yield* messages(roomId, null);
+        const anchor = middleOf(store.getState().timelines[roomId]);
+
+        if (anchor === null) {
+          mutations.applyPage(roomId, newest, "replace");
+
+          return;
+        }
+
+        const page = yield* messages(roomId, { around: anchor });
+
+        if (readingHistory(store.getState().timelines[roomId])) {
+          mutations.applyPage(roomId, page, "refresh");
+        }
+      });
+
+      /** As `resyncRoom` for a thread's replies, plus its header: status, permissions, membership. */
+      const resyncThread = Effect.fnUntraced(function* (threadId: number) {
+        mutations.setThreadPageReplacing(threadId);
+
+        const [detail, newest] = yield* Effect.all(
+          [Effect.result(thread(threadId)), threadMessages(threadId, null)],
+          { concurrency: 2 },
+        );
+
+        if (Result.isSuccess(detail)) {
+          mutations.loadThreadDetail(detail.success);
+        }
+
+        const anchor = middleOf(store.getState().threadTimelines[threadId]);
+
+        if (anchor === null) {
+          mutations.applyThreadPage(threadId, newest, "replace");
+
+          return;
+        }
+
+        const page = yield* threadMessages(threadId, { around: anchor });
+
+        if (readingHistory(store.getState().threadTimelines[threadId])) {
+          mutations.applyThreadPage(threadId, page, "refresh");
+        }
+      });
+
+      /** REST refetch for topics the server can't replay: the sidebar, a room or a thread. */
       const resync = Effect.fnUntraced(function* (topicList: readonly string[]) {
         for (const topic of topicList) {
           const roomId = roomIdOf(topic);
@@ -128,34 +199,20 @@ export class Engine extends Context.Service<
               Effect.provideContext(api),
             );
           } else if (roomId !== null) {
-            yield* messages(roomId, null).pipe(
-              Effect.tap((page) =>
-                Effect.sync(() => {
-                  if (readingHistory(store.getState().timelines[roomId])) {
-                    return;
-                  }
-
-                  mutations.applyPage(roomId, page, "replace");
-                }),
-              ),
+            yield* resyncRoom(roomId).pipe(
               Effect.catch((error) =>
-                Effect.logWarning(`sync: ${topic} resync failed`, error.message),
+                Effect.sync(() => mutations.setPageFailed(roomId)).pipe(
+                  Effect.andThen(Effect.logWarning(`sync: ${topic} resync failed`, error.message)),
+                ),
               ),
               Effect.provideContext(api),
             );
           } else if (threadId !== null) {
-            yield* threadMessages(threadId, null).pipe(
-              Effect.tap((page) =>
-                Effect.sync(() => {
-                  if (readingHistory(store.getState().threadTimelines[threadId])) {
-                    return;
-                  }
-
-                  mutations.applyThreadPage(threadId, page, "replace");
-                }),
-              ),
+            yield* resyncThread(threadId).pipe(
               Effect.catch((error) =>
-                Effect.logWarning(`sync: ${topic} resync failed`, error.message),
+                Effect.sync(() => mutations.setThreadPageFailed(threadId)).pipe(
+                  Effect.andThen(Effect.logWarning(`sync: ${topic} resync failed`, error.message)),
+                ),
               ),
               Effect.provideContext(api),
             );

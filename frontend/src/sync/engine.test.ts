@@ -23,6 +23,7 @@ import { SyncServices } from "./layers.ts";
 import { Outbox } from "./outbox.ts";
 import * as session from "./session.ts";
 import { MemorySocket, TestLifecycle } from "./testing.ts";
+import * as threadActions from "./thread-actions.ts";
 import { Typing } from "./typing.ts";
 
 const TestLayer = SyncServices.pipe(
@@ -422,7 +423,64 @@ describe("resync", () => {
     ),
   );
 
-  it.effect("keeps a window that stops short of the present, as a permalink opens it", () =>
+  it.effect("refetches a subscribed thread's header and replies", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        const detail = (status: "active" | "closed", canClose: boolean) => ({
+          thread: {
+            id: 88,
+            roomId: 12,
+            parentMessageId: 1,
+            creatorId: 7,
+            name: "Plans",
+            status,
+            replyCount: 2,
+            lastActivityAt: "2026-10-06T00:00:10.000Z",
+            autoArchiveAfterMinutes: 4320,
+            createdAt: "2026-10-06T00:00:01.000Z",
+          },
+          membership: null,
+          parentMessage: null,
+          permissions: {
+            canRename: true,
+            canClose,
+            canReopen: !canClose,
+            canLock: true,
+            canUnlock: false,
+            canDelete: true,
+          },
+          users: [],
+        });
+
+        const replies = (ids: readonly number[]) =>
+          pageFixture(ids.map((id) => messageFixture(id, 12, { threadId: 88 })));
+
+        yield* serve([]);
+        yield* api.reply("GET /threads/88", detail("active", true));
+        yield* api.reply("GET /threads/88/messages", replies([5, 6]));
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* threadActions.open(88);
+
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 6]);
+
+        // Closed and one reply deleted while the events were lost.
+        yield* api.reply("GET /threads/88", detail("closed", false));
+        yield* api.reply("GET /threads/88/messages", replies([5, 7]));
+        yield* socket.push({ t: "resync", topics: ["thread:88"], reason: "lagged" });
+        yield* settle;
+
+        expect(store.getState().threads[88]?.status).toBe("closed");
+        expect(store.getState().threadPanes[88]?.permissions?.canClose).toBe(false);
+        expect(store.getState().threadTimelines[88]?.ids).toEqual([5, 7]);
+      }),
+    ),
+  );
+
+  it.effect("re-reads a window that stops short of the present in place, dropping deletions", () =>
     withSync(
       Effect.gen(function* () {
         const socket = yield* MemorySocket;
@@ -443,17 +501,27 @@ describe("resync", () => {
 
         expect(timelineIds(12)).toEqual([4, 5, 6]);
 
-        yield* api.reply(
-          "GET /rooms/12/messages",
-          pageFixture(
-            [40, 41].map((id) => messageFixture(id, 12)),
-            39,
+        // The newest page would yank the reader away; the page around the window's middle (5,
+        // since deleted) is re-read instead.
+        yield* api.route("GET /rooms/12/messages", (request) =>
+          Effect.succeed(
+            request.query?.around === "5"
+              ? pageFixture(
+                  [4, 6].map((id) => messageFixture(id, 12)),
+                  3,
+                  7,
+                )
+              : pageFixture(
+                  [40, 41].map((id) => messageFixture(id, 12)),
+                  39,
+                ),
           ),
         );
         yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
         yield* settle;
 
-        expect(timelineIds(12)).toEqual([4, 5, 6]);
+        expect(timelineIds(12)).toEqual([4, 6]);
+        expect(store.getState().timelines[12]?.after).toBe(7);
       }),
     ),
   );

@@ -179,10 +179,11 @@ export function setThreadListLoading(state: State, roomId: number, filter: Threa
   };
 }
 
-export function setThreadListFailed(state: State, roomId: number): State {
+export function setThreadListFailed(state: State, roomId: number, filter: ThreadFilter): State {
   const list = state.roomThreads[roomId];
 
-  if (list === undefined) {
+  // A failure for a filter the pane has since left says nothing about the current one.
+  if (list === undefined || list.filter !== filter) {
     return state;
   }
 
@@ -199,6 +200,11 @@ export function loadThreadList(
   filter: ThreadFilter,
   list: ThreadList,
 ): State {
+  const current = state.roomThreads[roomId];
+  // A response for a filter the pane has since left (an earlier tab answering late) still
+  // teaches us its threads, but mustn't replace the current tab's list.
+  const stale = current !== undefined && current.filter !== filter;
+
   return {
     ...state,
     users: mergeUserList(state.users, list.users),
@@ -210,13 +216,15 @@ export function loadThreadList(
       ...state.threadMemberships,
       ...Object.fromEntries(list.threads.map((summary) => [summary.thread.id, summary.membership])),
     },
-    roomThreads: {
-      ...state.roomThreads,
-      [roomId]: {
-        filter,
-        ids: list.threads.map((summary) => summary.thread.id),
-        status: "ready",
-      },
-    },
+    roomThreads: stale
+      ? state.roomThreads
+      : {
+          ...state.roomThreads,
+          [roomId]: {
+            filter,
+            ids: list.threads.map((summary) => summary.thread.id),
+            status: "ready",
+          },
+        },
   };
 }

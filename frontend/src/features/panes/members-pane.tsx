@@ -1,10 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { createDirect } from "../../api/direct-endpoints.ts";
-import { members as fetchMembers, setStarred } from "../../api/pane-endpoints.ts";
 import type { MemberList } from "../../gen/MemberList.ts";
-import { mutations, useStore } from "../../store/store.ts";
-import { runAction } from "../../sync/runtime.ts";
+import { useStore } from "../../store/store.ts";
+import { directs } from "../../sync/directs.ts";
+import { panes } from "../../sync/panes.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { SkeletonReveal } from "../../ui/skeleton.tsx";
 import { toast } from "../../ui/toast-store.ts";
@@ -85,9 +84,8 @@ export function MembersPane({ roomId }: { readonly roomId: number }) {
 
   const reload = useCallback(() => {
     setLoad({ status: "loading" });
-    runAction(fetchMembers(roomId)).then(
+    panes.members(roomId).then(
       (list) => {
-        mutations.mergeUsers(list.users);
         setStars({});
         setLoad({ status: "ready", list });
       },
@@ -101,7 +99,7 @@ export function MembersPane({ roomId }: { readonly roomId: number }) {
     const next = !member.starred;
 
     setStars((held) => ({ ...held, [member.userId]: next }));
-    runAction(setStarred(member.userId, next)).then(
+    panes.setStarred(member.userId, next).then(
       (reply) => setStars((held) => ({ ...held, [reply.userId]: reply.starred })),
       (error: Error) => {
         setStars((held) => ({ ...held, [member.userId]: member.starred }));
@@ -115,7 +113,7 @@ export function MembersPane({ roomId }: { readonly roomId: number }) {
   };
 
   const open = (member: MemberEntry) => {
-    runAction(createDirect([member.userId])).then(
+    directs.create([member.userId]).then(
       (row) => void navigate({ to: "/r/$roomId", params: { roomId: row.room.id } }),
       (error: Error) =>
         toast({

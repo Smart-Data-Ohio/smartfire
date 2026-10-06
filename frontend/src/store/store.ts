@@ -1,4 +1,5 @@
 import { useStore as useZustandStore } from "zustand";
+import { useShallow } from "zustand/react/shallow";
 import { createStore } from "zustand/vanilla";
 import type { MessageReactions } from "../gen/MessageReactions.ts";
 import type { PinState } from "../gen/PinState.ts";
@@ -36,6 +37,26 @@ export function useStore<T>(selector: (state: State) => T): T {
   return useZustandStore(store, selector);
 }
 
+/** The messages among `ids` the store holds, as a record that only changes when one of them does. */
+export function useMessagesIn(ids: readonly number[]): Readonly<Record<number, MessageDTO>> {
+  return useZustandStore(
+    store,
+    useShallow((state: State) => {
+      const picked: Record<number, MessageDTO> = {};
+
+      for (const id of ids) {
+        const message = state.messages[id];
+
+        if (message !== undefined) {
+          picked[id] = message;
+        }
+      }
+
+      return picked;
+    }),
+  );
+}
+
 const apply = (change: (state: State) => State) => store.setState(change, true);
 
 /** Every write to the store. Each is one `setState`, so one React commit. */
@@ -61,10 +82,13 @@ export const mutations = {
   setPageLoading: (roomId: number, direction: "older" | "newer") =>
     apply((state) => reduce.setPageLoading(state, roomId, direction)),
   setPageFailed: (roomId: number) => apply((state) => reduce.setPageFailed(state, roomId)),
+  setPageReplacing: (roomId: number) => apply((state) => reduce.setPageReplacing(state, roomId)),
   clearUnreadDivider: (roomId: number) =>
     apply((state) => reduce.clearUnreadDivider(state, roomId)),
   moveUnreadDivider: (roomId: number, fromId: number) =>
     apply((state) => reduce.moveUnreadDivider(state, roomId, fromId)),
+  markUnreadFrom: (roomId: number, fromId: number, now: number) =>
+    apply((state) => reduce.markUnreadFrom(state, roomId, fromId, now)),
   receiveMessage: (message: MessageDTO) => apply((state) => reduce.receiveMessage(state, message)),
   addPending: (pending: PendingMessage) => apply((state) => reduce.addPending(state, pending)),
   setPendingState: (
@@ -94,6 +118,8 @@ export const mutations = {
     apply((state) => reduce.setThreadPageLoading(state, threadId, direction)),
   setThreadPageFailed: (threadId: number) =>
     apply((state) => reduce.setThreadPageFailed(state, threadId)),
+  setThreadPageReplacing: (threadId: number) =>
+    apply((state) => reduce.setThreadPageReplacing(state, threadId)),
   setThreadPaneLoading: (threadId: number) =>
     apply((state) => threads.setThreadPaneLoading(state, threadId)),
   setThreadPaneError: (threadId: number, error: string) =>
@@ -110,8 +136,8 @@ export const mutations = {
     apply((state) => threads.setThreadMembership(state, threadId, membership)),
   setThreadListLoading: (roomId: number, filter: ThreadFilter) =>
     apply((state) => threads.setThreadListLoading(state, roomId, filter)),
-  setThreadListFailed: (roomId: number) =>
-    apply((state) => threads.setThreadListFailed(state, roomId)),
+  setThreadListFailed: (roomId: number, filter: ThreadFilter) =>
+    apply((state) => threads.setThreadListFailed(state, roomId, filter)),
   loadThreadList: (roomId: number, filter: ThreadFilter, list: ThreadList) =>
     apply((state) => threads.loadThreadList(state, roomId, filter, list)),
   /** Back to an empty store (tests). */

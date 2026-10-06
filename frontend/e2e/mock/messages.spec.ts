@@ -242,6 +242,45 @@ test.describe("message actions", () => {
     await page.keyboard.press("Escape");
     await expect(target).toBeFocused();
   });
+
+  test("Home and End reach the ends of the window, past the rows drawn", async ({ page }) => {
+    await openRoom(page, `r/${ROOM_IDS.general}`);
+    // The socket's first welcome refetches the window; let that land before reading the rows.
+    await page.waitForLoadState("networkidle");
+
+    const drawn = () =>
+      page.evaluate(() =>
+        [
+          ...document.querySelectorAll('[role="log"][aria-label="Messages"] [data-message-row]'),
+        ].map((element) => Number(element.getAttribute("data-message-id"))),
+      );
+
+    /** The focused row's id, once a row has focus. */
+    const focusedId = async () =>
+      Number(
+        await (
+          await page.waitForFunction(() => {
+            const active = document.activeElement;
+
+            return active?.matches("[data-message-row]")
+              ? active.getAttribute("data-message-id")
+              : null;
+          })
+        ).jsonValue(),
+      );
+
+    const ids = await drawn();
+    const newest = Math.max(...ids);
+
+    await row(page, newest).focus();
+    await page.keyboard.press("Home");
+
+    // The first message wasn't among the rows drawn at the bottom.
+    expect(await focusedId()).toBeLessThan(Math.min(...ids));
+
+    await page.keyboard.press("End");
+    expect(await focusedId()).toBeGreaterThanOrEqual(newest);
+  });
 });
 
 matrix("message hover bar", async ({ page, theme, phone }) => {

@@ -471,6 +471,21 @@
     text-decoration: underline;
   }
 
+  .attachment-image.attachment-pending {
+    width: fit-content;
+    max-width: min(100%, 400px);
+    cursor: default;
+  }
+
+  .attachment-image.attachment-pending img {
+    max-height: 300px;
+  }
+
+  .attachment-pending .attachment-file-name:hover {
+    color: var(--text);
+    text-decoration: none;
+  }
+
   .attachment-file-meta {
     color: var(--text-faint);
     font-size: 11px;

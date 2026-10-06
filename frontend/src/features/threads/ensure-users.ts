@@ -1,7 +1,6 @@
 import { useEffect } from "react";
-import { users as fetchUsers } from "../../api/endpoints.ts";
-import { mutations, store } from "../../store/store.ts";
-import { runAction } from "../../sync/runtime.ts";
+import { store } from "../../store/store.ts";
+import { actions } from "../../sync/runtime.ts";
 
 /** Ids asked for already (or on their way), so each person is fetched once. */
 const requested = new Set<number>();
@@ -17,14 +16,11 @@ function flush(): void {
     return;
   }
 
-  void runAction(fetchUsers(ids)).then(
-    (list) => mutations.mergeUsers(list.users),
-    () => {
-      for (const id of ids) {
-        requested.delete(id);
-      }
-    },
-  );
+  void actions.ensureUsers(ids).catch(() => {
+    for (const id of ids) {
+      requested.delete(id);
+    }
+  });
 }
 
 /**

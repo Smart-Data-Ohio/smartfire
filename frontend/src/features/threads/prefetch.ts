@@ -1,5 +1,4 @@
-import { runAction } from "../../sync/runtime.ts";
-import { prefetchMemberships } from "../../sync/thread-prefetch.ts";
+import { actions } from "../../sync/runtime.ts";
 
 const fetched = new Set<number>();
 
@@ -13,5 +12,5 @@ export function prefetchThreadMemberships(roomId: number): void {
   }
 
   fetched.add(roomId);
-  void runAction(prefetchMemberships(roomId)).catch(() => fetched.delete(roomId));
+  void actions.threads.prefetchMemberships(roomId).catch(() => fetched.delete(roomId));
 }

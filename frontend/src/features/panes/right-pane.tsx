@@ -51,15 +51,36 @@ function writeWidth(width: number): void {
   }
 }
 
-/** Esc belongs to whatever has focus first: menus, dialogs, popovers, a search being cleared. */
+/** A field with something written in it, or anything inside a composer holding text or files. */
+function holdsWriting(target: Element): boolean {
+  if (target.closest(".composer[data-holding]") !== null) {
+    return true;
+  }
+
+  if (target instanceof HTMLTextAreaElement) {
+    return target.value !== "";
+  }
+
+  const editable = target.closest('[contenteditable]:not([contenteditable="false"])');
+
+  return editable !== null && (editable.textContent ?? "").trim() !== "";
+}
+
+/**
+ * Esc belongs to whatever has focus first: menus, dialogs, popovers, a search being cleared, an
+ * IME choosing characters, and anything with writing in it (a composer's text or uploads, an
+ * edit), so a stray Esc can't throw a draft's files away. An empty composer passes it on: the
+ * pane focuses its composer on open, and Esc still closes it.
+ */
 function escapeIsTaken(event: KeyboardEvent): boolean {
-  if (event.defaultPrevented) {
+  if (event.defaultPrevented || event.isComposing) {
     return true;
   }
 
   const target = event.target instanceof Element ? event.target : null;
 
   return (
+    (target !== null && holdsWriting(target)) ||
     target?.closest('[role="menu"], dialog, [popover], [role="listbox"]') != null ||
     document.querySelector("dialog[open]") !== null
   );

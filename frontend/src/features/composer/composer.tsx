@@ -176,6 +176,7 @@ export function Composer({
   const [waiting, setWaiting] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [running, setRunning] = useState(false);
+  const submitting = useRef(false);
   const [usage, setUsage] = useState<SlashCommand | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -438,13 +439,26 @@ export function Composer({
     actions.setTyping(roomId, false, threadId);
 
     if (onSubmit !== undefined) {
-      void onSubmit({ markdown, attachmentSignedId: files[0]?.snapshot.signedId ?? null }).then(
-        () => {
-          attachments.clearSent();
-          clear();
-        },
-        () => undefined,
-      );
+      // One request at a time: a second Enter while the first is out would post twice.
+      if (submitting.current) {
+        return;
+      }
+
+      submitting.current = true;
+      setRunning(true);
+
+      void onSubmit({ markdown, attachmentSignedId: files[0]?.snapshot.signedId ?? null })
+        .then(
+          () => {
+            attachments.clearSent();
+            clear();
+          },
+          () => undefined,
+        )
+        .finally(() => {
+          submitting.current = false;
+          setRunning(false);
+        });
 
       return;
     }
@@ -668,7 +682,7 @@ export function Composer({
   });
 
   return (
-    <div className="composer" ref={rootRef}>
+    <div className="composer" ref={rootRef} data-holding={hasText || hasFiles || undefined}>
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
         <div className="composer-card" data-drop={drop.active || undefined}>

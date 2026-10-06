@@ -68,23 +68,18 @@ export const start = Effect.fn("session.start")(function* () {
   }
 });
 
-/**
- * Opens a room view: subscribes to its topic, says present, loads the detail and the first page
- * (around `focusMessageId`, else around the first unread when many are unread, else the newest).
- */
-export const openRoom = Effect.fn("session.openRoom")(function* (
-  roomId: number,
-  focusMessageId: number | null,
-) {
-  const topics = yield* Topics;
-  const presenceService = yield* Presence;
-
-  yield* topics.acquire(roomTopic(roomId));
-  yield* presenceService.enter(roomId);
+/** The room's detail, then its first page: at the focused message, the unread divider or the end. */
+const loadRoom = Effect.fnUntraced(function* (roomId: number, focusMessageId: number | null) {
   mutations.setRoomLoading(roomId);
+  mutations.setPageReplacing(roomId);
 
   const detail = yield* room(roomId).pipe(
-    Effect.tapError((error) => Effect.sync(() => mutations.setRoomError(roomId, error.message))),
+    Effect.tapError((error) =>
+      Effect.sync(() => {
+        mutations.setPageFailed(roomId);
+        mutations.setRoomError(roomId, error.message);
+      }),
+    ),
     Effect.option,
   );
 
@@ -112,6 +107,30 @@ export const openRoom = Effect.fn("session.openRoom")(function* (
       }),
     ),
   );
+});
+
+/**
+ * Opens a room view: subscribes to its topic, says present, loads the detail and the first page
+ * (around `focusMessageId`, else around the first unread when many are unread, else the newest).
+ */
+export const openRoom = Effect.fn("session.openRoom")(function* (
+  roomId: number,
+  focusMessageId: number | null,
+) {
+  const topics = yield* Topics;
+  const presenceService = yield* Presence;
+
+  yield* topics.acquire(roomTopic(roomId));
+  yield* presenceService.enter(roomId);
+  yield* loadRoom(roomId, focusMessageId);
+});
+
+/** Loads an open room again after an error; the subscription and presence `openRoom` took hold. */
+export const reloadRoom = Effect.fn("session.reloadRoom")(function* (
+  roomId: number,
+  focusMessageId: number | null,
+) {
+  yield* loadRoom(roomId, focusMessageId);
 });
 
 /** Closes a room view: releases its topic, says absent, stops typing, forgets the divider. */
@@ -156,9 +175,15 @@ export const loadAround = Effect.fn("session.loadAround")(function* (
   roomId: number,
   messageId: number,
 ) {
+  mutations.setPageReplacing(roomId);
+
   yield* messages(roomId, { around: messageId }).pipe(
     Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, "replace"))),
-    Effect.catch((error) => Effect.logWarning("message lookup failed", error.message)),
+    Effect.catch((error) =>
+      Effect.sync(() => mutations.setPageFailed(roomId)).pipe(
+        Effect.andThen(Effect.logWarning("message lookup failed", error.message)),
+      ),
+    ),
   );
 });
 
@@ -174,6 +199,8 @@ export const loadNewer = Effect.fn("session.loadNewer")(function* (roomId: numbe
 
 /** Replaces the window with the newest page. */
 export const jumpToPresent = Effect.fn("session.jumpToPresent")(function* (roomId: number) {
+  mutations.setPageReplacing(roomId);
+
   yield* messages(roomId, null).pipe(
     Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, "replace"))),
     Effect.catch(() => Effect.sync(() => mutations.setPageFailed(roomId))),

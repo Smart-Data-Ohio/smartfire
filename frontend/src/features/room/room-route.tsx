@@ -57,7 +57,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
         <p className="text-muted">
           {error ?? "It may have been deleted, or you may have left it."}
         </p>
-        <Button variant="secondary" onClick={() => void actions.openRoom(roomId, focusMessageId)}>
+        <Button variant="secondary" onClick={() => void actions.reloadRoom(roomId, focusMessageId)}>
           Try again
         </Button>
       </section>

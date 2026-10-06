@@ -131,6 +131,17 @@ test("Esc closes the thread and focus goes back", async ({ page }) => {
   await expect(pane(page)).toHaveCount(0);
 });
 
+test("Esc in a composer with a draft keeps the thread open", async ({ page }) => {
+  await open(page, `r/${GENERAL}/t/${THREAD_IDS.generalActive}`);
+
+  const input = pane(page).locator(".composer-input");
+
+  await input.fill("half a thought");
+  await input.press("Escape");
+  await expect(pane(page).getByRole("heading", { name: ACTIVE_NAME })).toBeVisible();
+  await expect(input).toHaveValue("half a thought");
+});
+
 test("a thread opened from the Threads pane goes back to the list", async ({ page }) => {
   await open(page, `r/${GENERAL}`);
   await page.locator(".room-header").getByRole("button", { name: "Threads" }).click();

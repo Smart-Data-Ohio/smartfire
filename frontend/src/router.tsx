@@ -85,10 +85,29 @@ const newThreadRoute = createRoute({
   component: () => null,
 });
 
-/** `/app/r/$roomId/t/$threadId`: the room with a thread open in the right pane. */
+/** The thread pane's query as the URL has it. */
+interface RawThreadSearch {
+  readonly m?: unknown;
+}
+
+/** The thread pane's query: the reply a permalink points at, if any. */
+export interface ThreadSearch {
+  readonly m?: number;
+}
+
+/**
+ * `/app/r/$roomId/t/$threadId`: the room with a thread open in the right pane; `?m=` scrolls to
+ * and highlights one reply (a reply's permalink).
+ */
 const threadRoute = createRoute({
   getParentRoute: () => roomRoute,
   path: "t/$threadId",
+  validateSearch: (search: RawThreadSearch): ThreadSearch => {
+    const m = Number(search.m);
+
+    // Anything but a positive integer id is ignored: the thread opens at its newest reply.
+    return Number.isSafeInteger(m) && m > 0 ? { m } : {};
+  },
   params: {
     parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
     stringify: ({ threadId }) => ({ threadId: `${threadId}` }),

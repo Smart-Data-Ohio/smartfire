@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Boost } from "../../gen/Boost.ts";
 import type { Reaction } from "../../gen/Reaction.ts";
 import { preloadEmojiPicker } from "../../lib/emoji/lazy-emoji-picker.tsx";
@@ -6,8 +6,7 @@ import { AnimatedNumber } from "../../motion/animated-number.tsx";
 import { prefersReducedMotion } from "../../motion/reduced-motion.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { store, useStore } from "../../store/store.ts";
-import { ensureUsers } from "../../sync/message-view-actions.ts";
-import { runAction } from "../../sync/runtime.ts";
+import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
@@ -41,7 +40,7 @@ function fetchMissing(ids: readonly number[]): void {
   const known = store.getState().users;
 
   if (ids.some((id) => known[id] === undefined)) {
-    void runAction(ensureUsers(ids)).catch(() => undefined);
+    void actions.ensureUsers(ids).catch(() => undefined);
   }
 }
 
@@ -60,19 +59,18 @@ interface PillProps {
 function ReactionPill({ message, reaction, viewerId, fresh, canReact }: PillProps) {
   const mine = viewerId !== null && reaction.reactorIds.includes(viewerId);
   const nameOf = useNames();
-  const [burst, setBurst] = useState(() => takeBurst(message.id, reaction.content));
-
-  const [particles, setParticles] = useState<readonly CSSProperties[]>(() =>
-    Array.from({ length: PARTICLES }, (_, index) => particleStyle(index)),
-  );
-
+  const [burst, setBurst] = useState(false);
+  const [particles, setParticles] = useState<readonly CSSProperties[]>([]);
   const timer = useRef(0);
 
-  // A burst queued after mount (the pill already existed when the viewer added theirs).
-  if (mine && !burst && takeBurst(message.id, reaction.content)) {
-    setBurst(true);
-    setParticles(Array.from({ length: PARTICLES }, (_, index) => particleStyle(index)));
-  }
+  // The viewer's own add queued a burst: take it once the reaction shows as theirs, whether the
+  // click created this pill or it already existed. Before paint, so the pop starts with the pill.
+  useLayoutEffect(() => {
+    if (mine && takeBurst(message.id, reaction.content)) {
+      setParticles(Array.from({ length: PARTICLES }, (_, index) => particleStyle(index)));
+      setBurst(true);
+    }
+  }, [mine, message.id, reaction.content]);
 
   useEffect(() => {
     if (!burst) {

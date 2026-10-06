@@ -1,11 +1,9 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { files as fetchFiles } from "../../api/pane-endpoints.ts";
 import type { FileType } from "../../gen/FileType.ts";
 import type { RoomFile } from "../../gen/RoomFile.ts";
 import { formatFull } from "../../lib/time.ts";
-import { mutations } from "../../store/store.ts";
-import { runAction } from "../../sync/runtime.ts";
+import { panes } from "../../sync/panes.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -190,13 +188,12 @@ export function FilesPane({ roomId }: { readonly roomId: number }) {
 
     setListing((held) => (page === 1 ? LOADING : { ...held, loadingMore: true }));
 
-    runAction(fetchFiles(roomId, fileQuery(type, query, page))).then(
+    panes.files(roomId, fileQuery(type, query, page)).then(
       (list) => {
         if (ticket !== request.current) {
           return;
         }
 
-        mutations.mergeUsers(list.users);
         setListing((held) => ({
           status: "ready",
           files: page === 1 ? list.files : appendFiles(held.files, list.files),

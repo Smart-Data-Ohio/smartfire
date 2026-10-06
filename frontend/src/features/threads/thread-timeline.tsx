@@ -3,14 +3,21 @@ import { VList, type VListHandle } from "virtua";
 import { toMillis } from "../../lib/time.ts";
 import type { MessageDTO, PendingMessage } from "../../store/model.ts";
 import { emptyTimeline } from "../../store/state.ts";
-import { useStore } from "../../store/store.ts";
+import { useMessagesIn, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Spinner } from "../../ui/button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { useListEdges } from "../messages/list-edges.ts";
 import { DayDivider } from "../room/dividers.tsx";
 import { MessageRow, PendingRow } from "../room/message-row.tsx";
-import { type TimelineItem, timelineItems } from "../room/timeline-items.ts";
+import {
+  type CommittedEdges,
+  firstMessageKey,
+  prepended,
+  type TimelineItem,
+  timelineItems,
+} from "../room/timeline-items.ts";
 import { replyCountLabel } from "./thread-format.ts";
 
 /** Within this many px of the end counts as "at the bottom": new replies keep it pinned. */
@@ -89,6 +96,8 @@ interface ThreadTimelineProps {
   readonly replyCount: number;
   /** The header has loaded; until then the skeleton shows. */
   readonly ready: boolean;
+  /** A reply's permalink: placed in view and highlighted instead of opening at the newest. */
+  readonly focusMessageId: number | null;
 }
 
 /**
@@ -97,19 +106,27 @@ interface ThreadTimelineProps {
  * by author with day dividers, pending replies after them. It opens at the newest reply, pages at
  * either edge without jumping, and keeps new replies in view while you're at the bottom.
  */
-export function ThreadTimeline({ threadId, parent, replyCount, ready }: ThreadTimelineProps) {
+export function ThreadTimeline({
+  threadId,
+  parent,
+  replyCount,
+  ready,
+  focusMessageId,
+}: ThreadTimelineProps) {
   const timeline = useStore((state) => state.threadTimelines[threadId] ?? emptyTimeline);
-  const messages = useStore((state) => state.messages);
+  const messages = useMessagesIn(timeline.ids);
   const pendingIds = useStore((state) => state.pendingByThread[threadId] ?? NO_PENDING);
   const pendingById = useStore((state) => state.pending);
   const viewerId = useStore((state) => state.me?.user.id ?? state.boot?.user.id ?? null);
   const [openedAt] = useState(() => Date.now());
   const listRef = useRef<VListHandle | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const atBottomRef = useRef(true);
-  const placedRef = useRef<number | null>(null);
+  const placedRef = useRef<string | null>(null);
 
-  const committedRef = useRef<{ first: string | null; last: string | null }>({
+  const committedRef = useRef<CommittedEdges & { readonly last: string | null }>({
     first: null,
+    firstMessage: null,
     last: null,
   });
 
@@ -122,30 +139,33 @@ export function ThreadTimeline({ threadId, parent, replyCount, ready }: ThreadTi
   const now = Date.now();
   const loaded = ready && timeline.status === "ready";
   const items = loaded ? timelineItems({ timeline, messages, pending, now }) : [];
+
+  useListEdges(containerRef, listRef, items);
   const firstKey = items[0]?.key ?? null;
   const lastKey = items.at(-1)?.key ?? null;
-  const previousFirst = committedRef.current.first;
+  const shift = prepended(items, committedRef.current);
 
-  const shift =
-    previousFirst !== null &&
-    firstKey !== previousFirst &&
-    items.findIndex((item) => item.key === previousFirst) > 0;
-
-  // Open at the newest reply, once per loaded window.
+  // Place the view once per loaded window: on the permalinked reply, else at the newest.
   useLayoutEffect(() => {
     const list = listRef.current;
+    const placement = `${timeline.generation}:${focusMessageId ?? ""}`;
 
-    if (
-      !loaded ||
-      list === null ||
-      items.length === 0 ||
-      placedRef.current === timeline.generation
-    ) {
+    if (!loaded || list === null || items.length === 0 || placedRef.current === placement) {
       return;
     }
 
-    placedRef.current = timeline.generation;
-    list.scrollToIndex(items.length - 1, { align: "end" });
+    placedRef.current = placement;
+
+    const focusIndex =
+      focusMessageId === null
+        ? -1
+        : items.findIndex((item) => item.kind === "message" && item.message.id === focusMessageId);
+
+    if (focusIndex >= 0) {
+      list.scrollToIndex(focusIndex, { align: "center" });
+    } else {
+      list.scrollToIndex(items.length - 1, { align: "end" });
+    }
   });
 
   // Follow new replies at the bottom (always your own).
@@ -153,7 +173,11 @@ export function ThreadTimeline({ threadId, parent, replyCount, ready }: ThreadTi
     const previous = committedRef.current;
     const appended = previous.last !== null && lastKey !== previous.last && !shift;
 
-    committedRef.current = { first: firstKey, last: lastKey };
+    committedRef.current = {
+      first: firstKey,
+      firstMessage: firstMessageKey(items),
+      last: lastKey,
+    };
 
     if (appended && (atBottomRef.current || items.at(-1)?.kind === "pending")) {
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
@@ -213,7 +237,7 @@ export function ThreadTimeline({ threadId, parent, replyCount, ready }: ThreadTi
             message={item.message}
             groupStart={item.groupStart}
             mentionsMe={mentionsViewer(item.message.bodyHtml, viewerId)}
-            focused={false}
+            focused={item.message.id === focusMessageId}
             live={created > openedAt && now - created < LIVE_WINDOW_MS}
             inThread
           />
@@ -223,7 +247,7 @@ export function ThreadTimeline({ threadId, parent, replyCount, ready }: ThreadTi
   };
 
   return (
-    <div className="thread-timeline">
+    <div className="thread-timeline" ref={containerRef}>
       <SkeletonReveal loading={!loaded} skeleton={<ThreadSkeleton />}>
         {loaded ? (
           <VList

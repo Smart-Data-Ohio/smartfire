@@ -6,9 +6,8 @@ import type { EmojiChoice } from "../../lib/emoji/recent.ts";
 import { recordRecentEmoji } from "../../lib/emoji/recent.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { store } from "../../store/store.ts";
-import { customIcons, markUnreadFrom } from "../../sync/message-view-actions.ts";
 import type { ActionError } from "../../sync/run.ts";
-import { actions, runAction } from "../../sync/runtime.ts";
+import { actions } from "../../sync/runtime.ts";
 import { toast } from "../../ui/toast-store.ts";
 import { queueBurst } from "./burst.ts";
 import { startEditing } from "./editing-store.ts";
@@ -22,7 +21,7 @@ export function permalink(message: MessageDTO): string {
   const path =
     message.threadId === null
       ? `r/${message.roomId}/m/${message.id}`
-      : `r/${message.roomId}/t/${message.threadId}`;
+      : `r/${message.roomId}/t/${message.threadId}?m=${message.id}`;
 
   return new URL(`${import.meta.env.BASE_URL}${path}`, window.location.origin).href;
 }
@@ -110,10 +109,12 @@ export function toggleSave(message: MessageDTO): void {
 export function markUnread(message: MessageDTO): void {
   holdUnread(message.roomId);
 
-  void runAction(markUnreadFrom(message.roomId, message.id)).then(
-    () => toast({ title: "Marked unread from here", tone: "success" }),
-    failed("Couldn't mark it unread"),
-  );
+  void actions.messages
+    .markUnreadFrom(message.roomId, message.id)
+    .then(
+      () => toast({ title: "Marked unread from here", tone: "success" }),
+      failed("Couldn't mark it unread"),
+    );
 }
 
 export function edit(message: MessageDTO): void {
@@ -133,7 +134,7 @@ let iconsLoading: Promise<readonly EmojiChoice[]> | null = null;
 
 /** The workspace's icons as picker choices, fetched once per session. */
 export function loadCustomIcons(): Promise<readonly EmojiChoice[]> {
-  iconsLoading ??= runAction(customIcons()).then(
+  iconsLoading ??= actions.messages.customIcons().then(
     // The list holds brand and workspace icons, each with an image; anything else is skipped.
     (list) =>
       list.flatMap((icon) =>

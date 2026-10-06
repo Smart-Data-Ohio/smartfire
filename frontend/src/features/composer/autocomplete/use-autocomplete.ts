@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useStore } from "../../../store/store.ts";
 import {
   commandSuggestions,
@@ -50,10 +50,8 @@ function step(items: readonly Suggestion[], from: number, delta: number): number
   return from;
 }
 
-function firstSelectable(items: readonly Suggestion[]): number {
-  const index = items.findIndex(selectable);
-
-  return index < 0 ? 0 : index;
+function firstSelectableKey(items: readonly Suggestion[]): string | null {
+  return items.find(selectable)?.key ?? null;
 }
 
 /**
@@ -68,12 +66,15 @@ export function useAutocomplete(
   commandsEnabled: boolean,
 ): Autocomplete {
   const listboxId = useId();
-  const sidebar = useStore((state) => state.sidebar);
-  const [results, setResults] = useState<Results | null>(null);
-  const [activeIndex, setActive] = useState(0);
-  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
   const kind = trigger?.kind ?? null;
   const query = trigger?.query ?? "";
+  // Only `#` reads the sidebar; other triggers mustn't refire on every unread change.
+  const sidebar = useStore((state) => (kind === "room" ? state.sidebar : null));
+  const [results, setResults] = useState<Results | null>(null);
+  // The highlight follows a row, not a position, so refreshed rows keep it in place.
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const [dismissedAt, setDismissedAt] = useState<number | null>(null);
+  const landedFor = useRef<string | null>(null);
 
   useEffect(() => {
     if (kind === null || (kind === "command" && !commandsEnabled)) {
@@ -85,14 +86,26 @@ export function useAutocomplete(
     let live = true;
 
     const land = (items: readonly Suggestion[]) => {
-      if (live) {
-        setResults({ kind, query, items });
-        setActive(firstSelectable(items));
+      if (!live) {
+        return;
       }
+
+      const same = landedFor.current === `${kind}:${query}`;
+
+      landedFor.current = `${kind}:${query}`;
+      setResults({ kind, query, items });
+      // The same query refreshed keeps the highlighted row when it's still there.
+      setActiveKey((current) =>
+        same && items.some((item) => item.key === current && selectable(item))
+          ? current
+          : firstSelectableKey(items),
+      );
     };
 
     if (kind === "room") {
-      land(roomSuggestions(sidebar, query));
+      if (sidebar !== null) {
+        land(roomSuggestions(sidebar, query));
+      }
 
       return;
     }
@@ -130,7 +143,8 @@ export function useAutocomplete(
 
   const items = results !== null && results.kind === kind ? results.items : [];
   const open = trigger !== null && dismissedAt !== trigger.start && items.length > 0;
-  const index = Math.min(activeIndex, Math.max(0, items.length - 1));
+  const found = items.findIndex((item) => item.key === activeKey);
+  const index = found < 0 ? Math.max(0, items.findIndex(selectable)) : found;
 
   return {
     open,
@@ -143,10 +157,10 @@ export function useAutocomplete(
       const item = items[next];
 
       if (item !== undefined && selectable(item)) {
-        setActive(next);
+        setActiveKey(item.key);
       }
     },
-    move: (delta) => setActive(step(items, index, delta)),
+    move: (delta) => setActiveKey(items[step(items, index, delta)]?.key ?? null),
     dismiss: () => setDismissedAt(trigger?.start ?? null),
   };
 }

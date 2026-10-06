@@ -87,6 +87,23 @@ export function setPinState(state: State, change: PinState): State {
  * leaves the reaction if it was there (the reaction goes when nobody's left), else joins it (a
  * new reaction goes last). For the optimistic update; the server's reply replaces it.
  */
+/**
+ * `reactions` with the viewer in or out of `content`'s reactors, as `present` says: undoes one
+ * toggle on top of whatever arrived since, without touching anyone else's change.
+ */
+export function withViewerReaction(
+  reactions: readonly Reaction[],
+  content: string,
+  viewerId: number,
+  present: boolean,
+  shown: { readonly title: string; readonly imageUrl: string | null },
+): Reaction[] {
+  const existing = reactions.find((reaction) => reaction.content === content);
+  const mine = existing?.reactorIds.includes(viewerId) ?? false;
+
+  return mine === present ? [...reactions] : toggledReactions(reactions, content, viewerId, shown);
+}
+
 export function toggledReactions(
   reactions: readonly Reaction[],
   content: string,

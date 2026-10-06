@@ -29,6 +29,7 @@ import {
 import { startEditing, stopEditing, useEditingId } from "./editing-store.ts";
 import { HoverBar } from "./hover-bar.tsx";
 import { focusAdjacentRow, focusComposerNear, rowCommand } from "./keyboard.ts";
+import { requestListEdge } from "./list-edges.ts";
 import type { MenuCommand } from "./message-menu.tsx";
 import { trackModality, usingKeyboard } from "./modality.ts";
 import type { MessagePermissions } from "./permissions.ts";
@@ -378,9 +379,12 @@ export function useRowInteractions(message: MessageDTO, inThread: boolean): RowI
 
     switch (command) {
       case "up":
+        focusAdjacentRow(element, command);
+
+        return;
       case "first":
       case "last":
-        focusAdjacentRow(element, command);
+        if (!requestListEdge(element, command)) focusAdjacentRow(element, command);
 
         return;
       case "down":

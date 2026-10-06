@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import type { Attachment } from "../../gen/Attachment.ts";
+import type { PendingAttachment } from "../../store/model.ts";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
 import { download, fileIcon, fileKind, fitWithin, formatBytes } from "./format.ts";
@@ -122,4 +123,46 @@ export function AttachmentView({ attachment }: { readonly attachment: Attachment
     case "file":
       return <FileAttachment attachment={attachment} />;
   }
+}
+
+/**
+ * The file a message on its way carries: the local preview for an image (until its URL is
+ * released), otherwise an inert chip with the name, kind and size.
+ */
+export function PendingAttachmentView({ attachment }: { readonly attachment: PendingAttachment }) {
+  const [broken, setBroken] = useState(false);
+  const image = attachment.contentType.startsWith("image/");
+
+  if (image && attachment.previewUrl !== null && !broken) {
+    return (
+      <div className="attachment-image attachment-pending" data-loaded>
+        <img
+          src={attachment.previewUrl}
+          alt={attachment.filename}
+          decoding="async"
+          draggable={false}
+          onError={() => setBroken(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="attachment-file attachment-pending">
+      <div className="attachment-file-row">
+        <span className="attachment-file-icon" data-kind={fileIcon(attachment.contentType)}>
+          <Icon name={fileIcon(attachment.contentType)} size={20} />
+        </span>
+        <span className="attachment-file-text">
+          <span className="attachment-file-name" title={attachment.filename}>
+            {attachment.filename}
+          </span>
+          <span className="attachment-file-meta">
+            {fileKind(attachment.filename, attachment.contentType)} ·{" "}
+            {formatBytes(attachment.byteSize)}
+          </span>
+        </span>
+      </div>
+    </div>
+  );
 }

@@ -104,6 +104,11 @@ export interface Timeline {
   readonly unreadCount: number;
   /** Bumped when a resync replaces the window, so the list can jump instead of animating. */
   readonly generation: number;
+  /**
+   * While a fresh window loads, the live messages that arrived meanwhile (the page may have been
+   * read before them); merged in when it lands. `null` when no fresh window is on its way.
+   */
+  readonly arrived: readonly number[] | null;
 }
 
 /** The room view's data: the detail plus its timeline. */

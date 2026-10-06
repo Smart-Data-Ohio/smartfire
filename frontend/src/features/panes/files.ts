@@ -1,8 +1,9 @@
 /** The Files pane's query, paging and file-type presentation. */
-import type { FileQuery } from "../../api/pane-endpoints.ts";
+
 import type { Attachment } from "../../gen/Attachment.ts";
 import type { FileType } from "../../gen/FileType.ts";
 import type { RoomFile } from "../../gen/RoomFile.ts";
+import type { FileQuery } from "../../sync/panes.ts";
 import type { IconName } from "../../ui/icons/icon.tsx";
 
 export const FILE_TABS: readonly { readonly value: FileType; readonly label: string }[] = [

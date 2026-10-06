@@ -10,10 +10,13 @@ import {
   moveUnreadDivider,
   receiveMessage,
   removeMessage,
+  setPageFailed,
+  setPageReplacing,
   setRoomDetail,
+  setThreadPageReplacing,
 } from "./reducers.ts";
 import { initialState, type State } from "./state.ts";
-import { loadThreadList } from "./threads.ts";
+import { loadThreadList, setThreadListFailed, setThreadListLoading } from "./threads.ts";
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
@@ -358,5 +361,92 @@ describe("threads", () => {
     });
 
     expect(read.threadMemberships[THREAD]?.unreadAt).toBeNull();
+  });
+});
+
+describe("fresh windows", () => {
+  const reply = (id: number, minute: number) =>
+    message(id, minute, { threadId: THREAD, clientMessageId: `reply-${id}` });
+
+  it("keep a reply that arrives while a thread's first page loads", () => {
+    const loading = setThreadPageReplacing(initialState, THREAD);
+    const arrived = receiveMessage(loading, reply(7, 7));
+    // The page was read before reply 7 was posted.
+    const landed = applyThreadPage(arrived, THREAD, page([reply(5, 5), reply(6, 6)]), "replace");
+
+    expect(landed.threadTimelines[THREAD]?.ids).toEqual([5, 6, 7]);
+    expect(landed.threadTimelines[THREAD]?.arrived).toBeNull();
+  });
+
+  it("drop held messages that were deleted, or when the window stops short of the present", () => {
+    const loading = setThreadPageReplacing(initialState, THREAD);
+    const arrived = removeMessage(receiveMessage(loading, reply(7, 7)), 7, ROOM, THREAD, 0);
+
+    expect(
+      applyThreadPage(arrived, THREAD, page([reply(5, 5)]), "replace").threadTimelines[THREAD]?.ids,
+    ).toEqual([5]);
+
+    const held = receiveMessage(loading, reply(7, 7));
+    const away = { ...page([reply(5, 5)]), after: 6 };
+
+    expect(applyThreadPage(held, THREAD, away, "replace").threadTimelines[THREAD]?.ids).toEqual([
+      5,
+    ]);
+  });
+
+  it("stop holding once the load fails", () => {
+    const loading = setPageReplacing(
+      applyPage(initialState, ROOM, page([message(1, 1)]), "replace"),
+      ROOM,
+    );
+
+    const arrived = receiveMessage(loading, message(2, 2));
+
+    expect(arrived.timelines[ROOM]?.arrived).toEqual([2]);
+    expect(setPageFailed(arrived, ROOM).timelines[ROOM]?.arrived).toBeNull();
+  });
+
+  it("re-read part of a window in place: drop what the page lacks inside its span only", () => {
+    const window = {
+      ...page([1, 2, 3, 4, 5].map((id) => message(id, id))),
+      before: 0,
+      after: 6,
+    };
+
+    const state = applyPage(initialState, ROOM, window, "replace");
+    const generation = state.timelines[ROOM]?.generation;
+    // 3 was deleted; 1 and 5 lie outside the re-read page; 9 is newer than the window.
+    const reread = { ...page([2, 4].map((id) => message(id, id))), before: 1, after: 5 };
+    const next = applyPage(state, ROOM, reread, "refresh");
+
+    expect(next.timelines[ROOM]?.ids).toEqual([1, 2, 4, 5]);
+    expect(next.timelines[ROOM]?.before).toBe(0);
+    expect(next.timelines[ROOM]?.after).toBe(6);
+    expect(next.timelines[ROOM]?.generation).toBe(generation);
+  });
+});
+
+describe("thread lists", () => {
+  const list = (id: number) => ({
+    threads: [{ thread: thread("active", 5, id), membership: null }],
+    users: [],
+  });
+
+  it("ignore a late answer for a filter the pane has left", () => {
+    const switched = setThreadListLoading(
+      setThreadListLoading(initialState, ROOM, "active"),
+      ROOM,
+      "closed",
+    );
+
+    const late = loadThreadList(switched, ROOM, "active", list(70));
+
+    expect(late.roomThreads[ROOM]).toEqual({ filter: "closed", ids: [], status: "loading" });
+    expect(late.threads[70]?.id).toBe(70);
+    expect(setThreadListFailed(late, ROOM, "active").roomThreads[ROOM]?.status).toBe("loading");
+
+    const current = loadThreadList(late, ROOM, "closed", list(71));
+
+    expect(current.roomThreads[ROOM]).toEqual({ filter: "closed", ids: [71], status: "ready" });
   });
 });

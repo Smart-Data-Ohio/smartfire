@@ -57,6 +57,39 @@ describe("message actions", () => {
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 
+  it.effect("undo only its own toggle when refused, keeping reactions that arrived meanwhile", () =>
+    Effect.gen(function* () {
+      seed();
+
+      const fake = yield* FakeApi;
+      const thumbs = { content: "👍", title: "Thumbs up", imageUrl: null, reactorIds: [5] };
+
+      yield* fake.route("POST /messages/1/boosts", () => {
+        const held = store.getState().messages[1];
+
+        // Someone else's reaction lands while the request is out.
+        if (held !== undefined) {
+          mutations.setReactions({
+            messageId: 1,
+            roomId: ROOM,
+            threadId: null,
+            reactions: [...held.reactions, thumbs],
+            boosts: held.boosts,
+            updatedAt: held.updatedAt,
+          });
+        }
+
+        return refuse();
+      });
+
+      yield* Effect.flip(
+        messages.toggleReaction(1, "🎉", { title: "Party popper", imageUrl: null }),
+      );
+
+      expect(store.getState().messages[1]?.reactions).toEqual([reaction, thumbs]);
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
   it.effect("flip a pin at once and put it back when the server refuses", () =>
     Effect.gen(function* () {
       seed();

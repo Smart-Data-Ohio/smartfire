@@ -103,6 +103,7 @@ export const emptyTimeline: Timeline = {
   unreadFromId: null,
   unreadCount: 0,
   generation: 0,
+  arrived: null,
 };
 
 /** How long a remote typist stays listed without a refresh. */

@@ -8,7 +8,8 @@ import * as api from "../api/message-endpoints.ts";
 import { createUpload } from "../api/message-endpoints.ts";
 import type { CreateUpload } from "../gen/CreateUpload.ts";
 import type { ForwardTarget } from "../gen/ForwardTarget.ts";
-import { toggledReactions } from "../store/message-extras.ts";
+import type { Reaction } from "../gen/Reaction.ts";
+import { toggledReactions, withViewerReaction } from "../store/message-extras.ts";
 import { mutations, store } from "../store/store.ts";
 
 const viewerId = () => {
@@ -42,45 +43,53 @@ export const remove = Effect.fn("messages.remove")(function* (messageId: number)
   }
 });
 
-/** Toggles the viewer's reaction, showing it at once. */
+/**
+ * Toggles the viewer's reaction, showing it at once. A refusal undoes only this toggle, on top of
+ * whatever reactions and boosts arrived meanwhile.
+ */
 export const toggleReaction = Effect.fn("messages.toggleReaction")(function* (
   messageId: number,
   content: string,
   shown: { readonly title: string; readonly imageUrl: string | null },
 ) {
-  const held = store.getState().messages[messageId];
+  const viewer = viewerId();
 
-  const snapshot = (reactions: NonNullable<typeof held>["reactions"]) =>
-    held === undefined
-      ? null
-      : {
-          messageId,
-          roomId: held.roomId,
-          threadId: held.threadId,
-          reactions,
-          boosts: held.boosts,
-          updatedAt: held.updatedAt,
-        };
+  /** The message as held now, with its reactions changed by `change`. */
+  const landReactions = (change: (reactions: readonly Reaction[]) => Reaction[]) => {
+    const held = store.getState().messages[messageId];
 
-  const optimistic = snapshot(
-    held === undefined ? [] : toggledReactions(held.reactions, content, viewerId(), shown),
-  );
+    if (held !== undefined) {
+      mutations.setReactions({
+        messageId,
+        roomId: held.roomId,
+        threadId: held.threadId,
+        reactions: change(held.reactions),
+        boosts: held.boosts,
+        updatedAt: held.updatedAt,
+      });
+    }
+  };
 
-  if (optimistic !== null) {
-    mutations.setReactions(optimistic);
-  }
+  const before = store.getState().messages[messageId];
 
-  const reply = yield* api.react(messageId, content).pipe(
-    Effect.tapError(() =>
-      Effect.sync(() => {
-        const original = snapshot(held?.reactions ?? []);
+  const wasMine =
+    before?.reactions.some(
+      (reaction) => reaction.content === content && reaction.reactorIds.includes(viewer),
+    ) ?? false;
 
-        if (original !== null) {
-          mutations.setReactions(original);
-        }
-      }),
-    ),
-  );
+  landReactions((reactions) => toggledReactions(reactions, content, viewer, shown));
+
+  const reply = yield* api
+    .react(messageId, content)
+    .pipe(
+      Effect.tapError(() =>
+        Effect.sync(() =>
+          landReactions((reactions) =>
+            withViewerReaction(reactions, content, viewer, wasMine, shown),
+          ),
+        ),
+      ),
+    );
 
   mutations.setReactions(reply);
 });

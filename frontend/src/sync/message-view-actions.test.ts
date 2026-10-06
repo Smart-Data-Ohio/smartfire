@@ -3,6 +3,8 @@ import { Effect } from "effect";
 import {
   FakeApi,
   meFixture,
+  messageFixture,
+  pageFixture,
   sidebarFixture,
   sidebarRowFixture,
   userFixture,
@@ -56,6 +58,32 @@ describe("message view actions", () => {
       expect(first).toBe(40);
       expect(request?.body).toEqual({ messageId: 40 });
       expect(store.getState().sidebar.rows[ROOM]?.membership.unreadAt).not.toBeNull();
+    }).pipe(Effect.provide(FakeApi.layerClient)),
+  );
+
+  it.effect("count the sidebar badge the way the divider counts", () =>
+    Effect.gen(function* () {
+      mutations.reset();
+      mutations.setMe(meFixture);
+      mutations.loadSidebar(sidebarFixture([sidebarRowFixture(ROOM, "general")]));
+      mutations.applyPage(
+        ROOM,
+        pageFixture([39, 40, 41, 42].map((id) => messageFixture(id, ROOM))),
+        "replace",
+      );
+
+      const fake = yield* FakeApi;
+
+      yield* fake.reply(`DELETE /rooms/${ROOM}/read`, {
+        roomId: ROOM,
+        unread: true,
+        firstUnreadMessageId: 40,
+      });
+
+      yield* markUnreadFrom(ROOM, 40);
+
+      expect(store.getState().timelines[ROOM]?.unreadCount).toBe(3);
+      expect(store.getState().sidebar.rows[ROOM]?.unreadCount).toBe(3);
     }).pipe(Effect.provide(FakeApi.layerClient)),
   );
 

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useSearch } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import type { ThreadPermissions } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -348,9 +349,14 @@ export function ThreadPane({
 
   const [renaming, setRenaming] = useState(false);
   const status = pane?.status ?? "loading";
+  // A reply's permalink: the pane opens around it and highlights it.
+  const focusMessageId = useSearch({ strict: false }).m ?? null;
+  const focusRef = useRef(focusMessageId);
+
+  focusRef.current = focusMessageId;
 
   useEffect(() => {
-    void actions.threads.open(threadId).catch(() => undefined);
+    void actions.threads.open(threadId, focusRef.current).catch(() => undefined);
 
     return () => actions.threads.close(threadId);
   }, [threadId]);
@@ -382,7 +388,9 @@ export function ThreadPane({
         <PaneError
           message={message}
           onRetry={
-            deleted ? undefined : () => void actions.threads.open(threadId).catch(() => undefined)
+            deleted
+              ? undefined
+              : () => void actions.threads.reload(threadId, focusMessageId).catch(() => undefined)
           }
         />
       </PaneFrame>
@@ -413,6 +421,7 @@ export function ThreadPane({
         parent={parent}
         replyCount={thread?.replyCount ?? 0}
         ready={status === "ready"}
+        focusMessageId={focusMessageId}
       />
       <RenameDialog threadId={threadId} open={renaming} onOpenChange={setRenaming} />
     </PaneFrame>
