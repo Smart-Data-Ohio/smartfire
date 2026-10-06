@@ -8,6 +8,7 @@ import {
   markRoomRead,
   prune,
   receiveMessage,
+  setPageReplacing,
   setRoomDetail,
 } from "./reducers.ts";
 import { initialState, type State, TOMBSTONE_TTL_MS, TYPING_TTL_MS } from "./state.ts";
@@ -84,6 +85,52 @@ describe("applyPage", () => {
     expect(ids(older)).toEqual([1, 2, 3, 4]);
     expect(older.timelines[ROOM]?.before).toBeNull();
     expect(older.timelines[ROOM]?.generation).toBe(first.timelines[ROOM]?.generation);
+  });
+});
+
+describe("applyPage resync", () => {
+  /** A window around 3 that has paged down to the present: 2 to 5, older history before 2. */
+  const atPresent = () =>
+    applyPage(
+      applyPage(
+        initialState,
+        ROOM,
+        { ...page([message(2, 2), message(3, 3)], 2), after: 3 },
+        "replace",
+      ),
+      ROOM,
+      page([message(4, 4), message(5, 5)], 4),
+      "newer",
+    );
+
+  it("merges a newest page the window meets in place, keeping its history and placement", () => {
+    const start = atPresent();
+    const next = applyPage(start, ROOM, page([message(4, 4), message(6, 6)], 4), "resync");
+
+    expect(ids(next)).toEqual([2, 3, 4, 6]);
+    expect(next.timelines[ROOM]?.before).toBe(2);
+    expect(next.timelines[ROOM]?.after).toBeNull();
+    expect(next.timelines[ROOM]?.generation).toBe(start.timelines[ROOM]?.generation);
+  });
+
+  it("keeps a window the newest page no longer meets, now stopping short of the present", () => {
+    // 30 arrives live while the page is on its way; the page starts at 20, past the window's end.
+    const waiting = receiveMessage(setPageReplacing(atPresent(), ROOM), message(30, 30));
+    const next = applyPage(waiting, ROOM, page([message(20, 20), message(21, 21)], 20), "resync");
+
+    expect(ids(next)).toEqual([2, 3, 4, 5]);
+    expect(next.timelines[ROOM]?.after).toBe(5);
+    expect(next.timelines[ROOM]?.arrived).toBeNull();
+    expect(next.timelines[ROOM]?.generation).toBe(waiting.timelines[ROOM]?.generation);
+  });
+
+  it("leaves a window away from the present to be re-read around its middle", () => {
+    const away = applyPage(initialState, ROOM, { ...page([message(2, 2)]), after: 2 }, "replace");
+
+    const next = applyPage(away, ROOM, page([message(9, 9)], 9), "resync");
+
+    expect(next.timelines[ROOM]).toBe(away.timelines[ROOM]);
+    expect(next.messages[9]).toBeUndefined();
   });
 });
 

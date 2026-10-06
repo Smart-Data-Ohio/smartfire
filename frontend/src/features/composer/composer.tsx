@@ -317,11 +317,16 @@ export function Composer({
 
   const drop = useDropTarget(rootRef, addFiles, true);
 
-  /** Posts the text with the first file, and each further file as its own message. */
-  const deliver = (markdown: string, files: readonly TrayFile[]) => {
+  /** Takes the room's window to the present, where a message from here lands. */
+  const toPresent = () => {
     if (threadId === null && store.getState().timelines[roomId]?.after != null) {
       void actions.jumpToPresent(roomId);
     }
+  };
+
+  /** Posts the text with the first file, and each further file as its own message. */
+  const deliver = (markdown: string, files: readonly TrayFile[]) => {
+    toPresent();
 
     const [first, ...rest] = files;
 
@@ -346,6 +351,9 @@ export function Composer({
   const showResult = (result: SlashCommandResult, typed: string) => {
     switch (result.status) {
       case "posted":
+        // The server posted it with no pending row: go to it, as a send does.
+        toPresent();
+
         if (result.notice !== null) {
           toast({ title: result.notice, tone: "success" });
         }

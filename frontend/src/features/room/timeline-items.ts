@@ -32,6 +32,26 @@ interface Previous {
   readonly quiet: boolean;
 }
 
+/**
+ * Whether `item` is the viewer's own new message: a send still pending, or a message they posted
+ * after `since` (a server-side slash command posts one with no pending row). The list follows it.
+ */
+export function postedByViewer(
+  item: TimelineItem | undefined,
+  viewerId: number | null,
+  since: number,
+): boolean {
+  if (item?.kind === "pending") {
+    return true;
+  }
+
+  return (
+    item?.kind === "message" &&
+    item.message.creatorId === viewerId &&
+    toMillis(item.message.createdAt) > since
+  );
+}
+
 /** The key a message or pending row renders under. */
 export function messageKey(clientMessageId: string): string {
   return `c-${clientMessageId}`;

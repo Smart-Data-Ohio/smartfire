@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { MessageDTO, PendingMessage, Timeline } from "../../store/model.ts";
 import { emptyTimeline } from "../../store/state.ts";
-import { firstMessageKey, prepended, type TimelineItem, timelineItems } from "./timeline-items.ts";
+import {
+  firstMessageKey,
+  postedByViewer,
+  prepended,
+  type TimelineItem,
+  timelineItems,
+} from "./timeline-items.ts";
 
 function message(id: number, creatorId: number, createdAt: string, systemNote = false): MessageDTO {
   return {
@@ -179,5 +185,23 @@ describe("prepended", () => {
 
     expect(prepended(appended, edges(shown))).toBe(false);
     expect(prepended(layout(older, { before: 2 }), edges(shown))).toBe(false);
+  });
+});
+
+describe("postedByViewer", () => {
+  const opened = new Date(2026, 9, 6, 9, 0).getTime();
+
+  const last = (author: number, createdAt: string) =>
+    layout([message(1, author, createdAt)]).at(-1);
+
+  it("follows a message the viewer posted since the room opened", () => {
+    // A server-side slash command's post has no pending row: the message itself is the cue.
+    expect(postedByViewer(last(7, local(6, 9, 1)), 7, opened)).toBe(true);
+  });
+
+  it("leaves others' messages and the viewer's older ones to the reader", () => {
+    expect(postedByViewer(last(8, local(6, 9, 1)), 7, opened)).toBe(false);
+    expect(postedByViewer(last(7, local(6, 8, 59)), 7, opened)).toBe(false);
+    expect(postedByViewer(undefined, 7, opened)).toBe(false);
   });
 });

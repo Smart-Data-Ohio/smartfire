@@ -14,6 +14,7 @@ import { MessageRow, PendingRow } from "../room/message-row.tsx";
 import {
   type CommittedEdges,
   firstMessageKey,
+  postedByViewer,
   prepended,
   type TimelineItem,
   timelineItems,
@@ -179,7 +180,7 @@ export function ThreadTimeline({
       last: lastKey,
     };
 
-    if (appended && (atBottomRef.current || items.at(-1)?.kind === "pending")) {
+    if (appended && (atBottomRef.current || postedByViewer(items.at(-1), viewerId, openedAt))) {
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     }
   });
@@ -259,6 +260,8 @@ export function ThreadTimeline({
             data={items}
             aria-label="Replies"
             role="log"
+            // Focusable from script only: Home/End hold focus here while the edge row is drawn.
+            tabIndex={-1}
           >
             {renderItem}
           </VList>

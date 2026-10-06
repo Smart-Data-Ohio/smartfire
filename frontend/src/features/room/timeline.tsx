@@ -16,6 +16,7 @@ import { MessageRow, PendingRow } from "./message-row.tsx";
 import {
   type CommittedEdges,
   firstMessageKey,
+  postedByViewer,
   prepended,
   type TimelineItem,
   timelineItems,
@@ -166,10 +167,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       return;
     }
 
-    const last = items.at(-1);
-    const mine = last?.kind === "pending";
-
-    if (atBottomRef.current || mine) {
+    if (atBottomRef.current || postedByViewer(items.at(-1), viewerId, openedAt)) {
       listRef.current?.scrollToIndex(items.length - 1, { align: "end" });
     } else if (timeline.after === null) {
       setNewBelow((count) => count + Math.max(1, items.length - previous.count));
@@ -322,6 +320,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             data={items}
             aria-label="Messages"
             role="log"
+            // Focusable from script only: Home/End hold focus here while the edge row is drawn.
+            tabIndex={-1}
             data-message-list
           >
             {renderItem}

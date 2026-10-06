@@ -526,6 +526,92 @@ describe("resync", () => {
     ),
   );
 
+  /** Opens room 12 around 5 (4 to 6, more after) and pages down to the present (7, 8). */
+  const openAndReachPresent = Effect.gen(function* () {
+    const api = yield* FakeApi;
+
+    yield* serve([]);
+    yield* api.route("GET /rooms/12/messages", (request) =>
+      Effect.succeed(
+        request.query?.after === "6"
+          ? pageFixture([7, 8].map((id) => messageFixture(id, 12)))
+          : pageFixture(
+              [4, 5, 6].map((id) => messageFixture(id, 12)),
+              4,
+              6,
+            ),
+      ),
+    );
+    yield* startEngine;
+    yield* session.openRoom(12, 5);
+    yield* session.loadNewer(12);
+
+    expect(timelineIds(12)).toEqual([4, 5, 6, 7, 8]);
+    expect(store.getState().timelines[12]?.after).toBeNull();
+  });
+
+  it.effect(
+    "merges the first welcome's newest page into a window that paged down to the present",
+    () =>
+      withSync(
+        Effect.gen(function* () {
+          const api = yield* FakeApi;
+
+          yield* openAndReachPresent;
+
+          const generation = store.getState().timelines[12]?.generation;
+
+          // Replacing the window with the newest page would drop 4 and 5 and jump the reader.
+          yield* api.reply(
+            "GET /rooms/12/messages",
+            pageFixture(
+              [6, 7, 8, 9].map((id) => messageFixture(id, 12)),
+              6,
+            ),
+          );
+          yield* welcome(5, false);
+
+          expect(timelineIds(12)).toEqual([4, 5, 6, 7, 8, 9]);
+          expect(store.getState().timelines[12]?.before).toBe(4);
+          expect(store.getState().timelines[12]?.generation).toBe(generation);
+        }),
+      ),
+  );
+
+  it.effect("keeps a window the newest page no longer meets and re-reads it in place", () =>
+    withSync(
+      Effect.gen(function* () {
+        const api = yield* FakeApi;
+
+        yield* openAndReachPresent;
+
+        const generation = store.getState().timelines[12]?.generation;
+
+        // More was posted than a page holds: the window now stops short of the present, and the
+        // page around its middle (6) is re-read, without 5, deleted meanwhile.
+        yield* api.route("GET /rooms/12/messages", (request) =>
+          Effect.succeed(
+            request.query?.around === "6"
+              ? pageFixture(
+                  [4, 6, 7, 8].map((id) => messageFixture(id, 12)),
+                  4,
+                  8,
+                )
+              : pageFixture(
+                  [40, 41].map((id) => messageFixture(id, 12)),
+                  40,
+                ),
+          ),
+        );
+        yield* welcome(5, false);
+
+        expect(timelineIds(12)).toEqual([4, 6, 7, 8]);
+        expect(store.getState().timelines[12]?.after).toBe(8);
+        expect(store.getState().timelines[12]?.generation).toBe(generation);
+      }),
+    ),
+  );
+
   it.effect("fetches nothing when the server resumes", () =>
     withSync(
       Effect.gen(function* () {
