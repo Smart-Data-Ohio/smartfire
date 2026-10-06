@@ -77,10 +77,10 @@ export type SaveMessage = typeof SaveMessage.Type;
 
 export type SaveMessagePin = Assert<Pinned<typeof SaveMessage, GeneratedSaveMessage>>;
 
-/** The `saved.changed` event: saved (`savedItemId` set) or unsaved (`null`) in another tab. */
+/** The `saved.changed` event: the item as it is now, or `null` once unsaved. */
 export const SavedChanged = Schema.Struct({
   messageId: MessageId,
-  savedItemId: Schema.NullOr(SavedItemId),
+  item: Schema.NullOr(SavedItem),
 });
 
 export type SavedChanged = typeof SavedChanged.Type;

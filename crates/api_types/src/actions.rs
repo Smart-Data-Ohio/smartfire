@@ -61,19 +61,22 @@ pub enum SavedStatus {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SavedItem {
-    /// For `DELETE /api/v1/saved/:id` (unsave, 204).
+    /// For `PATCH /api/v1/saved/:id` ([`crate::UpdateSavedItem`]) and `DELETE /api/v1/saved/:id`
+    /// (unsave: 204, no body; its reminder activity items go too).
     pub id: i64,
     pub message_id: i64,
     pub status: SavedStatus,
-    /// When to remind the viewer; `null` for no reminder.
+    /// When to remind the viewer; `null` for no reminder. Changing it re-arms the reminder
+    /// (`remindedAt` goes back to `null`).
     pub remind_at: Option<Timestamp>,
     /// When the reminder went out; `null` until it does.
     pub reminded_at: Option<Timestamp>,
     pub created_at: Timestamp,
 }
 
-/// `POST /api/v1/saved`: save a message for later (`saved_items#create`). Any message in a room
-/// the viewer belongs to. Saving a saved message only updates `remindAt` (it doesn't toggle).
+/// `POST /api/v1/saved`: save a message for later (`saved_items#create`, `SavedItem::save_for`).
+/// Any message the viewer can reach (404 otherwise). Saving a saved message only replaces
+/// `remindAt`, clearing it when `null` (it doesn't toggle).
 /// Answers the [`SavedItem`] (201) and publishes `saved.changed` to the viewer's other tabs.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -93,15 +96,17 @@ pub struct SavedMark {
     pub saved_item_id: i64,
 }
 
-/// The `saved.changed` event on the viewer's `user` topic: they saved or unsaved a message in
-/// another tab. New: the classic app has no broadcast for saved items.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+/// The `saved.changed` event on the viewer's `user` topic: they saved, unsaved, marked done or
+/// reopened a message in another tab (or the reply to `PATCH /api/v1/saved/:id` did), or its
+/// reminder went out (`reminded_at` set by the 30-second dispatcher). New: the classic app has
+/// no broadcast for saved items.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct SavedChanged {
     pub message_id: i64,
-    /// The saved item, or `null` when it was unsaved.
-    pub saved_item_id: Option<i64>,
+    /// The saved item as it is now, or `null` when it was unsaved.
+    pub item: Option<SavedItem>,
 }
 
 /// `GET /api/v1/forward_destinations`: where the viewer may forward to

@@ -44,6 +44,8 @@ const messageJson = {
   boosts: [],
   pinned: false,
   thread: null,
+  poll: null,
+  cards: [],
   createdAt: "2026-10-06T09:15:00.123Z",
   updatedAt: "2026-10-06T09:15:00.123Z",
 } as const;

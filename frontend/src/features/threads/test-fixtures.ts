@@ -26,6 +26,8 @@ export function messageFixture(id: number, extra: Partial<MessageDTO> = {}): Mes
     boosts: [],
     pinned: false,
     thread: null,
+    poll: null,
+    cards: [],
     createdAt,
     updatedAt: createdAt,
     ...extra,

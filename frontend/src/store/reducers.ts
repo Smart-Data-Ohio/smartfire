@@ -687,7 +687,7 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
         next = setPinState(next, event.data);
         break;
       case "saved.changed":
-        next = setSavedMark(next, event.data.messageId, event.data.savedItemId);
+        next = setSavedMark(next, event.data.messageId, event.data.item?.id ?? null);
         break;
       case "thread.indicator":
         next = setThreadIndicator(next, event.data);

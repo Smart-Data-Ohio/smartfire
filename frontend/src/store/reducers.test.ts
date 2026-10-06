@@ -41,6 +41,8 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
     boosts: [],
     pinned: false,
     thread: null,
+    poll: null,
+    cards: [],
     createdAt,
     updatedAt: createdAt,
     ...extra,

@@ -56,6 +56,8 @@ export function messageFixture(
     boosts: [],
     pinned: false,
     thread: null,
+    poll: null,
+    cards: [],
     createdAt: at,
     updatedAt: at,
     ...change,

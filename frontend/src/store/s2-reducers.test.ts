@@ -49,6 +49,8 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
     boosts: [],
     pinned: false,
     thread: null,
+    poll: null,
+    cards: [],
     createdAt,
     updatedAt: createdAt,
     ...extra,
@@ -120,7 +122,17 @@ describe("saved marks", () => {
     const saved = events(first, {
       topic: "user",
       type: "saved.changed",
-      data: { messageId: 2, savedItemId: 32 },
+      data: {
+        messageId: 2,
+        item: {
+          id: 32,
+          messageId: 2,
+          status: "in_progress",
+          remindAt: null,
+          remindedAt: null,
+          createdAt: "2026-10-06T00:00:00.000Z",
+        },
+      },
     });
 
     expect(saved.saved).toEqual({ 1: 31, 2: 32 });
@@ -128,7 +140,7 @@ describe("saved marks", () => {
     const unsaved = events(saved, {
       topic: "user",
       type: "saved.changed",
-      data: { messageId: 1, savedItemId: null },
+      data: { messageId: 1, item: null },
     });
 
     expect(unsaved.saved).toEqual({ 2: 32 });
