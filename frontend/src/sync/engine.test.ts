@@ -422,6 +422,42 @@ describe("resync", () => {
     ),
   );
 
+  it.effect("keeps a window that stops short of the present, as a permalink opens it", () =>
+    withSync(
+      Effect.gen(function* () {
+        const socket = yield* MemorySocket;
+        const api = yield* FakeApi;
+
+        yield* serve([]);
+        yield* api.reply(
+          "GET /rooms/12/messages",
+          pageFixture(
+            [4, 5, 6].map((id) => messageFixture(id, 12)),
+            3,
+            7,
+          ),
+        );
+        yield* startEngine;
+        yield* welcome(5, false);
+        yield* session.openRoom(12, 5);
+
+        expect(timelineIds(12)).toEqual([4, 5, 6]);
+
+        yield* api.reply(
+          "GET /rooms/12/messages",
+          pageFixture(
+            [40, 41].map((id) => messageFixture(id, 12)),
+            39,
+          ),
+        );
+        yield* socket.push({ t: "resync", topics: ["room:12"], reason: "lagged" });
+        yield* settle;
+
+        expect(timelineIds(12)).toEqual([4, 5, 6]);
+      }),
+    ),
+  );
+
   it.effect("fetches nothing when the server resumes", () =>
     withSync(
       Effect.gen(function* () {

@@ -5,7 +5,7 @@ import { threadMessages } from "../api/thread-endpoints.ts";
 import type { ClientFrame } from "../gen/ClientFrame.ts";
 import type { ServerFrame } from "../gen/ServerFrame.ts";
 import type { SyncEvent } from "../gen/SyncEvent.ts";
-import type { ConnectionStatus } from "../store/model.ts";
+import type { ConnectionStatus, Timeline } from "../store/model.ts";
 import { nextExpiry } from "../store/reducers.ts";
 import { mutations, store } from "../store/store.ts";
 import { Cursor } from "./cursor.ts";
@@ -16,6 +16,17 @@ import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
 
 /** The server pings after 15 s idle; this long without any frame means the socket is dead. */
+
+/**
+ * A loaded window that stops short of the present: a permalink, or a jump back. A resync's newest
+ * page would replace it and yank the reader away; the pages towards the present load fresh as
+ * they scroll down instead. (Checked when the page lands, so a permalink that loads while the
+ * refetch is in flight wins.)
+ */
+function readingHistory(timeline: Timeline | undefined): boolean {
+  return timeline !== undefined && timeline.status === "ready" && timeline.after !== null;
+}
+
 export const SILENCE_LIMIT_MS = 30_000;
 
 /** A connection that lasted this long resets the reconnect backoff. */
@@ -118,7 +129,15 @@ export class Engine extends Context.Service<
             );
           } else if (roomId !== null) {
             yield* messages(roomId, null).pipe(
-              Effect.tap((page) => Effect.sync(() => mutations.applyPage(roomId, page, "replace"))),
+              Effect.tap((page) =>
+                Effect.sync(() => {
+                  if (readingHistory(store.getState().timelines[roomId])) {
+                    return;
+                  }
+
+                  mutations.applyPage(roomId, page, "replace");
+                }),
+              ),
               Effect.catch((error) =>
                 Effect.logWarning(`sync: ${topic} resync failed`, error.message),
               ),
@@ -127,7 +146,13 @@ export class Engine extends Context.Service<
           } else if (threadId !== null) {
             yield* threadMessages(threadId, null).pipe(
               Effect.tap((page) =>
-                Effect.sync(() => mutations.applyThreadPage(threadId, page, "replace")),
+                Effect.sync(() => {
+                  if (readingHistory(store.getState().threadTimelines[threadId])) {
+                    return;
+                  }
+
+                  mutations.applyThreadPage(threadId, page, "replace");
+                }),
               ),
               Effect.catch((error) =>
                 Effect.logWarning(`sync: ${topic} resync failed`, error.message),

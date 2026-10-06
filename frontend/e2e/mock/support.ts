@@ -31,7 +31,8 @@ export { expect } from "@playwright/test";
 export async function openApp(page: Page, path: string, theme: Theme = "light"): Promise<void> {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path.replace(/^\//, "")}`);
-  await page.getByRole("complementary", { name: "Conversations" }).waitFor();
+  // The main pane shows at every width; on phones a room hides the conversation list.
+  await page.getByRole("main").waitFor();
 }
 
 const SHOTS = process.env.SMARTFIRE_SHOTS === "1";
