@@ -18,19 +18,19 @@ export MAIL_TEST_PORT_RANGE="${MAIL_TEST_PORT_RANGE:-53400-53419}"
 export GITHUB_TEST_PORT_RANGE="${GITHUB_TEST_PORT_RANGE:-53450-53499}"
 # The paired WS11-UI sequences use the current normal binary for work and this
 # test executable's ignored HTTP host for the interleaved inbox producer.
-cargo build --locked -p campfire --bin campfire
+parity/system/stable-cargo build --locked -p campfire --bin campfire
 export WS11UI_BROWSER_BINARY
-WS11UI_BROWSER_BINARY=$(cargo metadata --locked --no-deps --format-version=1 |
+WS11UI_BROWSER_BINARY=$(parity/system/stable-cargo metadata --locked --no-deps --format-version=1 |
   python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"] + "/debug/campfire")')
 # --show-output preserves both libtest pass receipts and the real-browser traces.
-cargo test --locked -p campfire \
+parity/system/stable-cargo test --locked -p campfire \
   controllers::ws12_browser_remaining_tests -- --ignored --show-output --test-threads=1
 
 # Ledger follow-up: the original individual people/tour/star/worker assertions.
 # Shares the normal binary above and the full-gate pinned browser image.
-cargo test --locked -p campfire \
+parity/system/stable-cargo test --locked -p campfire \
   controllers::ws11ui_original_browser_tests -- --ignored --show-output --test-threads=1
 
 # Remaining WS8br/WS17 originals use the same pinned transport and leased hosts.
-cargo test --locked -p campfire \
+parity/system/stable-cargo test --locked -p campfire \
   controllers::ledger_browser_tests -- --ignored --show-output --test-threads=1 --skip original_ledger_injected_clock_host

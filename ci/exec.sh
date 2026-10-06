@@ -12,6 +12,8 @@ install -m 644 "$repo/ci/cargo-config.toml" "$repo/.cargo-home/config.toml"
 # an empty file hides .cargo/config.toml's Cranelift settings (stable Cargo rejects them).
 stable=$(sed -nE 's/^ARG RUST_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' "$repo/Dockerfile")
 [[ -n "$stable" ]] || { echo "RUST_VERSION not found in $repo/Dockerfile" >&2; exit 1; }
+# Docker would create a missing mount target as a root-owned file inside the checkout.
+[[ -f "$repo/.cargo/config.toml" ]] || { echo "$repo/.cargo/config.toml is missing: nothing to hide from the stable toolchain" >&2; exit 1; }
 : > "$scratch/no-cargo-config.toml"
 git_mount=()
 git_common=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)

@@ -90,6 +90,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Source revision ${SHA} -> ${IMAGE}:rust-git-${SHA} (publish=${PUBLISH})"
 
+      # This writes gha-creds-*.json into the workspace, the build context: setup-gcloud signs
+      # gcloud in with it for the tag checks. The root .dockerignore keeps it, and err.log,
+      # out of the context (ops/tests/test_image_context.py).
       - name: Authenticate to Google Cloud
         id: auth
         if: env.PUBLISH == 'true'
@@ -355,7 +358,8 @@ jobs:
     timeout-minutes: 20
     steps:
       # Read-only use of the publisher identity: the amd64 manifest is copied from Artifact
-      # Registry by digest.
+      # Registry by digest. Only docker login uses it, through the access token, so no
+      # credentials file is written.
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
@@ -363,6 +367,7 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_IMAGE_PUBLISHER_SA }}
           token_format: access_token
+          create_credentials_file: false
 
       - name: Set up Docker Buildx (for imagetools)
         uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0

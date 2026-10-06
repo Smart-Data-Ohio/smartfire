@@ -19,7 +19,7 @@
 #
 # Images (unmodified production images, not the parity ones: no libfaketime, no pinned cable pool,
 # the reference's own resque-pool.yml):
-#   RUST_IMAGE       campfire-rust:app        (docker build -t campfire-rust:app rust)
+#   RUST_IMAGE       campfire-rust:app        (docker build -t campfire-rust:app .)
 #   REFERENCE_IMAGE  no default: a Rails app image you built from the git history (before the
 #                    Rails removal); required only with --apps reference
 #

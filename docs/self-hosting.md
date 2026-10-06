@@ -26,7 +26,7 @@ To run it you'll need three things:
 If you'd rather build the image yourself from your own copy of the source, you can do that too:
 
 ```sh
-docker build -t smartfire rust
+docker build -t smartfire .
 ```
 
 The image is built from the [`Dockerfile`](../Dockerfile), with the repository root as the build context.

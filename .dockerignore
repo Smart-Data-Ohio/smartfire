@@ -20,6 +20,19 @@
 /Dockerfile
 /.dockerignore
 
+# Credentials and scratch files a CI job or a developer can leave at the root, which is the build
+# context: google-github-actions/auth writes gha-creds-*.json into the workspace before
+# publish-image.yml builds, and its tag check writes err.log. None may reach the builder.
+/gha-creds-*.json
+/.env
+/.env.*
+/*.log
+/.netrc
+/.npmrc
+/.docker
+/.config
+**/node_modules
+
 # Documentation, deployment scripts and agent notes: none is built into an image.
 /*.md
 /MIT-LICENSE
