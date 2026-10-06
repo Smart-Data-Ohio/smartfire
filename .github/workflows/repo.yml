@@ -61,7 +61,6 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      # npm rejects the script/livekit-gateway symlink as a prefix; use the real directory.
       - name: Install gateway dependencies
         run: npm ci --ignore-scripts --prefix rust/web/script/livekit-gateway
 

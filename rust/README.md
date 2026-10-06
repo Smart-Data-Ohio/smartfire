@@ -1,6 +1,7 @@
 # Smartfire in Rust
 
-This tree implements Smartfire, the Rails app at the repository root, in Rust. It derives from
+This tree is Smartfire. Production has run on it since 2026-10-05; it replaced Smartfire's
+original Rails app, which has been removed from the repository. It derives from
 37signals' MIT-licensed [ONCE Campfire Rust port](https://github.com/basecamp/once-campfire-rust),
 imported with its full history by `git subtree add --prefix=rust` at upstream `24c85975`.
 We do not track subsequent upstream changes. See [`MIT-LICENSE`](MIT-LICENSE).
@@ -11,21 +12,19 @@ Smartfire's boards, threads, huddles and stages, Slack import, Google and GitHub
 agent APIs, and two-factor authentication have controllers, jobs and views in this tree.
 The former stock-Campfire-only status is obsolete; the current handler table is
 [`crates/campfire/src/controllers.rs`](crates/campfire/src/controllers.rs#L195), with integration
-routes also registered in [`app.rs`](crates/campfire/src/app.rs#L303). This is implementation
-status, not a claim that every original Rails assertion or the production cutover has passed.
-The remaining behavioral gaps and exceptions are listed under [Known differences](#known-differences).
+routes also registered in [`app.rs`](crates/campfire/src/app.rs#L303). Deliberate behavioral
+differences from the Rails app are listed under [Known differences](#known-differences).
 
-The Rails app remains the behavior oracle. The port owns its copies of the Rails app's static
-inputs: the assets, JavaScript, vendored JavaScript, `public/`, importmap and LiveKit scripts in
-[`web/`](web) (laid out like the Rails app, which reads them through symlinks) and the test
-fixtures in [`fixtures/`](fixtures). `CAMPFIRE_REFERENCE` names another Rails app's absolute root
-to read them from instead; the tools that run Rails use it, defaulting to the repository root. Canonical Rails oracle images and generated seeds
-use [`parity/reference.sha`](parity/reference.sha); approved source copies are described in
-[`crates/assets/OVERRIDES.md`](crates/assets/OVERRIDES.md). The port uses the Rails SQLite schema,
-storage layout and compatible signed/AES-GCM cookies. Boot loads an empty database's compiled
-schema or checks an existing database's exact migration set; it does not run Rails migrations or
-add the former upstream extra message index ([schema preparation](crates/db/src/schema.rs#L103)).
-Apply needed Rails migrations before switching runtimes.
+The Rails app's behavior is pinned by the recorded golden vectors, fixtures and frozen seeds the
+tests read; they were recorded from Rails at [`parity/reference.sha`](parity/reference.sha) and
+are frozen. The app owns the static inputs it was ported with: the assets, JavaScript, vendored
+JavaScript, `public/`, importmap and LiveKit scripts in [`web/`](web) (laid out like the Rails app)
+and the test fixtures in [`fixtures/`](fixtures). Approved source copies are described in
+[`crates/assets/OVERRIDES.md`](crates/assets/OVERRIDES.md). The app uses the Rails SQLite schema,
+storage layout and compatible signed/AES-GCM cookies, so existing installs keep their data and
+sessions. Boot loads an empty database's compiled schema or checks an existing database's exact
+migration set ([schema preparation](crates/db/src/schema.rs#L103)); `campfire db-migrate` applies
+new migrations (see [`ops/README.md`](ops/README.md)).
 
 ### Current behavior
 
@@ -65,18 +64,11 @@ These contracts supersede the imported upstream operational claims:
 
 [`../.github/workflows/rust.yml`](../.github/workflows/rust.yml) restores the committed
 **`default`, `first_run`, `agents_ui` and `ledger_originals`** seeds (built once by Rails, now
-frozen) and checks them against this build's migrations; it never runs Rails. Missing seeds
+frozen) and checks them against this build's migrations. Missing seeds
 fail seed-dependent tests when `CI` is set; local tests can skip with a message. Report which
 seeds and test groups actually ran. See [`parity/seeds/README.md`](parity/seeds/README.md).
 Some workspace/doctest steps remain advisory (`continue-on-error`), so a successful CI run alone
 is not evidence that the complete correctness suite or a production-copy rehearsal passed.
-
-The current screen oracle has **172 states and 288 lean cells**, documented with canonical
-commands in [`parity/SCREENS.md`](parity/SCREENS.md). These are inventory sizes, not pass totals.
-[`parity/allowlist.yml`](parity/allowlist.yml) has no approved Smartfire divergences: it documents
-normalization of entropy and runtime framing while keeping application/security headers,
-cookie attributes, asset bytes and PWA bodies visible. The former upstream screenshot totals and
-manifest allowlist are not current Smartfire acceptance evidence.
 
 From `rust/`, with the Dockerfile's Rust toolchain:
 
@@ -89,8 +81,7 @@ cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnin
 ```
 
 After adding a migration, `python3 parity/bin/frozen-seeds migrate target/debug/campfire`
-applies it to the committed seeds. The screen matrix uses its own additional seeds and commands
-in `parity/SCREENS.md`. Golden vectors and fixtures were recorded from Rails and are frozen. See [`AGENTS.md`](AGENTS.md) for layout and working rules.
+applies it to the committed seeds. Golden vectors and fixtures were recorded from Rails and are frozen. See [`AGENTS.md`](AGENTS.md) for layout and working rules.
 
 ## Building and deploying
 
@@ -128,13 +119,12 @@ cargo run -p campfire -- server  # needs SECRET_KEY_BASE or SECRET_KEY_BASE_DUMM
 
 ## Known differences
 
-These are current code boundaries and observable differences from Rails, not a blanket cutover
-approval. Each entry states its reason and points to implementation or regression evidence;
+These are current code boundaries and observable differences from the original Rails app. Each entry states its reason and points to implementation or regression evidence;
 older approvals remain scoped to their recorded inputs.
 
 | Difference | Reason and evidence |
 |---|---|
-| Relative-duration overflow at unit-dependent ranges | Shared arithmetic is fixed-width I512 rather than Ruby's unbounded integers: power-of-ten inputs first overflow at 10^147 minutes, 10^145 hours, or 10^143 days/weeks (the preceding power still fits, including 10^144 hours); the 12 recorded hour/day inputs produce 24 mismatched outcomes. [Timestamp limit:23](crates/db/src/time.rs#L23), [parser:235](crates/db/src/slash_commands/time_parser.rs#L235), [boundary vectors](vectors/messaging/extreme_range.json), [diagnostic test:84](crates/campfire/src/controllers/message_features/extreme_range_tests.rs#L84), [strict probe](reference-tools/messaging/probe_extreme_range.py). |
+| Relative-duration overflow at unit-dependent ranges | Shared arithmetic is fixed-width I512 rather than Ruby's unbounded integers: power-of-ten inputs first overflow at 10^147 minutes, 10^145 hours, or 10^143 days/weeks (the preceding power still fits, including 10^144 hours); the 12 recorded hour/day inputs produce 24 mismatched outcomes. [Timestamp limit:23](crates/db/src/time.rs#L23), [parser:235](crates/db/src/slash_commands/time_parser.rs#L235), [boundary vectors](vectors/messaging/extreme_range.json), [diagnostic test:84](crates/campfire/src/controllers/message_features/extreme_range_tests.rs#L84), the strict probe that recorded them (removed with the Rails app). |
 | Security response headers on HTTP/1.1 Active Storage proxies | Rust retains six security defaults that Rails' Live responses omit, including successful streams and handled 404/416 responses. [Defaults:26](crates/campfire/src/security.rs#L26), [all-header regression:118](crates/campfire/src/controllers/agent_review_r5_tests.rs#L118), [scoped header list](plans/ws11api-approved-differences.md#http11-proxy-security-headers-pr-203-follow-up). |
 | Huge-integer password-confirmation replay → 302 | Rust discards optional replay parameters when the encrypted session would overflow, avoiding Rails' 500 for 1,001/1,002-digit JSON integers; this evidence concerns replay parameters, not arbitrary path IDs. [Sudo guard:57](crates/campfire/src/concerns/sudo.rs#L57), [HTTP regression:233](crates/campfire/src/controllers/accounts/bots/casting_followups_tests.rs#L233). |
 | Committed-file retention | Successful COMMIT transfers file ownership before fallible callbacks, so an earlier callback error cannot leave committed rows without their staged files as Rails can. [Callback/file regression:47](crates/campfire/src/controllers/agent_review_r4_tests.rs#L47), [retention contract](plans/ws11api-approved-differences.md#committed-file-ownership-and-missing-file-serving-pr-192-fourth-and-fifth-reviews). |
@@ -144,14 +134,14 @@ older approvals remain scoped to their recorded inputs.
 | No AES-CBC legacy-cookie fallback | The encryptor and cookie reader implement AES-256-GCM only; GCM vectors do not establish continuity for any deployed CBC cookies. [Encryptor:11](crates/rails_compat/src/message_encryptor.rs#L11), [cookie reader:154](crates/rails_compat/src/cookies.rs#L154). |
 | Active Storage blobs embedded in rich-text bodies render ☒ | The attachable resolver has no blob renderer, so these SGIDs fall through to the missing-attachment marker; top-level message files/previews are separate. [Attachable types:109](crates/richtext/src/attachables.rs#L109), [resolution:208](crates/richtext/src/attachables.rs#L208), [render fallback:368](crates/richtext/src/attachables.rs#L368). |
 | Session-cookie write frequency | Rust sends an encrypted session cookie on changes rather than Rails' refresh on each loaded/carried session, reducing cookie traffic while retaining its contents. [Session contract:6](crates/kit/src/session.rs#L6), [HTTP regression:636](crates/kit/tests/http.rs#L636). |
-| Authentication-cookie refresh frequency | Rust re-signs `session_token` when session activity is due for its hourly refresh; Rails re-signs it on every authenticated application request. [Refresh:708](crates/campfire/src/concerns.rs#L708), [HTTP regression:176](crates/campfire/src/app/tests.rs#L176), [Rails authentication](../app/controllers/concerns/authentication.rb). |
-| `last_room` cookie write frequency | Rust writes the permanent cookie only when the room changes, avoiding Rails' write and expiry renewal on every room page. [Cookie write:921](crates/campfire/src/concerns.rs#L921), [HTTP regression:477](crates/campfire/src/controllers/rooms/tests.rs#L477), [Rails room visit](../app/controllers/concerns/tracked_room_visit.rb#L8). |
+| Authentication-cookie refresh frequency | Rust re-signs `session_token` when session activity is due for its hourly refresh; Rails re-signs it on every authenticated application request. [Refresh:708](crates/campfire/src/concerns.rs#L708), [HTTP regression:176](crates/campfire/src/app/tests.rs#L176), Rails `app/controllers/concerns/authentication.rb`. |
+| `last_room` cookie write frequency | Rust writes the permanent cookie only when the room changes, avoiding Rails' write and expiry renewal on every room page. [Cookie write:921](crates/campfire/src/concerns.rs#L921), [HTTP regression:477](crates/campfire/src/controllers/rooms/tests.rs#L477), Rails `app/controllers/concerns/tracked_room_visit.rb`. |
 | ETag construction for cached pages | Rust hashes page-part digests to reuse cached compression instead of hashing the entire body; validators still change with content. [ETag construction:137](crates/kit/src/deflater/splice.rs#L137), [content-change test:517](crates/kit/src/deflater/splice.rs#L517). |
 | Compressed Action Cable frames | Rust negotiates `permessage-deflate` without context takeover to share compressed broadcasts; Rails' Cable does not negotiate it, while decoded messages retain the protocol. [Socket handshake:125](crates/cable/src/socket.rs#L125), [handshake regression:549](crates/cable/src/socket.rs#L549). |
 | Rich-text hardening limits | Attribute angle brackets are escaped before autolinking, `name` is anchor-only, and content attachments stop after eight levels to bound unsafe/expensive input. [Sanitizer:244](crates/richtext/src/sanitizer.rs#L244), [hardening regressions:55](crates/richtext/tests/hardening.rs#L55). |
 | Resource and listener bounds | Rust caps buffered JSON/form parameter bodies at 16 MiB before parsing and Cable subscriptions/identifiers at 64/4 KiB; its app listener defaults to loopback. These bound resource use and the forwarded-header trust boundary. [Body limits:19](crates/kit/src/body.rs#L19), [Cable limits:92](crates/cable/src/connection.rs#L92), [front defaults:75](crates/kit/src/front/config.rs#L75). |
 | Media subprocess deadlines | Rust kills and reaps ffprobe after 30 seconds and ffmpeg preview extraction after 60 seconds; Rails' analyzer/previewer subprocesses have no such deadlines. [ffprobe:15](crates/storage/src/analyze.rs#L15), [ffmpeg:20](crates/storage/src/process.rs#L20), [kill/reap regression:168](crates/storage/src/process.rs#L168). |
-| Composer unfurl budget | Rust adds a 10-second overall budget including slot waits, DNS, redirects and image validation, with at most 16 unfurls in flight; Rails' composer has no overall budget. Both use 5-second open/read/write operation timeouts. [Unfurl:27](crates/campfire/src/integrations/opengraph.rs#L27), [deadline regression:190](crates/campfire/src/integrations/opengraph/tests.rs#L190), [Rails fetch:9](../app/models/opengraph/fetch.rb#L9). |
+| Composer unfurl budget | Rust adds a 10-second overall budget including slot waits, DNS, redirects and image validation, with at most 16 unfurls in flight; Rails' composer has no overall budget. Both use 5-second open/read/write operation timeouts. [Unfurl:27](crates/campfire/src/integrations/opengraph.rs#L27), [deadline regression:190](crates/campfire/src/integrations/opengraph/tests.rs#L190), Rails `app/models/opengraph/fetch.rb`. |
 | Push HTTP-exchange deadline | Rust uses 10-second open/read and 60-second write timeouts, plus a 30-second HTTP-exchange deadline after DNS resolution; Rails uses 60-second operation timeouts without that overall exchange deadline. These bound time spent awaiting a push service, not DNS. [Timeouts:28](crates/campfire/src/integrations/web_push.rs#L28), [DNS before delivery:75](crates/campfire/src/integrations/web_push.rs#L75), [exchange deadline:182](crates/campfire/src/integrations/web_push.rs#L182). |
 
 ## Imported upstream history

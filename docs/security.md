@@ -122,7 +122,8 @@ them the inbox item is the whole alert and nothing is sent.
 `.github/dependabot.yml` runs weekly updates, with minor and patch
 updates grouped, for GitHub Actions, the Rust workspace (`rust/`,
 cargo), every live Node lockfile (the huddle gateway, the LiveKit
-client and code highlighter bundle builders, and the parity harness),
+client and code highlighter bundle builders, and the pinned Playwright
+the browser suites run in),
 and the production image's `rust/Dockerfile`. The Rust and Debian base
 images take their tags from build args the updater cannot read, so
 those bumps stay a manual, reviewed step (see the file's comments).

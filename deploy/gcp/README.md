@@ -13,7 +13,7 @@ Two GitHub workflows drive it:
 | [`deploy-gcp.yml`](../../.github/workflows/deploy-gcp.yml) | manual only | Production only from `main`. Requires a successful `rust.yml` push or scheduled run (with its `Rust port` job) for the revision, resolves `rust-git-<sha>` to a digest and runs `campfire-release.sh` on the app VM through an IAP SSH tunnel. |
 
 Production runs the Rust port. The release script only moves one Rust image (label
-`net.smartdata.campfire.runtime=rust`) to another; the Rails images and their
+`net.smartdata.campfire.runtime=rust`) to another; the old Rails images and their
 `git-<sha>` tags are history.
 
 ## The ordering rule
