@@ -179,7 +179,10 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     await quick(page);await reaction(page,2,true);await reaction(recipient,2,true);
     await actOnVisible(row.locator('.reaction-chip[data-reaction="👍"]'),'click',{});await reaction(page,1,false);await reaction(recipient,1,true);
   } else if(caseName.startsWith('a release click')) {
-    await page.setViewportSize({width:390,height:844});
+    // resize_to(390, 844) sizes Selenium's outer window; headless Chrome keeps
+    // 87px of browser UI, so the page gets 390x757. That is the geometry
+    // that puts the press point on the menu's Reply action.
+    await page.setViewportSize({width:390,height:757});
     await longPress(page);await assertMenuOpen(page);
     // The browser fires compatibility mouse events at the release point after
     // every touch. When the menu opens under the finger first, that click
