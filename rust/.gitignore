@@ -7,3 +7,7 @@ target/
 /.claude
 /.cargo-home
 __pycache__/
+# The Rails app's precompile and LiveKit tooling write through its symlinks into web/.
+/web/public/assets
+/web/script/*/node_modules/
+/web/.bundle

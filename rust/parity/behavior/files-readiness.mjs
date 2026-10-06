@@ -12,7 +12,7 @@ process.argv = process.argv.filter(arg => arg !== "--legacy-setup")
 await runSuite("Files search readiness", ({ room }) => [["filename search renders before the Images click", async page => {
   const query = `file-readiness-${randomUUID()}`
   const filename = `${query}.png`
-  const base64 = (await readFile(new URL("../../../test/fixtures/files/earth.png", import.meta.url))).toString("base64")
+  const base64 = (await readFile(new URL("../../fixtures/files/earth.png", import.meta.url))).toString("base64")
   await createMessage(page, room, { body: "Files readiness" }, { base64, name: filename, type: "image/png" })
   await page.reload()
   await page.getByRole("link", { name: "Show files", exact: true }).click()

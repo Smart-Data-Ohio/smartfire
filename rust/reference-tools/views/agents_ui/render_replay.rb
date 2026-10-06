@@ -1,7 +1,7 @@
 # Pinned Date/JSON casts and real credential/sudo requests for PR196's R4 review.
 require 'zlib'
 require 'action_dispatch/testing/integration'
-input = JSON.parse(Zlib::GzipReader.open(File.join(__dir__, 'render_replay_inputs.json.gz'), &:read))
+input = JSON.parse(Zlib::GzipReader.open(File.join(__dir__, '../../../test-support/agents_ui/render_replay_inputs.json.gz'), &:read))
 result = {reference: ENV.fetch("PARITY_REFERENCE_SHA")}
 result[:expiry] = input['zones'].flat_map do |zone|
   Time.use_zone(zone) do

@@ -79,10 +79,10 @@ release's image as MIGRATING.
 
 ## Image and release contract
 
-Build from the repository root, with the reference as a named context:
+Build with `rust/` as the context; it carries its own frontend inputs in `rust/web/`:
 
 ```sh
-docker build -f rust/Dockerfile --build-context reference=. -t smartfire-rust rust
+docker build -f rust/Dockerfile -t smartfire-rust rust
 ```
 
 The image:
@@ -90,8 +90,10 @@ The image:
 - has uid/gid 1000, `/rails`, `/rails/storage/{db,files,backups}`, ports 80/443,
   `bin/boot`, and both ONCE hooks;
 - has no `HEALTHCHECK`;
-- embeds assets digested from the checkout at build time;
-- uses `CARGO_BUILD_JOBS` (default 4) and `CARGO_PROFILE` (default release).
+- embeds assets digested from `rust/web/` at build time;
+- uses `CARGO_BUILD_JOBS` (default 4) and `CARGO_PROFILE` (default release; a
+  developer can select dev, but measurements meant to represent deployment use
+  release). `CARGO_CACHE_SCOPE` separates a worker's Docker target/registry caches.
 
 `CAMPFIRE_STORAGE_PATH` takes precedence over `CAMPFIRE_STORAGE`, then defaults to
 `/rails/storage` in the image. `CAMPFIRE_DATABASE_PATH`, `CAMPFIRE_FILES_PATH` and

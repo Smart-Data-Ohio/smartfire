@@ -494,12 +494,13 @@ async fn start_node_fixture() -> String {
 #[ignore = "requires Node and the gateway pinned ws package; run explicitly with --ignored"]
 async fn huddle_gateway_own_node_suite_against_rust_endpoints() {
     use axum::{Json, Router, routing::post};
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+    let rust = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let gateway = campfire_db::fixtures::reference_path("script/livekit-gateway").canonicalize().unwrap();
     // Build from the committed gateway lockfile in this test's own temporary directory.
     // A clean checkout must not rely on the worker's untracked .scratch/node-deps.
     let dependencies = tempfile::Builder::new().prefix("ws13-gateway-").tempdir().unwrap();
     for file in ["package.json", "package-lock.json"] {
-        std::fs::copy(root.join("script/livekit-gateway").join(file), dependencies.path().join(file)).unwrap();
+        std::fs::copy(gateway.join(file), dependencies.path().join(file)).unwrap();
     }
     let install = tokio::process::Command::new("npm")
         .args(["ci", "--ignore-scripts", "--no-audit", "--no-fund"])
@@ -524,11 +525,11 @@ async fn huddle_gateway_own_node_suite_against_rust_endpoints() {
     let output = tokio::process::Command::new("node")
         .args([
             "--import",
-            "./rust/reference-tools/huddle_gateway_node.mjs",
+            "./test-support/huddle_gateway_node.mjs",
             "--test",
-            "script/livekit-gateway/",
         ])
-        .current_dir(&root)
+        .arg(gateway.join(""))
+        .current_dir(&rust)
         .env("WS13_FIXTURE_CONTROL", control)
         .env("WS13_WS_MODULE", module)
         .env("WS13_JOIN_TOKEN", vectors["token"].as_str().unwrap())

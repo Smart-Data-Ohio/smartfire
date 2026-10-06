@@ -399,7 +399,7 @@ async fn slack_client_pacing_is_shared_per_tier_and_separate_between_tiers() {
 
 #[test]
 fn slack_client_vendored_fixtures_match_our_rails_files() {
-    let root = campfire_db::fixtures::reference_root();
+    let reference = campfire_db::fixtures::reference_path("test/fixtures/files/slack");
     for entry in std::fs::read_dir(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/src/integrations/slack/fixtures"
@@ -410,8 +410,7 @@ fn slack_client_vendored_fixtures_match_our_rails_files() {
         assert_eq!(
             std::fs::read(&path).unwrap(),
             std::fs::read(
-                root.join("test/fixtures/files/slack")
-                    .join(path.file_name().unwrap())
+                reference.join(path.file_name().unwrap())
             )
             .unwrap()
         );

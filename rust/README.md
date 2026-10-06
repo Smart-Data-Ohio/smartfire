@@ -15,8 +15,11 @@ routes also registered in [`app.rs`](crates/campfire/src/app.rs#L303). This is i
 status, not a claim that every original Rails assertion or the production cutover has passed.
 The remaining behavioral gaps and exceptions are listed under [Known differences](#known-differences).
 
-The Rails app remains the behavior oracle. `CAMPFIRE_REFERENCE` selects its absolute root and
-otherwise defaults to the repository root. Canonical Rails oracle images and generated seeds
+The Rails app remains the behavior oracle. The port owns its copies of the Rails app's static
+inputs: the assets, JavaScript, vendored JavaScript, `public/`, importmap and LiveKit scripts in
+[`web/`](web) (laid out like the Rails app, which reads them through symlinks) and the test
+fixtures in [`fixtures/`](fixtures). `CAMPFIRE_REFERENCE` names another Rails app's absolute root
+to read them from instead; the tools that run Rails use it, defaulting to the repository root. Canonical Rails oracle images and generated seeds
 use [`parity/reference.sha`](parity/reference.sha); approved source copies are described in
 [`crates/assets/OVERRIDES.md`](crates/assets/OVERRIDES.md). The port uses the Rails SQLite schema,
 storage layout and compatible signed/AES-GCM cookies. Boot loads an empty database's compiled
@@ -122,7 +125,7 @@ front listener unless explicitly configured otherwise
 For a local source image, from `rust/`:
 
 ```sh
-docker build -t smartfire-rust --build-context reference=.. .
+docker build -t smartfire-rust .
 cargo run -p campfire -- server  # needs SECRET_KEY_BASE or SECRET_KEY_BASE_DUMMY=1
 ```
 

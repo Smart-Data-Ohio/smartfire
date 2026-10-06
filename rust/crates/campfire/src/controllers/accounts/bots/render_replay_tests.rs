@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 fn inputs() -> Value {
     use std::io::Read;
     let bytes = include_bytes!(
-        "../../../../../../reference-tools/views/agents_ui/render_replay_inputs.json.gz"
+        "../../../../../../test-support/agents_ui/render_replay_inputs.json.gz"
     );
     let mut text = String::new();
     flate2::read::GzDecoder::new(&bytes[..])

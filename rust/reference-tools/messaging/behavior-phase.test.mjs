@@ -24,7 +24,7 @@ async function installedProbe(caseName,variant,asset) {
   const probe={ready:true,applied:0};
   await installMutation(page,caseName,probe,variant);
   const css=asset==='messages';
-  const source=readFileSync(new URL(css?'../../../app/assets/stylesheets/messages.css':`../../../app/javascript/controllers/${asset}.js`,import.meta.url),'utf8');
+  const source=readFileSync(new URL(css?'../../web/app/assets/stylesheets/messages.css':`../../web/app/javascript/controllers/${asset}.js`,import.meta.url),'utf8');
   const response={text:async()=>source,headers:()=>({'content-type':'text/javascript'}),status:()=>200};
   await handler({
     request:()=>({url:()=>css?'http://synthetic.invalid/assets/messages-synthetic.css':`http://synthetic.invalid/assets/controllers/${asset}-synthetic.js`,method:()=> 'GET'}),

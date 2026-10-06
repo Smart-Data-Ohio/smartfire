@@ -287,8 +287,8 @@ native_build() {
 
   log "syncing $REFERENCE_ROOT into parity/.native/app"
   # The reference contains this tree (rust/) when it's the repository root: leave it out, or the
-  # copy would contain itself.
-  rsync -a --delete --exclude=/.git --exclude='/storage/*' --exclude='/tmp/*' --exclude='/log/*' \
+  # copy would contain itself. Its symlinks into rust/web and rust/fixtures are copied as files.
+  rsync -a --copy-links --delete --exclude=/.git --exclude='/storage/*' --exclude='/tmp/*' --exclude='/log/*' \
     --exclude=/.bundle --exclude=/public/assets --exclude=/rust --exclude=/.claude --exclude=node_modules \
     "$REFERENCE_ROOT/" "$NATIVE/app/"
   printf '%s\n' "$revision" > "$NATIVE/app/.parity-reference.sha"

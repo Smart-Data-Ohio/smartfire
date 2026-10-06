@@ -30,7 +30,7 @@ fn analyzer_vectors() -> serde_json::Value {
 
 async fn analyzer_blob(app: &TestApp, case: &serde_json::Value) -> Blob {
     let bytes = if let Some(fixture) = case["reference_fixture"].as_str() {
-        std::fs::read(campfire_db::fixtures::reference_root().join(fixture)).unwrap()
+        std::fs::read(campfire_db::fixtures::reference_path(fixture)).unwrap()
     } else if let Some(fixture) = case["rust_fixture"].as_str() {
         std::fs::read(
             std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../..")).join(fixture),

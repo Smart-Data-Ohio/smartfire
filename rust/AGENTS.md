@@ -22,22 +22,38 @@ The goal is a drop-in replacement for the Rails app, indistinguishable from it b
 
 ## Where the reference lives
 
-`CAMPFIRE_REFERENCE` names the reference Rails app's root, as an absolute path (Cargo runs build
-scripts and tests from each crate's directory, so a relative one resolves differently there than in
-the shell tools). Tests read it at compile time, so changing it rebuilds them. Unset, it's the
-repository root, the parent of `rust/`, which is what every tool uses by default:
+The port owns copies of the reference's static inputs, in `rust/`:
 
-| Consumer | How it finds the reference |
+- `web/`, laid out like the Rails app: `app/assets`, `app/javascript`, `vendor/javascript`,
+  `public/`, `config/importmap.rb`, `config/initializers/assets.rb`, the JS builders that vendor
+  bundles into `vendor/javascript` (`script/livekit-client`, `script/code-highlighter`), the LiveKit
+  gateway (`script/livekit-gateway`) and `bin/livekit-local`.
+- `fixtures/`: the reference's `test/fixtures`.
+- `test-support/`: data the tests read that reference tools once held (attachment analyzer inputs,
+  agents UI cast inputs, the post-pin status files, Node test adapters).
+
+These are canonical. Until the Rails app is removed it reads them through relative symlinks at the
+old paths (`app/assets -> ../rust/web/app/assets`, `test/fixtures -> ../rust/fixtures`, ...); the
+root `.dockerignore` keeps `rust/web/` in the Rails image's context so they resolve there too.
+Edit the files under `rust/`.
+
+`CAMPFIRE_REFERENCE` names a reference Rails app's root, as an absolute path (Cargo runs build
+scripts and tests from each crate's directory, so a relative one resolves differently there than in
+the shell tools). Tests read it at compile time, so changing it rebuilds them. Unset, Rust reads its
+own copies:
+
+| Consumer | How it finds its inputs |
 |---|---|
-| `crates/assets/build.rs` | `CAMPFIRE_REFERENCE`, else `rust/..`; reads `app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`, `config/initializers/assets.rb` |
-| Tests (`campfire_db::fixtures::reference_root()`, storage vectors) | `CAMPFIRE_REFERENCE` at compile time, else `rust/..` |
-| `parity/bin/*`, `reference-tools/*`, `bench/run`, `crates/assets/script/revendor` | `REFERENCE_ROOT=${CAMPFIRE_REFERENCE:-rust/..}` |
+| `crates/assets/build.rs` | `CAMPFIRE_REFERENCE`, else `rust/web`; reads `app/assets`, `app/javascript`, `vendor/javascript`, `public/`, `config/importmap.rb`, `config/initializers/assets.rb` |
+| Tests | `campfire_db::fixtures`: `reference_root()` is `rust/web`, `reference_dir()` is `rust/fixtures`, and `reference_path("public/500.html")` / `reference_path("test/fixtures/files/...")` maps a Rails path to the port's copy (all `CAMPFIRE_REFERENCE` instead, when set at compile time) |
+| Tests that compare with Rails source the port doesn't copy (`db/schema.rb`, `db/migrate`, `app/models`, `app/views`, `config/icons.yml`) | `campfire_db::fixtures::rails_root()`: `CAMPFIRE_REFERENCE`, else `rust/..` |
+| `Dockerfile` | copies `web/`'s inputs from its own context (`docker build .` from `rust/`) |
+| `parity/bin/*`, `reference-tools/*`, `crates/assets/script/revendor` (they run Rails) | `REFERENCE_ROOT=${CAMPFIRE_REFERENCE:-rust/..}` |
 | `parity/capture` (TypeScript) | `REFERENCE_DIR`; `reference/...` paths in `screens.yml` resolve against it (`repoPath`) |
-| `Dockerfile` | the named build context `reference` (`docker build --build-context reference=.. .` from `rust/`) |
 
 `reference/` in comments, docs and `screens.yml` means the reference app's root. There's no
-submodule and no symlink: a `rust/reference -> ..` link would make a loop (`rust/reference/rust/...`)
-for anything that walks directories.
+submodule and no `rust/reference` symlink: a `rust/reference -> ..` link would make a loop
+(`rust/reference/rust/...`) for anything that walks directories.
 
 ## Layout
 
@@ -137,7 +153,6 @@ at the repository root, then the parity image `campfire-reference` on top of it
 (`parity/docker/Dockerfile`: libfaketime, the test fixtures, a one-worker resque pool). It runs in
 production mode with a fixed `SECRET_KEY_BASE` (see `parity/.env.reference`) so that golden
 vectors, seeds and screenshots are reproducible. Those keys are for tests only.
-`parity/bin/candidate build` builds the Rust image (`Dockerfile`, with the reference as a named
-build context) and `campfire-candidate` on top of it. Without Docker, `PARITY_RUNTIME=native` runs
+`parity/bin/candidate build` builds the Rust image (`Dockerfile`) and `campfire-candidate` on top of it. Without Docker, `PARITY_RUNTIME=native` runs
 the reference with the host's Ruby (not canonical: media bytes differ), and captures fall back to
 the pinned Playwright image under bubblewrap.

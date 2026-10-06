@@ -13,8 +13,8 @@ inputs = [
   {kind: "text", filename: "analysis.txt", content_type: "text/plain", data_base64: Base64.strict_encode64("Attachment analyzer parity.\n")},
   {kind: "image", filename: "analysis.png", content_type: "image/png", data_base64: signed_vectors.fetch("png_base64")},
   {kind: "video", filename: "alpha-centuri.mov", content_type: "video/quicktime", reference_fixture: "test/fixtures/files/alpha-centuri.mov"},
-  {kind: "audio", filename: "analysis.wav", content_type: "audio/wav", rust_fixture: "reference-tools/attachments/fixtures/analysis.wav"},
-  {kind: "pdf", filename: "analysis.pdf", content_type: "application/pdf", rust_fixture: "reference-tools/attachments/fixtures/analysis.pdf"}
+  {kind: "audio", filename: "analysis.wav", content_type: "audio/wav", rust_fixture: "test-support/attachments/analysis.wav"},
+  {kind: "pdf", filename: "analysis.pdf", content_type: "application/pdf", rust_fixture: "test-support/attachments/analysis.pdf"}
 ]
 user = User.find(127326141)
 session = user.sessions.detect(&:two_factor_verified?) || raise("no verified session")
