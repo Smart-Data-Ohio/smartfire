@@ -87,10 +87,14 @@ export function inActivityTab(tab: ActivityTab, type: ActivityEventType): boolea
   return tab === "all" || ACTIVITY_TAB_TYPES[tab].includes(type);
 }
 
+/** Which list a key names: one tab in one state. */
+interface ActivityListName {
+  readonly tab: ActivityTab;
+  readonly status: ActivityState;
+}
+
 /** The tab and state a list key names; `null` for a key this module didn't make. */
-function parseListKey(
-  key: string,
-): { readonly tab: ActivityTab; readonly status: ActivityState } | null {
+function parseListKey(key: string): ActivityListName | null {
   const [rawTab, rawStatus] = key.split(":");
   const tab = ACTIVITY_TABS.find((candidate) => candidate === rawTab);
   const status = ACTIVITY_STATUSES.find((candidate) => candidate === rawStatus);
