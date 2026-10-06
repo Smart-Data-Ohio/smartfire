@@ -118,13 +118,14 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         run: pnpm build
 
-      # Vite's manifest names the entry chunks; each one's size is reported with its CSS.
+      # Vite's manifest names the entry chunks and the chunks they import statically, i.e. what a
+      # first visit downloads; each is reported with its CSS. Lazy chunks are left out.
       - name: Report bundle sizes
         if: steps.scope.outputs.run == 'true'
         run: |
           set -euo pipefail
           {
-            echo "### Frontend bundle (entry chunks)"
+            echo "### Frontend bundle (initial load: entry chunks and their static imports)"
             echo
             echo "| File | Size | gzip -9 |"
             echo "| --- | ---: | ---: |"
@@ -134,7 +135,16 @@ jobs:
               gz=$(gzip -9 -c "dist/$file" | wc -c)
               total=$((total + gz))
               printf '| <code>%s</code> | %s B | %s B |\n' "$file" "$raw" "$gz"
-            done < <(jq -r '[.[] | select(.isEntry) | .file, (.css // [])[]] | unique[]' dist/.vite/manifest.json)
+            done < <(jq -r '
+              . as $m
+              | def walk($seen; $todo):
+                  if ($todo | length) == 0 then $seen
+                  elif ($seen | index([$todo[0]])) then walk($seen; $todo[1:])
+                  else walk($seen + [$todo[0]]; $todo[1:] + ($m[$todo[0]].imports // []))
+                  end;
+                walk([]; [to_entries[] | select(.value.isEntry) | .key])
+              | map($m[.] | .file, (.css // [])[])
+              | unique[]' dist/.vite/manifest.json)
             printf '| **Total** | | **%s B** |\n' "$total"
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
