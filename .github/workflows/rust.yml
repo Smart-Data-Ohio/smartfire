@@ -378,8 +378,8 @@ jobs:
           PY
 
   # Production builds on the image's stable toolchain, not the nightly the tests use. From the
-  # repository root neither rust-toolchain.toml nor .cargo/config.toml applies; the separate
-  # target dir keeps stable artifacts out of the caches.
+  # repository root neither rust-toolchain.toml nor .cargo/config.toml applies; its check-mode
+  # dependencies have their own `stable` Cargo cache.
   stable:
     name: Rust production toolchain check
     needs: changes
@@ -396,15 +396,16 @@ jobs:
           persist-credentials: false
 
       - name: Prepare shared Rust CI inputs
+        id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
           parity: none
+          cargo-cache: stable
 
       # The release the Dockerfile's production stages build with (its RUST_VERSION).
       - name: Check with the production toolchain
         env:
           RUST_CI_WORKDIR: /src
-          CARGO_TARGET_DIR: /ci-tmp/stable-target
         shell: bash
         run: |
           RUSTUP_TOOLCHAIN=$(sed -nE 's/^ARG RUST_VERSION=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' rust/Dockerfile)
@@ -412,6 +413,19 @@ jobs:
           echo "Production toolchain: $RUSTUP_TOOLCHAIN"
           export RUSTUP_TOOLCHAIN
           bash rust/ci/cargo.sh check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever
+
+      - name: Keep only dependency artifacts for the cache
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        run: python3 rust/ci/prune-target.py rust/target
+
+      - name: Save cargo registry and target
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.setup.outputs.cargo-cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            rust/.cargo-home/registry
+            rust/target
+          key: ${{ steps.setup.outputs.cargo-cache-key }}
 
   rust:
     # Not "test": ci.yml's required checks match jobs by name, and this one mustn't stand in for them.

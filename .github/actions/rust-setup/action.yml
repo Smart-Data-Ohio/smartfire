@@ -13,7 +13,7 @@ inputs:
     description: Build the toolchain image from the main-written Buildx cache
     default: 'true'
   cargo-cache:
-    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds from the repository root), or none'
+    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds from the repository root), stable (the production toolchain check), or none'
     default: none
   free-disk:
     description: Delete unused preinstalled SDKs in the background
