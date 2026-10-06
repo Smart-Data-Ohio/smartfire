@@ -337,7 +337,16 @@ async fn posting_is_idempotent_validated_and_broadcast_the_classic_way() {
 
     let again = post(&mut b, ALL_TALK, "0199b3c4-api-1", "Hello **there**").await;
     assert_eq!(again.status, StatusCode::OK);
-    assert_eq!(parse::<api::MessageDTO>(&again), created);
+    // The same message; only `cardsAsOf`, the read time, moves on.
+    let again = parse::<api::MessageDTO>(&again);
+    assert!(again.cards_as_of >= created.cards_as_of);
+    assert_eq!(
+        api::MessageDTO {
+            cards_as_of: created.cards_as_of.clone(),
+            ..again
+        },
+        created
+    );
     let count = a
         .db()
         .read(|conn| {
