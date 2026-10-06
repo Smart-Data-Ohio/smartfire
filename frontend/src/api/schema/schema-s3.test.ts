@@ -2,6 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { DateTime, Schema } from "effect";
 import { SavedChanged } from "./actions.ts";
 import {
+  ActivityAction,
   ActivityEventType,
   ActivityItem,
   ActivityItemChanged,
@@ -10,6 +11,8 @@ import {
   ActivitySourceType,
   ActivityTab,
   ActivityUnreadCount,
+  AgentApprovalStatus,
+  AgentBudgetCap,
   UpdateActivityItem,
 } from "./activity.ts";
 import {
@@ -17,8 +20,10 @@ import {
   EventAttendance,
   FizzyCardPreview,
   GithubPullRequestCard,
+  MessageCard,
   MessageCards,
   PollResults,
+  QuotePreviewResult,
   RespondToEvent,
   VotePoll,
 } from "./cards.ts";
@@ -42,7 +47,13 @@ import {
   UpdateRoomCategory,
 } from "./organize.ts";
 import { SavedFilter, SavedItemList, UpdateSavedItem } from "./saved.ts";
-import { RecentSearchList, RecordSearch, SearchOperator, SearchResults } from "./search.ts";
+import {
+  RecentSearchList,
+  RecordSearch,
+  SearchOperator,
+  SearchResults,
+  WorkStatus,
+} from "./search.ts";
 import { ServerFrame } from "./sync.ts";
 
 // The wire JSON below mirrors crates/api_types/src/tests_s3.rs.
@@ -81,6 +92,7 @@ const messageJson = {
   thread: null,
   poll: null,
   cards: [],
+  cardsAsOf: "2026-10-06T09:15:00.200Z",
   createdAt: "2026-10-06T09:15:00.123Z",
   updatedAt: "2026-10-06T09:15:00.123Z",
 } as const;
@@ -104,7 +116,8 @@ const activityItemJson = {
     title: "general",
     body: "Hello there @Grace",
     occurredAt: "2026-10-06T09:15:00.123Z",
-    status: null,
+    approvalStatus: null,
+    budgetCap: null,
     path: "/rooms/12/@9001",
   },
 } as const;
@@ -130,6 +143,7 @@ const savedItemJson = {
 const pollJson = {
   id: 5,
   messageId: 9001,
+  asOf: "2026-10-06T09:30:00.000Z",
   multiple: false,
   anonymous: false,
   closesAt: "2026-10-08T17:00:00.000Z",
@@ -160,7 +174,19 @@ const scheduledJson = {
 
 const categoryJson = { id: 3, name: "Projects", collapsed: false, position: 1 } as const;
 
+const quotePreviewJson = {
+  messageId: 8990,
+  roomId: 12,
+  threadId: null,
+  creatorId: 8,
+  authorName: "Grace Hopper",
+  roomLabel: "general",
+  excerpt: "The deploy is green",
+  createdAt: "2026-10-06T08:30:00.000Z",
+} as const;
+
 const cardsJson = [
+  { kind: "drive", data: { fileId: "1AbC", url: "https://drive.google.com/open?id=1AbC" } },
   {
     kind: "github",
     data: {
@@ -224,6 +250,8 @@ const cardsJson = [
       url: "https://app.fizzy.do/897362094/cards/17",
     },
   },
+  { kind: "quote", data: { referenceId: 61, preview: quotePreviewJson } },
+  { kind: "quote", data: { referenceId: 62, preview: null } },
   {
     kind: "linkedin",
     data: {
@@ -306,23 +334,37 @@ describe("S3 DTO schemas", () => {
       "security",
     ]);
     expect(() => Schema.decodeUnknownSync(ActivityEventType)("newSignIn")).toThrowError();
+    accepts(AgentApprovalStatus, ["pending", "approved", "denied", "cancelled", "expired"]);
+    accepts(AgentBudgetCap, ["messages", "board_posts", "external_actions"]);
+    accepts(ActivityAction, ["read", "unread", "handled", "unhandled"]);
 
     roundTrips(ActivityList, {
       items: [activityItemJson],
       users: [userJson],
       unreadCount: 4,
-      nextCursor: 301,
+      nextCursor: "MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ",
     });
     roundTrips(ActivityItem, {
       ...activityItemJson,
-      eventType: "new_sign_in",
+      eventType: "agent_budget_exceeded",
       state: "handled",
       readAt: "2026-10-06T10:00:00.000Z",
       handledAt: "2026-10-06T10:00:00.000Z",
-      source: null,
+      source: {
+        ...activityItemJson.source,
+        sourceType: "agent_budget_notice",
+        roomId: null,
+        messageId: null,
+        approvalStatus: null,
+        budgetCap: "board_posts",
+      },
     });
+    expect(() =>
+      Schema.decodeUnknownSync(ActivityItem)({ ...activityItemJson, source: null }),
+    ).toThrowError();
     roundTrips(ActivityUnreadCount, { unreadCount: 4 });
-    roundTrips(UpdateActivityItem, { state: "handled" });
+    roundTrips(UpdateActivityItem, { action: "unhandled" });
+    expect(() => Schema.decodeUnknownSync(UpdateActivityItem)({ state: "read" })).toThrowError();
     roundTrips(ActivityItemChanged, { item: activityItemJson, unreadCount: 3 });
     roundTrips(ActivityItemRemoved, { id: 301, unreadCount: 2 });
 
@@ -349,12 +391,10 @@ describe("S3 DTO schemas", () => {
     roundTrips(ScheduledMessageList, {
       scheduledMessages: [scheduledJson],
       conversations: [{ ...conversationJson, threadId: null, threadName: null }],
-      nextCursor: 4,
+      nextCursor: "MjAyNi0xMC0wN1QxMzo1NTowMC4wMDBafDQ",
     });
-    roundTrips(UpdateScheduledMessage, {
-      markdownSource: null,
-      sendAt: "2026-10-07T14:00:00.000Z",
-    });
+    roundTrips(UpdateScheduledMessage, { sendAt: "2026-10-07T14:00:00.000Z" });
+    roundTrips(UpdateScheduledMessage, {});
     roundTrips(ScheduledMessageRemoved, { id: 4, roomId: 12 });
   });
 
@@ -381,7 +421,7 @@ describe("S3 DTO schemas", () => {
       messages: [{ ...messageJson, threadId: 88 }],
       users: [userJson],
       conversations: [conversationJson],
-      before: 9001,
+      nextCursor: "MjAyNi0xMC0wNlQwOToxNTowMC4xMjNafDkwMDE",
       sections: [
         {
           kind: "work_threads",
@@ -403,11 +443,13 @@ describe("S3 DTO schemas", () => {
       searches: [{ id: 6, query: "launch", searchedAt: "2026-10-06T10:05:00.000Z" }],
     });
     roundTrips(RecordSearch, { query: "launch" });
+    accepts(WorkStatus, ["planned", "in_progress", "blocked", "done"]);
   });
 
   it("round-trip the sidebar organisation requests", () => {
-    roundTrips(CreateRoomCategory, { name: "Projects", collapsed: null });
-    roundTrips(UpdateRoomCategory, { name: null, collapsed: true });
+    roundTrips(CreateRoomCategory, { name: "Projects" });
+    roundTrips(CreateRoomCategory, { name: "Projects", collapsed: true });
+    roundTrips(UpdateRoomCategory, { collapsed: true });
     roundTrips(ReorderRoomCategories, { categoryIds: [4, 3] });
     roundTrips(RoomCategoryList, { categories: [categoryJson] });
     roundTrips(RoomCategoryRemoved, { id: 3 });
@@ -431,6 +473,7 @@ describe("S3 DTO schemas", () => {
       myOptionIds: [51],
     });
     roundTrips(CreatePoll, {
+      clientMessageId: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12",
       question: "Lunch?",
       options: ["Tacos", "Pizza"],
       multiple: false,
@@ -454,23 +497,55 @@ describe("S3 DTO schemas", () => {
     const carded = Schema.decodeUnknownSync(MessageDTO)({ ...messageJson, cards: cardsJson });
 
     expect(carded.cards.map((card) => card.kind)).toEqual([
+      "drive",
       "github",
       "x",
       "event",
       "fizzy",
+      "quote",
+      "quote",
       "linkedin",
       "link",
     ]);
     expect(Schema.encodeSync(MessageDTO)(carded)).toEqual({ ...messageJson, cards: cardsJson });
-    roundTrips(MessageCards, { messageId: 9001, roomId: 12, threadId: null, cards: cardsJson });
-    expect(() =>
-      Schema.decodeUnknownSync(MessageCards)({
-        messageId: 9001,
-        roomId: 12,
-        threadId: null,
-        cards: [{ kind: "youtube", data: {} }],
-      }),
-    ).toThrowError();
+    roundTrips(MessageCards, {
+      messageId: 9001,
+      roomId: 12,
+      threadId: null,
+      cards: cardsJson,
+      asOf: "2026-10-06T09:31:00.000Z",
+    });
+
+    // A kind this build doesn't know, or a known kind it can't read, is skipped, not fatal.
+    const tolerant = Schema.decodeUnknownSync(MessageCards)({
+      messageId: 9001,
+      roomId: 12,
+      threadId: null,
+      cards: [
+        { kind: "youtube", data: { url: "https://youtu.be/x" } },
+        { kind: "github", data: { pullRequestId: "fourteen" } },
+        cardsJson[0],
+      ],
+      asOf: "2026-10-06T09:31:00.000Z",
+    });
+
+    expect(tolerant.cards).toEqual([
+      { kind: "unknown", originalKind: "youtube" },
+      { kind: "unknown", originalKind: "github" },
+      cardsJson[0],
+    ]);
+    expect(Schema.encodeSync(MessageCard)({ kind: "unknown", originalKind: "youtube" })).toEqual({
+      kind: "youtube",
+    });
+    expect(() => Schema.decodeUnknownSync(MessageCard)({ data: {} })).toThrowError();
+
+    roundTrips(QuotePreviewResult, { state: "hidden" });
+    roundTrips(QuotePreviewResult, {
+      state: "loaded",
+      ...quotePreviewJson,
+      threadId: 88,
+      roomLabel: "a direct message",
+    });
 
     roundTrips(GithubPullRequestCard, { state: "hidden" });
     roundTrips(GithubPullRequestCard, { state: "loading" });
@@ -491,6 +566,12 @@ describe("S3 DTO schemas", () => {
       checks: "passing",
       githubUpdatedAt: "2026-10-06T12:00:00.000Z",
       discussionThreadId: null,
+      files: {
+        files: [
+          { filename: "frontend/src/app.tsx", status: "modified", additions: 12, deletions: 3 },
+        ],
+        totalCount: 41,
+      },
     });
 
     roundTrips(FizzyCardPreview, { state: "not_connected" });
@@ -523,8 +604,28 @@ describe("S3 sync events", () => {
       { type: "scheduled.removed", data: { id: 4, roomId: 12 } },
       { type: "sidebar.category.upserted", data: categoryJson },
       { type: "sidebar.category.removed", data: { id: 3 } },
-      { type: "poll.updated", data: pollJson },
-      { type: "message.cards", data: { messageId: 9001, roomId: 12, threadId: null, cards: [] } },
+      { type: "poll.updated", data: { roomId: 12, threadId: null, poll: pollJson } },
+      {
+        type: "poll.ballot",
+        data: {
+          pollId: 5,
+          messageId: 9001,
+          roomId: 12,
+          threadId: null,
+          myOptionIds: [51],
+          asOf: "2026-10-06T09:30:00.000Z",
+        },
+      },
+      {
+        type: "message.cards",
+        data: {
+          messageId: 9001,
+          roomId: 12,
+          threadId: null,
+          cards: [],
+          asOf: "2026-10-06T09:31:00.000Z",
+        },
+      },
       { type: "saved.changed", data: { messageId: 9001, item: savedItemJson } },
     ].map((event, index) => ({
       seq: index + 1,

@@ -7,7 +7,8 @@ import type { User } from "./User";
 
 /**
  * `GET /api/v1/search?q=&before=`: one page of results (`searches#index`). Doesn't record the
- * query; the client posts [`RecordSearch`] when the person submits it.
+ * query; the client posts [`RecordSearch`] to `/api/v1/search/recents` when the person submits
+ * it.
  *
  * `q` is free text plus operators (`SearchQuery::parse`):
  * - `from:name` (`@` optional): messages by anyone whose name contains it, case-insensitively.
@@ -26,8 +27,9 @@ import type { User } from "./User";
  * Only rooms the viewer belongs to, which aren't deleted, are searched. A blank `q` (no words
  * and no operators) answers an empty page, not an error.
  *
- * `before` is the previous page's `before` cursor (a message id): keyset paging on
- * `(createdAt, id)`, 40 a page. A cursor the viewer can't reach is a 404.
+ * `before` is the previous page's `nextCursor`: keyset paging on `(createdAt, id)`, newest
+ * first, 40 a page. A cursor that doesn't decode is a 422 (`ApiError::Validation` on
+ * `before`).
  */
 export type SearchResults = { 
 /**
@@ -54,10 +56,14 @@ users: Array<User>,
  */
 conversations: Array<ConversationName>, 
 /**
- * Pass as `before` for the next (older) page: the oldest message here when more exist,
- * else `null`.
+ * Pass as `before` for the next (older) page; `null` when no older match exists.
+ *
+ * Opaque to the client: it encodes the oldest message here by `(createdAt, id)`, and the
+ * next page holds the matches strictly older than that. So it stays valid when that message
+ * is deleted or leaves the viewer's reach. New: the classic cursor is the message id, and
+ * a vanished one is a 404.
  */
-before: number | null, 
+nextCursor: string | null, 
 /**
  * First page only, and only when `q` has words: up to 10 of each kind whose name (title or
  * description, for events) contains every word. Narrowed by `in:` but not by the other

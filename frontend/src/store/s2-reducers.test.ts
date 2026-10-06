@@ -51,6 +51,7 @@ function message(id: number, minute: number, extra: Partial<MessageDTO> = {}): M
     thread: null,
     poll: null,
     cards: [],
+    cardsAsOf: createdAt,
     createdAt,
     updatedAt: createdAt,
     ...extra,

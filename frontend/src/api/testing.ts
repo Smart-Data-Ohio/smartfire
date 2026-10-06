@@ -58,6 +58,7 @@ export function messageFixture(
     thread: null,
     poll: null,
     cards: [],
+    cardsAsOf: at,
     createdAt: at,
     updatedAt: at,
     ...change,

@@ -2,18 +2,20 @@
 
 /**
  * `PATCH /api/v1/scheduled_messages/:id`: change a pending one's text, time or both
- * (`scheduled_messages#update`; 200 with the [`ScheduledMessage`]). A `null` field keeps its
- * value. `sendAt` must be in the future when it changes (422).
+ * (`scheduled_messages#update`; 200 with the [`ScheduledMessage`]). A field left out (or
+ * `null`) keeps its value. `sendAt` must be in the future when it changes (422).
  *
  * The other actions on one:
  * - `DELETE /api/v1/scheduled_messages/:id` cancels it (204; `#destroy`), deleting its activity
  *   items.
  * - `POST /api/v1/scheduled_messages/:id/send_now` posts it at once (`#send_now`): 200 with it
  *   sent; 202 with it still pending when another runner holds it or its thread is locked (it
- *   isn't sent, and stays scheduled); 422 when it was dropped instead, with the reason.
+ *   isn't sent, and stays scheduled); 422 when it was dropped instead: an
+ *   `ApiError::Validation` whose `message` is the drop reason (the message is now `dropped`,
+ *   and `scheduled.changed` says so).
  *
  * Editing or cancelling one that's `sending` is a 409 ("That message is sending right now; try
  * again in a moment."). Any of the three on one that isn't the viewer's or isn't pending is a
  * 404.
  */
-export type UpdateScheduledMessage = { markdownSource: string | null, sendAt: string | null, };
+export type UpdateScheduledMessage = { markdownSource?: string, sendAt?: string, };

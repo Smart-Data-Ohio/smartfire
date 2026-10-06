@@ -6,7 +6,7 @@
  * fields (`campfire_views::events::CardView`). The viewer's response and the counts are
  * [`EventAttendance`].
  *
- * Fill order: 4.
+ * Fill order: 6.
  */
 export type EventCard = { eventId: number, roomId: number, title: string, organizerId: number, startsAt: string, 
 /**

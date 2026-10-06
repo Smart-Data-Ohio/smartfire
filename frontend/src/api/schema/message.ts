@@ -44,6 +44,7 @@ export const MessageDTO = Schema.Struct({
   thread: Schema.NullOr(ThreadIndicator),
   poll: Schema.NullOr(Poll),
   cards: Schema.Array(MessageCard),
+  cardsAsOf: Timestamp,
   createdAt: Timestamp,
   updatedAt: Timestamp,
 });

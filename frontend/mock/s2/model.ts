@@ -217,6 +217,7 @@ export function buildMessage(
     thread: null,
     poll: null,
     cards: [],
+    cardsAsOf: createdAt,
     createdAt,
     updatedAt: createdAt,
   };

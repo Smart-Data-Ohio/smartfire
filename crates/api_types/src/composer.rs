@@ -231,15 +231,17 @@ pub struct CreateScheduledMessage {
 }
 
 /// `PATCH /api/v1/scheduled_messages/:id`: change a pending one's text, time or both
-/// (`scheduled_messages#update`; 200 with the [`ScheduledMessage`]). A `null` field keeps its
-/// value. `sendAt` must be in the future when it changes (422).
+/// (`scheduled_messages#update`; 200 with the [`ScheduledMessage`]). A field left out (or
+/// `null`) keeps its value. `sendAt` must be in the future when it changes (422).
 ///
 /// The other actions on one:
 /// - `DELETE /api/v1/scheduled_messages/:id` cancels it (204; `#destroy`), deleting its activity
 ///   items.
 /// - `POST /api/v1/scheduled_messages/:id/send_now` posts it at once (`#send_now`): 200 with it
 ///   sent; 202 with it still pending when another runner holds it or its thread is locked (it
-///   isn't sent, and stays scheduled); 422 when it was dropped instead, with the reason.
+///   isn't sent, and stays scheduled); 422 when it was dropped instead: an
+///   `ApiError::Validation` whose `message` is the drop reason (the message is now `dropped`,
+///   and `scheduled.changed` says so).
 ///
 /// Editing or cancelling one that's `sending` is a 409 ("That message is sending right now; try
 /// again in a moment."). Any of the three on one that isn't the viewer's or isn't pending is a
@@ -248,7 +250,11 @@ pub struct CreateScheduledMessage {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateScheduledMessage {
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub markdown_source: Option<String>,
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub send_at: Option<Timestamp>,
 }
 
@@ -264,13 +270,16 @@ pub enum ScheduledMessageFilter {
     Past,
 }
 
-/// `GET /api/v1/scheduled_messages?state=&roomId=&before=`: the viewer's scheduled messages
-/// (`scheduled_messages#index`, `ScheduledMessage::owned_by`).
+/// `GET /api/v1/scheduled_messages?status=&roomId=&before=`: the viewer's scheduled messages
+/// (`scheduled_messages#index`, `ScheduledMessage::owned_by`). Active humans only (403
+/// otherwise, as for creating one).
 ///
-/// - `state`: a [`ScheduledMessageFilter`], default `pending`.
+/// - `status`: a [`ScheduledMessageFilter`], default `pending`; an unknown value reads as the
+///   default.
 /// - `roomId`: only this room's (the composer's list). New: the classic page lists every room.
 /// - `before`: the previous page's `nextCursor`. Keyset paging in the filter's order, 50 a page.
-///   New: the classic page lists everything at once.
+///   A cursor that doesn't decode is a 422 (`ApiError::Validation` on `before`). New: the
+///   classic page lists everything at once.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -278,8 +287,15 @@ pub struct ScheduledMessageList {
     pub scheduled_messages: Vec<ScheduledMessage>,
     /// The rooms and threads they're in.
     pub conversations: Vec<crate::ConversationName>,
-    /// Pass as `before` for the next page; `null` on the last.
-    pub next_cursor: Option<i64>,
+    /// Pass as `before` for the next page; `null` on the last (set only when another row
+    /// exists past this page).
+    ///
+    /// Opaque to the client: it encodes the last row's `(sendAt, id)`, and the next page holds
+    /// the rows strictly after that key in the filter's order. So it stays valid when that
+    /// message is edited to another time, sent, dropped or cancelled. A message rescheduled
+    /// behind the cursor after the client paged past it won't appear on later pages; the client
+    /// learns of it from `scheduled.changed`.
+    pub next_cursor: Option<String>,
 }
 
 /// The `scheduled.removed` event on the author's `user` topic: they cancelled a scheduled

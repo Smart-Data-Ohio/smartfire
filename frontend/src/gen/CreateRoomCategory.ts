@@ -8,6 +8,6 @@
  */
 export type CreateRoomCategory = { name: string, 
 /**
- * `null` for `false`.
+ * Left out (or `null`) for `false`.
  */
-collapsed: boolean | null, };
+collapsed?: boolean, };

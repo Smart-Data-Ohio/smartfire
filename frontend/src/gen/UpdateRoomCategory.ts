@@ -2,7 +2,7 @@
 
 /**
  * `PATCH /api/v1/room_categories/:id`: rename it or fold it (`room_categories#update`; a
- * `null` field keeps its value). Answers the [`RoomCategory`] and publishes
+ * field left out, or `null`, keeps its value). Answers the [`RoomCategory`] and publishes
  * `sidebar.category.upserted`, so folding follows the person to their other tabs. 422 as for
  * [`CreateRoomCategory`].
  *
@@ -10,4 +10,4 @@
  * go back to Channels (`memberships.room_category_id` is cleared), each published as
  * `sidebar.row.upserted`, then `sidebar.category.removed`.
  */
-export type UpdateRoomCategory = { name: string | null, collapsed: boolean | null, };
+export type UpdateRoomCategory = { name?: string, collapsed?: boolean, };

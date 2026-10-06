@@ -4,7 +4,6 @@ import type { SavedItemList as GeneratedSavedItemList } from "../../gen/SavedIte
 import type { UpdateSavedItem as GeneratedUpdateSavedItem } from "../../gen/UpdateSavedItem.ts";
 import { SavedItem, SavedStatus } from "./actions.ts";
 import { ConversationName } from "./conversation.ts";
-import { SavedItemId } from "./ids.ts";
 import { MessageDTO } from "./message.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { User } from "./user.ts";
@@ -15,13 +14,16 @@ export type SavedFilter = typeof SavedFilter.Type;
 
 export type SavedFilterPin = Assert<Pinned<typeof SavedFilter, GeneratedSavedFilter>>;
 
-/** `GET /api/v1/saved?status=&before=`: newest saved first, 50 a page, with the messages. */
+/**
+ * `GET /api/v1/saved?status=&before=`: newest saved first, 50 a page, with the messages.
+ * `nextCursor` is opaque (it encodes `createdAt` and `id`); pass it back as `before`.
+ */
 export const SavedItemList = Schema.Struct({
   items: Schema.Array(SavedItem),
   messages: Schema.Array(MessageDTO),
   users: Schema.Array(User),
   conversations: Schema.Array(ConversationName),
-  nextCursor: Schema.NullOr(SavedItemId),
+  nextCursor: Schema.NullOr(Schema.String),
 });
 
 export type SavedItemList = typeof SavedItemList.Type;

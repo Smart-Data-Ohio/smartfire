@@ -3,13 +3,16 @@ import type { ConversationName } from "./ConversationName";
 import type { ScheduledMessage } from "./ScheduledMessage";
 
 /**
- * `GET /api/v1/scheduled_messages?state=&roomId=&before=`: the viewer's scheduled messages
- * (`scheduled_messages#index`, `ScheduledMessage::owned_by`).
+ * `GET /api/v1/scheduled_messages?status=&roomId=&before=`: the viewer's scheduled messages
+ * (`scheduled_messages#index`, `ScheduledMessage::owned_by`). Active humans only (403
+ * otherwise, as for creating one).
  *
- * - `state`: a [`ScheduledMessageFilter`], default `pending`.
+ * - `status`: a [`ScheduledMessageFilter`], default `pending`; an unknown value reads as the
+ *   default.
  * - `roomId`: only this room's (the composer's list). New: the classic page lists every room.
  * - `before`: the previous page's `nextCursor`. Keyset paging in the filter's order, 50 a page.
- *   New: the classic page lists everything at once.
+ *   A cursor that doesn't decode is a 422 (`ApiError::Validation` on `before`). New: the
+ *   classic page lists everything at once.
  */
 export type ScheduledMessageList = { scheduledMessages: Array<ScheduledMessage>, 
 /**
@@ -17,6 +20,13 @@ export type ScheduledMessageList = { scheduledMessages: Array<ScheduledMessage>,
  */
 conversations: Array<ConversationName>, 
 /**
- * Pass as `before` for the next page; `null` on the last.
+ * Pass as `before` for the next page; `null` on the last (set only when another row
+ * exists past this page).
+ *
+ * Opaque to the client: it encodes the last row's `(sendAt, id)`, and the next page holds
+ * the rows strictly after that key in the filter's order. So it stays valid when that
+ * message is edited to another time, sent, dropped or cancelled. A message rescheduled
+ * behind the cursor after the client paged past it won't appear on later pages; the client
+ * learns of it from `scheduled.changed`.
  */
-nextCursor: number | null, };
+nextCursor: string | null, };

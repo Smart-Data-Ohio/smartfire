@@ -8,8 +8,9 @@ import type { SearchResults as GeneratedSearchResults } from "../../gen/SearchRe
 import type { SearchSection as GeneratedSearchSection } from "../../gen/SearchSection.ts";
 import type { SearchSectionKind as GeneratedSearchSectionKind } from "../../gen/SearchSectionKind.ts";
 import type { SearchSectionRow as GeneratedSearchSectionRow } from "../../gen/SearchSectionRow.ts";
+import type { WorkStatus as GeneratedWorkStatus } from "../../gen/WorkStatus.ts";
 import { ConversationName } from "./conversation.ts";
-import { MessageId, RecentSearchId, RoomId } from "./ids.ts";
+import { RecentSearchId, RoomId } from "./ids.ts";
 import { MessageDTO } from "./message.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { RoomKind } from "./room.ts";
@@ -35,6 +36,13 @@ export type SearchChip = typeof SearchChip.Type;
 
 export type SearchChipPin = Assert<Pinned<typeof SearchChip, GeneratedSearchChip>>;
 
+/** `threads.work_status`. */
+export const WorkStatus = Schema.Literals(["planned", "in_progress", "blocked", "done"]);
+
+export type WorkStatus = typeof WorkStatus.Type;
+
+export type WorkStatusPin = Assert<Pinned<typeof WorkStatus, GeneratedWorkStatus>>;
+
 export const SearchSectionKind = Schema.Literals(["board_posts", "work_threads", "events"]);
 
 export type SearchSectionKind = typeof SearchSectionKind.Type;
@@ -50,7 +58,7 @@ export const SearchSectionRow = Schema.Struct({
   roomKind: RoomKind,
   title: Schema.String,
   time: Timestamp,
-  workStatus: Schema.NullOr(Schema.String),
+  workStatus: Schema.NullOr(WorkStatus),
   cancelled: Schema.Boolean,
 });
 
@@ -71,7 +79,8 @@ export type SearchSectionPin = Assert<Pinned<typeof SearchSection, GeneratedSear
 
 /**
  * `GET /api/v1/search?q=&before=`: 40 matching messages a page, oldest first, newest page
- * first; sections on the first page only. People and rooms come from the switcher, files from
+ * first; sections on the first page only. `nextCursor` is opaque (it encodes `createdAt` and
+ * `id`); pass it back as `before`. People and rooms come from the switcher, files from
  * `has:file` / `has:image`.
  */
 export const SearchResults = Schema.Struct({
@@ -80,7 +89,7 @@ export const SearchResults = Schema.Struct({
   messages: Schema.Array(MessageDTO),
   users: Schema.Array(User),
   conversations: Schema.Array(ConversationName),
-  before: Schema.NullOr(MessageId),
+  nextCursor: Schema.NullOr(Schema.String),
   sections: Schema.Array(SearchSection),
 });
 

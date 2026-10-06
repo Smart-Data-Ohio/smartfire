@@ -9,6 +9,11 @@ import type { PollOption } from "./PollOption";
  */
 export type Poll = { id: number, messageId: number, 
 /**
+ * When the server read this state (see the module's **Ordering**): keep the poll with the
+ * latest one.
+ */
+asOf: string, 
+/**
  * Several options may be chosen; otherwise exactly one.
  */
 multiple: boolean, 

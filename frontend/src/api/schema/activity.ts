@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { ActivityAction as GeneratedActivityAction } from "../../gen/ActivityAction.ts";
 import type { ActivityEventType as GeneratedActivityEventType } from "../../gen/ActivityEventType.ts";
 import type { ActivityItem as GeneratedActivityItem } from "../../gen/ActivityItem.ts";
 import type { ActivityItemChanged as GeneratedActivityItemChanged } from "../../gen/ActivityItemChanged.ts";
@@ -9,6 +10,8 @@ import type { ActivitySourceType as GeneratedActivitySourceType } from "../../ge
 import type { ActivityState as GeneratedActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab as GeneratedActivityTab } from "../../gen/ActivityTab.ts";
 import type { ActivityUnreadCount as GeneratedActivityUnreadCount } from "../../gen/ActivityUnreadCount.ts";
+import type { AgentApprovalStatus as GeneratedAgentApprovalStatus } from "../../gen/AgentApprovalStatus.ts";
+import type { AgentBudgetCap as GeneratedAgentBudgetCap } from "../../gen/AgentBudgetCap.ts";
 import type { UpdateActivityItem as GeneratedUpdateActivityItem } from "../../gen/UpdateActivityItem.ts";
 import { ActivityItemId, EventId, MessageId, RoomId, ThreadId, UserId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
@@ -89,6 +92,28 @@ export type ActivityTab = typeof ActivityTab.Type;
 
 export type ActivityTabPin = Assert<Pinned<typeof ActivityTab, GeneratedActivityTab>>;
 
+/** `AgentApproval#effective_status`. */
+export const AgentApprovalStatus = Schema.Literals([
+  "pending",
+  "approved",
+  "denied",
+  "cancelled",
+  "expired",
+]);
+
+export type AgentApprovalStatus = typeof AgentApprovalStatus.Type;
+
+export type AgentApprovalStatusPin = Assert<
+  Pinned<typeof AgentApprovalStatus, GeneratedAgentApprovalStatus>
+>;
+
+/** `agent_budget_notices.cap`: which daily cap a budget notice is about. */
+export const AgentBudgetCap = Schema.Literals(["messages", "board_posts", "external_actions"]);
+
+export type AgentBudgetCap = typeof AgentBudgetCap.Type;
+
+export type AgentBudgetCapPin = Assert<Pinned<typeof AgentBudgetCap, GeneratedAgentBudgetCap>>;
+
 /** What an item is about, with the classic row's title, body and timestamp. */
 export const ActivitySource = Schema.Struct({
   sourceType: ActivitySourceType,
@@ -101,7 +126,8 @@ export const ActivitySource = Schema.Struct({
   title: Schema.String,
   body: Schema.String,
   occurredAt: Timestamp,
-  status: Schema.NullOr(Schema.String),
+  approvalStatus: Schema.NullOr(AgentApprovalStatus),
+  budgetCap: Schema.NullOr(AgentBudgetCap),
   path: Schema.String,
 });
 
@@ -117,19 +143,22 @@ export const ActivityItem = Schema.Struct({
   handledAt: Schema.NullOr(Timestamp),
   createdAt: Timestamp,
   updatedAt: Timestamp,
-  source: Schema.NullOr(ActivitySource),
+  source: ActivitySource,
 });
 
 export type ActivityItem = typeof ActivityItem.Type;
 
 export type ActivityItemPin = Assert<Pinned<typeof ActivityItem, GeneratedActivityItem>>;
 
-/** `GET /api/v1/activity?status=&type=&before=`: up to 100, newest `updatedAt` first. */
+/**
+ * `GET /api/v1/activity?status=&type=&before=`: up to 100, newest `updatedAt` first.
+ * `nextCursor` is opaque (it encodes `updatedAt` and `id`); pass it back as `before`.
+ */
 export const ActivityList = Schema.Struct({
   items: Schema.Array(ActivityItem),
   users: Schema.Array(User),
   unreadCount: Schema.Int,
-  nextCursor: Schema.NullOr(ActivityItemId),
+  nextCursor: Schema.NullOr(Schema.String),
 });
 
 export type ActivityList = typeof ActivityList.Type;
@@ -145,8 +174,15 @@ export type ActivityUnreadCountPin = Assert<
   Pinned<typeof ActivityUnreadCount, GeneratedActivityUnreadCount>
 >;
 
+/** What `PATCH /api/v1/activity/:id` asks for; `read` on a handled item is a no-op. */
+export const ActivityAction = Schema.Literals(["read", "unread", "handled", "unhandled"]);
+
+export type ActivityAction = typeof ActivityAction.Type;
+
+export type ActivityActionPin = Assert<Pinned<typeof ActivityAction, GeneratedActivityAction>>;
+
 /** The body of `PATCH /api/v1/activity/:id`. */
-export const UpdateActivityItem = Schema.Struct({ state: ActivityState });
+export const UpdateActivityItem = Schema.Struct({ action: ActivityAction });
 
 export type UpdateActivityItem = typeof UpdateActivityItem.Type;
 

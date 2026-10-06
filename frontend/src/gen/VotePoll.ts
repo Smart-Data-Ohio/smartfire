@@ -3,7 +3,8 @@
 /**
  * `POST /api/v1/rooms/:roomId/polls/:id/vote`: replace the viewer's whole ballot
  * (`rooms/polls#vote`, `Poll#cast_vote`); an empty list takes their vote back. Answers
- * [`PollResults`] and publishes `poll.updated`. 422 when the poll is closed, an option isn't
- * the poll's, or a single-choice poll gets more than one. Active human members only (403).
+ * [`PollResults`], publishes `poll.updated` ([`PollUpdated`]) to the room and `poll.ballot`
+ * ([`PollBallot`]) to the voter's other tabs. 422 when the poll is closed, an option isn't the
+ * poll's, or a single-choice poll gets more than one. Active human members only (403).
  */
 export type VotePoll = { optionIds: Array<number>, };

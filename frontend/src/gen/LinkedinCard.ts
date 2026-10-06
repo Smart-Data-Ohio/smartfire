@@ -5,7 +5,7 @@
  * `crates/app/src/integrations/linkedin.rs`). Unlike [`LinkCard`] it's always shown: without
  * a title or description it's the classic "View post on LinkedIn" chip.
  *
- * Fill order: 6.
+ * Fill order: 8.
  */
 export type LinkedinCard = { url: string, title: string | null, description: string | null, imageUrl: string | null, 
 /**

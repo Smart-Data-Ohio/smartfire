@@ -2,7 +2,11 @@
 import type { FizzyCard } from "./FizzyCard";
 
 /**
- * The reply to `GET /api/v1/fizzy/cards/:id/card?messageId=`: the card as the viewer's Fizzy
- * account sees it. Tagged by `state`.
+ * The reply to `GET /api/v1/rooms/:roomId/fizzy/cards/:id/card?messageId=`
+ * (`rooms/fizzy/cards#show`): the card as the viewer's Fizzy account sees it. Tagged by
+ * `state`. 404 unless the viewer is a member of `roomId`, `messageId` is given and is a message
+ * in that room, and the message references this card (`fizzy_card_references`). Asking also
+ * queues a refresh of the viewer's cached copy when they're connected, as the classic frame
+ * does; the result arrives on the next fetch, not as an event.
  */
 export type FizzyCardPreview = { "state": "not_connected" } | { "state": "not_found" } | { "state": "loading" } | { "state": "failed", message: string, } | { "state": "loaded" } & FizzyCard;

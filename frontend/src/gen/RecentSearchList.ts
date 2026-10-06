@@ -2,7 +2,9 @@
 import type { RecentSearch } from "./RecentSearch";
 
 /**
- * `GET /api/v1/searches`: the viewer's recent searches, most recent first, at most 10
- * (`Search::recent_for_user`, `RECENT_SEARCHES`). Also the reply to [`RecordSearch`].
+ * `GET /api/v1/search/recents`: the viewer's recent searches, most recent first, at most 10
+ * (`Search::recent_for_user`, `RECENT_SEARCHES`). Also the reply to [`RecordSearch`]. New: the
+ * classic app has no JSON for these; `GET /searches` renders results and recents in one page,
+ * `POST /searches` records and `POST /searches/clear` clears.
  */
 export type RecentSearchList = { searches: Array<RecentSearch>, };

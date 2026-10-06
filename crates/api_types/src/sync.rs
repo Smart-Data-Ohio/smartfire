@@ -5,9 +5,10 @@ use ts_rs::TS;
 
 use crate::{
     ActivityItemChanged, ActivityItemRemoved, MessageCards, MessageDTO, MessageReactions,
-    MessageRemoved, PinState, Poll, RoomCategory, RoomCategoryRemoved, RoomRead, RoomUnread,
-    SavedChanged, ScheduledMessage, ScheduledMessageRemoved, SidebarRow, SidebarRowRemoved, Thread,
-    ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread, UserPresence,
+    MessageRemoved, PinState, PollBallot, PollUpdated, RoomCategory, RoomCategoryRemoved, RoomRead,
+    RoomUnread, SavedChanged, ScheduledMessage, ScheduledMessageRemoved, SidebarRow,
+    SidebarRowRemoved, Thread, ThreadIndicatorChanged, ThreadRead, ThreadRemoved, ThreadUnread,
+    UserPresence,
 };
 
 /// A frame the client sends.
@@ -191,7 +192,10 @@ pub enum SyncPayload {
     /// On the question's conversation topic: a poll's votes changed or it closed. The JSON twin
     /// of the classic `card_poll_<id>` replace (`Poll#broadcast_card`).
     #[serde(rename = "poll.updated")]
-    PollUpdated(Poll),
+    PollUpdated(PollUpdated),
+    /// On the voter's `user` topic: their own ballot changed (see [`PollBallot`]). New.
+    #[serde(rename = "poll.ballot")]
+    PollBallot(PollBallot),
     /// On the message's conversation topic: its cards changed (see [`MessageCards`]).
     #[serde(rename = "message.cards")]
     MessageCards(MessageCards),

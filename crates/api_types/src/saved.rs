@@ -27,8 +27,9 @@ pub enum SavedFilter {
 /// active human, and a current member of the message's room, which isn't deleted. An item hidden
 /// that way comes back if access does.
 ///
-/// Keyset paging, 50 a page: `before` is the previous page's `nextCursor` (a saved item id;
-/// rows older than it by `(createdAt, id)`). New: the classic page lists every item at once.
+/// Keyset paging, 50 a page: `before` is the previous page's `nextCursor`. A cursor that
+/// doesn't decode is a 422 (`ApiError::Validation` on `before`). New: the classic page lists
+/// every item at once.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -41,8 +42,13 @@ pub struct SavedItemList {
     pub users: Vec<User>,
     /// The rooms and threads the messages are in.
     pub conversations: Vec<ConversationName>,
-    /// Pass as `before` for the next page; `null` on the last.
-    pub next_cursor: Option<i64>,
+    /// Pass as `before` for the next page; `null` on the last (set only when an older row
+    /// exists: the server reads 51).
+    ///
+    /// Opaque to the client: it encodes the last row's `(createdAt, id)`, and the next page
+    /// holds the rows strictly after that key in `createdAt DESC, id DESC` order. So it stays
+    /// valid when that item is unsaved, moves to another status or becomes unreachable.
+    pub next_cursor: Option<String>,
 }
 
 /// `PATCH /api/v1/saved/:id`: mark an item done or reopen it (`saved_items#update`, which takes

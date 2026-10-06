@@ -10,8 +10,13 @@ import type { ActivityItem } from "./ActivityItem";
  * (`ActivityItem::broadcast_item_for_user`): an item was recorded, re-armed, revived by newer
  * thread activity, read, unread, handled or unhandled, or its approval was settled or expired.
  * It carries the item itself so the client needn't refetch. A grouped item re-pointed at a newer
- * reply without a state change isn't published, as in the classic app. Huddle invitation
- * frames on the same channel belong to the huddle slice's `huddle.*` events.
+ * reply without a state change isn't published, as in the classic app.
+ *
+ * Huddle items (`huddle_started`, `huddle_missed`) are published as `activity.item` too,
+ * whenever they're recorded or change state (including the settling of overdue invitations
+ * when the inbox is listed), so the badge stays current. The classic app sends huddle
+ * invitation frames on the same channel instead; those ring the huddle UI and belong to the
+ * huddle slice's `huddle.*` events, which don't replace this one.
  */
 export type ActivityItemChanged = { item: ActivityItem, 
 /**

@@ -3,11 +3,11 @@
 /**
  * A GitHub pull request the message links to (`github_pull_request_references`). Only the
  * identity: what the card shows depends on whether the viewer can read the repository, so the
- * client fetches `GET /api/v1/github/pull_requests/:pullRequestId/card?messageId=`
+ * client fetches `GET /api/v1/rooms/:roomId/github/pull_requests/:pullRequestId/card?messageId=`
  * ([`GithubPullRequestCard`]), as the classic lazy frame does
  * (`controllers/github/cards.rs`). Issues, commits and discussions get no card.
  *
- * Fill order: 5.
+ * Fill order: 7.
  */
 export type GithubCardRef = { 
 /**

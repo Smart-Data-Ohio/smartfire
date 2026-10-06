@@ -56,12 +56,16 @@ pub struct MessageDTO {
     /// messages nobody has replied to in a thread.
     pub thread: Option<ThreadIndicator>,
     /// The poll this message asks, if it's a poll's question (`polls.message_id`); `null`
-    /// otherwise. Kept current by `poll.updated`.
+    /// otherwise. Kept current by `poll.updated` (by `asOf`, not `updatedAt`).
     pub poll: Option<Poll>,
     /// The cards under the body (events, link previews), in the classic slot order; empty when
     /// there are none or the server doesn't fill that kind yet (see [`crate::MessageCard`]).
     /// Kept current by `message.cards`.
     pub cards: Vec<MessageCard>,
+    /// When the server read `cards`. A `message.cards` with an earlier `asOf` is stale, and so
+    /// is this message's `cards` when the client already holds a later one (see the **Ordering**
+    /// note in [`crate::MessageCard`]'s module). `poll` carries its own `asOf`.
+    pub cards_as_of: Timestamp,
     pub created_at: Timestamp,
     /// Bumped by edits, embed suppression, streaming growth, reactions, boosts, pins and thread
     /// replies (`touch`), so a later `updatedAt` always holds the newer copy.

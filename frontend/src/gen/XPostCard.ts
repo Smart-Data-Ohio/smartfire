@@ -8,7 +8,7 @@ import type { XQuote } from "./XQuote";
  * fxtwitter: `crates/app/src/integrations/twitter`). Up to the classic card's fields
  * (`presenters/twitter_cards.rs`).
  *
- * Fill order: 2.
+ * Fill order: 3.
  */
 export type XPostCard = { fetch: CardFetch, 
 /**

@@ -68,8 +68,25 @@ pub enum ActivityEventType {
     NewSignIn,
 }
 
-/// What an item points at (`activity_items.source_type`: the eleven source tables
-/// `ActivityItem` validation knows, `crates/db/src/models/activity_item.rs`).
+/// What an item points at: the eleven source tables `ActivityItem` validation knows
+/// (`crates/db/src/models/activity_item.rs`).
+///
+/// The wire value is the snake_case form of `activity_items.source_type`, which stores the Rails
+/// class name. The mapping, wire to column value to table:
+///
+/// | wire | `source_type` | table |
+/// |---|---|---|
+/// | `message` | `Message` | `messages` |
+/// | `saved_item` | `SavedItem` | `saved_items` |
+/// | `work_thread_event` | `WorkThreadEvent` | `work_thread_events` |
+/// | `board_sla_nudge` | `BoardSlaNudge` | `board_sla_nudges` |
+/// | `huddle_grant` | `HuddleGrant` | `huddle_grants` |
+/// | `event` | `Event` | `events` |
+/// | `agent_approval` | `AgentApproval` | `agent_approvals` |
+/// | `agent_budget_notice` | `AgentBudgetNotice` | `agent_budget_notices` |
+/// | `scheduled_message` | `ScheduledMessage` | `scheduled_messages` |
+/// | `two_factor_credential` | `TwoFactorCredential` | `two_factor_credentials` |
+/// | `session` | `Session` | `sessions` |
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
@@ -136,12 +153,13 @@ pub struct ActivityItem {
     pub handled_at: Option<Timestamp>,
     /// When the item was first recorded.
     pub created_at: Timestamp,
-    /// The inbox's sort key: bumped when a grouped thread or work item is re-pointed at newer
-    /// activity, or an old item is re-armed (`refresh_unread`). New on the wire: the classic
-    /// JSON sorts by it but leaves it out.
+    /// The inbox's sort key: bumped by every state change (`save_state`), when a grouped thread
+    /// or work item is re-pointed at newer activity, and when an old item is re-armed
+    /// (`refresh_unread`). New on the wire: the classic JSON sorts by it but leaves it out.
     pub updated_at: Timestamp,
-    /// What it's about; `null` when the source is gone.
-    pub source: Option<ActivitySource>,
+    /// What it's about. Always present: an item whose source is gone isn't accessible
+    /// (`access.sql` joins the source), so it's never listed or published.
+    pub source: ActivitySource,
 }
 
 /// The thing an item is about, as the classic inbox row shows it
@@ -180,10 +198,12 @@ pub struct ActivitySource {
     pub body: String,
     /// The timestamp the row shows: the source's own creation time, not the item's.
     pub occurred_at: Timestamp,
-    /// Agent approvals: `pending`, `approved`, `denied`, `cancelled` or `expired`
-    /// (`AgentApproval#effective_status`). Agent budget notices: the cap, `messages`,
-    /// `board_posts` or `external_actions`. `null` otherwise.
-    pub status: Option<String>,
+    /// `agent_approval` sources only: the approval's state (`AgentApproval#effective_status`).
+    /// `null` otherwise.
+    pub approval_status: Option<AgentApprovalStatus>,
+    /// `agent_budget_notice` sources only: which daily cap was hit
+    /// (`agent_budget_notices.cap`). `null` otherwise.
+    pub budget_cap: Option<AgentBudgetCap>,
     /// The classic page `open` leads to (`presenters::activity` destination), for sources the SPA
     /// has no screen for yet, e.g. `/agents/3/approvals` or `/users/me/sessions`. The SPA routes
     /// the others from the ids above.
@@ -195,8 +215,8 @@ pub struct ActivitySource {
 ///
 /// - `status`: `unread` (default), `read` or `handled`; an unknown value reads as the default.
 /// - `type`: an [`ActivityTab`], default `all`; an unknown value reads as `all`.
-/// - `before`: the previous page's `nextCursor`. Keyset paging on `(updatedAt, id)`, newest first;
-///   a cursor that isn't an item the viewer can see is ignored.
+/// - `before`: the previous page's `nextCursor`, an opaque string (see [`ActivityList::next_cursor`]).
+///   A cursor that doesn't decode is a 422 (`ApiError::Validation` on `before`).
 ///
 /// At most 100 items a page. Listing first settles the viewer's overdue huddle invitations and
 /// agent approvals, as the classic page does.
@@ -209,10 +229,18 @@ pub struct ActivityList {
     pub users: Vec<User>,
     /// The viewer's unread items across every type (the badge), as `unreadCount` below.
     pub unread_count: i64,
-    /// Pass as `before` for the next page; `null` when this is the last. Set only when a newer
+    /// Pass as `before` for the next page; `null` when this is the last. Set only when an older
     /// row exists past this page (the server reads 101), unlike the classic `next_cursor`,
     /// which is set on any full page.
-    pub next_cursor: Option<i64>,
+    ///
+    /// Opaque to the client: it encodes the last row's sort key, `(updatedAt, id)`, and the next
+    /// page holds the rows strictly after that key in `updatedAt DESC, id DESC` order. So it
+    /// stays valid when that row changes or disappears: marking it read (which bumps its
+    /// `updatedAt`) or losing access to it doesn't make the next page restart or repeat rows. A row
+    /// whose `updatedAt` moves after the client has paged past it moves to the top; the client
+    /// learns of it from `activity.item`, not from paging. New: the classic cursor is the
+    /// item id, resolved to that row's current `updated_at`.
+    pub next_cursor: Option<String>,
 }
 
 /// `GET /api/v1/activity/unread_count` (`activity_items#unread_count`, `no-store`): the badge.
@@ -224,21 +252,55 @@ pub struct ActivityUnreadCount {
     pub unread_count: i64,
 }
 
-/// `PATCH /api/v1/activity/:id`: move an item between states, replacing the classic
+/// `PATCH /api/v1/activity/:id`: apply one of the classic state actions, replacing the classic
 /// `PATCH /activity/:id/read?state=` and `PATCH /activity/:id/handled?state=` pair. Answers
-/// [`ActivityItemChanged`] and publishes it as `activity.item` to the viewer's other tabs.
-///
-/// - `read`: from `unread`, sets `readAt` (`mark_read`); from `handled`, clears `handledAt` and
-///   keeps `readAt` (`mark_unhandled`).
-/// - `unread`: clears both `readAt` and `handledAt` (`mark_unread`).
-/// - `handled`: sets `handledAt`, and `readAt` if it was unset (`mark_handled`).
-///
-/// Setting the state an item already has succeeds unchanged.
+/// [`ActivityItemChanged`] and publishes it as `activity.item` to the viewer's other tabs (only
+/// when something changed). An unknown `action` is a 422.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateActivityItem {
-    pub state: ActivityState,
+    pub action: ActivityAction,
+}
+
+/// The request side of [`UpdateActivityItem`]: the four classic actions, which aren't the same
+/// as the three states they lead to ([`ActivityState`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum ActivityAction {
+    /// `mark_read`: sets `readAt` if it's unset. On a `handled` item (which always has
+    /// `readAt`) it's a no-op: the item stays handled, as with the classic `/read`.
+    Read,
+    /// `mark_unread`: clears both `readAt` and `handledAt`.
+    Unread,
+    /// `mark_handled`: sets `handledAt`, and `readAt` if it was unset.
+    Handled,
+    /// `mark_unhandled`: clears `handledAt` and keeps `readAt`, so the item becomes `read`.
+    Unhandled,
+}
+
+/// An agent approval's state (`agent_approvals.status`, `AgentApproval::STATUSES`), with
+/// `expired` derived for a pending one past `expires_at` (`AgentApproval#effective_status`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "lowercase")]
+#[ts(export)]
+pub enum AgentApprovalStatus {
+    Pending,
+    Approved,
+    Denied,
+    Cancelled,
+    Expired,
+}
+
+/// The daily cap an agent budget notice is about (`agent_budget_notices.cap`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum AgentBudgetCap {
+    Messages,
+    BoardPosts,
+    ExternalActions,
 }
 
 /// The reply to `PATCH /api/v1/activity/:id` and `POST /api/v1/activity/:id/open` (which marks
@@ -249,8 +311,13 @@ pub struct UpdateActivityItem {
 /// (`ActivityItem::broadcast_item_for_user`): an item was recorded, re-armed, revived by newer
 /// thread activity, read, unread, handled or unhandled, or its approval was settled or expired.
 /// It carries the item itself so the client needn't refetch. A grouped item re-pointed at a newer
-/// reply without a state change isn't published, as in the classic app. Huddle invitation
-/// frames on the same channel belong to the huddle slice's `huddle.*` events.
+/// reply without a state change isn't published, as in the classic app.
+///
+/// Huddle items (`huddle_started`, `huddle_missed`) are published as `activity.item` too,
+/// whenever they're recorded or change state (including the settling of overdue invitations
+/// when the inbox is listed), so the badge stays current. The classic app sends huddle
+/// invitation frames on the same channel instead; those ring the huddle UI and belong to the
+/// huddle slice's `huddle.*` events, which don't replace this one.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]

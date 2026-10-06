@@ -46,6 +46,7 @@ const messageJson = {
   thread: null,
   poll: null,
   cards: [],
+  cardsAsOf: "2026-10-06T09:15:00.200Z",
   createdAt: "2026-10-06T09:15:00.123Z",
   updatedAt: "2026-10-06T09:15:00.123Z",
 } as const;

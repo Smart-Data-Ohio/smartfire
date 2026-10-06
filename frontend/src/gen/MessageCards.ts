@@ -5,8 +5,13 @@ import type { MessageCard } from "./MessageCard";
  * The `message.cards` event on the message's conversation topic: its cards changed (a fetch
  * finished, a pull request or post was refreshed, an event it links to was edited, cancelled
  * or reminded, previews were suppressed, or the body was edited to link something else). The
- * JSON twin of the classic slot replaces (`github_pr_cards`, `twitter_cards`,
- * `[message, :event_cards]`, `fizzy_cards`, `linkedin_cards`, `link_embed_cards`). Replaces
- * the message's `cards` without touching its `updatedAt`.
+ * JSON twin of the classic slot replaces (`drive_attachments`, `github_pr_cards`,
+ * `twitter_cards`, `[message, :event_cards]`, `fizzy_cards`, `message_link_cards`,
+ * `linkedin_cards`, `link_embed_cards`). Replaces the message's `cards` without touching its
+ * `updatedAt`, when `asOf` is at least the stored `cardsAsOf` (see the module's **Ordering**).
  */
-export type MessageCards = { messageId: number, roomId: number, threadId: number | null, cards: Array<MessageCard>, };
+export type MessageCards = { messageId: number, roomId: number, threadId: number | null, cards: Array<MessageCard>, 
+/**
+ * When the server read these cards.
+ */
+asOf: string, };

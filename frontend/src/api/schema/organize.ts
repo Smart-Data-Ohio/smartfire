@@ -16,7 +16,7 @@ import { RoomCategory, SidebarRow } from "./sidebar.ts";
 /** The body of `POST /api/v1/room_categories`: a name of 1 to 50 characters. */
 export const CreateRoomCategory = Schema.Struct({
   name: Schema.String,
-  collapsed: Schema.NullOr(Schema.Boolean),
+  collapsed: Schema.optionalKey(Schema.Boolean),
 });
 
 export type CreateRoomCategory = typeof CreateRoomCategory.Type;
@@ -27,8 +27,8 @@ export type CreateRoomCategoryPin = Assert<
 
 /** The body of `PATCH /api/v1/room_categories/:id`; `null` keeps a field. */
 export const UpdateRoomCategory = Schema.Struct({
-  name: Schema.NullOr(Schema.String),
-  collapsed: Schema.NullOr(Schema.Boolean),
+  name: Schema.optionalKey(Schema.String),
+  collapsed: Schema.optionalKey(Schema.Boolean),
 });
 
 export type UpdateRoomCategory = typeof UpdateRoomCategory.Type;

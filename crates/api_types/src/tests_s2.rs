@@ -484,7 +484,7 @@ fn preview_and_scheduled_messages_round_trip() {
             markdown_source: Some("Standup in 10".into()),
             send_at: None,
         },
-        json!({"markdownSource": "Standup in 10", "sendAt": null}),
+        json!({"markdownSource": "Standup in 10"}),
     );
     assert_wire(
         &ScheduledMessageList {

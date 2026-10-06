@@ -80,7 +80,7 @@ pinned: boolean,
 thread: ThreadIndicator | null, 
 /**
  * The poll this message asks, if it's a poll's question (`polls.message_id`); `null`
- * otherwise. Kept current by `poll.updated`.
+ * otherwise. Kept current by `poll.updated` (by `asOf`, not `updatedAt`).
  */
 poll: Poll | null, 
 /**
@@ -88,7 +88,13 @@ poll: Poll | null,
  * there are none or the server doesn't fill that kind yet (see [`crate::MessageCard`]).
  * Kept current by `message.cards`.
  */
-cards: Array<MessageCard>, createdAt: string, 
+cards: Array<MessageCard>, 
+/**
+ * When the server read `cards`. A `message.cards` with an earlier `asOf` is stale, and so
+ * is this message's `cards` when the client already holds a later one (see the **Ordering**
+ * note in [`crate::MessageCard`]'s module). `poll` carries its own `asOf`.
+ */
+cardsAsOf: string, createdAt: string, 
 /**
  * Bumped by edits, embed suppression, streaming growth, reactions, boosts, pins and thread
  * replies (`touch`), so a later `updatedAt` always holds the newer copy.

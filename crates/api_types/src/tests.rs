@@ -59,6 +59,7 @@ pub(crate) fn message() -> MessageDTO {
         thread: None,
         poll: None,
         cards: vec![],
+        cards_as_of: "2026-10-06T09:15:00.200Z".into(),
         created_at: "2026-10-06T09:15:00.123Z".into(),
         updated_at: "2026-10-06T09:15:00.123Z".into(),
     }
@@ -241,6 +242,7 @@ fn message_round_trips() {
             "thread": null,
             "poll": null,
             "cards": [],
+            "cardsAsOf": "2026-10-06T09:15:00.200Z",
             "createdAt": "2026-10-06T09:15:00.123Z",
             "updatedAt": "2026-10-06T09:15:00.123Z",
         }),

@@ -2,8 +2,20 @@
 import type { GithubPullRequest } from "./GithubPullRequest";
 
 /**
- * The reply to `GET /api/v1/github/pull_requests/:id/card?messageId=`: the pull request as the
- * viewer may see it (`Github::PullRequest#visible_to`: a public repository, or one the
+ * The reply to `GET /api/v1/rooms/:roomId/github/pull_requests/:id/card?messageId=` or
+ * `?threadId=` (`rooms/github/pull_request_cards#show`, `viewer_card_context`): the pull request
+ * as the viewer may see it (`Github::PullRequest#visible_to`: a public repository, or one the
  * viewer's connected GitHub account can read). Tagged by `state`.
+ *
+ * Exactly one of the two parameters:
+ * - `messageId`: the card under a message. 404 unless the viewer is a member of `roomId`, the
+ *   message is in that room, and it references this pull request
+ *   (`github_pull_request_references`).
+ * - `threadId`: the header of the room's discussion thread for the pull request, which also
+ *   lists the changed files ([`GithubPullRequest::files`]). 404 unless the viewer is a member of
+ *   `roomId`, the thread is in that room, and it's this pull request's discussion thread there
+ *   (`github_pull_request_threads`).
+ *
+ * Neither, or an unknown pull request, is a 404.
  */
 export type GithubPullRequestCard = { "state": "hidden" } | { "state": "loading" } | { "state": "failed", message: string, } | { "state": "loaded" } & GithubPullRequest;

@@ -15,7 +15,7 @@ fn activity_item() -> ActivityItem {
         handled_at: None,
         created_at: "2026-10-06T09:15:01.000Z".into(),
         updated_at: "2026-10-06T09:15:01.000Z".into(),
-        source: Some(ActivitySource {
+        source: ActivitySource {
             source_type: ActivitySourceType::Message,
             source_id: 9001,
             room_id: Some(12),
@@ -26,9 +26,10 @@ fn activity_item() -> ActivityItem {
             title: "general".into(),
             body: "Hello there @Grace".into(),
             occurred_at: "2026-10-06T09:15:00.123Z".into(),
-            status: None,
+            approval_status: None,
+            budget_cap: None,
             path: "/rooms/12/@9001".into(),
-        }),
+        },
     }
 }
 
@@ -52,7 +53,8 @@ fn activity_item_wire() -> serde_json::Value {
             "title": "general",
             "body": "Hello there @Grace",
             "occurredAt": "2026-10-06T09:15:00.123Z",
-            "status": null,
+            "approvalStatus": null,
+            "budgetCap": null,
             "path": "/rooms/12/@9001",
         },
     })
@@ -106,6 +108,7 @@ fn poll() -> Poll {
     Poll {
         id: 5,
         message_id: 9001,
+        as_of: "2026-10-06T09:30:00.000Z".into(),
         multiple: false,
         anonymous: false,
         closes_at: Some("2026-10-08T17:00:00.000Z".into()),
@@ -133,6 +136,7 @@ fn poll_wire() -> serde_json::Value {
     json!({
         "id": 5,
         "messageId": 9001,
+        "asOf": "2026-10-06T09:30:00.000Z",
         "multiple": false,
         "anonymous": false,
         "closesAt": "2026-10-08T17:00:00.000Z",
@@ -269,26 +273,45 @@ fn activity_round_trips() {
             items: vec![activity_item()],
             users: vec![user()],
             unread_count: 4,
-            next_cursor: Some(301),
+            next_cursor: Some("MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ".into()),
         },
         json!({
             "items": [activity_item_wire()],
             "users": [serde_json::to_value(user()).unwrap()],
             "unreadCount": 4,
-            "nextCursor": 301,
+            "nextCursor": "MjAyNi0xMC0wNlQwOToxNTowMS4wMDBafDMwMQ",
         }),
     );
 
-    let mut sessionless = activity_item();
-    sessionless.event_type = ActivityEventType::NewSignIn;
-    sessionless.state = ActivityState::Handled;
-    sessionless.read_at = Some("2026-10-06T10:00:00.000Z".into());
-    sessionless.handled_at = Some("2026-10-06T10:00:00.000Z".into());
-    sessionless.source = None;
-    let wire = serde_json::to_value(&sessionless).unwrap();
-    assert_eq!(wire["source"], json!(null));
+    let mut approval = activity_item();
+    approval.event_type = ActivityEventType::AgentApprovalRequest;
+    approval.state = ActivityState::Handled;
+    approval.read_at = Some("2026-10-06T10:00:00.000Z".into());
+    approval.handled_at = Some("2026-10-06T10:00:00.000Z".into());
+    approval.source.source_type = ActivitySourceType::AgentApproval;
+    approval.source.approval_status = Some(AgentApprovalStatus::Approved);
+    let wire = serde_json::to_value(&approval).unwrap();
+    assert_eq!(wire["source"]["approvalStatus"], "approved");
     assert_eq!(wire["state"], "handled");
-    assert_wire(&sessionless, wire);
+    assert_wire(&approval, wire);
+    let statuses = [
+        (AgentApprovalStatus::Pending, "pending"),
+        (AgentApprovalStatus::Approved, "approved"),
+        (AgentApprovalStatus::Denied, "denied"),
+        (AgentApprovalStatus::Cancelled, "cancelled"),
+        (AgentApprovalStatus::Expired, "expired"),
+    ];
+    for (value, wire) in statuses {
+        assert_wire(&value, json!(wire));
+    }
+    let caps = [
+        (AgentBudgetCap::Messages, "messages"),
+        (AgentBudgetCap::BoardPosts, "board_posts"),
+        (AgentBudgetCap::ExternalActions, "external_actions"),
+    ];
+    for (value, wire) in caps {
+        assert_wire(&value, json!(wire));
+    }
 
     assert_wire(
         &ActivityUnreadCount { unread_count: 4 },
@@ -296,10 +319,19 @@ fn activity_round_trips() {
     );
     assert_wire(
         &UpdateActivityItem {
-            state: ActivityState::Handled,
+            action: ActivityAction::Handled,
         },
-        json!({"state": "handled"}),
+        json!({"action": "handled"}),
     );
+    let actions = [
+        (ActivityAction::Read, "read"),
+        (ActivityAction::Unread, "unread"),
+        (ActivityAction::Handled, "handled"),
+        (ActivityAction::Unhandled, "unhandled"),
+    ];
+    for (value, wire) in actions {
+        assert_wire(&value, json!(wire));
+    }
     assert_wire(
         &ActivityItemChanged {
             item: activity_item(),
@@ -376,7 +408,7 @@ fn scheduled_messages_carry_their_state() {
                 thread_name: None,
                 ..conversation()
             }],
-            next_cursor: Some(4),
+            next_cursor: Some("MjAyNi0xMC0wN1QxMzo1NTowMC4wMDBafDQ".into()),
         },
         json!({
             "scheduledMessages": [scheduled_wire()],
@@ -388,7 +420,7 @@ fn scheduled_messages_carry_their_state() {
                 "roomIconName": "campfire",
                 "threadName": null,
             }],
-            "nextCursor": 4,
+            "nextCursor": "MjAyNi0xMC0wN1QxMzo1NTowMC4wMDBafDQ",
         }),
     );
     assert_wire(
@@ -396,8 +428,12 @@ fn scheduled_messages_carry_their_state() {
             markdown_source: None,
             send_at: Some("2026-10-07T14:00:00.000Z".into()),
         },
-        json!({"markdownSource": null, "sendAt": "2026-10-07T14:00:00.000Z"}),
+        json!({"sendAt": "2026-10-07T14:00:00.000Z"}),
     );
+    let explicit_null: UpdateScheduledMessage =
+        serde_json::from_value(json!({"markdownSource": null, "sendAt": null})).unwrap();
+    assert_eq!(explicit_null.markdown_source, None);
+    assert_eq!(explicit_null.send_at, None);
     assert_wire(
         &ScheduledMessageRemoved { id: 4, room_id: 12 },
         json!({"id": 4, "roomId": 12}),
@@ -431,7 +467,7 @@ fn search_round_trips() {
             messages: vec![reply],
             users: vec![user()],
             conversations: vec![conversation()],
-            before: Some(9001),
+            next_cursor: Some("MjAyNi0xMC0wNlQwOToxNTowMC4xMjNafDkwMDE".into()),
             sections: vec![SearchSection {
                 kind: SearchSectionKind::WorkThreads,
                 rows: vec![SearchSectionRow {
@@ -440,7 +476,7 @@ fn search_round_trips() {
                     room_kind: RoomKind::Open,
                     title: "Launch checklist".into(),
                     time: "2026-10-06T10:00:00.000Z".into(),
-                    work_status: Some("in_progress".into()),
+                    work_status: Some(WorkStatus::InProgress),
                     cancelled: false,
                 }],
             }],
@@ -454,7 +490,7 @@ fn search_round_trips() {
             "messages": [reply_wire],
             "users": [serde_json::to_value(user()).unwrap()],
             "conversations": [conversation_wire()],
-            "before": 9001,
+            "nextCursor": "MjAyNi0xMC0wNlQwOToxNTowMC4xMjNafDkwMDE",
             "sections": [{"kind": "work_threads", "rows": [{
                 "id": 88,
                 "roomId": 12,
@@ -506,14 +542,14 @@ fn sidebar_organisation_requests_round_trip() {
             name: "Projects".into(),
             collapsed: None,
         },
-        json!({"name": "Projects", "collapsed": null}),
+        json!({"name": "Projects"}),
     );
     assert_wire(
         &UpdateRoomCategory {
             name: None,
             collapsed: Some(true),
         },
-        json!({"name": null, "collapsed": true}),
+        json!({"collapsed": true}),
     );
     assert_wire(
         &ReorderRoomCategories {
@@ -570,13 +606,14 @@ fn polls_round_trip() {
     );
     assert_wire(
         &CreatePoll {
+            client_message_id: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12".into(),
             question: "Lunch?".into(),
             options: vec!["Tacos".into(), "Pizza".into()],
             multiple: false,
             anonymous: false,
             closes_at: None,
         },
-        json!({"question": "Lunch?", "options": ["Tacos", "Pizza"], "multiple": false, "anonymous": false, "closesAt": null}),
+        json!({"clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c12", "question": "Lunch?", "options": ["Tacos", "Pizza"], "multiple": false, "anonymous": false, "closesAt": null}),
     );
     assert_wire(&VotePoll { option_ids: vec![] }, json!({"optionIds": []}));
 }
@@ -584,6 +621,10 @@ fn polls_round_trip() {
 #[test]
 fn message_cards_are_tagged_by_kind() {
     let cards = vec![
+        MessageCard::Drive(DriveFileCard {
+            file_id: "1AbC".into(),
+            url: "https://drive.google.com/open?id=1AbC".into(),
+        }),
         MessageCard::Github(GithubCardRef {
             pull_request_id: 14,
             owner: "Smart-Data-Ohio".into(),
@@ -638,6 +679,23 @@ fn message_cards_are_tagged_by_kind() {
             number: 17,
             url: "https://app.fizzy.do/897362094/cards/17".into(),
         }),
+        MessageCard::Quote(QuoteCard {
+            reference_id: 61,
+            preview: Some(QuotePreview {
+                message_id: 8990,
+                room_id: 12,
+                thread_id: None,
+                creator_id: 8,
+                author_name: "Grace Hopper".into(),
+                room_label: "general".into(),
+                excerpt: "The deploy is green".into(),
+                created_at: "2026-10-06T08:30:00.000Z".into(),
+            }),
+        }),
+        MessageCard::Quote(QuoteCard {
+            reference_id: 62,
+            preview: None,
+        }),
         MessageCard::Linkedin(LinkedinCard {
             url: "https://www.linkedin.com/posts/ada_activity-1".into(),
             title: None,
@@ -654,6 +712,7 @@ fn message_cards_are_tagged_by_kind() {
         }),
     ];
     let wire = json!([
+        {"kind": "drive", "data": {"fileId": "1AbC", "url": "https://drive.google.com/open?id=1AbC"}},
         {"kind": "github", "data": {
             "pullRequestId": 14,
             "owner": "Smart-Data-Ohio",
@@ -696,6 +755,17 @@ fn message_cards_are_tagged_by_kind() {
             "number": 17,
             "url": "https://app.fizzy.do/897362094/cards/17",
         }},
+        {"kind": "quote", "data": {"referenceId": 61, "preview": {
+            "messageId": 8990,
+            "roomId": 12,
+            "threadId": null,
+            "creatorId": 8,
+            "authorName": "Grace Hopper",
+            "roomLabel": "general",
+            "excerpt": "The deploy is green",
+            "createdAt": "2026-10-06T08:30:00.000Z",
+        }}},
+        {"kind": "quote", "data": {"referenceId": 62, "preview": null}},
         {"kind": "linkedin", "data": {
             "url": "https://www.linkedin.com/posts/ada_activity-1",
             "title": null,
@@ -723,8 +793,33 @@ fn message_cards_are_tagged_by_kind() {
             room_id: 12,
             thread_id: None,
             cards,
+            as_of: "2026-10-06T09:31:00.000Z".into(),
         },
-        json!({"messageId": 9001, "roomId": 12, "threadId": null, "cards": wire}),
+        json!({"messageId": 9001, "roomId": 12, "threadId": null, "cards": wire, "asOf": "2026-10-06T09:31:00.000Z"}),
+    );
+    assert_wire(&QuotePreviewResult::Hidden, json!({"state": "hidden"}));
+    assert_wire(
+        &QuotePreviewResult::Loaded(QuotePreview {
+            message_id: 70,
+            room_id: 3,
+            thread_id: Some(88),
+            creator_id: 7,
+            author_name: "Ada Lovelace".into(),
+            room_label: "a direct message".into(),
+            excerpt: "See you there".into(),
+            created_at: "2026-10-05T18:00:00.000Z".into(),
+        }),
+        json!({
+            "state": "loaded",
+            "messageId": 70,
+            "roomId": 3,
+            "threadId": 88,
+            "creatorId": 7,
+            "authorName": "Ada Lovelace",
+            "roomLabel": "a direct message",
+            "excerpt": "See you there",
+            "createdAt": "2026-10-05T18:00:00.000Z",
+        }),
     );
     assert_wire(&CardFetch::Loading, json!("loading"));
     assert_wire(&CardFetch::Failed, json!("failed"));
@@ -789,6 +884,15 @@ fn github_previews_are_tagged_by_state() {
             checks: Some(GithubChecks::Passing),
             github_updated_at: Some("2026-10-06T12:00:00.000Z".into()),
             discussion_thread_id: None,
+            files: Some(GithubChangedFiles {
+                files: vec![GithubChangedFile {
+                    filename: "frontend/src/app.tsx".into(),
+                    status: Some("modified".into()),
+                    additions: 12,
+                    deletions: 3,
+                }],
+                total_count: 41,
+            }),
         })),
         json!({
             "state": "loaded",
@@ -806,6 +910,10 @@ fn github_previews_are_tagged_by_state() {
             "checks": "passing",
             "githubUpdatedAt": "2026-10-06T12:00:00.000Z",
             "discussionThreadId": null,
+            "files": {
+                "files": [{"filename": "frontend/src/app.tsx", "status": "modified", "additions": 12, "deletions": 3}],
+                "totalCount": 41,
+            },
         }),
     );
     assert_wire(&GithubPullRequestStatus::Draft, json!("draft"));
@@ -903,8 +1011,24 @@ fn s3_sync_events_round_trip() {
         ),
         (
             "room:12",
-            SyncPayload::PollUpdated(poll()),
-            json!({"type": "poll.updated", "data": poll_wire()}),
+            SyncPayload::PollUpdated(PollUpdated {
+                room_id: 12,
+                thread_id: None,
+                poll: poll(),
+            }),
+            json!({"type": "poll.updated", "data": {"roomId": 12, "threadId": null, "poll": poll_wire()}}),
+        ),
+        (
+            "user",
+            SyncPayload::PollBallot(PollBallot {
+                poll_id: 5,
+                message_id: 9001,
+                room_id: 12,
+                thread_id: None,
+                my_option_ids: vec![51],
+                as_of: "2026-10-06T09:30:00.000Z".into(),
+            }),
+            json!({"type": "poll.ballot", "data": {"pollId": 5, "messageId": 9001, "roomId": 12, "threadId": null, "myOptionIds": [51], "asOf": "2026-10-06T09:30:00.000Z"}}),
         ),
         (
             "room:12",
@@ -913,8 +1037,9 @@ fn s3_sync_events_round_trip() {
                 room_id: 12,
                 thread_id: None,
                 cards: vec![],
+                as_of: "2026-10-06T09:31:00.000Z".into(),
             }),
-            json!({"type": "message.cards", "data": {"messageId": 9001, "roomId": 12, "threadId": null, "cards": []}}),
+            json!({"type": "message.cards", "data": {"messageId": 9001, "roomId": 12, "threadId": null, "cards": [], "asOf": "2026-10-06T09:31:00.000Z"}}),
         ),
         (
             "user",

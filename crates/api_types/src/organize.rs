@@ -33,12 +33,14 @@ use crate::{Involvement, RoomCategory, SidebarRow};
 #[ts(export)]
 pub struct CreateRoomCategory {
     pub name: String,
-    /// `null` for `false`.
+    /// Left out (or `null`) for `false`.
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub collapsed: Option<bool>,
 }
 
 /// `PATCH /api/v1/room_categories/:id`: rename it or fold it (`room_categories#update`; a
-/// `null` field keeps its value). Answers the [`RoomCategory`] and publishes
+/// field left out, or `null`, keeps its value). Answers the [`RoomCategory`] and publishes
 /// `sidebar.category.upserted`, so folding follows the person to their other tabs. 422 as for
 /// [`CreateRoomCategory`].
 ///
@@ -49,12 +51,17 @@ pub struct CreateRoomCategory {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct UpdateRoomCategory {
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+    #[ts(optional)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub collapsed: Option<bool>,
 }
 
 /// `PUT /api/v1/room_categories/order`: the viewer's categories in their new order, every one of
-/// them exactly once (422 otherwise). Sets `position` to 1, 2, … in this order and answers
+/// them exactly once. A list that doesn't match the viewer's current categories (one added or
+/// removed in another tab, or a repeat) is a 409 Conflict and changes nothing: refetch and retry. Sets `position` to 1, 2, … in this order and answers
 /// [`RoomCategoryList`], publishing `sidebar.category.upserted` for each one that moved.
 ///
 /// New: the classic app keeps creation order (`position` is set once and isn't a permitted

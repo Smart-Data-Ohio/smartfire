@@ -731,6 +731,7 @@ export function seedWorld(now: number, random: Random): World {
       thread: null,
       poll: null,
       cards: [],
+      cardsAsOf: createdAt,
       createdAt,
       updatedAt: editedAt ?? createdAt,
     });

@@ -45,17 +45,18 @@ pub use actions::{
     SavedStatus,
 };
 pub use activity::{
-    ActivityEventType, ActivityItem, ActivityItemChanged, ActivityItemRemoved, ActivityList,
-    ActivitySource, ActivitySourceType, ActivityState, ActivityTab, ActivityUnreadCount,
-    UpdateActivityItem,
+    ActivityAction, ActivityEventType, ActivityItem, ActivityItemChanged, ActivityItemRemoved,
+    ActivityList, ActivitySource, ActivitySourceType, ActivityState, ActivityTab,
+    ActivityUnreadCount, AgentApprovalStatus, AgentBudgetCap, UpdateActivityItem,
 };
 pub use attachment::{Attachment, AttachmentPreview, CreateUpload, DirectUpload};
 pub use cards::{
-    AttendanceResponse, CardFetch, CreatePoll, EventAttendance, EventCard, FizzyAssignee,
-    FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef, GithubChecks,
-    GithubPullRequest, GithubPullRequestCard, GithubPullRequestStatus, GithubReview, LinkCard,
-    LinkedinCard, MessageCard, MessageCards, Poll, PollOption, PollResults, RespondToEvent,
-    VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
+    AttendanceResponse, CardFetch, CreatePoll, DriveFileCard, EventAttendance, EventCard,
+    FizzyAssignee, FizzyCard, FizzyCardPreview, FizzyCardRef, FizzyCardStatus, GithubCardRef,
+    GithubChangedFile, GithubChangedFiles, GithubChecks, GithubPullRequest, GithubPullRequestCard,
+    GithubPullRequestStatus, GithubReview, LinkCard, LinkedinCard, MessageCard, MessageCards, Poll,
+    PollBallot, PollOption, PollResults, PollUpdated, QuoteCard, QuotePreview, QuotePreviewResult,
+    RespondToEvent, VotePoll, XMedia, XMediaKind, XPostCard, XQuote,
 };
 pub use composer::{
     CreateScheduledMessage, Icon, IconKind, IconList, MessagePreview, PreviewMessage,
@@ -87,7 +88,7 @@ pub use room::{Involvement, Membership, Room, RoomDetail, RoomKind, StageRole, U
 pub use saved::{SavedFilter, SavedItemList, UpdateSavedItem};
 pub use search::{
     RecentSearch, RecentSearchList, RecordSearch, SearchChip, SearchOperator, SearchResults,
-    SearchSection, SearchSectionKind, SearchSectionRow,
+    SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};

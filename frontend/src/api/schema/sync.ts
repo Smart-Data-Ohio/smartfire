@@ -7,7 +7,7 @@ import type { SyncPayload as GeneratedSyncPayload } from "../../gen/SyncPayload.
 import type { Typing as GeneratedTyping } from "../../gen/Typing.ts";
 import { PinState, SavedChanged } from "./actions.ts";
 import { ActivityItemChanged, ActivityItemRemoved } from "./activity.ts";
-import { MessageCards, Poll } from "./cards.ts";
+import { MessageCards, PollBallot, PollUpdated } from "./cards.ts";
 import { ScheduledMessage, ScheduledMessageRemoved } from "./composer.ts";
 import { RoomId, UserId } from "./ids.ts";
 import { MessageDTO, MessageRemoved } from "./message.ts";
@@ -84,7 +84,8 @@ export const SyncPayload = Schema.Union([
   Schema.Struct({ type: Schema.Literal("scheduled.removed"), data: ScheduledMessageRemoved }),
   Schema.Struct({ type: Schema.Literal("sidebar.category.upserted"), data: RoomCategory }),
   Schema.Struct({ type: Schema.Literal("sidebar.category.removed"), data: RoomCategoryRemoved }),
-  Schema.Struct({ type: Schema.Literal("poll.updated"), data: Poll }),
+  Schema.Struct({ type: Schema.Literal("poll.updated"), data: PollUpdated }),
+  Schema.Struct({ type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ type: Schema.Literal("message.cards"), data: MessageCards }),
 ]);
 
@@ -159,7 +160,8 @@ export const SyncEvent = Schema.Union([
     type: Schema.Literal("sidebar.category.removed"),
     data: RoomCategoryRemoved,
   }),
-  Schema.Struct({ ...eventFields, type: Schema.Literal("poll.updated"), data: Poll }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("poll.updated"), data: PollUpdated }),
+  Schema.Struct({ ...eventFields, type: Schema.Literal("poll.ballot"), data: PollBallot }),
   Schema.Struct({ ...eventFields, type: Schema.Literal("message.cards"), data: MessageCards }),
 ]);
 

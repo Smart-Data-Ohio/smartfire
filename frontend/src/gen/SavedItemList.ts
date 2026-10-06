@@ -12,8 +12,9 @@ import type { User } from "./User";
  * active human, and a current member of the message's room, which isn't deleted. An item hidden
  * that way comes back if access does.
  *
- * Keyset paging, 50 a page: `before` is the previous page's `nextCursor` (a saved item id;
- * rows older than it by `(createdAt, id)`). New: the classic page lists every item at once.
+ * Keyset paging, 50 a page: `before` is the previous page's `nextCursor`. A cursor that
+ * doesn't decode is a 422 (`ApiError::Validation` on `before`). New: the classic page lists
+ * every item at once.
  */
 export type SavedItemList = { items: Array<SavedItem>, 
 /**
@@ -30,6 +31,11 @@ users: Array<User>,
  */
 conversations: Array<ConversationName>, 
 /**
- * Pass as `before` for the next page; `null` on the last.
+ * Pass as `before` for the next page; `null` on the last (set only when an older row
+ * exists: the server reads 51).
+ *
+ * Opaque to the client: it encodes the last row's `(createdAt, id)`, and the next page
+ * holds the rows strictly after that key in `createdAt DESC, id DESC` order. So it stays
+ * valid when that item is unsaved, moves to another status or becomes unreachable.
  */
-nextCursor: number | null, };
+nextCursor: string | null, };

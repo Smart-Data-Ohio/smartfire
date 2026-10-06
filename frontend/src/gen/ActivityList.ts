@@ -8,8 +8,8 @@ import type { User } from "./User";
  *
  * - `status`: `unread` (default), `read` or `handled`; an unknown value reads as the default.
  * - `type`: an [`ActivityTab`], default `all`; an unknown value reads as `all`.
- * - `before`: the previous page's `nextCursor`. Keyset paging on `(updatedAt, id)`, newest first;
- *   a cursor that isn't an item the viewer can see is ignored.
+ * - `before`: the previous page's `nextCursor`, an opaque string (see [`ActivityList::next_cursor`]).
+ *   A cursor that doesn't decode is a 422 (`ApiError::Validation` on `before`).
  *
  * At most 100 items a page. Listing first settles the viewer's overdue huddle invitations and
  * agent approvals, as the classic page does.
@@ -24,8 +24,16 @@ users: Array<User>,
  */
 unreadCount: number, 
 /**
- * Pass as `before` for the next page; `null` when this is the last. Set only when a newer
+ * Pass as `before` for the next page; `null` when this is the last. Set only when an older
  * row exists past this page (the server reads 101), unlike the classic `next_cursor`,
  * which is set on any full page.
+ *
+ * Opaque to the client: it encodes the last row's sort key, `(updatedAt, id)`, and the next
+ * page holds the rows strictly after that key in `updatedAt DESC, id DESC` order. So it
+ * stays valid when that row changes or disappears: marking it read (which bumps its
+ * `updatedAt`) or losing access to it doesn't make the next page restart or repeat rows. A row
+ * whose `updatedAt` moves after the client has paged past it moves to the top; the client
+ * learns of it from `activity.item`, not from paging. New: the classic cursor is the
+ * item id, resolved to that row's current `updated_at`.
  */
-nextCursor: number | null, };
+nextCursor: string | null, };

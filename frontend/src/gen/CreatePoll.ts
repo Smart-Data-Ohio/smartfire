@@ -5,10 +5,19 @@
  * `Poll::create_for_message`). Answers the question's [`crate::MessageDTO`] (201) with its
  * `poll`, published as `message.created`. Active human members only (403).
  *
+ * Idempotent on `clientMessageId`, as [`crate::CreateMessage`] is (`Message::find_duplicate`):
+ * posting the same id again returns the question already created, with 200 instead of 201,
+ * and creates no second poll. The optimistic row reconciles with `message.created` by that id.
+ * New: the classic form has no client id and replies with a redirect.
+ *
  * 422 when the question is blank, there are fewer than 2 or more than 10 non-blank options,
  * a label is over 200 characters, or `closesAt` isn't in the future.
  */
 export type CreatePoll = { 
+/**
+ * The sender's id for the question message: a UUID, as for [`crate::CreateMessage`].
+ */
+clientMessageId: string, 
 /**
  * Markdown, posted as the message.
  */

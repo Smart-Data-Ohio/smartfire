@@ -7,7 +7,7 @@
  * `<url>`. Only pages with a title or description get a card (`usable`), so there's no
  * loading or failed state: the card appears once a fetch finds one.
  *
- * Fill order: 3.
+ * Fill order: 4.
  */
 export type LinkCard = { 
 /**

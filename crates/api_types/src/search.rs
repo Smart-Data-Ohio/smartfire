@@ -11,9 +11,11 @@
 //! There are no people, room or file results on the server:
 //! - **people and rooms** come from the quick switcher's [`crate::Switcher`], matched on the
 //!   client;
-//! - **files** are messages with an attachment: `has:file` (an upload or a Drive file) or
-//!   `has:image`, whose hits carry their [`crate::Attachment`]. The per-room file list is
-//!   `GET /api/v1/rooms/:id/files` ([`crate::FileList`]).
+//! - **files** are messages with an attachment: `has:file` (an upload or a Google Drive file)
+//!   or `has:image`. An upload's hit carries its [`crate::Attachment`]; a Drive file's hit
+//!   carries none (`attachment` is `null`), and its link shows through the message's `drive`
+//!   card ([`crate::DriveFileCard`]). The per-room file list is `GET /api/v1/rooms/:id/files`
+//!   ([`crate::FileList`]), which lists uploads only.
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -21,7 +23,8 @@ use ts_rs::TS;
 use crate::{ConversationName, MessageDTO, RoomKind, Timestamp, User};
 
 /// `GET /api/v1/search?q=&before=`: one page of results (`searches#index`). Doesn't record the
-/// query; the client posts [`RecordSearch`] when the person submits it.
+/// query; the client posts [`RecordSearch`] to `/api/v1/search/recents` when the person submits
+/// it.
 ///
 /// `q` is free text plus operators (`SearchQuery::parse`):
 /// - `from:name` (`@` optional): messages by anyone whose name contains it, case-insensitively.
@@ -40,8 +43,9 @@ use crate::{ConversationName, MessageDTO, RoomKind, Timestamp, User};
 /// Only rooms the viewer belongs to, which aren't deleted, are searched. A blank `q` (no words
 /// and no operators) answers an empty page, not an error.
 ///
-/// `before` is the previous page's `before` cursor (a message id): keyset paging on
-/// `(createdAt, id)`, 40 a page. A cursor the viewer can't reach is a 404.
+/// `before` is the previous page's `nextCursor`: keyset paging on `(createdAt, id)`, newest
+/// first, 40 a page. A cursor that doesn't decode is a 422 (`ApiError::Validation` on
+/// `before`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -59,9 +63,13 @@ pub struct SearchResults {
     pub users: Vec<User>,
     /// The rooms and threads the messages and section rows are in.
     pub conversations: Vec<ConversationName>,
-    /// Pass as `before` for the next (older) page: the oldest message here when more exist,
-    /// else `null`.
-    pub before: Option<i64>,
+    /// Pass as `before` for the next (older) page; `null` when no older match exists.
+    ///
+    /// Opaque to the client: it encodes the oldest message here by `(createdAt, id)`, and the
+    /// next page holds the matches strictly older than that. So it stays valid when that message
+    /// is deleted or leaves the viewer's reach. New: the classic cursor is the message id, and
+    /// a vanished one is a 404.
+    pub next_cursor: Option<String>,
     /// First page only, and only when `q` has words: up to 10 of each kind whose name (title or
     /// description, for events) contains every word. Narrowed by `in:` but not by the other
     /// operators. Kinds with no matches are left out, so this is often empty.
@@ -133,15 +141,28 @@ pub struct SearchSectionRow {
     pub title: String,
     /// The thread's `lastActivityAt`, or the event's `startsAt`.
     pub time: Timestamp,
-    /// Work threads (and board posts that have one): `planned`, `in_progress`, `blocked` or
-    /// `done` (`channel_threads.work_status`). `null` otherwise.
-    pub work_status: Option<String>,
+    /// Work threads (and board posts that have one): `channel_threads.work_status`. `null`
+    /// otherwise.
+    pub work_status: Option<WorkStatus>,
     /// Events only: it was cancelled.
     pub cancelled: bool,
 }
 
-/// `GET /api/v1/searches`: the viewer's recent searches, most recent first, at most 10
-/// (`Search::recent_for_user`, `RECENT_SEARCHES`). Also the reply to [`RecordSearch`].
+/// A work thread's status (`channel_threads.work_status`, `ChannelThread::WORK_STATUSES`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub enum WorkStatus {
+    Planned,
+    InProgress,
+    Blocked,
+    Done,
+}
+
+/// `GET /api/v1/search/recents`: the viewer's recent searches, most recent first, at most 10
+/// (`Search::recent_for_user`, `RECENT_SEARCHES`). Also the reply to [`RecordSearch`]. New: the
+/// classic app has no JSON for these; `GET /searches` renders results and recents in one page,
+/// `POST /searches` records and `POST /searches/clear` clears.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -160,10 +181,11 @@ pub struct RecentSearch {
     pub searched_at: Timestamp,
 }
 
-/// `POST /api/v1/searches`: remember a submitted query (`searches#create`, `Search::record`).
+/// `POST /api/v1/search/recents`: remember a submitted query (`searches#create`,
+/// `Search::record`).
 /// Repeating a query moves it to the top instead of adding a row; the list is trimmed to the
 /// newest 10. Answers the [`RecentSearchList`] (201). A blank query is a 422 ("Enter a word to
-/// search for."), recording nothing. `DELETE /api/v1/searches` forgets them all (204;
+/// search for."), recording nothing. `DELETE /api/v1/search/recents` forgets them all (204;
 /// `searches#clear`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]

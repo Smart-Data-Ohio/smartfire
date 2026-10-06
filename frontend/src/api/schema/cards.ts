@@ -1,7 +1,8 @@
-import { Schema } from "effect";
+import { Schema, SchemaGetter } from "effect";
 import type { AttendanceResponse as GeneratedAttendanceResponse } from "../../gen/AttendanceResponse.ts";
 import type { CardFetch as GeneratedCardFetch } from "../../gen/CardFetch.ts";
 import type { CreatePoll as GeneratedCreatePoll } from "../../gen/CreatePoll.ts";
+import type { DriveFileCard as GeneratedDriveFileCard } from "../../gen/DriveFileCard.ts";
 import type { EventAttendance as GeneratedEventAttendance } from "../../gen/EventAttendance.ts";
 import type { EventCard as GeneratedEventCard } from "../../gen/EventCard.ts";
 import type { FizzyAssignee as GeneratedFizzyAssignee } from "../../gen/FizzyAssignee.ts";
@@ -10,6 +11,8 @@ import type { FizzyCardPreview as GeneratedFizzyCardPreview } from "../../gen/Fi
 import type { FizzyCardRef as GeneratedFizzyCardRef } from "../../gen/FizzyCardRef.ts";
 import type { FizzyCardStatus as GeneratedFizzyCardStatus } from "../../gen/FizzyCardStatus.ts";
 import type { GithubCardRef as GeneratedGithubCardRef } from "../../gen/GithubCardRef.ts";
+import type { GithubChangedFile as GeneratedGithubChangedFile } from "../../gen/GithubChangedFile.ts";
+import type { GithubChangedFiles as GeneratedGithubChangedFiles } from "../../gen/GithubChangedFiles.ts";
 import type { GithubChecks as GeneratedGithubChecks } from "../../gen/GithubChecks.ts";
 import type { GithubPullRequest as GeneratedGithubPullRequest } from "../../gen/GithubPullRequest.ts";
 import type { GithubPullRequestCard as GeneratedGithubPullRequestCard } from "../../gen/GithubPullRequestCard.ts";
@@ -20,8 +23,13 @@ import type { LinkedinCard as GeneratedLinkedinCard } from "../../gen/LinkedinCa
 import type { MessageCard as GeneratedMessageCard } from "../../gen/MessageCard.ts";
 import type { MessageCards as GeneratedMessageCards } from "../../gen/MessageCards.ts";
 import type { Poll as GeneratedPoll } from "../../gen/Poll.ts";
+import type { PollBallot as GeneratedPollBallot } from "../../gen/PollBallot.ts";
 import type { PollOption as GeneratedPollOption } from "../../gen/PollOption.ts";
 import type { PollResults as GeneratedPollResults } from "../../gen/PollResults.ts";
+import type { PollUpdated as GeneratedPollUpdated } from "../../gen/PollUpdated.ts";
+import type { QuoteCard as GeneratedQuoteCard } from "../../gen/QuoteCard.ts";
+import type { QuotePreview as GeneratedQuotePreview } from "../../gen/QuotePreview.ts";
+import type { QuotePreviewResult as GeneratedQuotePreviewResult } from "../../gen/QuotePreviewResult.ts";
 import type { RespondToEvent as GeneratedRespondToEvent } from "../../gen/RespondToEvent.ts";
 import type { VotePoll as GeneratedVotePoll } from "../../gen/VotePoll.ts";
 import type { XMedia as GeneratedXMedia } from "../../gen/XMedia.ts";
@@ -56,10 +64,13 @@ export type PollOptionPin = Assert<Pinned<typeof PollOption, GeneratedPollOption
 /**
  * A poll on its question message. `voterIds` are empty when it's anonymous; treat it as closed
  * once `closesAt` passes, before `poll.updated` says so. Server fill order: 1.
+ *
+ * `asOf` orders copies of the same poll: keep the latest, and on a tie the later arrival.
  */
 export const Poll = Schema.Struct({
   id: PollId,
   messageId: MessageId,
+  asOf: Timestamp,
   multiple: Schema.Boolean,
   anonymous: Schema.Boolean,
   closesAt: Schema.NullOr(Timestamp),
@@ -80,8 +91,12 @@ export type PollResults = typeof PollResults.Type;
 
 export type PollResultsPin = Assert<Pinned<typeof PollResults, GeneratedPollResults>>;
 
-/** The body of `POST /api/v1/rooms/:roomId/polls`: 2 to 10 options of up to 200 characters. */
+/**
+ * The body of `POST /api/v1/rooms/:roomId/polls`: 2 to 10 options of up to 200 characters.
+ * Idempotent on `clientMessageId`, like `CreateMessage`.
+ */
 export const CreatePoll = Schema.Struct({
+  clientMessageId: Schema.String,
   question: Schema.String,
   options: Schema.Array(Schema.String),
   multiple: Schema.Boolean,
@@ -99,6 +114,41 @@ export const VotePoll = Schema.Struct({ optionIds: Schema.Array(PollOptionId) })
 export type VotePoll = typeof VotePoll.Type;
 
 export type VotePollPin = Assert<Pinned<typeof VotePoll, GeneratedVotePoll>>;
+
+/** The `poll.updated` event on the room topic: replace the poll if `asOf` isn't older. */
+export const PollUpdated = Schema.Struct({
+  roomId: RoomId,
+  threadId: Schema.NullOr(ThreadId),
+  poll: Poll,
+});
+
+export type PollUpdated = typeof PollUpdated.Type;
+
+export type PollUpdatedPin = Assert<Pinned<typeof PollUpdated, GeneratedPollUpdated>>;
+
+/**
+ * The `poll.ballot` event on the voter's own topic: their choice after a vote from any tab,
+ * which `poll.updated` can't carry for anonymous polls.
+ */
+export const PollBallot = Schema.Struct({
+  pollId: PollId,
+  messageId: MessageId,
+  roomId: RoomId,
+  threadId: Schema.NullOr(ThreadId),
+  myOptionIds: Schema.Array(PollOptionId),
+  asOf: Timestamp,
+});
+
+export type PollBallot = typeof PollBallot.Type;
+
+export type PollBallotPin = Assert<Pinned<typeof PollBallot, GeneratedPollBallot>>;
+
+/** A Google Drive file attached to the message: shown in the attachment slot. Fill order: 2. */
+export const DriveFileCard = Schema.Struct({ fileId: Schema.String, url: Schema.String });
+
+export type DriveFileCard = typeof DriveFileCard.Type;
+
+export type DriveFileCardPin = Assert<Pinned<typeof DriveFileCard, GeneratedDriveFileCard>>;
 
 export const CardFetch = Schema.Literals(["loading", "loaded", "failed"]);
 
@@ -248,6 +298,31 @@ export const GithubChecks = Schema.Literals(["passing", "pending", "failing"]);
 
 export type GithubChecksPin = Assert<Pinned<typeof GithubChecks, GeneratedGithubChecks>>;
 
+export const GithubChangedFile = Schema.Struct({
+  filename: Schema.String,
+  status: Schema.NullOr(Schema.String),
+  additions: Schema.Int,
+  deletions: Schema.Int,
+});
+
+export type GithubChangedFile = typeof GithubChangedFile.Type;
+
+export type GithubChangedFilePin = Assert<
+  Pinned<typeof GithubChangedFile, GeneratedGithubChangedFile>
+>;
+
+/** The thread-header card's changed files: the first page, and how many there are in all. */
+export const GithubChangedFiles = Schema.Struct({
+  files: Schema.Array(GithubChangedFile),
+  totalCount: Schema.Int,
+});
+
+export type GithubChangedFiles = typeof GithubChangedFiles.Type;
+
+export type GithubChangedFilesPin = Assert<
+  Pinned<typeof GithubChangedFiles, GeneratedGithubChangedFiles>
+>;
+
 const githubPullRequestFields = {
   owner: Schema.String,
   repo: Schema.String,
@@ -263,6 +338,7 @@ const githubPullRequestFields = {
   checks: Schema.NullOr(GithubChecks),
   githubUpdatedAt: Schema.NullOr(Timestamp),
   discussionThreadId: Schema.NullOr(ThreadId),
+  files: Schema.NullOr(GithubChangedFiles),
 };
 
 export const GithubPullRequest = Schema.Struct(githubPullRequestFields);
@@ -273,7 +349,10 @@ export type GithubPullRequestPin = Assert<
   Pinned<typeof GithubPullRequest, GeneratedGithubPullRequest>
 >;
 
-/** `GET /api/v1/github/pull_requests/:id/card?messageId=`: the card as the viewer may see it. */
+/**
+ * `GET /api/v1/rooms/:roomId/github/pull_requests/:id/card?messageId=|threadId=`: the card as
+ * the viewer may see it; `files` is filled only for `threadId` (the thread header).
+ */
 export const GithubPullRequestCard = Schema.Union([
   Schema.Struct({ state: Schema.Literal("hidden") }),
   Schema.Struct({ state: Schema.Literal("loading") }),
@@ -343,7 +422,10 @@ export type FizzyCard = typeof FizzyCard.Type;
 
 export type FizzyCardPin = Assert<Pinned<typeof FizzyCard, GeneratedFizzyCard>>;
 
-/** `GET /api/v1/fizzy/cards/:id/card?messageId=`: the card as the viewer's Fizzy account sees it. */
+/**
+ * `GET /api/v1/rooms/:roomId/fizzy/cards/:id/card?messageId=`: the card as the viewer's Fizzy
+ * account sees it.
+ */
 export const FizzyCardPreview = Schema.Union([
   Schema.Struct({ state: Schema.Literal("not_connected") }),
   Schema.Struct({ state: Schema.Literal("not_found") }),
@@ -358,18 +440,88 @@ export type FizzyCardPreviewPin = Assert<
   Pinned<typeof FizzyCardPreview, GeneratedFizzyCardPreview>
 >;
 
+/** A quoted message's preview: same-room sources only. */
+export const QuotePreview = Schema.Struct({
+  messageId: MessageId,
+  roomId: RoomId,
+  threadId: Schema.NullOr(ThreadId),
+  creatorId: UserId,
+  authorName: Schema.String,
+  roomLabel: Schema.String,
+  excerpt: Schema.String,
+  createdAt: Timestamp,
+});
+
+export type QuotePreview = typeof QuotePreview.Type;
+
+export type QuotePreviewPin = Assert<Pinned<typeof QuotePreview, GeneratedQuotePreview>>;
+
 /**
- * One card under a message, in the classic slot order. LinkedIn and link cards are absent while
- * `embedsSuppressed`; a kind the server doesn't fill yet is absent too.
+ * A permalink to another message (`message_link_cards`). `preview` is inline when the source is
+ * in the same room; otherwise fetch it per viewer. Fill order: 5.
  */
-export const MessageCard = Schema.Union([
+export const QuoteCard = Schema.Struct({
+  referenceId: Schema.Int,
+  preview: Schema.NullOr(QuotePreview),
+});
+
+export type QuoteCard = typeof QuoteCard.Type;
+
+export type QuoteCardPin = Assert<Pinned<typeof QuoteCard, GeneratedQuoteCard>>;
+
+/** `GET /api/v1/rooms/:roomId/message_links/:referenceId/card`: the preview, if the viewer may see it. */
+export const QuotePreviewResult = Schema.Union([
+  Schema.Struct({ state: Schema.Literal("hidden") }),
+  Schema.Struct({ state: Schema.Literal("loaded"), ...QuotePreview.fields }),
+]);
+
+export type QuotePreviewResult = typeof QuotePreviewResult.Type;
+
+export type QuotePreviewResultPin = Assert<
+  Pinned<typeof QuotePreviewResult, GeneratedQuotePreviewResult>
+>;
+
+/** Every kind the server sends today, in the classic slot order. */
+export const KnownMessageCard = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("drive"), data: DriveFileCard }),
   Schema.Struct({ kind: Schema.Literal("github"), data: GithubCardRef }),
   Schema.Struct({ kind: Schema.Literal("x"), data: XPostCard }),
   Schema.Struct({ kind: Schema.Literal("event"), data: EventCard }),
   Schema.Struct({ kind: Schema.Literal("fizzy"), data: FizzyCardRef }),
+  Schema.Struct({ kind: Schema.Literal("quote"), data: QuoteCard }),
   Schema.Struct({ kind: Schema.Literal("linkedin"), data: LinkedinCard }),
   Schema.Struct({ kind: Schema.Literal("link"), data: LinkCard }),
 ]);
+
+export type KnownMessageCard = typeof KnownMessageCard.Type;
+
+export type KnownMessageCardPin = Assert<Pinned<typeof KnownMessageCard, GeneratedMessageCard>>;
+
+/**
+ * A card this build can't read: a kind added after it, or a known kind whose `data` doesn't
+ * decode. Renders as nothing; encodes back to just its `kind`. Its wire shape is `ToleratedWire`.
+ */
+export const UnknownMessageCard = Schema.Struct({
+  kind: Schema.String,
+  data: Schema.optionalKey(Schema.Unknown),
+}).pipe(
+  Schema.decodeTo(Schema.Struct({ kind: Schema.Literal("unknown"), originalKind: Schema.String }), {
+    decode: SchemaGetter.transform((card) => ({
+      kind: "unknown" as const,
+      originalKind: card.kind,
+    })),
+    encode: SchemaGetter.transform((card) => ({ kind: card.originalKind })),
+  }),
+);
+
+export type UnknownMessageCard = typeof UnknownMessageCard.Type;
+
+/**
+ * One card under a message, in the classic slot order. LinkedIn and link cards are absent while
+ * `embedsSuppressed`. Tolerant: a card it can't read decodes to `{ kind: "unknown" }` instead of
+ * failing the whole message. The pin skips the fallback's wire shape (`ToleratedWire`).
+ */
+export const MessageCard = Schema.Union([KnownMessageCard, UnknownMessageCard]);
 
 export type MessageCard = typeof MessageCard.Type;
 
@@ -381,6 +533,7 @@ export const MessageCards = Schema.Struct({
   roomId: RoomId,
   threadId: Schema.NullOr(ThreadId),
   cards: Schema.Array(MessageCard),
+  asOf: Timestamp,
 });
 
 export type MessageCards = typeof MessageCards.Type;

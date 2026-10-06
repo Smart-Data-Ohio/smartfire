@@ -182,10 +182,10 @@ export type CreateScheduledMessagePin = Assert<
   Pinned<typeof CreateScheduledMessage, GeneratedCreateScheduledMessage>
 >;
 
-/** The body of `PATCH /api/v1/scheduled_messages/:id`; `null` keeps a field. */
+/** The body of `PATCH /api/v1/scheduled_messages/:id`; a field left out keeps its value. */
 export const UpdateScheduledMessage = Schema.Struct({
-  markdownSource: Schema.NullOr(Schema.String),
-  sendAt: Schema.NullOr(Timestamp),
+  markdownSource: Schema.optionalKey(Schema.String),
+  sendAt: Schema.optionalKey(Timestamp),
 });
 
 export type UpdateScheduledMessage = typeof UpdateScheduledMessage.Type;
@@ -203,13 +203,14 @@ export type ScheduledMessageFilterPin = Assert<
 >;
 
 /**
- * `GET /api/v1/scheduled_messages?state=&roomId=&before=`: pending soonest first, or past most
- * recent first; 50 a page.
+ * `GET /api/v1/scheduled_messages?status=&roomId=&before=`: pending soonest first, or past most
+ * recent first; 50 a page. `nextCursor` is opaque (it encodes `sendAt` and `id`); pass it back
+ * as `before`.
  */
 export const ScheduledMessageList = Schema.Struct({
   scheduledMessages: Schema.Array(ScheduledMessage),
   conversations: Schema.Array(ConversationName),
-  nextCursor: Schema.NullOr(ScheduledMessageId),
+  nextCursor: Schema.NullOr(Schema.String),
 });
 
 export type ScheduledMessageList = typeof ScheduledMessageList.Type;

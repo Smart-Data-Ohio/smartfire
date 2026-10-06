@@ -3,10 +3,10 @@
 /**
  * A Fizzy card the message links to (`fizzy_card_references`). Fizzy content is fetched with
  * each viewer's own Fizzy token and cached per viewer, so the client fetches
- * `GET /api/v1/fizzy/cards/:fizzyCardId/card?messageId=` ([`FizzyCardPreview`]), as the
- * classic lazy frame does (`controllers/fizzy_cards.rs`).
+ * `GET /api/v1/rooms/:roomId/fizzy/cards/:fizzyCardId/card?messageId=` ([`FizzyCardPreview`]),
+ * as the classic lazy frame does (`controllers/fizzy_cards.rs`).
  *
- * Fill order: 7.
+ * Fill order: 9.
  */
 export type FizzyCardRef = { 
 /**
