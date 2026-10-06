@@ -65,9 +65,33 @@ const permalinkRoute = createRoute({
   component: () => null,
 });
 
+/** `/app/r/$roomId/t/new?parent=`: the right pane drafting a thread's first reply on `parent`. */
+const newThreadRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "t/new",
+  validateSearch: (search: Record<string, unknown>): { parent: number } => ({
+    parent: parseId(String(search.parent ?? "")),
+  }),
+  component: () => null,
+});
+
+/** `/app/r/$roomId/t/$threadId`: the room with a thread open in the right pane. */
+const threadRoute = createRoute({
+  getParentRoute: () => roomRoute,
+  path: "t/$threadId",
+  params: {
+    parse: ({ threadId }) => ({ threadId: parseId(threadId) }),
+    stringify: ({ threadId }) => ({ threadId: `${threadId}` }),
+  },
+  component: () => null,
+});
+
 const routeTree = rootRoute.addChildren([
   kitchenSinkRoute,
-  shellRoute.addChildren([homeRoute, roomRoute.addChildren([permalinkRoute])]),
+  shellRoute.addChildren([
+    homeRoute,
+    roomRoute.addChildren([permalinkRoute, newThreadRoute, threadRoute]),
+  ]),
 ]);
 
 export const router = createRouter({

@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:mock": "playwright test -c playwright.mock.config.ts",
     "motion:scan": "npx -y transitions-agent@0.11.1 scan",
     "check": "pnpm lint && pnpm lint:anti-slop && pnpm typecheck && pnpm test && pnpm build"
   },
@@ -28,6 +29,8 @@
     "border-beam": "1.4.1",
     "bot-avatars": "0.2.2",
     "effect": "4.0.1",
+    "emojibase-data": "17.0.0",
+    "liquid-gooey": "0.2.2",
     "metal-fx": "2.0.11",
     "react": "19.3.0",
     "react-dom": "19.3.0",
