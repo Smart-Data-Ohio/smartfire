@@ -2,8 +2,8 @@ name: Rust
 
 # The Rust port in rust/: clippy, binary build and tests, in the toolchain stage of rust/Dockerfile (the
 # same libvips and ffmpeg builds as its image, so the storage vectors' byte checks run rather than
-# skip). The whole repository is mounted, so rust/.. is the Rails app the port reads as its
-# reference (assets, fixtures, schema).
+# skip). The port reads only its own inputs under rust/: rust/web and rust/fixtures (copied from
+# the Rails app) and the seeds and recordings Rails built once, which are committed.
 #
 # This workflow only checks: it has read-only contents permission, no secrets and no id-token, and
 # nothing is pushed or published. Deploys stay behind the manual Deploy to GCP workflow, which
@@ -121,9 +121,9 @@ jobs:
           print("Run the Rust gates" if rust else "No Rust inputs changed: skip the Rust gates")
           PY
 
-  # Builds or restores the pinned Rails reference image and the default/first_run/agents_ui
-  # seeds, and validates them with Rails. Other jobs restore that exact seed cache entry
-  # (or, on a miss, build and validate their own); both gates require this job.
+  # The committed default/first_run/agents_ui/ledger_originals seeds (parity/seeds/frozen), built
+  # once by the Rails app: their manifest, keys and schema version match this checkout, and the
+  # checker rejects changed, missing or out-of-date seeds. Every job restores them the same way.
   seeds:
     name: Rust seeds
     needs: changes
@@ -131,7 +131,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -139,12 +139,11 @@ jobs:
           ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
-      - name: Prepare and validate pinned Rails inputs
-        uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
-        with:
-          parity: full
-          toolchain: 'false'
-          save-caches: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'true' || 'false' }}
+      - name: Prove the seed check rejects changed or missing seeds
+        run: python3 -m unittest discover -s rust/parity -p test_frozen_seeds.py
+
+      - name: Check the committed seeds
+        run: python3 rust/parity/bin/frozen-seeds check
 
   # Every ordinary nextest test but the four LLVM-only ones (the llvm job), split round-robin
   # by nextest into twelve slices.
@@ -511,7 +510,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [database, acme, livekit, agents-ui]
+        suite: [acme, livekit, agents-ui]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -524,7 +523,7 @@ jobs:
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           cargo-cache: correctness
 
       - name: Build pinned correctness prerequisites
@@ -568,7 +567,7 @@ jobs:
         id: setup
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           cargo-cache: correctness
       # The prerequisite image only adds browsers and tools to the toolchain image, so the
       # server binary and campfire's test harnesses (what correctness.sh builds first)
@@ -720,7 +719,7 @@ jobs:
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           # The prerequisite image comes from the application host job.
           toolchain: 'false'
       - name: Collect the Rust hosts
@@ -788,7 +787,7 @@ jobs:
       - name: Prepare shared Rust CI inputs
         uses: ./.github/actions/rust-setup # zizmor: ignore[self-repository] -- setup must follow the selected checkout, including a manual PR ref
         with:
-          parity: reference
+          parity: seeds
           cargo-cache: correctness
       - name: Build pinned correctness prerequisites
         run: docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust

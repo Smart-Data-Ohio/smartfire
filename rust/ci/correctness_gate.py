@@ -19,7 +19,7 @@ from pathlib import Path
 from ignored_tests import ROOT, verify_junit
 
 SCOPES = {
-    "full": ["database", "acme", "browsers", "livekit", "messaging", "agents-ui"],
+    "full": ["acme", "browsers", "livekit", "messaging", "agents-ui"],
     "messaging-and-browsers": ["browsers", "messaging"],
 }
 

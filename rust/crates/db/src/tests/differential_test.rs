@@ -1,6 +1,6 @@
 //! Runs the same scenario as `scenario.rb` (reproduced below) through the Rust models and
-//! compares every table with the database the reference app produced from the same fixtures:
-//! frozen in `scenario_rails_rows.json`, or live when `CAMPFIRE_RUBY_SCENARIO_DB` points at one.
+//! compares every table with the database the reference app produced from the same fixtures,
+//! frozen in `scenario_rails_rows.json`.
 //!
 //! ```ruby
 //! m = rooms(:designers).messages.create!(body: "Hello <b>there</b>", client_message_id: "s1", creator: david)
@@ -229,27 +229,4 @@ fn scenario_matches_frozen_rails_rows() {
             .collect())
     });
     super::fixtures_test::assert_frozen_rows("scenario_rails_rows.json", &rows);
-}
-
-#[test]
-#[ignore = "needs CAMPFIRE_RUBY_SCENARIO_DB, the reference app's database after scenario.rb"]
-fn scenario_matches_ruby() {
-    let path = std::env::var("CAMPFIRE_RUBY_SCENARIO_DB").expect("CAMPFIRE_RUBY_SCENARIO_DB");
-    let ruby = Connection::open(path).unwrap();
-    let t = TestDb::new();
-    run_scenario(&t);
-
-    let mut mismatches = Vec::new();
-    for (table, order) in SCENARIO_TABLES {
-        let expected = normalized_dump(&ruby, table, order);
-        let actual = t.read(|c| Ok(normalized_dump(c, table, order)));
-        if expected != actual {
-            let only_ruby: Vec<_> = expected.iter().filter(|r| !actual.contains(r)).collect();
-            let only_rust: Vec<_> = actual.iter().filter(|r| !expected.contains(r)).collect();
-            mismatches.push(format!(
-                "{table}:\n  ruby only: {only_ruby:#?}\n  rust only: {only_rust:#?}"
-            ));
-        }
-    }
-    assert!(mismatches.is_empty(), "{}", mismatches.join("\n"));
 }

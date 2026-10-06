@@ -2,7 +2,7 @@
 set -euo pipefail
 repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$repo"
-suite=${1:?Expected database, acme, browsers, livekit, messaging, or agents-ui}
+suite=${1:?Expected acme, browsers, livekit, messaging, or agents-ui}
 # CI splits the longest suites across parallel jobs. CORRECTNESS_SHARD=K/N runs one
 # deterministic slice; CORRECTNESS_PART selects messaging's behaviour cases or its
 # original WS14/WS15 declarations (default: both). rust/ci/correctness_gate.py then
@@ -45,18 +45,6 @@ browser_images() {
 run_suite() {
   python3 rust/ci/ignored_tests.py
   case "$suite" in
-    database)
-      export OUT="$repo/rust/target/ci-differential"
-      # Nonzero microseconds retain Rails' six-digit DB timestamp representation.
-      export CAMPFIRE_FIXTURES_NOW='2026-03-02 16:00:00.123456'
-      bash rust/reference-tools/db/differential.sh --prepare-only
-      export CAMPFIRE_RUBY_FIXTURES_DB="$OUT/fixtures_ruby.sqlite3"
-      export CAMPFIRE_RUBY_SCENARIO_DB="$OUT/scenario_ruby.sqlite3"
-      export WS9_ROLLBACK_DIR="$repo/rust/target/ci-rollback"
-      export WS9_REFERENCE_IMAGE="$PARITY_IMAGE"
-      bash rust/reference-tools/auth/rollback.sh --prepare-only
-      ignored
-      ;;
     acme)
       local pebble="campfire-ci-pebble-$$"
       trap "docker rm -f '$pebble' >/dev/null 2>&1 || true" EXIT

@@ -242,7 +242,7 @@ def verify_junit(records, paths):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--filter", choices=["database", "acme", "browsers", "livekit", "messaging"])
+    parser.add_argument("--filter", choices=["acme", "browsers", "livekit", "messaging"])
     parser.add_argument("--package", action="store_true")
     parser.add_argument("--shard", type=parse_shard, help="K/N: only this shard of the suite's tests")
     parser.add_argument("--junit", type=Path, action="append", help="receipt; repeat to verify the union of shards")
