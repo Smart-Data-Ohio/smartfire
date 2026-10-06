@@ -3,9 +3,10 @@
 Runs the real script, phase by phase, against fakes for docker, once, curl and
 the host tools. No real container, ONCE or cloud command runs. The fakes model
 the one thing every decision hangs on: the live database's bytes in the
-storage volume, which the candidate's `campfire db-migrate` and a serving
-candidate can change. The real-Docker rehearsal of the same flow is
-rust/ops/tests/simulate_release.sh.
+storage volume, which the candidate's `campfire db-migrate` and a booted
+candidate can change, either with real writes ("+write") or with only its own
+bookkeeping ("+bookkeeping": bytes move, every row stays the same). The
+real-Docker rehearsal of the same flow is rust/ops/tests/simulate_release.sh.
 """
 import hashlib
 import json
@@ -42,6 +43,8 @@ def serving():
 def boot():
     crash = state["image"] == candidate and os.environ.get("CANDIDATE_CRASHES")
     state["running"] = not crash
+    if state["running"] and state["image"] == candidate and os.environ.get("CANDIDATE_BOOKKEEPING"):
+        db.write_bytes(db.read_bytes() + b"+bookkeeping")
     if state["running"] and state["image"] == candidate and os.environ.get("CANDIDATE_WRITES"):
         db.write_bytes(db.read_bytes() + b"+write")
     save()
@@ -53,6 +56,9 @@ if name == "docker":
     if args[0] == "ps":
         if "-a" in args or state["running"]:
             print("once-app-fixture")
+    elif args[:3] == ["inspect", "--type", "container"]:
+        # Only the leftover migration container is looked up this way.
+        sys.exit(0 if os.environ.get("LEFTOVER_MIGRATION") else 1)
     elif args[0] == "inspect":
         fmt = args[args.index("--format") + 1]
         if ".State.Running" in fmt:
@@ -96,6 +102,19 @@ if name == "docker":
             sys.exit("a release container ran while the application was running")
         image = next(a for a in args if a in (candidate, os.environ["PREVIOUS"], os.environ["ROLLBACK_TAG"]))
         command = " ".join(args[args.index(image) + 1:])
+        if image != candidate and "verify-additive-sqlite-migration" in command:
+            mount = next(a for a in args if a.endswith(":/rails/storage"))
+            copies = pathlib.Path(mount.rsplit(":", 1)[0])
+            if copies == work / "volume":
+                sys.exit("the rollback comparison must read copies")
+            reference = (copies / "reference/production.sqlite3").read_bytes()
+            live = (copies / "live/production.sqlite3").read_bytes()
+            if live.replace(b"+bookkeeping", b"") == reference:
+                print("MATCH: 88 preexisting tables preserved")
+                print("ADDITIVE: 0 tables, 0 columns")
+                sys.exit(0)
+            print("MISMATCH: 1 preservation checks failed")
+            sys.exit(1)
         if image != candidate:
             if "db-check" not in command:
                 sys.exit("the previous image may only check a copy: " + command)
@@ -383,6 +402,50 @@ class ReleaseTest(unittest.TestCase):
         self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
         self.assertIn(["once", "update", "fixture.invalid", "--image", PREVIOUS, "--auto-update=false"], commands)
 
+    def test_an_unhealthy_candidate_whose_boot_only_did_bookkeeping_gets_the_frozen_bytes_back(self):
+        # A real candidate always writes on boot (its job queue, AUTOINCREMENT
+        # counters), even when /up never answers.
+        results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1", CANDIDATE_BOOKKEEPING="1")
+        self.assertEqual(results["cutover"][0].returncode, 10)
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database+migrated+bookkeeping")
+        result, commands = self.host.run("rollback")
+        self.assertOk(result)
+        rollback = self.host.json("rollback-result.json")
+        self.assertEqual(rollback["action"], "migration-reverted")
+        self.assertTrue(rollback["database_restored"])
+        self.assertTrue(rollback["rows_match_migration"])
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database")
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+        compare = next(c for c in commands if c[:2] == ["docker", "run"])
+        self.assertIn(ROLLBACK_TAG, compare)
+        self.assertIn("none", compare)
+        self.assertIn("verify-additive-sqlite-migration", compare)
+
+    def test_rollback_removes_a_migration_container_only_when_one_was_left(self):
+        for leftover in ["", "1"]:
+            with self.subTest(leftover=leftover):
+                self.tearDown()
+                self.setUp()
+                results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1")
+                self.assertEqual(results["cutover"][0].returncode, 10)
+                result, commands = self.host.run("rollback", LEFTOVER_MIGRATION=leftover)
+                self.assertOk(result)
+                removed = ["docker", "rm", "-f", "campfire-migrate-fixture"] in commands
+                self.assertEqual(removed, bool(leftover))
+                self.assertEqual("removed the migration container" in result.stderr, bool(leftover))
+
+    def test_an_unhealthy_candidate_without_migrations_keeps_its_bookkeeping_and_rolls_back(self):
+        results = self.host.release(CANDIDATE_UNHEALTHY="1", CANDIDATE_BOOKKEEPING="1")
+        self.assertEqual(results["cutover"][0].returncode, 10)
+        result, _ = self.host.run("rollback")
+        self.assertOk(result)
+        rollback = self.host.json("rollback-result.json")
+        self.assertEqual(rollback["action"], "image-rolled-back")
+        self.assertFalse(rollback["database_restored"])
+        self.assertTrue(rollback["rows_match_freeze"])
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database+bookkeeping")
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+
     def test_an_unhealthy_candidate_without_migrations_rolls_back_the_image_only(self):
         results = self.host.release(CANDIDATE_CRASHES="1")
         self.assertEqual(results["cutover"][0].returncode, 10)
@@ -397,10 +460,11 @@ class ReleaseTest(unittest.TestCase):
             with self.subTest(action=action):
                 self.tearDown()
                 self.setUp()
-                results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1", CANDIDATE_WRITES="1")
+                results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1",
+                                            CANDIDATE_BOOKKEEPING="1", CANDIDATE_WRITES="1")
                 self.assertEqual(results["cutover"][0].returncode, 10)
                 written = self.host.db.read_bytes()
-                self.assertEqual(written, b"SQLite fixture database+migrated+write")
+                self.assertEqual(written, b"SQLite fixture database+migrated+bookkeeping+write")
                 result, commands = self.host.run("rollback", PREVIOUS_REFUSES=refuses)
                 self.assertEqual(result.returncode, 30, result.stdout + result.stderr)
                 self.assertIn("OPERATOR ACTION REQUIRED", result.stderr)
@@ -410,7 +474,7 @@ class ReleaseTest(unittest.TestCase):
                 self.assertEqual(self.host.fake()["image"], image)
                 # The database bytes are whatever the writes left, plus nothing.
                 self.assertTrue(self.host.db.read_bytes().startswith(written))
-                check = next(c for c in commands if c[:2] == ["docker", "run"])
+                check = next(c for c in commands if c[:2] == ["docker", "run"] and "db-check" in c)
                 self.assertIn(ROLLBACK_TAG, check)
                 self.assertIn("none", check)
                 self.assertNotIn("fixture-volume:/rails/storage", check, "the check reads a copy")

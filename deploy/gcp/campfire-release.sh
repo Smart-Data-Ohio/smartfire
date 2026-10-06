@@ -365,14 +365,17 @@ live_database_fingerprint() {
 }
 
 # The stopped database's own files, byte for byte, beside the release state.
-# This is what the rehearsal migrates a copy of, and what a rollback puts back
-# when the only thing that touched the live database was this release's
-# migration. The -shm index is not kept: SQLite rebuilds it from the log.
+# frozen-live is what the rehearsal migrates a copy of, and what a rollback puts
+# back when nothing but this release's migration and the new image's own
+# bookkeeping touched the live database. migrated-live is the live database as
+# the cutover's migration left it, which is what a rollback compares against.
+# The -shm index is not kept: SQLite rebuilds it from the log.
 FROZEN_DB_DIR_NAME="frozen-live"
+MIGRATED_DB_DIR_NAME="migrated-live"
 
-capture_frozen_database() {
-  local mountpoint="$1" fingerprint="$2" dir part
-  dir="$(state_path "$FROZEN_DB_DIR_NAME")"
+keep_database_copy() {
+  local mountpoint="$1" fingerprint="$2" name="$3" dir part
+  dir="$(state_path "$name")"
   rm -rf "$dir"
   install -d -m 0700 "$dir" "$dir/db"
   for part in production.sqlite3 production.sqlite3-wal; do
@@ -380,9 +383,13 @@ capture_frozen_database() {
       cp -p "$mountpoint/db/$part" "$dir/db/$part"
     fi
   done
-  [ "$(live_database_fingerprint "$dir")" = "$fingerprint" ] \
+  [ "$(live_database_fingerprint "$dir")" = "$fingerprint" ] || return 1
+  log "kept a byte-exact copy of the stopped database in $dir"
+}
+
+capture_frozen_database() {
+  keep_database_copy "$1" "$2" "$FROZEN_DB_DIR_NAME" \
     || die "freeze: the byte-exact copy of the stopped database does not match its fingerprint"
-  log "freeze: kept a byte-exact copy of the stopped database in $dir"
 }
 
 # Only ever called with the application stopped and the live database proven to
@@ -1022,14 +1029,15 @@ phase_preflight() {
 
   # Now that the real sizes are known, size the requirement properly: the
   # storage volume is archived once and copied once more, and the database is
-  # kept byte for byte, copied for the rehearsal and snapshotted twice there,
-  # and kept once more as after.sqlite3. The live migration's write-ahead log
-  # can grow to about the database's size inside the volume.
+  # kept byte for byte (frozen and again migrated), copied for the rehearsal and
+  # snapshotted twice there, and kept once more as after.sqlite3. The live
+  # migration's write-ahead log can grow to about the database's size inside
+  # the volume.
   image_mb=$(( $(docker image inspect "$IMAGE_REF" --format '{{.Size}}') / 1048576 ))
   volume_mb="$(du -sm "$mountpoint" | awk '{print $1}')"
   db_mb="$(du -sm "$mountpoint/db" | awk '{print $1}')"
   local need_state_mb need_docker_mb state_fs docker_fs
-  need_state_mb=$(( volume_mb * 2 + db_mb * 5 + 512 ))
+  need_state_mb=$(( volume_mb * 2 + db_mb * 6 + 512 ))
   need_docker_mb=$(( image_mb + db_mb + 512 ))
   state_fs="$(df -P "$STATE_ROOT" | awk 'NR==2 {print $1}')"
   docker_fs="$(df -P /var/lib/docker | awk 'NR==2 {print $1}')"
@@ -1412,6 +1420,11 @@ migrate_live_database() {
     exit "$EXIT_UNHEALTHY"
   fi
   log "cutover: live database migrated: $(describe_migrations "$applied")"
+  if [ "$migrated" != "$frozen" ] \
+     && ! keep_database_copy "$mountpoint" "$migrated" "$MIGRATED_DB_DIR_NAME"; then
+    warn "cutover: could not keep a copy of the migrated database"
+    exit "$EXIT_UNHEALTHY"
+  fi
 }
 
 phase_cutover() {
@@ -1640,6 +1653,36 @@ restore_previous_image() {
   fi
 }
 
+# True when the stopped live database holds exactly the rows of the reference
+# copy (the database as this release's migration left it, or as it was frozen
+# when nothing was migrated): every table, row for row, with no table or column
+# added. The new image's boot always writes something (its job queue and SQLite's
+# AUTOINCREMENT counters) even when it never served a request; this is how a
+# rollback tells that bookkeeping from real writes. Uses the previous image's
+# own preservation verifier on copies, with no network.
+live_rows_match_reference() {
+  local mountpoint="$1" reference="$2" image="$3" dir part status=0 output
+  dir="$(state_path rollback-compare)"
+  output="$(state_path rollback-compare.txt)"
+  rm -rf "$dir"
+  install -d -o 1000 -g 1000 -m 0700 "$dir" "$dir/reference" "$dir/live"
+  for part in production.sqlite3 production.sqlite3-wal; do
+    if [ -f "$reference/db/$part" ]; then
+      install -m 0600 -o 1000 -g 1000 "$reference/db/$part" "$dir/reference/$part"
+    fi
+    if [ -f "$mountpoint/db/$part" ]; then
+      install -m 0600 -o 1000 -g 1000 "$mountpoint/db/$part" "$dir/live/$part"
+    fi
+  done
+  docker run --rm --network none --memory 768m -v "$dir:/rails/storage" "$image" \
+    campfire verify-additive-sqlite-migration \
+      /rails/storage/reference/production.sqlite3 /rails/storage/live/production.sqlite3 \
+    > "$output" 2>&1 || status=$?
+  chmod 0600 "$output"
+  rm -rf "$dir"
+  [ "$status" -eq 0 ] && grep -qx 'ADDITIVE: 0 tables, 0 columns' "$output"
+}
+
 # Runs the previous image's own `campfire db-check` against a copy of the live
 # database (never the live files, and with no network), which is exactly the
 # schema test its boot applies.
@@ -1726,7 +1769,10 @@ phase_rollback() {
   # A cutover killed mid-migration (a dropped SSH session) can leave its
   # `docker run` behind. SQLite discards an uncommitted migration, but nothing
   # may be writing while the database is inspected.
-  if docker rm -f "campfire-migrate-$RELEASE_LABEL" >/dev/null 2>&1; then
+  # (`docker rm -f` succeeds for a missing container, so look first.)
+  if docker inspect --type container "campfire-migrate-$RELEASE_LABEL" >/dev/null 2>&1; then
+    docker rm -f "campfire-migrate-$RELEASE_LABEL" >/dev/null 2>&1 \
+      || die "rollback: could not remove the leftover migration container campfire-migrate-$RELEASE_LABEL"
     warn "rollback: removed the migration container an interrupted cutover left behind"
   fi
   purge_volume_scratch "$mountpoint"
@@ -1770,6 +1816,73 @@ phase_rollback() {
     fi
     warn "rollback: could not put the frozen bytes back; treating the database as changed"
     current_fingerprint="$(live_database_fingerprint "$mountpoint")"
+  elif [ "$current_fingerprint" != "$frozen_fingerprint" ]; then
+    # The bytes moved, but maybe only by the new image's boot bookkeeping.
+    local reference reference_fingerprint="$frozen_fingerprint"
+    reference="$(state_path "$FROZEN_DB_DIR_NAME")"
+    if [ -n "$migrated_fingerprint" ] && [ "$migrated_fingerprint" != "$frozen_fingerprint" ]; then
+      reference="$(state_path "$MIGRATED_DB_DIR_NAME")"
+      reference_fingerprint="$migrated_fingerprint"
+    fi
+    if [ "$(live_database_fingerprint "$reference")" = "$reference_fingerprint" ] \
+       && live_rows_match_reference "$mountpoint" "$reference" "$rollback_tag"; then
+      log "rollback: every row matches the database as this release left it before the new image started; only the new image's bookkeeping changed it"
+      if [ "$reference_fingerprint" = "$frozen_fingerprint" ]; then
+        # Nothing was migrated, so the previous image reads this database as is:
+        # there is nothing to put back, and no reason to write to it.
+        action="image-rolled-back"
+        reason="the new image changed only its own bookkeeping in the database, which the previous image reads as is; nothing was lost"
+        restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+        if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
+        warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
+        jq -n \
+          --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
+          --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
+          --arg restored_image "$RESTORE_TARGET" --arg previous_image "$previous_image" \
+          --arg rollback_tag "$rollback_tag" \
+          --arg frozen "$frozen_fingerprint" --arg current "$current_fingerprint" \
+          --arg health "$health" --arg timer "$TIMER_UNIT" \
+          '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
+            reason:$reason, database_restored:false, rows_match_freeze:true,
+            restored_image:$restored_image, previous_image:$previous_image,
+            retained_local_tag:$rollback_tag, frozen_live_database_sha256:$frozen,
+            current_live_database_sha256:$current, health:$health, feed_timer:$timer,
+            feed_timer_state:"left paused for operator review"}' \
+          | write_state rollback-result.json
+        log "rollback: finished with health=$health"
+        return 0
+      fi
+      if restore_frozen_database "$mountpoint" "$frozen_fingerprint"; then
+        action="migration-reverted"
+        reason="only this release's migration and the new image's own bookkeeping had changed the live database, so its frozen bytes were put back and the previous image was restored; nothing was lost"
+        restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+        if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
+        warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
+        jq -n \
+          --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
+          --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
+          --arg restored_image "$RESTORE_TARGET" --arg previous_image "$previous_image" \
+          --arg rollback_tag "$rollback_tag" \
+          --arg frozen "$frozen_fingerprint" --arg migrated "$migrated_fingerprint" \
+          --arg replaced "$current_fingerprint" \
+          --arg health "$health" --arg timer "$TIMER_UNIT" \
+          '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
+            reason:$reason, database_restored:true, rows_match_migration:true,
+            restored_image:$restored_image,
+            previous_image:$previous_image, retained_local_tag:$rollback_tag,
+            frozen_live_database_sha256:$frozen, migrated_live_database_sha256:$migrated,
+            replaced_live_database_sha256:$replaced, current_live_database_sha256:$frozen,
+            health:$health, feed_timer:$timer,
+            feed_timer_state:"left paused for operator review"}' \
+          | write_state rollback-result.json
+        log "rollback: finished with health=$health"
+        return 0
+      fi
+      warn "rollback: could not put the frozen bytes back; treating the database as changed"
+      current_fingerprint="$(live_database_fingerprint "$mountpoint")"
+    else
+      warn "rollback: the live database holds rows the release did not write (see $(state_path rollback-compare.txt))"
+    fi
   fi
 
   if [ "$current_fingerprint" != "$frozen_fingerprint" ]; then

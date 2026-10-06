@@ -782,8 +782,9 @@ jobs:
               echo "## Rolled back"
               echo
               if [ "$action" = "migration-reverted" ]; then
-                echo "Only this release's migration had touched the live database, so its frozen"
-                echo "bytes were put back before the previous image was restored."
+                echo "Only this release's migration (and, at most, the new image's own job-queue"
+                echo "bookkeeping, with every row unchanged) had touched the live database, so its"
+                echo "frozen bytes were put back before the previous image was restored."
               fi
               echo "${reason}."
               echo
