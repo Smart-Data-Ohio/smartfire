@@ -1,11 +1,13 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { userFixture } from "../../api/testing.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
+import { mutations } from "../../store/store.ts";
 import { ActivityRow } from "./activity-row.tsx";
 
 const NOW = Date.parse("2026-10-06T12:00:00.000Z");
 
-function item(state: ActivityItem["state"]): ActivityItem {
+function item(state: ActivityItem["state"], creatorId: number | null = null): ActivityItem {
   return {
     id: 7,
     eventType: "mention",
@@ -21,7 +23,7 @@ function item(state: ActivityItem["state"]): ActivityItem {
       threadId: null,
       messageId: 9001,
       eventId: null,
-      creatorId: null,
+      creatorId,
       title: "general",
       body: "Can you review the launch plan?",
       occurredAt: "2026-10-06T11:00:00.000Z",
@@ -32,9 +34,9 @@ function item(state: ActivityItem["state"]): ActivityItem {
   };
 }
 
-function renderRow(state: ActivityItem["state"]) {
+function renderRow(state: ActivityItem["state"], creatorId: number | null = null) {
   const handlers = { onOpen: vi.fn(), onAction: vi.fn(), onMenu: vi.fn() };
-  const subject = item(state);
+  const subject = item(state, creatorId);
 
   render(
     <ActivityRow
@@ -51,7 +53,20 @@ function renderRow(state: ActivityItem["state"]) {
   return { handlers, subject, open: screen.getByRole("button", { name: /general/ }) };
 }
 
+afterEach(() => mutations.reset());
+
 describe("an activity row", () => {
+  it("names a live item's creator as soon as their profile lands", () => {
+    renderRow("unread", 8);
+
+    expect(screen.queryByText("Lucía Fernández")).toBeNull();
+
+    act(() => mutations.mergeUsers([userFixture(8, "Lucía Fernández")]));
+
+    expect(screen.getByText("Lucía Fernández")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Lucía Fernández/ })).toBeTruthy();
+  });
+
   it("shows the kind, title and excerpt, and opens on click", () => {
     const { handlers, subject, open } = renderRow("unread");
 
