@@ -32,6 +32,7 @@ import { Presence } from "./presence.ts";
 import { ActionError, asAction } from "./run.ts";
 import * as savedActions from "./saved-actions.ts";
 import * as scheduledActions from "./scheduled-actions.ts";
+import * as searchActions from "./search-actions.ts";
 import * as session from "./session.ts";
 import { SyncSocket } from "./socket.ts";
 import * as threadActions from "./thread-actions.ts";
@@ -205,6 +206,22 @@ export function isScheduledDropped(error: Error): boolean {
   return error instanceof ActionError && error.tag === "ScheduledDropped";
 }
 
+/**
+ * Global search (S3). Loads land in the search store (errors too) and never reject; writes to
+ * the recent searches reject on failure, after putting the list back.
+ */
+const search = {
+  /** Loads the query's first page (sections included); a held list keeps its rows meanwhile. */
+  run: (query: string): Promise<void> => runAction(searchActions.run(query)),
+  /** The next older page of the query's matches. */
+  loadMore: (query: string): Promise<void> => runAction(searchActions.loadMore(query)),
+  loadRecents: (): Promise<void> => runAction(searchActions.loadRecents()),
+  /** Remembers a submitted query (it moves to the top of the recents at once). */
+  record: (query: string): Promise<void> => runAction(searchActions.record(query)),
+  /** Forgets every recent search. */
+  clearRecents: (): Promise<void> => runAction(searchActions.clearRecents()),
+};
+
 /** What React calls. Nothing here throws synchronously; failures land in the store or reject. */
 export const actions = {
   messages,
@@ -212,6 +229,7 @@ export const actions = {
   activity,
   saved,
   scheduled,
+  search,
 
   endpointUrl: (path: string): Promise<string> => runtime.runPromise(endpointUrl(path)),
 
