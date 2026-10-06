@@ -74,3 +74,20 @@ export const ApiErrorResponse = Schema.Struct({ error: ApiError });
 export type ApiErrorResponsePin = Assert<
   Pinned<typeof ApiErrorResponse, GeneratedApiErrorResponse>
 >;
+
+/** The request got no response at all: offline, a dropped connection, DNS. Worth retrying. */
+export class NetworkError extends Schema.TaggedError<NetworkError>()("NetworkError", {
+  message: Schema.String,
+}) {}
+
+/**
+ * A response the client can't use: a 5xx, an error body outside the contract, or a success body
+ * that fails its schema. `status` is the HTTP status (0 when there was none to speak of).
+ */
+export class ServerError extends Schema.TaggedError<ServerError>()("ServerError", {
+  status: Schema.Int,
+  message: Schema.String,
+}) {}
+
+/** Everything an `/api/v1` call can fail with. */
+export type ApiFailure = ApiError | NetworkError | ServerError;

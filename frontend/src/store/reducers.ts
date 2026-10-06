@@ -53,10 +53,7 @@ function insertOrdered(
   return [...ids.slice(0, low), message.id, ...ids.slice(low)];
 }
 
-function mergeUserList(
-  users: Readonly<Record<number, User>>,
-  list: readonly User[],
-): Readonly<Record<number, User>> {
+function mergeUserList(users: State["users"], list: readonly User[]): State["users"] {
   if (list.length === 0) {
     return users;
   }
@@ -124,11 +121,7 @@ export function loadSidebar(state: State, sidebar: Sidebar): State {
   };
 }
 
-function updateRow(
-  state: State,
-  roomId: number,
-  change: (row: SidebarRow) => SidebarRow,
-): State {
+function updateRow(state: State, roomId: number, change: (row: SidebarRow) => SidebarRow): State {
   const row = state.sidebar.rows[roomId];
 
   if (row === undefined) {
@@ -226,6 +219,7 @@ export function applyPage(state: State, roomId: number, page: MessagePage, mode:
   }
 
   const timeline = timelineOf(state, roomId);
+
   const pageIds = page.messages
     .filter((message) => state.tombstones[message.id] === undefined)
     .map((message) => message.id);
@@ -409,13 +403,7 @@ export function discardPending(state: State, clientMessageId: string): State {
   return removePending(state, clientMessageId);
 }
 
-function setTyping(
-  state: State,
-  topic: string,
-  userId: number,
-  on: boolean,
-  now: number,
-): State {
+function setTyping(state: State, topic: string, userId: number, on: boolean, now: number): State {
   const typists = state.typing[topic] ?? {};
 
   if (!on && typists[userId] === undefined) {
@@ -426,7 +414,10 @@ function setTyping(
 
   return {
     ...state,
-    typing: { ...state.typing, [topic]: on ? { ...others, [userId]: now + TYPING_TTL_MS } : others },
+    typing: {
+      ...state.typing,
+      [topic]: on ? { ...others, [userId]: now + TYPING_TTL_MS } : others,
+    },
   };
 }
 
@@ -484,11 +475,7 @@ export function applyEvents(state: State, events: readonly SyncEvent[], now: num
   for (const event of events) {
     switch (event.type) {
       case "message.created":
-        next = stopTypingFor(
-          receiveMessage(next, event.data),
-          event.topic,
-          event.data.creatorId,
-        );
+        next = stopTypingFor(receiveMessage(next, event.data), event.topic, event.data.creatorId);
         break;
       case "message.updated":
         next = updateMessage(next, event.data);

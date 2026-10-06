@@ -1,0 +1,173 @@
+/* The composer card and the typing line under it. */
+@layer app {
+  .composer {
+    flex-shrink: 0;
+    padding: 0 var(--space-5);
+  }
+
+  .composer .beam-host {
+    border-radius: var(--radius-lg);
+  }
+
+  .composer-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    background: var(--bg-pane);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+    transition:
+      box-shadow var(--duration-small) var(--ease-enter),
+      background-color var(--duration-small) var(--ease-enter);
+  }
+
+  .composer-card:hover {
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border-strong), var(--text-faint) 30%);
+  }
+
+  .composer-card:focus-within {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in oklch, var(--accent), transparent 30%),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 85%);
+  }
+
+  .composer-input {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    max-height: 50vh;
+    padding: var(--space-3) var(--space-4) var(--space-1);
+    border: 0;
+    background: transparent;
+    font-size: var(--text-composer);
+    line-height: var(--leading-composer);
+    resize: none;
+    overflow-y: auto;
+  }
+
+  .composer-input:focus-visible {
+    outline: none;
+  }
+
+  .composer-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .composer-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-1-5) var(--space-1-5);
+  }
+
+  .composer-formats {
+    display: flex;
+    flex: 1;
+    gap: var(--space-0-5);
+    opacity: 0.7;
+    transition: opacity var(--duration-small) var(--ease-enter);
+  }
+
+  .composer-card:focus-within .composer-formats,
+  .composer-formats:hover {
+    opacity: 1;
+  }
+
+  .composer-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-faint);
+    font-size: 11px;
+    opacity: 0;
+    translate: var(--distance-micro) 0;
+    transition:
+      opacity var(--duration-small) var(--ease-enter),
+      translate var(--duration-small) var(--ease-enter);
+  }
+
+  .composer-hint[data-visible] {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .composer-send {
+    --button-height: 28px;
+
+    width: 36px;
+    padding: 0;
+  }
+
+  .composer-send:disabled {
+    color: var(--text-faint);
+    opacity: 1;
+  }
+
+  /* The typing line: fixed height, so the composer above never moves. */
+  .typing {
+    display: flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .typing-line {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .typing-line strong {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .typing-dots {
+    display: inline-flex;
+    gap: 3px;
+    padding: 0 2px;
+  }
+
+  .typing-dots > span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    /* Opacity only, on the spinner's clock: it keeps its pace under reduced motion. */
+    animation: typing-dot calc(var(--duration-spin) * 1.6) var(--ease-move) infinite;
+  }
+
+  .typing-dots > span:nth-child(2) {
+    animation-delay: calc(var(--duration-spin) * 0.2);
+  }
+
+  .typing-dots > span:nth-child(3) {
+    animation-delay: calc(var(--duration-spin) * 0.4);
+  }
+
+  @keyframes typing-dot {
+    0%,
+    60%,
+    100% {
+      opacity: 0.25;
+    }
+
+    30% {
+      opacity: 1;
+    }
+  }
+
+  @media (width < 720px) {
+    .composer {
+      padding: 0 var(--space-2) env(safe-area-inset-bottom);
+    }
+
+    .composer-hint {
+      display: none;
+    }
+  }
+}

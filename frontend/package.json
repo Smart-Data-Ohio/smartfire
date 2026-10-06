@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:mock": "vite --mode mock",
     "build": "vite build",
     "preview": "vite preview",
     "gen": "rm -f src/gen/*.ts && cargo test -p campfire_api_types export_bindings -j 4",

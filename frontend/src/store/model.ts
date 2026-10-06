@@ -8,16 +8,27 @@ import type { RoomDetail } from "../gen/RoomDetail.ts";
 import type { SidebarRow } from "../gen/SidebarRow.ts";
 
 export type { Me } from "../gen/Me.ts";
+
 export type { MessageDTO } from "../gen/MessageDTO.ts";
+
 export type { MessagePage } from "../gen/MessagePage.ts";
+
 export type { Presence } from "../gen/Presence.ts";
+
 export type { RoomCategory } from "../gen/RoomCategory.ts";
+
 export type { RoomDetail } from "../gen/RoomDetail.ts";
+
 export type { RoomKind } from "../gen/RoomKind.ts";
+
 export type { Sidebar } from "../gen/Sidebar.ts";
+
 export type { SidebarRow } from "../gen/SidebarRow.ts";
+
 export type { SyncEvent } from "../gen/SyncEvent.ts";
+
 export type { User } from "../gen/User.ts";
+
 export type { UserPresence } from "../gen/UserPresence.ts";
 
 /**

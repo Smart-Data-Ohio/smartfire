@@ -1,0 +1,255 @@
+/* The conversation list: Slack's calm on the sidebar surface. */
+@layer app {
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--bg-sidebar);
+  }
+
+  .sidebar-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    height: var(--pane-header-height);
+    padding: 0 var(--space-2);
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .sidebar-workspace {
+    max-width: 100%;
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+  }
+
+  .sidebar-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-2) 0 var(--space-3);
+    overscroll-behavior: contain;
+  }
+
+  .sidebar-section + .sidebar-section {
+    margin-top: var(--space-3);
+  }
+
+  .sidebar-section-heading {
+    padding: 0 var(--space-2);
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: normal;
+  }
+
+  .sidebar-section-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    width: 100%;
+    height: 26px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+    text-align: start;
+    transition: color var(--duration-micro) var(--ease-enter);
+  }
+
+  .sidebar-section-trigger:hover {
+    color: var(--text);
+  }
+
+  .sidebar-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sidebar-row-gap);
+    margin: 0;
+    padding: 0 var(--space-2);
+    list-style: none;
+  }
+
+  .sidebar-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: calc(var(--sidebar-row-height) + 2px);
+    padding: 0 var(--space-1-5) 0 var(--space-2);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: var(--text-sidebar);
+    line-height: var(--leading-sidebar);
+    text-decoration: none;
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter);
+  }
+
+  .sidebar-row:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  .sidebar-row:active {
+    scale: 0.985;
+  }
+
+  .sidebar-row:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .sidebar-row[data-state="unread"] {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Discord's unread nub on the row's leading edge. */
+  .sidebar-row::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: calc(var(--space-2) * -1);
+    width: 4px;
+    height: 8px;
+    border-radius: 0 4px 4px 0;
+    background: var(--text);
+    translate: 0 -50%;
+    scale: 0 1;
+    transform-origin: left;
+    transition: scale var(--duration-small) var(--ease-move);
+  }
+
+  .sidebar-row[data-state="unread"]::before {
+    scale: 1;
+  }
+
+  .sidebar-row[data-state="muted"] {
+    color: var(--text-faint);
+    opacity: 0.7;
+  }
+
+  .sidebar-row[data-state="selected"] {
+    background: var(--bg-selected);
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .sidebar-row-glyph {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+  }
+
+  .sidebar-you .avatar {
+    --avatar-ring: color-mix(in oklch, var(--bg-sidebar), var(--bg-app) 55%);
+  }
+
+  .sidebar-row-glyph .avatar {
+    --avatar-ring: var(--bg-sidebar);
+  }
+
+  .sidebar-row:hover .sidebar-row-glyph .avatar {
+    --avatar-ring: var(--bg-hover);
+  }
+
+  .sidebar-row[data-state="selected"] .sidebar-row-glyph .avatar {
+    --avatar-ring: var(--bg-selected);
+  }
+
+  .sidebar-row-group {
+    border-radius: var(--radius-xs);
+    background: var(--bg-active);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: var(--weight-semibold);
+  }
+
+  .sidebar-row-icon {
+    opacity: 0.75;
+  }
+
+  .sidebar-row-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-row-muted {
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+
+  .sidebar-empty {
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-sidebar);
+  }
+
+  .sidebar-error {
+    padding: var(--space-3) var(--space-4);
+    color: var(--danger-text);
+  }
+
+  .sidebar-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .sidebar-skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* Your own panel, pinned under the list. */
+  .sidebar-you {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+    background: color-mix(in oklch, var(--bg-sidebar), var(--bg-app) 55%);
+  }
+
+  .sidebar-you-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+  }
+
+  .sidebar-you-name,
+  .sidebar-you-status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-you-name {
+    font-size: var(--text-sidebar);
+    font-weight: var(--weight-semibold);
+  }
+
+  .sidebar-you-status {
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+}
+
+@layer app {
+  /* A closed badge keeps its pop-out but gives its width back to the name. */
+  .sidebar-row .badge[data-open="false"] {
+    width: 0;
+    margin-left: calc(var(--space-2) * -1);
+  }
+}

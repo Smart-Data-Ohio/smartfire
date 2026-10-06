@@ -35,8 +35,7 @@ export const mutations = {
   setConnection: (connection: ConnectionStatus) =>
     apply((state) => (state.connection === connection ? state : { ...state, connection })),
   mergeUsers: (users: readonly User[]) => apply((state) => reduce.mergeUsers(state, users)),
-  setPresence: (list: readonly UserPresence[]) =>
-    apply((state) => reduce.setPresence(state, list)),
+  setPresence: (list: readonly UserPresence[]) => apply((state) => reduce.setPresence(state, list)),
   setSidebarLoading: () =>
     apply((state) => ({ ...state, sidebar: { ...state.sidebar, status: "loading" } })),
   setSidebarFailed: () =>
