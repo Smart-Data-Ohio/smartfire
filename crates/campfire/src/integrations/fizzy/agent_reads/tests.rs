@@ -1,4 +1,8 @@
 use super::*;
+use campfire_app::integrations::fizzy::accounts::Account;
+use rails_compat::ar_encryption::ArEncryption;
+use serde_json::Value;
+use serde_json::json;
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{

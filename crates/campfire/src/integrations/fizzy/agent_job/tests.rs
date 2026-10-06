@@ -1,4 +1,14 @@
 use super::*;
+use campfire_db::Job;
+use campfire_jobs::JobKind;
+use campfire_app::integrations::action_claims::FIZZY;
+use campfire_app::integrations::action_claims;
+use campfire_app::integrations::fizzy::accounts::Account;
+use campfire_app::integrations::fizzy::agent_action::Action;
+use rails_compat::ar_encryption::ArEncryption;
+use rusqlite::params;
+use serde_json::Value;
+use serde_json::json;
 use crate::{
     controllers::presenters::test_support::*,
     integrations::{

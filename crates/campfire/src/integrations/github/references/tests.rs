@@ -1,5 +1,6 @@
 use super::super::pull_requests::PullRequest;
 use super::*;
+use campfire_db::Tx;
 use crate::{app, config::Config};
 use campfire_db::{Message, MessageChanges, NewMessage, fixtures};
 

@@ -1,5 +1,5 @@
 //! PR #176 regressions use the pinned Rails callbacks and real production adapters.
-use super::*;
+use std::sync::Arc;
 use crate::controllers::presenters::test_support::{BENDER, DAVID, TestApp};
 use crate::integrations::{
     net::Network,

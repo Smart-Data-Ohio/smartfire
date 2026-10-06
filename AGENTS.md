@@ -79,10 +79,10 @@ retain their normal linker and profile. `.github/actions/rust-setup` restores th
 seeds and the toolchain image.
 
 Dev, test and CI builds use the nightly in `rust-toolchain.toml`, and `.cargo/config.toml` builds
-the `campfire` crate with the Cranelift backend (everything else, and every release build, uses
+the `campfire` crates (`campfire`, `campfire_app`) with the Cranelift backend (everything else, and every release build, uses
 LLVM; the production image stays on the Dockerfile's stable toolchain, and so do the CI
 correctness suites: `ci/exec.sh` selects that stable release and hides `.cargo/config.toml`). Cranelift can't unwind:
-tests of panic recovery need `--config 'profile.dev.package.campfire.codegen-backend="llvm"'`.
+tests of panic recovery need `--config ci/llvm.toml`.
 Measurements and rejected options: `plans/build-speed-report.md`.
 
 Separate required correctness jobs (some sharded, behind the `Rust correctness` gate) run
@@ -112,9 +112,9 @@ differential and rollback comparisons are retired; their recorded results
 - Work from the repository root, with rustup's `cargo` (`~/.cargo/bin`): `rust-toolchain.toml` selects the
   nightly. Stable cargo, including `mise exec rust@1.98.1` (it sets `RUSTUP_TOOLCHAIN`), rejects
   `.cargo/config.toml`'s Cranelift settings.
-- `cargo nextest run --workspace --exclude html5ever -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))"`
-  runs everything but four panic-recovery tests, which need campfire on LLVM:
-  `cargo nextest run -p campfire --config 'profile.dev.package.campfire.codegen-backend="llvm"' -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)"`
+- `cargo nextest run --workspace --exclude html5ever -E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))"`
+  runs everything but four panic-recovery tests, which need the campfire crates on LLVM:
+  `cargo nextest run -p campfire -p campfire_app --config ci/llvm.toml --profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS"`
   (`CAMPFIRE_LLVM_ONLY_TESTS` is in `.github/workflows/rust.yml`). Plain `cargo test --workspace`
   exits 101 at the first of them under Cranelift. The app's integration tests need
   the committed seeds (`python3 parity/bin/frozen-seeds restore` copies `default`, `first_run`,

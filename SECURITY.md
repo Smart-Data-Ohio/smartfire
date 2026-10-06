@@ -17,7 +17,7 @@ proportion to what they send.
 ## Intentional behavior
 
 Every webhook POST, legacy bot or agent delivery, resolves through the
-private-network guard (`crates/campfire/src/integrations/net/guard.rs`)
+private-network guard (`crates/app/src/net/guard.rs`)
 and pins the connection to the resolved public address, like link
 unfurling: loopback and private destinations are refused instead of
 posted to. Operators who need bots

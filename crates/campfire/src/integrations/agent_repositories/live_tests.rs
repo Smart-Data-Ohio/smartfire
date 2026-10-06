@@ -1,5 +1,6 @@
 //! The production seam calls the existing linked-account domain over actual TLS.
-use super::*;
+use campfire_db::Agent;
+use campfire_db::models::agent_payloads::RepositoryAccess;
 use crate::controllers::presenters::test_support::{BENDER, DAVID, SEED_NOW, TestApp};
 use crate::integrations::{
     net::Network,

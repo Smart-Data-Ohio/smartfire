@@ -48,7 +48,7 @@ account, and you can sign in with that account from then on.
   process.
 
 Other settings (Google, GitHub, mail, LiveKit, public policy pages) are environment variables
-read by [`crates/campfire/src/config.rs`](../crates/campfire/src/config.rs); the
+read by [`crates/app/src/config.rs`](../crates/app/src/config.rs); the
 [self-hosting guide](self-hosting.md) lists the ones operators set.
 
 ### Web Push notifications
@@ -84,10 +84,9 @@ say whether the seeds were restored when you report results. Then:
 
 ```sh
 cargo nextest run --workspace --exclude html5ever \
-  -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))"
-cargo nextest run -p campfire \
-  --config 'profile.dev.package.campfire.codegen-backend="llvm"' \
-  -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)"
+  -E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))"
+cargo nextest run -p campfire -p campfire_app --config ci/llvm.toml --profile ci-llvm \
+  -E "$CAMPFIRE_LLVM_ONLY_TESTS"
 cargo test --workspace --exclude html5ever --doc
 ```
 

@@ -49,10 +49,11 @@ env:
   CI: "true"
   RUST_CI_IMAGE: campfire-toolchain
   RUST_CI_CONTAINER_PREFIX: campfire-ci
-  # Dev/test builds compile campfire with Cranelift (.cargo/config.toml), which can't
-  # unwind, so these panic-recovery tests run in their own job with campfire on LLVM, as
-  # production builds it. The scheduled run tests the whole campfire suite on LLVM.
-  CAMPFIRE_LLVM: --config=profile.dev.package.campfire.codegen-backend="llvm"
+  # Dev/test builds compile the campfire crates with Cranelift (.cargo/config.toml), which can't
+  # unwind, so these panic-recovery tests run in their own job with those crates on LLVM, as
+  # production builds them (ci/llvm.toml; the ci-llvm nextest profile selects the app's crates).
+  # The scheduled run tests the whole suite on LLVM.
+  CAMPFIRE_LLVM: --config=ci/llvm.toml
   CAMPFIRE_LLVM_ONLY_TESTS: >-
     test(=channels::message_features::tests::origin_is_present_for_commit_callbacks_and_restored_after_errors_and_panics) |
     test(=controllers::agent_review_r5_tests::ws11_proxy_header_oracle_rejects_unapproved_changes) |
@@ -193,7 +194,7 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: |
           status=0
-          selection=(-E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))")
+          selection=(-E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))")
           if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then selection+=("$CAMPFIRE_LLVM"); fi
           bash ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
             --profile ci -j 4 --no-fail-fast --no-tests fail --partition "slice:$SHARD" "${selection[@]}" 2>&1 |
@@ -211,12 +212,12 @@ jobs:
           llvm=()
           if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then llvm=("$CAMPFIRE_LLVM"); fi
           mkdir -p "$RUNNER_TEMP/results"
-          # Each list names the same packages its run does. -p campfire resolves the same
-          # dependency features as --workspace, so the second list doesn't rebuild either.
-          list() { bash ci/cargo.sh nextest list --locked --profile ci --message-format json "${llvm[@]}" "$@"; }
-          list --workspace --exclude html5ever -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))" \
+          # Each list names the same packages and profile its run does. The app's packages resolve
+          # the same dependency features as --workspace, so the second list doesn't rebuild either.
+          list() { bash ci/cargo.sh nextest list --locked --message-format json "${llvm[@]}" "$@"; }
+          list --workspace --exclude html5ever --profile ci -E "not (rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS))" \
             > "$RUNNER_TEMP/results/list-shards.json"
-          list -p campfire -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)" \
+          list -p campfire -p campfire_app --profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS" \
             > "$RUNNER_TEMP/results/list-llvm.json"
 
       # Lists ignored tests from the harnesses compiled above, with no partition or filter.
@@ -357,10 +358,10 @@ jobs:
         shell: bash
         run: |
           status=0
-          bash ci/cargo.sh nextest run --locked -p campfire --profile ci -j 4 --no-fail-fast --no-tests fail \
-            "$CAMPFIRE_LLVM" -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)" || status=$?
+          bash ci/cargo.sh nextest run --locked -p campfire -p campfire_app --profile ci-llvm -j 4 --no-fail-fast --no-tests fail \
+            "$CAMPFIRE_LLVM" -E "$CAMPFIRE_LLVM_ONLY_TESTS" || status=$?
           mkdir -p "$RUNNER_TEMP/results"
-          cp target/nextest/ci/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
+          cp target/nextest/ci-llvm/junit.xml "$RUNNER_TEMP/results/junit-llvm.xml"
           exit "$status"
 
       - name: Retain test results

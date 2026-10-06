@@ -1,4 +1,6 @@
 use super::*;
+use campfire_db::Database;
+use campfire_db::Timestamp;
 use crate::integrations::test_support::TestDb;
 use campfire_db::{BasicRichText, Env, Event, EventSink, TestClock, Tx};
 use campfire_jobs::{JobQueue, QueueConfig, Registry, RunnerConfig};

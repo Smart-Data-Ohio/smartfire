@@ -1,5 +1,17 @@
 use super::super::jobs::tests::{run, setup, start};
 use super::*;
+use campfire_app::integrations::slack::runner::array;
+use campfire_app::integrations::slack::runner::integer;
+use campfire_app::integrations::slack::runner::string;
+use campfire_app::integrations::slack::users;
+use campfire_db::ChannelThread;
+use campfire_db::Message;
+use campfire_db::Room;
+use campfire_db::User;
+use indexmap::IndexMap;
+use serde_json::Value;
+use serde_json::json;
+use std::collections::HashSet;
 use campfire_jobs::inspect;
 
 #[tokio::test]
