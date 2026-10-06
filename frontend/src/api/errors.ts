@@ -51,6 +51,11 @@ export class RateLimited extends Schema.TaggedError<RateLimited>()("RateLimited"
   retryAfter: Schema.Int,
 }) {}
 
+/** 503: the feature isn't set up on this server ("Huddles are not configured"); hide it. */
+export class Unavailable extends Schema.TaggedError<Unavailable>()("Unavailable", {
+  message: Schema.String,
+}) {}
+
 /** Every typed `/api/v1` error, told apart by `_tag`. */
 export const ApiError = Schema.Union([
   Unauthorized,
@@ -62,6 +67,7 @@ export const ApiError = Schema.Union([
   InvalidAuthenticityToken,
   Validation,
   RateLimited,
+  Unavailable,
 ]);
 
 export type ApiError = typeof ApiError.Type;

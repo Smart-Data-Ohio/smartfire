@@ -178,15 +178,23 @@ pub const NOT_YET_TWINNED: &[&str] = &[
     "agent_step::StepParentChange",
 ];
 
-/// Sync events the contract defines that no broadcast point publishes yet (the S3 events: their
-/// endpoints and twins come with the S3 server work). The coverage test fails when an event is
-/// in neither this list nor [`TWINS`], or in both.
+/// Sync events the contract defines that no broadcast point publishes yet (the S3 and S5
+/// events: their endpoints and twins come with each slice's server work). The coverage test
+/// fails when an event is in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
     "sidebar.category.upserted",
     "sidebar.category.removed",
     "poll.updated",
     "poll.ballot",
     "message.cards",
+    // S5: huddles and stages. Their endpoints and the twins of `huddle_effects::*`, the join
+    // notices and the invitation frames come with the S5 server work.
+    "huddle.presence",
+    "huddle.role",
+    "huddle.notice",
+    "huddle.ring",
+    "stage.updated",
+    "stage.stream.stopped",
 ];
 
 /// The conversation topic a message's events go to: its thread's, or its room's.

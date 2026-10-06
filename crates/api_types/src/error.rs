@@ -38,6 +38,9 @@ pub enum ApiError {
     },
     /// 429: try again after `retryAfter` seconds.
     RateLimited { message: String, retry_after: u32 },
+    /// 503: the feature isn't set up on this server ("Huddles are not configured"). Not worth
+    /// retrying; the client hides the feature.
+    Unavailable { message: String },
 }
 
 impl ApiError {
@@ -52,6 +55,7 @@ impl ApiError {
             ApiError::Conflict { .. } => 409,
             ApiError::InvalidAuthenticityToken { .. } | ApiError::Validation { .. } => 422,
             ApiError::RateLimited { .. } => 429,
+            ApiError::Unavailable { .. } => 503,
         }
     }
 }

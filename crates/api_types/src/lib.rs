@@ -23,6 +23,7 @@ mod composer;
 mod conversation;
 mod direct;
 mod error;
+mod huddle;
 mod me;
 mod message;
 mod organize;
@@ -34,6 +35,7 @@ mod room;
 mod saved;
 mod search;
 mod sidebar;
+mod stage;
 mod switcher;
 mod sync;
 mod thread;
@@ -69,6 +71,11 @@ pub use direct::{
     AddDirectMembers, CreateDirect, DirectCandidate, DirectCandidateList, RenameDirect,
 };
 pub use error::{ApiError, ApiErrorResponse};
+pub use huddle::{
+    HuddleCredentials, HuddleDetail, HuddleModeration, HuddleNotice, HuddleParticipant,
+    HuddlePresence, HuddlePresenceList, HuddleRing, HuddleRingEvent, HuddleRingState,
+    HuddleRoleChanged, ModerateHuddle,
+};
 pub use me::{
     DoNotDisturb, Me, OutOfOffice, Preferences, PresenceSetting, QuietHours, TextSize, Theme,
     VoiceMode,
@@ -92,6 +99,10 @@ pub use search::{
     SearchSection, SearchSectionKind, SearchSectionRow, WorkStatus,
 };
 pub use sidebar::{RoomCategory, Sidebar, SidebarRow, SidebarRowRemoved};
+pub use stage::{
+    ChangeStageRole, LowerHand, StageDetail, StageMember, StageState, StageStream,
+    StageStreamStopped, StartStageStream, StopStageStream, StreamQuality,
+};
 pub use switcher::{Switcher, SwitcherPerson, SwitcherRoom, SwitcherRoomKind, SwitcherThread};
 pub use sync::{ClientFrame, ResumePoint, ServerFrame, SyncEvent, SyncPayload, Typing};
 pub use thread::{
@@ -112,3 +123,5 @@ mod tests;
 mod tests_s2;
 #[cfg(test)]
 mod tests_s3;
+#[cfg(test)]
+mod tests_s5;
