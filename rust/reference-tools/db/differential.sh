@@ -2,8 +2,9 @@
 # Runs campfire_db's differential tests against the campfire-reference image (built by
 # `parity/bin/reference build`):
 #
-#   1. schema identity: the sqlite_master of a fresh reference `db:prepare`, of crates/db/src/schema.sql
-#      and of a database the Rust crate created must be the same
+#   1. schema identity: the sqlite_master of a fresh reference `db:prepare`, of the Rails-era
+#      baseline (crates/db/baseline/schema.sql) and of a database the Rust crate created must be
+#      the same (until the first Rust migration in crates/db/migrations ships)
 #   2. fixtures_match_ruby_row_for_row against the reference's `db:fixtures:load`
 #   3. scenario_matches_ruby against the reference after crates/db/ruby/scenario.rb
 #   4. message_save_touches.json (which timestamps each Message save advances) is what
@@ -70,9 +71,9 @@ echo "message_save_touches.json matches the reference"
 
 echo "== schema identity"
 sqlite3 "$OUT/rust_export.sqlite3" "$SCHEMA_QUERY" > "$OUT/schema_rust.sql"
-diff -u "$ROOT/crates/db/src/schema.sql" "$OUT/schema_ruby.sql"
+diff -u "$ROOT/crates/db/baseline/schema.sql" "$OUT/schema_ruby.sql"
 diff -u "$OUT/schema_ruby.sql" "$OUT/schema_rust.sql"
-echo "schema.sql, reference db:prepare and Rust prepare agree"
+echo "baseline schema.sql, reference db:prepare and Rust prepare agree"
 
 echo "== reference on the Rust-written database"
 reference '

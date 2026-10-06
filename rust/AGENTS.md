@@ -75,11 +75,15 @@ correctness selectors and explicit compiled utility list; source checks cover
 inactive conditional attributes and the tools-only host. See
 `ci/README.md` for commands, pins, and job names. All builds/tests use at most four slots.
 
-`crates/db/src/schema.sql` (with `schema_migrations.txt`, `schema_sha1.txt` and
-`schema_sequences.txt`) is generated from the Rails app by `reference-tools/db/regenerate-schema.sh`;
-rerun it after a Rails migration (`--check` verifies). `reference-tools/db/check-migration-replay.sh`
-checks that replaying every migration from empty (how production databases were built) gives the
-same schema. `reference-tools/db/differential.sh` compares fixtures and a scenario with Ruby's,
+Schema changes are SQL migrations in `crates/db/migrations/<VERSION>_<name>.sql` (a 14-digit UTC
+timestamp after the last Rails migration, 20261003180000), compiled into the binary and applied only
+by `campfire db-migrate DATABASE`, which the release script runs; boot never migrates. After adding
+one, regenerate `crates/db/src/schema.sql`, `schema_migrations.txt` and `schema_sequences.txt` with
+`CAMPFIRE_SCHEMA_DUMP=write cargo test -p campfire_db --lib schema::tests::schema_files` (the test
+fails while they're stale). `crates/db/baseline/` is the frozen Rails-era schema those start from,
+generated from the Rails app by `reference-tools/db/regenerate-schema.sh`;
+`reference-tools/db/check-migration-replay.sh` checks that replaying every Rails migration from
+empty (how production databases were built) gives the same schema. `reference-tools/db/differential.sh` compares fixtures and a scenario with Ruby's,
 regenerates the reference's `Message` save-timestamp table (`crates/db/src/tests/message_save_touches.json`)
 and checks that Rails reads, and validates, every row the Rust crate wrote.
 

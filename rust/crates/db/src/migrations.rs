@@ -1,15 +1,50 @@
-//! Explicit, post-cutover migrations. Server boot continues to use `schema::prepare` only.
+//! Schema changes after the Rails era: `crates/db/migrations/<VERSION>_<name>.sql`, compiled into
+//! the binary and applied only by the explicit `campfire db-migrate DATABASE` step. Server boot
+//! never migrates (`schema::prepare` still insists on exactly this build's versions).
+//!
+//! Versions are Rails-compatible: 14-digit UTC timestamps recorded in `schema_migrations` as
+//! canonical decimal strings, ordered as integers, and newer than every Rails migration in
+//! `baseline/schema_migrations.txt`. After adding a migration, regenerate the schema files
+//! (`schema::dump`); a test fails while they're stale.
 
 use rusqlite::{
     Connection, TransactionBehavior,
     hooks::{AuthAction, AuthContext, Authorization},
 };
+use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Migration {
     pub version: String,
+    pub name: String,
     pub sql: String,
+}
+
+impl Migration {
+    pub fn new(version: &str, name: &str, sql: &str) -> Self {
+        Migration {
+            version: version.into(),
+            name: name.into(),
+            sql: sql.into(),
+        }
+    }
+}
+
+/// This build's migrations, oldest first.
+pub fn catalog() -> Vec<Migration> {
+    const CATALOG: &[(&str, &str, &str)] = include!(concat!(env!("OUT_DIR"), "/migrations.rs"));
+    let mut migrations: Vec<_> = CATALOG
+        .iter()
+        .map(|(version, name, sql)| Migration::new(version, name, sql))
+        .collect();
+    migrations.sort_by(|a, b| version_order(&a.version, &b.version));
+    migrations
+}
+
+/// Rails compares versions as integers.
+pub fn version_order(a: &str, b: &str) -> Ordering {
+    a.len().cmp(&b.len()).then_with(|| a.cmp(b))
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -20,85 +55,137 @@ pub enum Error {
     Schema(crate::schema::SchemaMismatch),
     #[error("migration {version}: {source}")]
     Migration { version: String, source: rusqlite::Error },
+    #[error("the migrations left foreign key violations (table {0}); nothing was applied")]
+    ForeignKeys(String),
+    #[error("another process changed schema_migrations while migrating; nothing was applied")]
+    Concurrent,
     #[error(transparent)]
     Sqlite(#[from] rusqlite::Error),
     #[error(transparent)]
     Database(#[from] crate::Error),
 }
 
-/// Rails stores `Migration#version.to_s`: canonical decimal strings, without leading zeroes.
-/// The caller supplies a complete catalog of post-cutover migrations, including already run ones.
-/// Each migration and its version insert commit together. Prior successful migrations remain
-/// committed if a later migration fails, matching Rails' per-migration transactions.
-pub fn apply_pending(conn: &mut Connection, migrations: &[Migration]) -> Result<Vec<String>, Error> {
-    let mut catalog = BTreeSet::new();
+/// Migrations the database hasn't run, oldest first. Refuses (without writing) a database this
+/// build can't bring to its schema: one that has run versions this build doesn't know (a newer
+/// build migrated it, so running this one would be a downgrade), or one missing versions that
+/// aren't in the catalog (it predates the baseline).
+pub fn pending<'a>(
+    conn: &Connection,
+    manifest: &[&str],
+    catalog: &'a [Migration],
+) -> Result<Vec<&'a Migration>, Error> {
+    validate(manifest, catalog)?;
+    let mut mismatch = crate::schema::schema_mismatch_against(conn, manifest)?;
+    let in_catalog = |version: &String| catalog.iter().any(|m| &m.version == version);
+    let pending: BTreeSet<String> = mismatch.missing.iter().filter(|v| in_catalog(v)).cloned().collect();
+    mismatch.missing.retain(|version| !in_catalog(version));
+    if !mismatch.missing.is_empty() || !mismatch.unknown.is_empty() {
+        return Err(Error::Schema(mismatch));
+    }
+    let mut pending: Vec<_> = catalog.iter().filter(|m| pending.contains(&m.version)).collect();
+    pending.sort_by(|a, b| version_order(&a.version, &b.version));
+    Ok(pending)
+}
+
+/// [`pending`] against this build's schema and catalog.
+pub fn pending_for_build(conn: &Connection) -> Result<Vec<String>, Error> {
+    let manifest: Vec<_> = crate::schema::migration_versions().collect();
+    Ok(pending(conn, &manifest, &catalog())?
+        .into_iter()
+        .map(|m| m.version.clone())
+        .collect())
+}
+
+/// Applies this build's pending migrations. See [`migrate_with`].
+pub fn migrate(conn: &mut Connection) -> Result<Vec<String>, Error> {
+    let manifest: Vec<_> = crate::schema::migration_versions().collect();
+    migrate_with(conn, &manifest, &catalog())
+}
+
+/// Brings the database to `manifest` by applying the pending part of `catalog`, oldest first, in
+/// one transaction with their `schema_migrations` rows: either all of them commit or none do.
+/// Foreign key enforcement is off while they run (so a migration can rebuild a table the way
+/// SQLite documents), then `PRAGMA foreign_key_check` must come back empty before the commit.
+/// Migration SQL can't end the transaction, attach databases, set pragmas or touch
+/// `schema_migrations`. Writes nothing when nothing is pending.
+pub fn migrate_with(
+    conn: &mut Connection,
+    manifest: &[&str],
+    catalog: &[Migration],
+) -> Result<Vec<String>, Error> {
+    let planned: Vec<String> = pending(conn, manifest, catalog)?
+        .into_iter()
+        .map(|m| m.version.clone())
+        .collect();
+    if planned.is_empty() {
+        return Ok(planned);
+    }
+    let foreign_keys: bool = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0))?;
+    conn.pragma_update(None, "foreign_keys", false)?;
+    let result = apply(conn, manifest, catalog, &planned);
+    conn.pragma_update(None, "foreign_keys", foreign_keys)?;
+    result.map(|()| planned)
+}
+
+fn apply(conn: &mut Connection, manifest: &[&str], catalog: &[Migration], planned: &[String]) -> Result<(), Error> {
+    let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    // Plan again while holding the write lock: another runner may have got there first.
+    let migrations = pending(&tx, manifest, catalog)?;
+    if migrations.iter().map(|m| &m.version).ne(planned.iter()) {
+        return Err(Error::Concurrent);
+    }
     for migration in migrations {
+        let failed = |source| Error::Migration {
+            version: migration.version.clone(),
+            source,
+        };
+        tx.authorizer(Some(migration_authorizer));
+        let result = tx.execute_batch(&migration.sql);
+        tx.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
+        result.map_err(failed)?;
+        tx.execute(r#"INSERT INTO "schema_migrations" ("version") VALUES (?)"#, [&migration.version])
+            .map_err(failed)?;
+    }
+    let violation: Option<String> = {
+        let mut stmt = tx.prepare("PRAGMA foreign_key_check")?;
+        let mut rows = stmt.query([])?;
+        rows.next()?.map(|row| row.get(0)).transpose()?
+    };
+    if let Some(table) = violation {
+        return Err(Error::ForeignKeys(table));
+    }
+    tx.commit()?;
+    Ok(())
+}
+
+fn validate(manifest: &[&str], catalog: &[Migration]) -> Result<(), Error> {
+    let mut seen = BTreeSet::new();
+    for migration in catalog {
         let version = &migration.version;
         if version.is_empty() || version.starts_with('0') || !version.bytes().all(|b| b.is_ascii_digit()) {
             return Err(Error::Catalog(format!("noncanonical version {version:?}")));
         }
-        if !catalog.insert(version.as_str()) {
+        if !seen.insert(version.as_str()) {
             return Err(Error::Catalog(format!("duplicate version {version}")));
         }
-    }
-    let mut ordered: Vec<_> = migrations.iter().collect();
-    ordered.sort_by(|a, b| a.version.len().cmp(&b.version.len()).then(a.version.cmp(&b.version)));
-    check_schema(conn, &catalog)?;
-    let mut applied = Vec::new();
-    for migration in ordered {
-        let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
-        // Check again while holding the write lock: concurrent runners may have advanced it.
-        check_schema(&tx, &catalog)?;
-        if tx
-            .prepare("SELECT 1 FROM schema_migrations WHERE version = ?")?
-            .exists([&migration.version])?
-        {
-            continue;
+        if !manifest.contains(&version.as_str()) {
+            return Err(Error::Catalog(format!(
+                "version {version} isn't in the schema manifest (regenerate the schema files)"
+            )));
         }
-        tx.authorizer(Some(migration_authorizer));
-        let result = tx.execute_batch(&migration.sql);
-        tx.authorizer(None::<fn(AuthContext<'_>) -> Authorization>);
-        result.map_err(|source| Error::Migration {
-            version: migration.version.clone(),
-            source,
-        })?;
-        tx.execute(
-            "INSERT INTO schema_migrations(version) VALUES (?)",
-            [&migration.version],
-        )
-        .map_err(|source| Error::Migration {
-            version: migration.version.clone(),
-            source,
-        })?;
-        tx.commit().map_err(|source| Error::Migration {
-            version: migration.version.clone(),
-            source,
-        })?;
-        applied.push(migration.version.clone());
     }
-    Ok(applied)
-}
-
-fn check_schema(conn: &Connection, catalog: &BTreeSet<&str>) -> Result<(), Error> {
-    let mut mismatch = crate::schema::schema_mismatch(conn)?;
-    // A new build's schema manifest includes its pending versions. The explicit runner may
-    // supply those definitions; ordinary server boot still insists on the exact complete set.
-    mismatch.missing.retain(|version| !catalog.contains(version.as_str()));
-    mismatch.unknown.retain(|version| !catalog.contains(version.as_str()));
-    if mismatch.missing.is_empty() && mismatch.unknown.is_empty() {
-        Ok(())
-    } else {
-        Err(Error::Schema(mismatch))
-    }
+    Ok(())
 }
 
 fn migration_authorizer(ctx: AuthContext<'_>) -> Authorization {
     match ctx.action {
-        // SQL must not commit behind the runner's back or tamper with its version ledger.
+        // SQL must not commit behind the runner's back, reach other databases, change connection
+        // settings (foreign keys, writable_schema) or tamper with its version ledger.
         AuthAction::Transaction { .. }
         | AuthAction::Savepoint { .. }
         | AuthAction::Attach { .. }
-        | AuthAction::Detach { .. } => Authorization::Deny,
+        | AuthAction::Detach { .. }
+        | AuthAction::Pragma { .. } => Authorization::Deny,
         AuthAction::Insert { table_name }
         | AuthAction::Delete { table_name }
         | AuthAction::Update { table_name, .. }
@@ -123,25 +210,75 @@ mod tests {
         conn
     }
 
+    /// This build's manifest plus `extra`, as a build that ships those migrations would have it.
+    fn manifest(extra: &[&'static str]) -> Vec<&'static str> {
+        schema::migration_versions().chain(extra.iter().copied()).collect()
+    }
+
     fn migration(version: &str, sql: &str) -> Migration {
-        Migration {
-            version: version.into(),
-            sql: sql.into(),
+        Migration::new(version, "ws18", sql)
+    }
+
+    fn exists(conn: &Connection, sql: &str) -> bool {
+        conn.prepare(sql).unwrap().exists([]).unwrap()
+    }
+
+    fn versions_like(conn: &Connection, pattern: &str) -> Vec<String> {
+        conn.prepare("SELECT version FROM schema_migrations WHERE version LIKE ? ORDER BY rowid")
+            .unwrap()
+            .query_map([pattern], |r| r.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap()
+    }
+
+    #[test]
+    fn the_shipped_catalog_is_valid_and_newer_than_every_rails_migration() {
+        let catalog = catalog();
+        let manifest: Vec<_> = schema::migration_versions().collect();
+        validate(&manifest, &catalog).unwrap();
+        let newest_rails = schema::baseline_versions()
+            .max_by(|a, b| version_order(a, b))
+            .unwrap();
+        for migration in &catalog {
+            assert_eq!(migration.version.len(), 14, "{}", migration.version);
+            assert_eq!(
+                version_order(&migration.version, newest_rails),
+                Ordering::Greater,
+                "{} must sort after the last Rails migration {newest_rails}",
+                migration.version
+            );
+        }
+        // Every manifest version is either a Rails-era one or one this build can apply.
+        let baseline: BTreeSet<_> = schema::baseline_versions().collect();
+        for version in manifest {
+            assert!(
+                baseline.contains(version) || catalog.iter().any(|m| m.version == version),
+                "{version} is in schema_migrations.txt but neither in the baseline nor the catalog"
+            );
         }
     }
 
     #[test]
-    fn orders_versions_numerically_and_records_rails_strings_once() {
+    fn an_up_to_date_database_has_nothing_pending() {
         let mut conn = prepared();
-        let migrations = [
+        assert!(pending_for_build(&conn).unwrap().is_empty());
+        assert!(migrate(&mut conn).unwrap().is_empty());
+    }
+
+    #[test]
+    fn applies_in_integer_order_once_and_records_rails_strings() {
+        let mut conn = prepared();
+        let catalog = [
             migration("29991231235959", "INSERT INTO ws18_order VALUES ('second');"),
             migration(
                 "29990101000000",
                 "CREATE TABLE ws18_order(value TEXT); INSERT INTO ws18_order VALUES ('first');",
             ),
         ];
+        let manifest = manifest(&["29990101000000", "29991231235959"]);
         assert_eq!(
-            apply_pending(&mut conn, &migrations).unwrap(),
+            migrate_with(&mut conn, &manifest, &catalog).unwrap(),
             ["29990101000000", "29991231235959"]
         );
         let values: Vec<String> = conn
@@ -152,160 +289,145 @@ mod tests {
             .collect::<rusqlite::Result<_>>()
             .unwrap();
         assert_eq!(values, ["first", "second"]);
-        let versions: Vec<String> = conn
-            .prepare("SELECT version FROM schema_migrations WHERE version LIKE '2999%' ORDER BY rowid")
-            .unwrap()
-            .query_map([], |r| r.get(0))
-            .unwrap()
-            .collect::<rusqlite::Result<_>>()
-            .unwrap();
-        assert_eq!(versions, ["29990101000000", "29991231235959"]);
-        assert!(apply_pending(&mut conn, &migrations).unwrap().is_empty());
-    }
-
-    #[test]
-    fn failed_sql_rolls_back_schema_rows_and_version() {
-        let mut conn = prepared();
-        let migrations = [migration(
-            "29990101000000",
-            "CREATE TABLE ws18_failure(id INTEGER); INSERT INTO ws18_failure VALUES (1); SELECT missing FROM ws18_failure;",
-        )];
-        assert!(apply_pending(&mut conn, &migrations).is_err());
-        assert!(
-            !conn
-                .prepare("SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'")
-                .unwrap()
-                .exists([])
-                .unwrap()
-        );
-        assert!(
-            !conn
-                .prepare("SELECT 1 FROM schema_migrations WHERE version='29990101000000'")
-                .unwrap()
-                .exists([])
-                .unwrap()
-        );
+        assert_eq!(versions_like(&conn, "2999%"), ["29990101000000", "29991231235959"]);
+        assert!(migrate_with(&mut conn, &manifest, &catalog).unwrap().is_empty());
+        let mismatch = schema::schema_mismatch_against(&conn, &manifest).unwrap();
+        assert!(mismatch.missing.is_empty() && mismatch.unknown.is_empty());
     }
 
     #[test]
     fn orders_different_length_decimal_versions_as_rails_integers() {
         let mut conn = prepared();
+        let catalog = [
+            migration("10", "INSERT INTO ws18_order VALUES ('second');"),
+            migration("9", "CREATE TABLE ws18_order(value TEXT); INSERT INTO ws18_order VALUES ('first');"),
+        ];
         assert_eq!(
-            apply_pending(
-                &mut conn,
-                &[
-                    migration("10", "INSERT INTO ws18_order VALUES ('second');"),
-                    migration(
-                        "9",
-                        "CREATE TABLE ws18_order(value TEXT); INSERT INTO ws18_order VALUES ('first');"
-                    ),
-                ]
-            )
-            .unwrap(),
+            migrate_with(&mut conn, &manifest(&["9", "10"]), &catalog).unwrap(),
             ["9", "10"]
         );
     }
 
     #[test]
-    fn applies_a_pending_version_already_in_the_new_builds_schema_manifest() {
-        let mut conn = prepared();
-        let version = schema::migration_versions().next().unwrap();
-        conn.execute("DELETE FROM schema_migrations WHERE version=?", [version])
-            .unwrap();
-        assert!(
-            apply_pending(&mut conn, &[]).is_err(),
-            "missing versions still require migration definitions"
-        );
-        assert_eq!(
-            apply_pending(
-                &mut conn,
-                &[migration(version, "CREATE TABLE ws18_pending(id INTEGER);")]
-            )
-            .unwrap(),
-            [version]
-        );
-        assert!(schema::schema_mismatch(&conn).unwrap().missing.is_empty());
-    }
-
-    #[test]
-    fn failed_version_insert_rolls_back_migration_and_retains_prior_success() {
-        let mut conn = prepared();
-        conn.execute_batch("CREATE TRIGGER ws18_no_version BEFORE INSERT ON schema_migrations WHEN NEW.version='29991231235959' BEGIN SELECT RAISE(ABORT, 'injected'); END;").unwrap();
-        let migrations = [
-            migration("29990101000000", "CREATE TABLE ws18_success(id INTEGER);"),
-            migration("29991231235959", "CREATE TABLE ws18_failure(id INTEGER);"),
-        ];
-        assert!(apply_pending(&mut conn, &migrations).is_err());
-        assert!(
-            conn.prepare("SELECT 1 FROM sqlite_schema WHERE name='ws18_success'")
-                .unwrap()
-                .exists([])
-                .unwrap()
-        );
-        assert!(
-            !conn
-                .prepare("SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'")
-                .unwrap()
-                .exists([])
-                .unwrap()
-        );
-        assert!(
-            conn.prepare("SELECT 1 FROM schema_migrations WHERE version='29990101000000'")
-                .unwrap()
-                .exists([])
-                .unwrap()
-        );
-    }
-
-    #[test]
-    fn rejects_duplicate_noncanonical_and_unknown_versions_before_writes() {
-        for versions in [
-            vec!["29990101000000", "29990101000000"],
-            vec!["029990101000000"],
-            vec!["version"],
-            vec!["0"],
+    fn a_failure_anywhere_applies_nothing() {
+        let versions = ["29990101000000", "29991231235959"];
+        for (second, block_version_insert) in [
+            ("CREATE TABLE ws18_failure(id INTEGER); SELECT missing FROM ws18_failure;", false),
+            ("CREATE TABLE ws18_failure(id INTEGER);", true),
         ] {
             let mut conn = prepared();
-            let migrations: Vec<_> = versions
-                .iter()
-                .map(|v| migration(v, "CREATE TABLE ws18_failure(id INTEGER);"))
-                .collect();
-            assert!(apply_pending(&mut conn, &migrations).is_err(), "{versions:?}");
-            assert!(
-                !conn
-                    .prepare("SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'")
-                    .unwrap()
-                    .exists([])
-                    .unwrap()
-            );
+            if block_version_insert {
+                conn.execute_batch("CREATE TRIGGER ws18_no_version BEFORE INSERT ON schema_migrations WHEN NEW.version='29991231235959' BEGIN SELECT RAISE(ABORT, 'injected'); END;").unwrap();
+            }
+            let catalog = [
+                migration(versions[0], "CREATE TABLE ws18_success(id INTEGER);"),
+                migration(versions[1], second),
+            ];
+            assert!(migrate_with(&mut conn, &manifest(&versions), &catalog).is_err());
+            assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name IN ('ws18_success', 'ws18_failure')"));
+            assert!(versions_like(&conn, "2999%").is_empty());
+            let foreign_keys: bool = conn.query_row("PRAGMA foreign_keys", [], |r| r.get(0)).unwrap();
+            assert!(foreign_keys, "enforcement is restored after a failure");
         }
+    }
+
+    #[test]
+    fn foreign_key_violations_roll_everything_back() {
+        let mut conn = prepared();
+        let catalog = [migration(
+            "29990101000000",
+            "CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY); \
+             CREATE TABLE ws18_child(parent_id INTEGER REFERENCES ws18_parent(id)); \
+             INSERT INTO ws18_child VALUES (42);",
+        )];
+        let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
+        assert!(matches!(error, Error::ForeignKeys(ref table) if table == "ws18_child"), "{error}");
+        assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_child'"));
+    }
+
+    #[test]
+    fn a_table_rebuild_runs_with_enforcement_off_and_is_checked_after() {
+        let mut conn = prepared();
+        conn.execute_batch(
+            "CREATE TABLE ws18_parent(id INTEGER PRIMARY KEY, name TEXT); \
+             CREATE TABLE ws18_child(parent_id INTEGER REFERENCES ws18_parent(id)); \
+             INSERT INTO ws18_parent VALUES (1, 'a'); INSERT INTO ws18_child VALUES (1);",
+        )
+        .unwrap();
+        // SQLite's documented twelve-step rebuild: dropping the parent would fail (or cascade)
+        // with enforcement on.
+        let catalog = [migration(
+            "29990101000000",
+            "CREATE TABLE ws18_parent_new(id INTEGER PRIMARY KEY, name TEXT NOT NULL); \
+             INSERT INTO ws18_parent_new SELECT id, name FROM ws18_parent; \
+             DROP TABLE ws18_parent; \
+             ALTER TABLE ws18_parent_new RENAME TO ws18_parent;",
+        )];
+        migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap();
+        let children: i64 = conn.query_row("SELECT count(*) FROM ws18_child", [], |r| r.get(0)).unwrap();
+        assert_eq!(children, 1);
+    }
+
+    #[test]
+    fn refuses_unknown_versions_as_a_downgrade_before_writing() {
         let mut conn = prepared();
         conn.execute("INSERT INTO schema_migrations(version) VALUES ('29991231235959')", [])
             .unwrap();
-        assert!(
-            apply_pending(
-                &mut conn,
-                &[migration("29990101000000", "CREATE TABLE ws18_failure(id INTEGER);")]
-            )
-            .is_err()
-        );
+        let catalog = [migration("29990101000000", "CREATE TABLE ws18_failure(id INTEGER);")];
+        let error = migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).unwrap_err();
+        assert!(error.to_string().contains("unknown migrations 29991231235959"), "{error}");
+        assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"));
+        // The shipped build refuses it too.
+        assert!(migrate(&mut conn).is_err());
     }
 
     #[test]
-    fn migration_cannot_escape_its_transaction_or_forge_versions() {
-        for sql in [
-            "CREATE TABLE ws18_failure(id INTEGER); COMMIT;",
-            "CREATE TABLE ws18_failure(id INTEGER); INSERT INTO schema_migrations(version) VALUES ('29991231235959');",
+    fn refuses_a_database_missing_versions_it_cannot_apply() {
+        let mut conn = prepared();
+        let newest = schema::baseline_versions().next().unwrap();
+        conn.execute("DELETE FROM schema_migrations WHERE version=?", [newest])
+            .unwrap();
+        let error = migrate(&mut conn).unwrap_err();
+        assert!(error.to_string().contains(&format!("missing migrations {newest}")), "{error}");
+    }
+
+    #[test]
+    fn rejects_duplicate_noncanonical_and_unlisted_versions_before_writes() {
+        for (versions, listed) in [
+            (vec!["29990101000000", "29990101000000"], vec!["29990101000000"]),
+            (vec!["029990101000000"], vec!["029990101000000"]),
+            (vec!["version"], vec!["version"]),
+            (vec!["0"], vec!["0"]),
+            (vec!["29990101000000"], vec![]),
         ] {
             let mut conn = prepared();
-            assert!(apply_pending(&mut conn, &[migration("29990101000000", sql)]).is_err());
+            let catalog: Vec<_> = versions
+                .iter()
+                .map(|v| migration(v, "CREATE TABLE ws18_failure(id INTEGER);"))
+                .collect();
+            let manifest: Vec<&str> = schema::migration_versions().chain(listed).collect();
             assert!(
-                !conn
-                    .prepare("SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'")
-                    .unwrap()
-                    .exists([])
-                    .unwrap()
+                matches!(migrate_with(&mut conn, &manifest, &catalog), Err(Error::Catalog(_))),
+                "{versions:?}"
             );
+            assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"));
+        }
+    }
+
+    #[test]
+    fn migration_sql_cannot_escape_its_transaction_change_settings_or_forge_versions() {
+        for sql in [
+            "CREATE TABLE ws18_failure(id INTEGER); COMMIT;",
+            "CREATE TABLE ws18_failure(id INTEGER); SAVEPOINT ws18; RELEASE ws18;",
+            "CREATE TABLE ws18_failure(id INTEGER); INSERT INTO schema_migrations(version) VALUES ('29991231235959');",
+            "CREATE TABLE ws18_failure(id INTEGER); PRAGMA writable_schema = ON;",
+            "CREATE TABLE ws18_failure(id INTEGER); ATTACH ':memory:' AS other;",
+        ] {
+            let mut conn = prepared();
+            let catalog = [migration("29990101000000", sql)];
+            assert!(migrate_with(&mut conn, &manifest(&["29990101000000"]), &catalog).is_err(), "{sql}");
+            assert!(!exists(&conn, "SELECT 1 FROM sqlite_schema WHERE name='ws18_failure'"), "{sql}");
+            assert!(versions_like(&conn, "2999%").is_empty(), "{sql}");
         }
     }
 }
