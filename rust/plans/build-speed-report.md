@@ -94,7 +94,7 @@ Incremental (app edit, Cranelift):
 
 Nightly with LLVM alone was slower than stable: 298s clean, 97–105s incremental. The whole gain comes from Cranelift.
 
-## Cranelift and panics (unresolved: owner's choice)
+## Cranelift and panics
 
 rustup's `rustc-codegen-cranelift-preview` doesn't implement unwinding. Inside Cranelift-compiled code:
 - `catch_unwind` does not catch. The process exits with 101.
@@ -120,19 +120,18 @@ Note: `--config profile.dev.codegen-backend="llvm"` is **not** enough, because t
 
 Production is unaffected: release is LLVM with unwinding.
 
-## Required CI changes (not made here: `.github/workflows/` and `rust/ci/` belong to `ci/fast-rust`)
+## CI changes (made in this PR, kept small: `ci/fast-rust` owns sharding and caching)
 
-1. **Panic-recovery tests.** Without one of the following, the seed-dependent gate fails on the 4 tests above. Options:
-   - (a) Add the 4 tests to `ci/ignored-tests.json`, or a nextest filter, for the Cranelift run, and run them in a small extra step built with `--config 'profile.dev.package.campfire.codegen-backend="llvm"'`. That step costs one LLVM build of the campfire test crate, ~2–3 min on CI.
-   - (b) Have `ci/cargo.sh` pass that `--config` for the whole campfire test run. This loses the CI speedup but keeps the local one.
-
-   I'd pick (a).
-2. **Cache keys** must hash `rust/rust-toolchain.toml` and `rust/.cargo/config.toml`, as well as `rust/Cargo.toml`. Changing the toolchain or the backend invalidates every artifact. Today's key (`rust.yml`, `hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/ci/cargo.sh')`) changes for this PR only because the Dockerfile changed. A later nightly bump in `rust-toolchain.toml` alone would restore a stale cache.
-3. **Toolchain.** Nothing more is needed. `rust/Dockerfile`'s toolchain stage already installs the pinned nightly and components from `rust-toolchain.toml`. Run 37387060037 built the image and ran clippy, the binaries and all test steps with it. To bump the nightly, edit `rust-toolchain.toml` only.
-4. **Optional:** `RUSTFLAGS`/profile-rustflags `-Zthreads=4` for the campfire crate on CI. In a CI-like run (`CARGO_INCREMENTAL=0`, `-j4`) the crate took 90.4s instead of 123.6s (−27%), with peak RSS 12.1GB instead of 10.1GB. Enable it only if the runner has the memory headroom.
-5. **Linker:** CI keeps mold.
-6. **Debuginfo:** CI keeps its `CARGO_PROFILE_*_DEBUG=line-tables-only`.
-7. **Recommended: a stable check.** From the repository root, so that neither `rust-toolchain.toml` nor `.cargo/config.toml` applies, run `RUSTUP_TOOLCHAIN=1.98.1 cargo check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever`. This catches code that compiles only on the nightly before it reaches the production image. It took 51s locally from empty, at `-j12`. The toolchain image would need 1.98.1 as well. It already has it: it's the base image's toolchain.
+1. **Panic-recovery tests.** The Cranelift campfire run excludes the 4 tests above (`CAMPFIRE_LLVM_ONLY_TESTS` in `rust.yml`). A separate step, "Tests (campfire panic recovery, LLVM)", runs exactly those 4 with `--config=profile.dev.package.campfire.codegen-backend="llvm"`. It fails unless its JUnit report shows 4 tests run and passed. It shares the target dir, so only the campfire crate rebuilds. It runs after the test summary because it overwrites `target/nextest/ci/junit.xml`.
+2. **Scheduled run on LLVM.** On `schedule` the campfire suite runs whole with campfire on LLVM, and the 4-test step is skipped. Production's codegen gets a full test pass every day. That run rebuilds the campfire crate twice more: LLVM for the suite, then Cranelift again for the other-workspace step.
+3. **Cache key.** It hashes `rust/rust-toolchain.toml` and `rust/.cargo/config.toml`, both in `rust.yml` and in `.github/actions/rust-setup`.
+4. **Stable check.** "Check with the production toolchain" runs `cargo check --locked --manifest-path rust/Cargo.toml --workspace --exclude html5ever` with `RUSTUP_TOOLCHAIN=1.98.1` from the repository root, where neither file applies. It uses a scratch target dir so that stable artifacts stay out of the cache. `ci/cargo.sh` gained two optional pass-throughs for this, `RUST_CI_WORKDIR` and `RUSTUP_TOOLCHAIN`. This catches code that compiles only on the nightly before `publish-rust-image.yml` builds production.
+5. **Toolchain.** `rust/Dockerfile`'s toolchain stage installs the pinned nightly and components from `rust-toolchain.toml`. To bump the nightly, edit `rust-toolchain.toml` only.
+6. **Unchanged:**
+   - The correctness jobs run cargo from the repository root (`ci/correctness.sh`), so they build on the image's stable toolchain with LLVM, as production does.
+   - mold stays.
+   - `line-tables-only` debuginfo stays.
+   - `-Zthreads=4` is left out for now. In a CI-like run (`CARGO_INCREMENTAL=0`, `-j4`) it cut the campfire crate from 123.6s to 90.4s (−27%), with peak RSS 12.1GB instead of 10.1GB.
 
 ## Options measured and rejected
 
@@ -194,4 +193,4 @@ Costs:
 - Measurement target dirs and scratch crates lived under `~/.cache/fast-builds` (outside the repo) and were removed afterwards.
 - With the final config, a full local test target is ~11G (baseline 14G).
 - The nightly toolchain with the Cranelift component adds ~0.7G under `~/.rustup`.
-- Toolchain skew: tests and CI build on the nightly, while production builds on stable 1.98.1. clippy's `msrv` flags std APIs newer than 1.98.1. It does not catch language features stabilised after 1.98.1, and PR CI doesn't build the production image (`publish-rust-image.yml` builds it after merge). See CI change 7.
+- Toolchain skew: tests and CI build on the nightly, while production builds on stable 1.98.1. clippy's `msrv` flags std APIs newer than 1.98.1. It does not catch language features stabilised after 1.98.1, and PR CI doesn't build the production image (`publish-rust-image.yml` builds it after merge). The stable check (CI change 4) covers that gap.
