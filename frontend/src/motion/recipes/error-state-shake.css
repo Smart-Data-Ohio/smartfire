@@ -1,0 +1,97 @@
+/*
+ * Error state shake: adapted from the free "Error state shake" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add error-state-shake`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the
+ * micro exit step for the swings, --distance-micro for the overshoot, the medium step for the
+ * revert), and the border tween uses the small step instead of a literal. TextField (src/ui) runs
+ * the recipe's orchestration from React state.
+ */
+
+@layer recipes {
+  :root {
+    --shake-distance: 6px;
+    --shake-overshoot: var(--distance-micro);
+    --shake-dur-a: var(--duration-micro-exit);
+    --shake-dur-b: calc(var(--duration-micro-exit) * 0.75);
+    --shake-ease: var(--ease-enter);
+    --revert-hold: 3000ms;
+    --revert-dur: var(--duration-medium);
+  }
+
+  .t-input {
+    transition:
+      border-color var(--duration-small) var(--ease-enter),
+      box-shadow var(--duration-small) var(--ease-enter);
+    will-change: transform;
+  }
+
+  .t-input.is-error {
+    transition:
+      border-color var(--revert-dur) var(--ease-enter),
+      box-shadow var(--revert-dur) var(--ease-enter);
+  }
+
+  .t-error-msg {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--revert-dur) var(--ease-enter),
+      visibility 0s linear var(--revert-dur);
+  }
+
+  .t-input-wrap.is-error .t-error-msg {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity var(--revert-dur) var(--ease-enter),
+      visibility 0s linear 0s;
+  }
+
+  /* Legs of 80, 80, 60, 60 ms (A, A, B, B): the stops are cumulative fractions of 280 ms. */
+  .t-input.is-shaking {
+    animation: t-input-shake calc(var(--shake-dur-a) * 2 + var(--shake-dur-b) * 2) linear;
+  }
+
+  @keyframes t-input-shake {
+    0% {
+      transform: translateX(0);
+      animation-timing-function: var(--shake-ease);
+    }
+
+    28.57% {
+      transform: translateX(var(--shake-distance));
+      animation-timing-function: var(--shake-ease);
+    }
+
+    57.14% {
+      transform: translateX(calc(var(--shake-distance) * -1));
+      animation-timing-function: var(--shake-ease);
+    }
+
+    78.57% {
+      transform: translateX(var(--shake-overshoot));
+      animation-timing-function: var(--shake-ease);
+    }
+
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-input {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-input {
+    animation: none !important;
+    transform: none !important;
+  }
+}

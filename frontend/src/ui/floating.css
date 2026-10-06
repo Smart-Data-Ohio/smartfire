@@ -1,0 +1,78 @@
+/*
+ * Floating surfaces (menus, popovers, tooltips) sit in the top layer through the Popover API and
+ * beside their anchor through CSS anchor positioning: `position-area` picks the side, margins make
+ * the gap, and `position-try-fallbacks` flips to the other side near a viewport edge. Without
+ * anchor positioning, src/lib/anchor.ts writes fixed coordinates instead.
+ */
+
+@layer ui {
+  .floating {
+    --floating-gap: var(--space-1-5);
+
+    position: fixed;
+    inset: auto;
+    margin: 0;
+  }
+
+  @supports (position-area: top) {
+    .floating {
+      position-try-fallbacks:
+        flip-block,
+        flip-inline,
+        flip-block flip-inline;
+    }
+
+    .floating[data-placement="bottom-start"] {
+      position-area: bottom span-right;
+      margin-top: var(--floating-gap);
+    }
+
+    .floating[data-placement="bottom-end"] {
+      position-area: bottom span-left;
+      margin-top: var(--floating-gap);
+    }
+
+    .floating[data-placement="bottom"] {
+      position-area: bottom;
+      margin-top: var(--floating-gap);
+    }
+
+    .floating[data-placement="top-start"] {
+      position-area: top span-right;
+      margin-bottom: var(--floating-gap);
+    }
+
+    .floating[data-placement="top-end"] {
+      position-area: top span-left;
+      margin-bottom: var(--floating-gap);
+    }
+
+    .floating[data-placement="top"] {
+      position-area: top;
+      margin-bottom: var(--floating-gap);
+    }
+
+    .floating[data-placement="right"] {
+      position-area: right;
+      margin-left: var(--floating-gap);
+    }
+
+    .floating[data-placement="left"] {
+      position-area: left;
+      margin-right: var(--floating-gap);
+    }
+
+    /* Submenus line their first item up with the item that opened them. */
+    .floating[data-placement="right-start"] {
+      position-area: right span-bottom;
+      margin-top: calc(var(--space-1) * -1 - 1px);
+      margin-left: var(--space-0-5);
+    }
+
+    .floating[data-placement="left-start"] {
+      position-area: left span-bottom;
+      margin-top: calc(var(--space-1) * -1 - 1px);
+      margin-right: var(--space-0-5);
+    }
+  }
+}

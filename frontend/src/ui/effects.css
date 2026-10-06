@@ -1,0 +1,100 @@
+/* Wrappers around Jakub Antalik's effect libraries: thinking-orbs, border-beam, voice-glow and
+   bot-avatars. Each falls back to plain CSS while its chunk loads or when motion is reduced. */
+
+@layer ui {
+  /* ── AgentThinking ── */
+
+  .agent-thinking {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: var(--orb-size);
+    height: var(--orb-size);
+    color: var(--agent);
+  }
+
+  .agent-thinking canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  .agent-thinking-dots {
+    display: inline-flex;
+    gap: 2px;
+  }
+
+  .agent-thinking-dots > span {
+    width: calc(var(--orb-size) / 6);
+    height: calc(var(--orb-size) / 6);
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.7;
+  }
+
+  /* ── Beam ── */
+
+  .beam-host {
+    position: relative;
+    border-radius: var(--beam-radius);
+  }
+
+  .beam-host[data-beam="static"]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--agent);
+    pointer-events: none;
+  }
+
+  .beam-overlay,
+  .speaking-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .beam-overlay-effect,
+  .speaking-overlay-effect {
+    width: 100%;
+    height: 100%;
+  }
+
+  .beam-fill,
+  .speaking-fill {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── SpeakingRing ── */
+
+  .speaking-ring {
+    position: relative;
+    display: inline-flex;
+    border-radius: var(--ring-radius);
+  }
+
+  .speaking-ring::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: calc(var(--ring-radius) + 3px);
+    box-shadow: 0 0 0 2px var(--presence-online);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .speaking-ring[data-speaking]::after {
+    opacity: calc(0.45 + var(--level) * 0.55);
+  }
+
+  /* ── AgentAvatar ── */
+
+  .agent-avatar {
+    background: var(--agent-soft);
+    color: var(--agent-text);
+  }
+}

@@ -1,0 +1,61 @@
+/*
+ * Icon swap: adapted from the free "Icon swap" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add icon-swap`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (the medium step,
+ * --blur-small, --ease-move), and the recipe's 0.25 start scale is the --scale-icon-swap token
+ * (1 under reduced motion). The blur hides the small frames, so at 16 px it reads as the glyph
+ * blooming in place. Used for copy -> check, mute and the theme switch.
+ */
+
+@layer recipes {
+  :root {
+    --icon-swap-dur: var(--duration-medium);
+    --icon-swap-blur: var(--blur-small);
+    --icon-swap-start-scale: var(--scale-icon-swap);
+    --icon-swap-ease: var(--ease-move);
+  }
+
+  .t-icon-swap {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .t-icon-swap .t-icon {
+    grid-area: 1 / 1;
+    transition:
+      opacity var(--icon-swap-dur) var(--icon-swap-ease),
+      filter var(--icon-swap-dur) var(--icon-swap-ease),
+      transform var(--icon-swap-dur) var(--icon-swap-ease);
+    will-change: opacity, filter, transform;
+  }
+
+  .t-icon-swap[data-state="a"] .t-icon[data-icon="a"],
+  .t-icon-swap[data-state="b"] .t-icon[data-icon="b"] {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+
+  .t-icon-swap[data-state="a"] .t-icon[data-icon="b"],
+  .t-icon-swap[data-state="b"] .t-icon[data-icon="a"] {
+    opacity: 0;
+    filter: blur(var(--icon-swap-blur));
+    transform: scale(var(--icon-swap-start-scale));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-icon-swap .t-icon {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-icon-swap .t-icon {
+    transition: none !important;
+  }
+}

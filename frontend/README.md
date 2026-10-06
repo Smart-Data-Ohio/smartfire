@@ -22,7 +22,8 @@ Run from `frontend/`, with Node 24 or later and pnpm (pnpm switches itself to th
 | `pnpm lint:anti-slop` | The anti-slop Oxlint rules |
 | `pnpm typecheck` | `tsc --noEmit` for the app, then for the vendored plugin |
 | `pnpm test` | Vitest unit tests (`src/**/*.test.ts(x)`) |
-| `pnpm test:e2e` | Playwright specs in `e2e/` against `vite preview` (first run: `pnpm exec playwright install chromium`) |
+| `pnpm test:e2e` | Playwright specs in `e2e/` against `vite preview` (first run: `pnpm exec playwright install chromium`); set `SHOTS_DIR=/some/dir` to also write kitchen-sink screenshots there (light, dark, compact; not committed) |
+| `pnpm motion:scan` | Score the motion locally with `transitions-agent scan` (static analysis, no upload). Never run its `fix` or `--pr` modes: they upload code |
 | `pnpm check` | lint, anti-slop, typecheck, test and build: what the `Frontend` CI check runs |
 
 ## Layout
@@ -32,6 +33,31 @@ engine and the shared Effect runtime; `src/store/` holds client state, `src/rout
 `src/features/` one folder per product area, `src/ui/` the design system, and `src/motion/`,
 `src/styles/` and `src/lib/` the shared pieces. `src/gen/` will hold the TypeScript types
 generated from the Rust API structs; never edit it by hand. `e2e/` holds the Playwright specs.
+
+## Design system
+
+`/app/_kitchen-sink` (the `pnpm dev` server, or a build) shows every component in every variant
+and state, a miniature of the app, and switches for theme, density, motion and a side-by-side
+light/dark view. Check changes to `src/ui/`, `src/motion/` or `src/styles/` there.
+
+- `src/styles/`: OKLCH design tokens (`tokens.css`; every colour is a `light-dark()` pair, themed
+  by `:root[data-theme]` or the OS), the type scale, the base layer and the self-hosted Inter and
+  JetBrains Mono subsets (`tools/fonts/subset.sh` rebuilds them). `tokens.test.ts` holds every
+  text token to 4.5:1 on the surfaces it sits on, in both themes. Components use only the
+  semantic tokens; violet (`--agent`) is reserved for agents.
+- `src/motion/`: duration, easing, distance and scale tokens (reduced motion folds into the
+  tokens, and `<html data-motion>` overrides the OS), `usePresence` for exit animations, and
+  `recipes/`, 16 adapted transitions.dev recipes (license in `THIRD_PARTY_NOTICES.md`: they ship
+  inside the app, never as a standalone kit).
+- `src/ui/`: the components. Overlays use the platform: `<dialog>`, the Popover API and CSS
+  anchor positioning (with a JS fallback in `src/lib/anchor.ts`), so there is no headless UI
+  dependency. Jakub Antalik's canvas effects (`thinking-orbs`, `border-beam`, `voice-glow`,
+  `bot-avatars`, `metal-fx`) are wrapped as AgentThinking, Beam, SpeakingRing, AgentAvatar and
+  the metal Button, each lazy-loaded with a static fallback for reduced motion.
+- `src/lib/appearance.ts`: the per-device theme, density and motion settings.
+
+Stylesheets share one cascade-layer order, `tokens, base, motion, recipes, ui, app`, so a
+component's styles beat a recipe's without specificity fights.
 
 ## The Effect boundary
 

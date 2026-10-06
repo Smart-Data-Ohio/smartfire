@@ -1,0 +1,65 @@
+/*
+ * Toast: adapted from the free "Toast open/close" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add toast`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium for
+ * the open, small for the close, --distance-toast, --blur-small). Toast (src/ui) mounts each toast
+ * with `data-state="open"`, so the rise plays from @starting-style, and plays the close on
+ * `data-state="closing"` before unmounting. The stack offset lives in `translate` so it composes
+ * with the recipe's `transform`.
+ */
+
+@layer recipes {
+  :root {
+    --toast-open: var(--duration-medium);
+    --toast-close: var(--duration-small);
+    --toast-distance: var(--distance-toast);
+    --toast-blur: var(--blur-small);
+    --toast-scale: var(--scale-menu);
+    --toast-ease: var(--ease-enter);
+    --toast-close-ease: var(--ease-exit);
+  }
+
+  .t-toast {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+    will-change: transform, opacity, filter;
+    transition:
+      opacity var(--toast-open) var(--toast-ease),
+      transform var(--toast-open) var(--toast-ease),
+      filter var(--toast-open) var(--toast-ease);
+  }
+
+  @starting-style {
+    .t-toast[data-state="open"] {
+      opacity: 0;
+      transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+      filter: blur(var(--toast-blur));
+    }
+  }
+
+  .t-toast[data-state="closing"] {
+    opacity: 0;
+    transform: translateY(var(--toast-distance)) scale(var(--toast-scale));
+    filter: blur(var(--toast-blur));
+    transition:
+      opacity var(--toast-close) var(--toast-close-ease),
+      transform var(--toast-close) var(--toast-close-ease),
+      filter var(--toast-close) var(--toast-close-ease);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-toast {
+      transition: opacity var(--duration-micro-exit) linear !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-toast {
+    transition: opacity var(--duration-micro-exit) linear !important;
+  }
+}

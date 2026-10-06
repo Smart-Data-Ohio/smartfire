@@ -1,0 +1,55 @@
+/*
+ * Checkbox check: adapted from the free "Checkbox check" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add checkbox-check`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (micro for the box fill,
+ * medium for the stroke draw, micro-exit for the un-draw), the box uses the accent and border
+ * tokens, the draw starts a stagger step after the fill so the mark lands on a filled box, and
+ * the checked state is also read from `data-checked` (Checkbox wraps a native input).
+ */
+
+@layer recipes {
+  :root {
+    --check-box: var(--duration-micro);
+    --check-draw: var(--duration-medium);
+    --check-delay: var(--duration-stagger);
+    --check-uncheck: var(--duration-micro-exit);
+    --check-ease: var(--ease-enter);
+  }
+
+  .t-check {
+    transition:
+      background-color var(--check-box) var(--check-ease),
+      box-shadow var(--check-box) var(--check-ease);
+  }
+
+  .t-check svg path {
+    stroke-dasharray: var(--check-len, 15);
+    stroke-dashoffset: var(--check-len, 15);
+    transition: stroke-dashoffset var(--check-uncheck) var(--check-ease);
+  }
+
+  .t-check[aria-checked="true"] svg path,
+  .t-check[aria-checked="mixed"] svg path,
+  .t-check[data-checked="true"] svg path,
+  .t-check[data-checked="mixed"] svg path {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset var(--check-draw) var(--check-ease) var(--check-delay);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-check,
+    :root:not([data-motion="full"]) .t-check svg path {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-check,
+  :root[data-motion="reduce"] .t-check svg path {
+    transition: none !important;
+  }
+}

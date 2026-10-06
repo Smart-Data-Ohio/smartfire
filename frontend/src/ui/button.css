@@ -1,0 +1,268 @@
+/*
+ * Buttons. Replace every Campfire button: quieter fills, 6 px corners, one height scale (28/32/40),
+ * a press that dips to 0.97 and a keyboard-only focus ring. Hover and press change colour on the
+ * micro step; nothing bounces.
+ */
+
+@layer ui {
+  .button {
+    --button-bg: transparent;
+    --button-bg-hover: var(--bg-hover);
+    --button-bg-active: var(--bg-active);
+    --button-fg: var(--text);
+    --button-ring: transparent;
+    --button-height: var(--control-md);
+    --button-pad: var(--space-3);
+
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1-5);
+    height: var(--button-height);
+    padding-inline: var(--button-pad);
+    border-radius: var(--radius-sm);
+    background: var(--button-bg);
+    box-shadow: inset 0 0 0 1px var(--button-ring);
+    color: var(--button-fg);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+    line-height: var(--leading-ui);
+    white-space: nowrap;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter),
+      box-shadow var(--duration-micro) var(--ease-enter),
+      opacity var(--duration-micro) var(--ease-enter),
+      scale var(--duration-micro) var(--ease-enter),
+      filter var(--duration-micro) var(--ease-enter);
+  }
+
+  .button:hover {
+    background: var(--button-bg-hover);
+  }
+
+  .button:active:not(:disabled, [aria-disabled="true"]) {
+    background: var(--button-bg-active);
+    scale: var(--scale-press);
+  }
+
+  .button:disabled,
+  .button[aria-disabled="true"]:not([aria-busy="true"]) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .button:disabled:hover,
+  .button[aria-disabled="true"]:hover {
+    background: var(--button-bg);
+  }
+
+  .button[aria-busy="true"] {
+    cursor: progress;
+  }
+
+  .button .icon {
+    flex-shrink: 0;
+  }
+
+  /* ── Sizes ── */
+
+  .button[data-size="sm"] {
+    --button-height: var(--control-sm);
+    --button-pad: var(--space-2);
+
+    gap: var(--space-1);
+    font-size: var(--text-sidebar);
+  }
+
+  .button[data-size="lg"] {
+    --button-height: var(--control-lg);
+    --button-pad: var(--space-4);
+
+    gap: var(--space-2);
+    border-radius: var(--radius-md);
+    font-size: var(--text-body);
+  }
+
+  /* ── Variants ── */
+
+  .button[data-variant="primary"] {
+    --button-bg: var(--accent-solid);
+    --button-bg-hover: color-mix(in oklch, var(--accent-solid), black 9%);
+    --button-bg-active: color-mix(in oklch, var(--accent-solid), black 16%);
+    --button-fg: var(--on-accent);
+
+    box-shadow:
+      var(--shadow-control),
+      inset 0 1px 0 oklch(100% 0 0 / 12%);
+  }
+
+  .button[data-variant="secondary"] {
+    --button-bg: var(--bg-raised);
+    --button-ring: var(--border-strong);
+    --button-fg: var(--text);
+
+    box-shadow:
+      var(--shadow-control),
+      inset 0 0 0 1px var(--button-ring);
+  }
+
+  .button[data-variant="ghost"] {
+    --button-fg: var(--text-muted);
+  }
+
+  .button[data-variant="ghost"]:hover {
+    color: var(--text);
+  }
+
+  .button[data-variant="danger"] {
+    --button-bg: var(--danger-solid);
+    --button-bg-hover: color-mix(in oklch, var(--danger-solid), black 9%);
+    --button-bg-active: color-mix(in oklch, var(--danger-solid), black 16%);
+    --button-fg: var(--on-danger);
+
+    box-shadow: var(--shadow-control);
+  }
+
+  .button[data-variant="icon"] {
+    --button-fg: var(--text-muted);
+    --button-pad: 0;
+
+    width: var(--button-height);
+  }
+
+  .button[data-variant="icon"]:hover,
+  .button[data-variant="icon"][aria-expanded="true"],
+  .button[data-variant="icon"][aria-pressed="true"] {
+    color: var(--text);
+  }
+
+  .button[data-variant="icon"][aria-expanded="true"] {
+    background: var(--button-bg-active);
+  }
+
+  .button[data-variant="pill"] {
+    --button-bg: var(--bg-hover);
+    --button-bg-hover: var(--bg-active);
+    --button-bg-active: var(--bg-active);
+
+    border-radius: var(--radius-pill);
+  }
+
+  .button[data-variant="pill"][aria-pressed="true"] {
+    --button-bg: var(--accent-soft);
+    --button-bg-hover: var(--accent-soft);
+    --button-ring: color-mix(in oklch, var(--accent), transparent 45%);
+    --button-fg: var(--accent);
+  }
+
+  .button[data-variant="link"] {
+    --button-bg-hover: transparent;
+    --button-bg-active: transparent;
+    --button-fg: var(--accent);
+    --button-pad: 0;
+
+    height: auto;
+    font-weight: var(--weight-regular);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.18em;
+    transition:
+      color var(--duration-micro) var(--ease-enter),
+      text-decoration-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .button[data-variant="link"]:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .button[data-variant="link"]:active:not(:disabled, [aria-disabled="true"]) {
+    scale: 1;
+  }
+
+  /* Metal: brushed silver when it can't (or shouldn't) run the shader; a deep, quiet fill under
+     the live ring when it can. */
+  .button[data-variant="metal"] {
+    --button-fg: oklch(24% 0.01 260);
+    --button-bg: linear-gradient(
+      180deg,
+      oklch(97% 0.003 260) 0%,
+      oklch(88% 0.006 260) 48%,
+      oklch(82% 0.008 260) 52%,
+      oklch(92% 0.004 260) 100%
+    );
+    --button-bg-hover: var(--button-bg);
+    --button-bg-active: var(--button-bg);
+
+    border-radius: var(--radius-pill);
+    box-shadow:
+      var(--shadow-control),
+      inset 0 0 0 1px oklch(60% 0.01 260 / 45%),
+      inset 0 1px 0 oklch(100% 0 0 / 70%);
+    font-weight: var(--weight-semibold);
+  }
+
+  .button[data-variant="metal"]:hover {
+    filter: brightness(1.04);
+  }
+
+  .button[data-variant="metal"][data-metal="live"] {
+    --button-fg: oklch(96% 0.003 260);
+    --button-bg: oklch(22% 0.006 260);
+
+    box-shadow: var(--shadow-control);
+  }
+
+  .metal-host {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  /* ── Loading: label and busy state share one grid cell, so the width never moves ── */
+
+  .button-stack {
+    display: inline-grid;
+    align-items: center;
+    justify-items: center;
+  }
+
+  .button-stack > * {
+    grid-area: 1 / 1;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  .button-busy {
+    pointer-events: none;
+  }
+
+  .button[aria-busy="true"] .button-busy,
+  .button:not([aria-busy="true"]) .button-label {
+    transition-delay: calc(var(--duration-small) * 0.5);
+  }
+
+  /* ── Spinner ── */
+
+  .spinner {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-turn var(--duration-spin) linear infinite;
+  }
+
+  @keyframes spinner-turn {
+    to {
+      rotate: 1turn;
+    }
+  }
+}

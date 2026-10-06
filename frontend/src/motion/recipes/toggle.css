@@ -1,0 +1,97 @@
+/*
+ * Toggle: adapted from the free "Toggle" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add toggle`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the thumb's travel is derived from the control-size tokens, the
+ * keyframed overshoot runs on the spring step with --ease-enter between stops (the keyframes are the
+ * spring), and the track colour crossfades on the micro step instead of snapping (the recipe's
+ * 0ms; the scanner reports that as off-scale, and it is deliberate). The recipe's `is-init` class
+ * is a `data-init` attribute here, set after the first user flip so a toggle that renders "on"
+ * doesn't animate on mount.
+ */
+
+@layer recipes {
+  :root {
+    --toggle-width: 34px;
+    --toggle-height: 20px;
+    --toggle-inset: 2px;
+    --toggle-thumb: calc(var(--toggle-height) - var(--toggle-inset) * 2);
+    --toggle-travel: calc(var(--toggle-width) - var(--toggle-thumb) - var(--toggle-inset) * 2);
+    --toggle-dur: var(--duration-spring);
+    --toggle-ov1: 1.5px;
+    --toggle-ov2: 0px;
+    --toggle-track: var(--duration-micro);
+    --toggle-ease: var(--ease-enter);
+  }
+
+  .t-toggle {
+    transition: background-color var(--toggle-track) var(--toggle-ease);
+  }
+
+  .t-toggle-thumb {
+    translate: 0 0;
+    will-change: translate;
+  }
+
+  .t-toggle[data-on="true"] .t-toggle-thumb {
+    translate: var(--toggle-travel) 0;
+  }
+
+  .t-toggle[data-init][data-on="true"] .t-toggle-thumb {
+    animation: t-toggle-on var(--toggle-dur) var(--toggle-ease) both;
+  }
+
+  .t-toggle[data-init][data-on="false"] .t-toggle-thumb {
+    animation: t-toggle-off var(--toggle-dur) var(--toggle-ease) both;
+  }
+
+  @keyframes t-toggle-on {
+    0% {
+      translate: 0 0;
+    }
+
+    55% {
+      translate: calc(var(--toggle-travel) + var(--toggle-ov1)) 0;
+    }
+
+    80% {
+      translate: calc(var(--toggle-travel) - var(--toggle-ov2)) 0;
+    }
+
+    100% {
+      translate: var(--toggle-travel) 0;
+    }
+  }
+
+  @keyframes t-toggle-off {
+    0% {
+      translate: var(--toggle-travel) 0;
+    }
+
+    55% {
+      translate: calc(0px - var(--toggle-ov1)) 0;
+    }
+
+    80% {
+      translate: var(--toggle-ov2) 0;
+    }
+
+    100% {
+      translate: 0 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-toggle .t-toggle-thumb {
+      animation: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-toggle .t-toggle-thumb {
+    animation: none !important;
+  }
+}

@@ -48,6 +48,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/motion/recipes/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noImportantStyles": "off"
+          }
+        }
+      }
     }
   ]
 }

@@ -1,0 +1,89 @@
+/*
+ * Tabs sliding: adapted from the free "Tabs sliding" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add tabs-sliding`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens (medium, --ease-move) and
+ * the colour tokens; the bar is a quiet segmented control (radius-md, not a 48 px capsule) and the
+ * pill is the raised surface with the control shadow. Tabs (src/ui) measures the selected tab and
+ * writes the pill's width and transform; the first measurement lands without a transition.
+ */
+
+@layer recipes {
+  :root {
+    --tabs-dur: var(--duration-medium);
+    --tabs-ease: var(--ease-move);
+    --tabs-text-muted: var(--text-muted);
+    --tabs-text-active: var(--text);
+    --tabs-bar-bg: var(--bg-sunken);
+    --tabs-pill-bg: light-dark(var(--neutral-0), var(--charcoal-700));
+  }
+
+  .t-tabs {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-0-5);
+    padding: var(--space-0-5);
+    border-radius: var(--radius-md);
+    background: var(--tabs-bar-bg);
+  }
+
+  .t-tab {
+    position: relative;
+    z-index: 1;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--tabs-text-muted);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: color var(--duration-micro) var(--ease-enter);
+  }
+
+  .t-tab:not([aria-selected="true"]):hover,
+  .t-tab[aria-selected="true"] {
+    color: var(--tabs-text-active);
+  }
+
+  /* Width and transform are written inline from measurements, so the transition tweens between
+     the previous and the next tab. */
+  .t-tabs-pill {
+    position: absolute;
+    top: var(--space-0-5);
+    bottom: var(--space-0-5);
+    left: 0;
+    z-index: 0;
+    width: 0;
+    border-radius: var(--radius-sm);
+    background: var(--tabs-pill-bg);
+    box-shadow:
+      var(--shadow-control),
+      0 0 0 1px var(--shadow-ring);
+    transform: translateX(0);
+    transition:
+      transform var(--tabs-dur) var(--tabs-ease),
+      width var(--tabs-dur) var(--tabs-ease);
+    will-change: transform, width;
+    pointer-events: none;
+  }
+
+  .t-tabs-pill[data-measured="false"] {
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-tabs-pill,
+    :root:not([data-motion="full"]) .t-tab {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-tabs-pill,
+  :root[data-motion="reduce"] .t-tab {
+    transition: none !important;
+  }
+}

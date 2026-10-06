@@ -1,0 +1,149 @@
+/*
+ * Type. Inter (variable, self-hosted) for everything, JetBrains Mono (variable) only in code.
+ * Both are subsets: Latin and Latin Extended plus the UI symbols (arrows, ⌘ ⌥ ⇧ ⎋ ⏎), with the
+ * weight axis cut to the 400-600 the scale uses and Inter's optical-size axis pinned to text.
+ * tools/fonts/subset.sh regenerates them from the upstream releases; the OFL licences sit beside
+ * the files. Text outside the subset falls back to the system font through unicode-range.
+ */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/inter-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: italic;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/inter-latin-var-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2303, U+2318, U+2325, U+232B, U+238B, U+23CE,
+    U+2713, U+2715, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("./fonts/jetbrains-mono-latin-var.woff2") format("woff2");
+  unicode-range:
+    U+0000-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2000-206F, U+20A0-20C0,
+    U+2113, U+2122, U+2190-21FF, U+2212, U+2215, U+2C60-2C7F, U+A720-A7FF, U+FEFF, U+FFFD;
+}
+
+/* Arial tuned to Inter's metrics, so the swap from the fallback doesn't shift layout. */
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial"), local("Helvetica"), local("Liberation Sans");
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+
+@layer tokens {
+  :root {
+    --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --font-features: "cv11", "ss01", "calt";
+
+    /* Scale (rem at 16 px). Weights: 400 body, 500 names and unread rows, 600 headings. No 700. */
+    --text-meta: 0.75rem; /* 12: timestamps, captions, badges */
+    --leading-meta: 1rem;
+    --text-sidebar: 0.8125rem; /* 13: sidebar rows, small controls */
+    --leading-sidebar: 1.125rem;
+    --text-ui: 0.875rem; /* 14: buttons, menus, inputs */
+    --leading-ui: 1.25rem;
+    --text-body: 0.9375rem; /* 15/22: message body, as Slack */
+    --leading-body: 1.375rem;
+    --text-composer: 1rem; /* 16: composer, so iOS never zooms */
+    --leading-composer: 1.5rem;
+    --text-title: 1.125rem; /* 18: pane header title */
+    --leading-title: 1.5rem;
+    --text-page: 1.375rem; /* 22/28: page titles */
+    --leading-page: 1.75rem;
+
+    --weight-regular: 400;
+    --weight-medium: 500;
+    --weight-semibold: 600;
+
+    --tracking-tight: -0.011em;
+    --tracking-title: -0.017em;
+  }
+}
+
+@layer base {
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+    font-feature-settings: normal;
+    font-size: 0.9em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  .text-meta {
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .text-ui {
+    font-size: var(--text-ui);
+    line-height: var(--leading-ui);
+  }
+
+  .text-body {
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  .text-title {
+    font-size: var(--text-title);
+    line-height: var(--leading-title);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+  }
+
+  .text-page {
+    font-size: var(--text-page);
+    line-height: var(--leading-page);
+    font-weight: var(--weight-semibold);
+    letter-spacing: var(--tracking-title);
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .text-faint {
+    color: var(--text-faint);
+  }
+
+  /* Counters and timestamps line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

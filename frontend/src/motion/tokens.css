@@ -1,0 +1,165 @@
+/*
+ * Motion tokens: the only durations and easings in the app. Recipes and components read these
+ * (directly, or through a recipe's own tunable variable that points here), so changing a step
+ * here retimes everything that uses it.
+ *
+ * Durations by size (exits run about 25 % faster than entries):
+ *   micro   hover, press, colour                         120 / 80 ms
+ *   small   tooltip, menu, popover, chip, text swap      160 / 120 ms
+ *   medium  pane, dialog, sheet, tabs, accordion         240 / 180 ms
+ *   large   route-level cross-fade                       250 / 180 ms
+ *   spring  pops that settle on a CSS linear() spring    400 ms
+ *
+ * Reduced motion (the OS setting, unless the user picked "full" in Smartfire, or the user's own
+ * "reduce" override): distances, blur and scale collapse to nothing and every duration becomes a
+ * short fade, so whatever animated becomes a <= 80 ms opacity change. WebGL and canvas effects
+ * read the same setting through useReducedMotion() and render a still frame or a CSS fallback.
+ */
+
+@layer tokens {
+  :root {
+    --duration-micro: 120ms;
+    --duration-micro-exit: 80ms;
+    --duration-small: 160ms;
+    --duration-small-exit: 120ms;
+    --duration-medium: 240ms;
+    --duration-medium-exit: 180ms;
+    --duration-large: 250ms;
+    --duration-large-exit: 180ms;
+    --duration-spring: 400ms;
+    --duration-stagger: 40ms;
+    /* One turn of a loading spinner. It keeps turning under reduced motion: it is the message. */
+    --duration-spin: 750ms;
+    /* Hover intent: the delay before hover-only chrome (action bar, tooltips) commits. */
+    --duration-intent: 80ms;
+    /* A cold tooltip waits this long (on top of the intent delay); a warm one shows at once. */
+    --duration-tooltip-cold: 300ms;
+    /* How long a toast stays before it leaves on its own (paused while hovered or focused). */
+    --duration-toast-dwell: 5000ms;
+
+    /* Enter: fast-out, "emphasized decelerate". Exit: accelerate away. Move: position and size. */
+    --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --ease-move: cubic-bezier(0.3, 0, 0, 1);
+    /* Springs, as linear() curves so no runtime motion library is needed.
+       pop: about 12 % overshoot (badges, reaction chips). soft: about 3 % (toggles, drag release). */
+    --ease-spring: linear(
+      0,
+      0.135,
+      0.417,
+      0.708,
+      0.933,
+      1.067,
+      1.122,
+      1.121,
+      1.091,
+      1.053,
+      1.02,
+      0.998,
+      0.987,
+      0.984,
+      0.987,
+      0.991,
+      0.996,
+      0.999,
+      1.001,
+      1.002,
+      1.002,
+      1.001,
+      1.001,
+      1,
+      1
+    );
+    --ease-spring-soft: linear(
+      0,
+      0.132,
+      0.386,
+      0.631,
+      0.815,
+      0.933,
+      0.996,
+      1.023,
+      1.028,
+      1.024,
+      1.017,
+      1.01,
+      1.005,
+      1.002,
+      1,
+      0.999,
+      0.999,
+      0.999,
+      1,
+      1,
+      1
+    );
+
+    --distance-micro: 4px;
+    --distance-rise: 8px;
+    --distance-pane: 12px;
+    --distance-toast: 16px;
+    --blur-small: 2px;
+    --scale-press: 0.97;
+    --scale-surface: 0.96;
+    --scale-menu: 0.97;
+    --scale-menu-exit: 0.99;
+    --scale-tooltip: 0.98;
+    --scale-chip: 0.8;
+    /* Icon swap: the recipe's 0.25, softened by its blur, so the new glyph blooms in place. */
+    --scale-icon-swap: 0.25;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) {
+      --duration-micro: 80ms;
+      --duration-small: 80ms;
+      --duration-small-exit: 80ms;
+      --duration-medium: 80ms;
+      --duration-medium-exit: 80ms;
+      --duration-large: 80ms;
+      --duration-large-exit: 80ms;
+      --duration-spring: 80ms;
+      --duration-stagger: 0ms;
+      --ease-spring: var(--ease-enter);
+      --ease-spring-soft: var(--ease-enter);
+      --distance-micro: 0px;
+      --distance-rise: 0px;
+      --distance-pane: 0px;
+      --distance-toast: 0px;
+      --blur-small: 0px;
+      --scale-press: 1;
+      --scale-surface: 1;
+      --scale-menu: 1;
+      --scale-menu-exit: 1;
+      --scale-tooltip: 1;
+      --scale-chip: 1;
+      --scale-icon-swap: 1;
+    }
+  }
+
+  :root[data-motion="reduce"] {
+    --duration-micro: 80ms;
+    --duration-small: 80ms;
+    --duration-small-exit: 80ms;
+    --duration-medium: 80ms;
+    --duration-medium-exit: 80ms;
+    --duration-large: 80ms;
+    --duration-large-exit: 80ms;
+    --duration-spring: 80ms;
+    --duration-stagger: 0ms;
+    --ease-spring: var(--ease-enter);
+    --ease-spring-soft: var(--ease-enter);
+    --distance-micro: 0px;
+    --distance-rise: 0px;
+    --distance-pane: 0px;
+    --distance-toast: 0px;
+    --blur-small: 0px;
+    --scale-press: 1;
+    --scale-surface: 1;
+    --scale-menu: 1;
+    --scale-menu-exit: 1;
+    --scale-tooltip: 1;
+    --scale-chip: 1;
+    --scale-icon-swap: 1;
+  }
+}

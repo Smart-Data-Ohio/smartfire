@@ -25,5 +25,10 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
+    // Component tests need a DOM. jsdom has no Popover API, showModal() or anchor positioning,
+    // so these tests exercise the components' fallbacks (their own focus, Esc and outside-click
+    // handling); the native paths are covered by the Playwright pass.
+    environment: "jsdom",
+    setupFiles: ["src/test/setup.ts"],
   },
 });

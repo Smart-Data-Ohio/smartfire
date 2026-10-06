@@ -1,0 +1,88 @@
+/*
+ * Tooltip: adapted from the free "Tooltip open/close" recipe on transitions.dev by Jakub Antalik
+ * (https://transitions.dev), installed with
+ * `npx transitions-dev add tooltip`.
+ * Used and modified under the Transitions.dev License (https://transitions.dev/terms.html): free
+ * recipes may be used and modified in products, but not republished as a transitions library,
+ * template pack or component kit. See THIRD_PARTY_NOTICES.md.
+ *
+ * Changes from the recipe: the tunables point at the motion tokens and the
+ * tooltip colours at --tooltip-bg/--tooltip-text. Instead of a CSS :hover wrap, Tooltip (src/ui)
+ * sets `data-state` and shows the element in the top layer, anchored with CSS anchor positioning;
+ * the intent delay stays on the open transition only, so leaving still snaps it away. It closes on
+ * the ease-out curve, as the recipe does, so the fade starts at once.
+ */
+
+@layer recipes {
+  :root {
+    --tt-in-dur: var(--duration-small);
+    --tt-out-dur: var(--duration-micro-exit);
+    --tt-scale: var(--scale-tooltip);
+    --tt-delay: var(--duration-intent);
+    --tt-in-ease: var(--ease-enter);
+    --tt-out-ease: var(--ease-enter);
+    --tt-bg: var(--tooltip-bg);
+    --tt-fg: var(--tooltip-text);
+  }
+
+  .t-tt {
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--tt-bg);
+    color: var(--tt-fg);
+    white-space: nowrap;
+    box-shadow: var(--shadow-raised);
+    transform-origin: 50% 100%;
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: none;
+    transition:
+      opacity var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+      transform var(--tt-in-dur) var(--tt-in-ease) var(--tt-delay),
+      display var(--tt-in-dur) var(--tt-delay),
+      overlay var(--tt-in-dur) var(--tt-delay);
+    transition-behavior: allow-discrete;
+  }
+
+  .t-tt[data-placement^="bottom"] {
+    transform-origin: 50% 0%;
+  }
+
+  .t-tt[data-placement^="right"] {
+    transform-origin: 0% 50%;
+  }
+
+  .t-tt[data-placement^="left"] {
+    transform-origin: 100% 50%;
+  }
+
+  @starting-style {
+    .t-tt[data-state="open"] {
+      opacity: 0;
+      transform: scale(var(--tt-scale));
+    }
+  }
+
+  /* Leaving has no delay: the tooltip gets out of the way immediately. */
+  .t-tt[data-state="closing"] {
+    opacity: 0;
+    transform: scale(var(--tt-scale));
+    transition-duration: var(--tt-out-dur);
+    transition-timing-function: var(--tt-out-ease);
+    transition-delay: 0s;
+  }
+
+  .t-tt[data-warm] {
+    transition-delay: 0s;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :root:not([data-motion="full"]) .t-tt {
+      transition: none !important;
+    }
+  }
+
+  :root[data-motion="reduce"] .t-tt {
+    transition: none !important;
+  }
+}

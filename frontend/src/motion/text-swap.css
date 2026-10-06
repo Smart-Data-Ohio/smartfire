@@ -1,0 +1,18 @@
+/*
+ * TextSwap's slot: every reserved label and the live text share one grid cell, so the slot is as
+ * wide as its widest label and a swap never shifts what sits beside it.
+ */
+@layer ui {
+  .text-swap {
+    display: inline-grid;
+    justify-items: start;
+  }
+
+  .text-swap > * {
+    grid-area: 1 / 1;
+  }
+
+  .text-swap-reserve {
+    visibility: hidden;
+  }
+}

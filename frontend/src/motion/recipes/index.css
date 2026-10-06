@@ -1,0 +1,17 @@
+/* The adapted transitions.dev recipes (see each file's header and THIRD_PARTY_NOTICES.md). */
+@import "./menu-dropdown.css";
+@import "./tooltip.css";
+@import "./modal.css";
+@import "./toast.css";
+@import "./notification-badge.css";
+@import "./number-pop-in.css";
+@import "./text-states-swap.css";
+@import "./success-check.css";
+@import "./error-state-shake.css";
+@import "./skeleton-reveal.css";
+@import "./tabs-sliding.css";
+@import "./toggle.css";
+@import "./checkbox-check.css";
+@import "./icon-swap.css";
+@import "./accordion.css";
+@import "./panel-reveal.css";
