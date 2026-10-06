@@ -17,6 +17,7 @@ import { IconButton } from "../../ui/icon-button.tsx";
 import type { IconName } from "../../ui/icons/icon.tsx";
 import { Kbd } from "../../ui/kbd.tsx";
 import { toast } from "../../ui/toast-store.ts";
+import { editLastOwnMessage } from "../messages/edit-last.ts";
 import { AttachmentTray } from "./attachments/attachment-tray.tsx";
 import { DropOverlay, useDropTarget } from "./attachments/drop-zone.tsx";
 import {
@@ -30,8 +31,7 @@ import { loadCommands, selectable } from "./autocomplete/suggestions.ts";
 import { applyCompletion, findTrigger } from "./autocomplete/trigger.ts";
 import { useAutocomplete } from "./autocomplete/use-autocomplete.ts";
 import { draftKey as conversationDraftKey, readDraft, writeDraft } from "./draft.ts";
-import { editLastOwnMessage } from "./edit-last.ts";
-import { composerEmojiPicker } from "./emoji-hook.ts";
+import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { useKeyboardInset } from "./keyboard-inset.ts";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
@@ -616,18 +616,6 @@ export function Composer({
     }
   };
 
-  const openEmoji = (anchor: HTMLElement) => {
-    const picker = composerEmojiPicker();
-
-    if (picker === null) {
-      insertAtCaret(":");
-
-      return;
-    }
-
-    picker(anchor, insertAtCaret);
-  };
-
   const scheduleBlocked = hasFiles ? "Files can't be scheduled" : null;
 
   const plusActions: PlusAction[] = [
@@ -746,13 +734,7 @@ export function Composer({
               ))}
               <span className="composer-divider" aria-hidden="true" />
             </div>
-            <IconButton
-              icon="smile"
-              label="Emoji"
-              size="sm"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={(event) => openEmoji(event.currentTarget)}
-            />
+            <ComposerEmojiButton onInsert={insertAtCaret} />
             <IconButton
               icon="at"
               label="Mention someone"

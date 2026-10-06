@@ -341,7 +341,7 @@
   }
 
   .message:hover,
-  .message:focus-within {
+  .message:has(:focus-visible) {
     background: color-mix(in oklch, var(--bg-hover), transparent 35%);
     transition-duration: 0s;
   }
@@ -458,43 +458,6 @@
     color: var(--danger-text);
     font-size: var(--text-meta);
     font-weight: var(--weight-medium);
-  }
-
-  .message-actions {
-    position: absolute;
-    top: calc(var(--space-4) * -1);
-    right: var(--space-5);
-    z-index: 2;
-    display: flex;
-    gap: var(--space-0-5);
-    padding: var(--space-0-5);
-    border-radius: var(--radius-md);
-    background: var(--bg-raised);
-    box-shadow: var(--shadow-raised);
-    opacity: 0;
-    translate: 0 var(--distance-micro);
-    pointer-events: none;
-    transition:
-      opacity var(--duration-micro-exit) var(--ease-exit),
-      translate var(--duration-micro-exit) var(--ease-exit);
-  }
-
-  .message:not([data-group-start]) .message-actions {
-    top: calc(var(--space-5) * -1);
-  }
-
-  .message:hover .message-actions,
-  .message:focus-within .message-actions {
-    opacity: 1;
-    translate: 0 0;
-    pointer-events: auto;
-    transition:
-      opacity var(--duration-small) var(--ease-enter) var(--duration-intent),
-      translate var(--duration-small) var(--ease-enter) var(--duration-intent);
-  }
-
-  .message:focus-within .message-actions {
-    transition-delay: 0s;
   }
 
   /* ── Message bodies: the server's HTML ─────────────────────────────────── */
@@ -628,10 +591,6 @@
     .day-divider,
     .unread-divider {
       margin-inline: var(--space-3);
-    }
-
-    .message-actions {
-      display: none;
     }
   }
 }

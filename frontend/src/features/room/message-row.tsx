@@ -3,13 +3,17 @@ import type { MessageDTO, PendingMessage } from "../../store/model.ts";
 import { actions } from "../../sync/runtime.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Button, Spinner } from "../../ui/button.tsx";
-import { IconButton } from "../../ui/icon-button.tsx";
-import { toast } from "../../ui/toast-store.ts";
 import { Tooltip } from "../../ui/tooltip.tsx";
+import { MessageContent, MessageFlags, ReplyQuote } from "../messages/message-content.tsx";
+import { MessageEditor } from "../messages/message-editor.tsx";
+import { ReactionsRow } from "../messages/reactions.tsx";
+import { useRowInteractions } from "../messages/row-interactions.tsx";
+import { useViewerId } from "../messages/use-message.ts";
 import { isAgent, UNKNOWN_NAME, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ThreadIndicator } from "../threads/thread-indicator.tsx";
 import { InlineMarkdown } from "./inline-markdown.tsx";
+import "../messages/messages.css";
 
 interface HeaderProps {
   readonly creatorId: number;
@@ -57,29 +61,6 @@ function Gutter({
   );
 }
 
-function permalink(message: MessageDTO): string {
-  return new URL(
-    `${import.meta.env.BASE_URL}r/${message.roomId}/m/${message.id}`,
-    window.location.origin,
-  ).href;
-}
-
-/** The hover bar: commits after the hover-intent delay, leaves at once. More actions land in S2. */
-function ActionBar({ message }: { readonly message: MessageDTO }) {
-  const copy = () => {
-    void navigator.clipboard.writeText(permalink(message)).then(
-      () => toast({ title: "Link copied", tone: "success" }),
-      () => toast({ title: "Couldn't copy the link", tone: "danger" }),
-    );
-  };
-
-  return (
-    <div className="message-actions" role="toolbar" aria-label="Message actions">
-      <IconButton icon="link" label="Copy link" size="sm" onClick={copy} />
-    </div>
-  );
-}
-
 interface MessageRowProps {
   readonly message: MessageDTO;
   readonly groupStart: boolean;
@@ -93,7 +74,8 @@ interface MessageRowProps {
 /**
  * A confirmed message: Slack's row anatomy on Discord's density. The body is the server's
  * sanitized HTML. Mentions of you get the amber bar; a permalinked row flashes; a message that
- * arrived live rises in (history never animates).
+ * arrived live rises in (history never animates). Hovering (or focusing) shows the action bar;
+ * right click, a long press or ⇧F10 opens the message menu; the row answers the message keys.
  */
 export function MessageRow({
   message,
@@ -104,48 +86,77 @@ export function MessageRow({
   inThread = false,
 }: MessageRowProps) {
   const creator = useUser(message.creatorId);
+  const viewerId = useViewerId();
   const streaming = message.streaming && isAgent(creator);
+  const row = useRowInteractions(message, inThread);
+  const edited = message.editedAt !== null;
+  const name = creator?.name ?? UNKNOWN_NAME;
+  // A pinned message or a reply always shows who wrote it, under its flag or quote line.
+  const header = groupStart || message.pinned || message.replyToMessageId !== null;
+
+  const style =
+    row.removingHeight === null ? undefined : { "--row-height": `${row.removingHeight}px` };
 
   return (
     <article
+      ref={row.rowRef}
       className={`message${live ? " enter-rise" : ""}`}
-      data-group-start={groupStart || undefined}
+      data-message-row
+      data-message-id={message.id}
+      data-group-start={header || undefined}
       data-mention={mentionsMe || undefined}
       data-focused={focused || undefined}
       data-system={message.systemNote || undefined}
-      aria-label={`${creator?.name ?? UNKNOWN_NAME}, ${formatTime(message.createdAt)}`}
+      data-pinned={message.pinned || undefined}
+      data-editing={row.editing || undefined}
+      data-removing={row.removingHeight === null ? undefined : true}
+      style={style}
+      tabIndex={-1}
+      aria-label={`${name}, ${formatTime(message.createdAt)}`}
+      {...row.rowProps}
     >
-      <Gutter creatorId={message.creatorId} createdAt={message.createdAt} groupStart={groupStart} />
+      <Gutter creatorId={message.creatorId} createdAt={message.createdAt} groupStart={header} />
       <div className="message-main">
-        {groupStart ? (
+        <MessageFlags pinned={message.pinned} saved={row.saved} />
+        <ReplyQuote message={message} />
+        {header ? (
           <MessageHeader
             creatorId={message.creatorId}
             createdAt={message.createdAt}
-            edited={message.editedAt !== null}
+            edited={edited}
           />
         ) : null}
-        <div className="message-body-row">
-          {streaming ? (
-            <span className="message-streaming">
-              <AgentThinking
-                size={20}
-                state="composing"
-                label={`${creator?.name ?? "Agent"} is writing`}
-              />
-            </span>
-          ) : null}
-          <div
-            className="message-body"
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-            dangerouslySetInnerHTML={{ __html: message.bodyHtml }}
+        {streaming ? (
+          <span className="message-streaming">
+            <AgentThinking
+              size={20}
+              state="composing"
+              label={`${creator?.name ?? "Agent"} is writing`}
+            />
+          </span>
+        ) : null}
+        {row.editing ? (
+          <MessageEditor
+            message={message}
+            onClose={row.closeEditor}
+            onRequestDelete={row.requestDelete}
           />
-          {!groupStart && message.editedAt !== null ? (
-            <span className="message-edited">(edited)</span>
-          ) : null}
-        </div>
+        ) : (
+          <MessageContent
+            message={message}
+            trailing={!header && edited ? <span className="message-edited">(edited)</span> : null}
+          />
+        )}
+        <ReactionsRow
+          message={message}
+          viewerId={viewerId}
+          canReact={row.permissions.react}
+          onAddReaction={row.onAddReaction}
+        />
         {inThread || message.thread === null ? null : <ThreadIndicator message={message} />}
       </div>
-      <ActionBar message={message} />
+      {row.bar}
+      {row.overlays}
     </article>
   );
 }

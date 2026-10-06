@@ -4,9 +4,11 @@ import { createStore } from "zustand/vanilla";
 interface EditingState {
   /** The message being edited in place, or `null`. Only one edits at a time. */
   readonly messageId: number | null;
+  /** Where focus goes when the edit ends (the composer that asked); `null` for the row. */
+  readonly returnFocusTo: HTMLElement | null;
 }
 
-const editingStore = createStore<EditingState>()(() => ({ messageId: null }));
+const editingStore = createStore<EditingState>()(() => ({ messageId: null, returnFocusTo: null }));
 
 /**
  * Which message is open for an in-place edit. The hover bar, the context menu, the `E` key and
@@ -16,10 +18,21 @@ export function useEditingId(): number | null {
   return useZustand(editingStore, (state) => state.messageId);
 }
 
-export function startEditing(messageId: number): void {
-  editingStore.setState({ messageId });
+/** Opens `messageId` for editing; `returnFocusTo` gets focus back when it closes. */
+export function startEditing(messageId: number, returnFocusTo: HTMLElement | null = null): void {
+  editingStore.setState({ messageId, returnFocusTo });
 }
 
-export function stopEditing(): void {
-  editingStore.setState({ messageId: null });
+/** Closes the editor; answers where focus should go (or `null` for the row's own choice). */
+export function stopEditing(): HTMLElement | null {
+  const target = editingStore.getState().returnFocusTo;
+
+  editingStore.setState({ messageId: null, returnFocusTo: null });
+
+  return target?.isConnected === true ? target : null;
+}
+
+/** The message open for editing right now (outside React). */
+export function editingId(): number | null {
+  return editingStore.getState().messageId;
 }

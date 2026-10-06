@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { meFixture, messageFixture } from "../../api/testing.ts";
 import type { MessageDTO } from "../../gen/MessageDTO.ts";
 import { emptyTimeline, initialState, type State } from "../../store/state.ts";
-import { lastOwnMessageId } from "./edit-last.ts";
+import { lastEditableMessage } from "./edit-last.ts";
 
 function stateWith(
   messages: readonly MessageDTO[],
@@ -20,7 +20,7 @@ function stateWith(
   };
 }
 
-describe("lastOwnMessageId", () => {
+describe("lastEditableMessage", () => {
   it("picks the viewer's newest message, skipping others and system notes", () => {
     const state = stateWith([
       messageFixture(1, 12),
@@ -29,18 +29,21 @@ describe("lastOwnMessageId", () => {
       messageFixture(4, 12, { creatorId: 8 }),
     ]);
 
-    expect(lastOwnMessageId(state, 12, null)).toBe(1);
+    expect(lastEditableMessage(state, 12, null)?.id ?? null).toBe(1);
   });
 
   it("returns null when the viewer has nothing here", () => {
-    expect(lastOwnMessageId(stateWith([messageFixture(1, 12, { creatorId: 8 })]), 12, null)).toBe(
-      null,
-    );
-    expect(lastOwnMessageId(stateWith([]), 99, null)).toBeNull();
+    expect(
+      lastEditableMessage(stateWith([messageFixture(1, 12, { creatorId: 8 })]), 12, null)?.id ??
+        null,
+    ).toBe(null);
+    expect(lastEditableMessage(stateWith([]), 99, null)?.id ?? null).toBeNull();
   });
 
   it("returns null when the loaded window doesn't reach the present", () => {
-    expect(lastOwnMessageId(stateWith([messageFixture(1, 12)], { after: 1 }), 12, null)).toBeNull();
+    expect(
+      lastEditableMessage(stateWith([messageFixture(1, 12)], { after: 1 }), 12, null)?.id ?? null,
+    ).toBeNull();
   });
 
   it("reads a thread's own timeline", () => {
@@ -52,7 +55,7 @@ describe("lastOwnMessageId", () => {
       { threadId: 40 },
     );
 
-    expect(lastOwnMessageId(state, 12, 40)).toBe(5);
-    expect(lastOwnMessageId(state, 12, null)).toBeNull();
+    expect(lastEditableMessage(state, 12, 40)?.id ?? null).toBe(5);
+    expect(lastEditableMessage(state, 12, null)?.id ?? null).toBeNull();
   });
 });

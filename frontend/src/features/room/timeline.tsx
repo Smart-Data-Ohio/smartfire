@@ -8,6 +8,8 @@ import { store, useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
+import { useEditingId } from "../messages/editing-store.ts";
+import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
 import { DayDivider, RoomIntro, UnreadDivider } from "./dividers.tsx";
 import { MessageRow, PendingRow } from "./message-row.tsx";
 import { type TimelineItem, timelineItems } from "./timeline-items.ts";
@@ -161,10 +163,32 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
   });
 
+  // An edit opened from elsewhere (the composer's ↑) brings its row into view.
+  const editingId = useEditingId();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only when a new edit starts, not on every new message
+  useEffect(() => {
+    if (editingId === null) {
+      return;
+    }
+
+    const index = items.findIndex(
+      (item) => item.kind === "message" && item.message.id === editingId,
+    );
+
+    if (index >= 0) {
+      listRef.current?.scrollToIndex(index, { align: "nearest" });
+    }
+  }, [editingId]);
+
+  // "Mark unread" holds the room unread until it's left; let go when this timeline goes.
+  useEffect(() => () => releaseUnread(roomId), [roomId]);
+
   const markReadIfDue = () => {
     const row = store.getState().sidebar.rows[roomId];
 
     if (
+      !isUnreadHeld(roomId) &&
       atBottomRef.current &&
       timeline.after === null &&
       document.visibilityState === "visible" &&
@@ -285,6 +309,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             data={items}
             aria-label="Messages"
             role="log"
+            data-message-list
           >
             {renderItem}
           </VList>
