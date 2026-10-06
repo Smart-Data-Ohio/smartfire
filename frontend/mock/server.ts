@@ -57,6 +57,7 @@ import { createThreads } from "./s2/threads.ts";
 import { createUploads, isBinaryPath } from "./s2/uploads.ts";
 import { createActivity, scheduledInboxHooks } from "./s3/activity.ts";
 import { createServerInboxAmbient } from "./s3/ambient.ts";
+import { createOrganize } from "./s3/organize.ts";
 import { createSaved } from "./s3/saved.ts";
 import { createSearch } from "./s3/search.ts";
 import {
@@ -694,6 +695,7 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     ...createPanes(ctx).routes,
     ...activity.routes,
     ...saved.routes,
+    ...createOrganize(ctx).routes,
   ];
 
   composer.arm();
