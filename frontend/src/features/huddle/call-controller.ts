@@ -22,6 +22,7 @@ import {
   initialCallState,
   livePhase,
   type PrejoinState,
+  streamVideoIdOf,
 } from "./call-store.ts";
 import {
   canShareScreen,
@@ -1838,19 +1839,10 @@ export class CallController {
       return null;
     }
 
-    if (state.streaming?.roomId === roomId) {
-      return state.snapshot.participants.find((participant) => participant.local)?.screenId ?? null;
-    }
-
-    const presenter = store.getState().stages[roomId]?.live?.identity ?? null;
-
-    if (presenter === null) {
-      return null;
-    }
-
-    return (
-      state.snapshot.participants.find((participant) => participant.identity === presenter)
-        ?.screenId ?? null
+    return streamVideoIdOf(
+      state.snapshot.participants,
+      state.streaming?.roomId === roomId,
+      store.getState().stages[roomId]?.live?.identity ?? null,
     );
   }
 

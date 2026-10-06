@@ -13,7 +13,7 @@ import { SpeakingRing } from "../../ui/speaking-ring.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { callController } from "./call-controller.ts";
-import { useCall } from "./call-store.ts";
+import { streamVideoIdOf, useCall } from "./call-store.ts";
 import { loadParticipantMuted, loadStreamQuality } from "./engine/preferences.ts";
 import type { CallParticipant, ViewerQuality } from "./engine/transport.ts";
 import { ParticipantMenu } from "./participant-menu.tsx";
@@ -288,9 +288,9 @@ export function CallView({ roomId }: { readonly roomId: number }) {
   const roomName = useCall((state) => state.roomName);
   const participants = useCall((state) => state.snapshot.participants);
   const expandedVideoId = useCall((state) => state.expandedVideoId);
-  // Subscribed for the stream's identity: the presenter's share is the stream.
-  useStore((state) => state.stages);
-  useCall((state) => state.streaming);
+  // Read reactively (not through the controller), so the compiled memo sees the stream change.
+  const streamingHere = useCall((state) => state.streaming?.roomId === roomId);
+  const presenter = useStore((state) => state.stages[roomId]?.live?.identity ?? null);
 
   if (
     !here ||
@@ -300,7 +300,7 @@ export function CallView({ roomId }: { readonly roomId: number }) {
     return null;
   }
 
-  const streamVideoId = callController.streamVideoId();
+  const streamVideoId = streamVideoIdOf(participants, streamingHere, presenter);
   const shares = participants.filter((participant) => participant.screenId !== null);
   const expanded = shares.find((participant) => participant.screenId === expandedVideoId);
   const glowing = loudest(participants);

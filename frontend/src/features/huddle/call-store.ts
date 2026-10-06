@@ -10,6 +10,7 @@ import type { StreamQuality } from "../../gen/StreamQuality.ts";
 import { type DeviceLists, EMPTY_DEVICE_LISTS } from "./engine/devices.ts";
 import type { DevicePreferences } from "./engine/preferences.ts";
 import {
+  type CallParticipant,
   type CallSnapshot,
   type ConnectionQuality,
   type ConnectionStats,
@@ -135,6 +136,26 @@ export const initialCallState: CallState = {
 };
 
 export const callStore = createStore<CallState>()(() => initialCallState);
+
+/**
+ * The stage stream's screen share among the call's participants: this tab's own share while it
+ * streams, otherwise the live presenter's (when they're in this call and sharing).
+ */
+export function streamVideoIdOf(
+  participants: readonly CallParticipant[],
+  streamingHere: boolean,
+  presenter: string | null,
+): string | null {
+  if (streamingHere) {
+    return participants.find((participant) => participant.local)?.screenId ?? null;
+  }
+
+  if (presenter === null) {
+    return null;
+  }
+
+  return participants.find((participant) => participant.identity === presenter)?.screenId ?? null;
+}
 
 export function useCall<T>(selector: (state: CallState) => T): T {
   return useStore(callStore, selector);
