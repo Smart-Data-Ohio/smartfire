@@ -420,6 +420,14 @@ async fn cutover_c_picker_without_drive_consent_omits_legacy_menu_even_with_cale
             .len(),
             0
         );
+        // drive_link_previews_test.rb:88 (WS14g-231): the plain attach button opens the file picker.
+        assert_eq!(
+            nodes(&d, root, |d, n| d.local_name(n) == Some("button")
+                && class(d, n, "composer__attachment-btn")
+                && !d.has_attr(n, "aria-haspopup"))
+            .len(),
+            1
+        );
     }
 }
 #[tokio::test]

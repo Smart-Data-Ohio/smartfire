@@ -697,6 +697,8 @@ mod google_calendar_job_tests;
 #[cfg(test)]
 mod google_meeting_refresh_tests;
 #[cfg(test)]
+mod ws14_profile_status_tests;
+#[cfg(test)]
 mod google_push_channel_tests;
 
 #[cfg(test)]
