@@ -1,0 +1,399 @@
+/* Workspace destinations (Activity, Saved, Scheduled): the page frame and the shared list row. */
+@layer app {
+  /* ── Page ──────────────────────────────────────────────────────────────── */
+
+  .page {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .page-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--pane-header-height);
+    padding: 0 var(--space-3) 0 var(--space-5);
+    box-shadow: 0 1px 0 var(--border);
+    z-index: 2;
+  }
+
+  .page-back {
+    display: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin-left: calc(var(--space-2) * -1);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+  }
+
+  .page-heading {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .page-heading-icon {
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+
+  .page-title {
+    min-width: 0;
+    overflow: hidden;
+    font-size: var(--text-body);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-body);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* A quiet count beside the title ("3 unread"). */
+  .page-count {
+    flex-shrink: 0;
+    padding: 0 var(--space-1-5);
+    border-radius: var(--radius-pill);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-medium);
+    line-height: 18px;
+  }
+
+  .page-tools {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .page-toolbar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5) var(--space-2);
+  }
+
+  /* The tab strip scrolls sideways when it doesn't fit, its edges fading out. */
+  .page-toolbar .tabs {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .page-toolbar .t-tabs {
+    flex-shrink: 0;
+  }
+
+  .page-body {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  /* The list column: a readable measure, flush with the header's start like the timeline. */
+  .page-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .page-list-scroll {
+    flex: 1;
+    min-height: 0;
+    overscroll-behavior: contain;
+  }
+
+  .page-section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 880px;
+    padding: var(--space-4) var(--space-5) var(--space-1-5);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.02em;
+    line-height: var(--leading-meta);
+    text-transform: uppercase;
+  }
+
+  .page-section-count {
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-medium);
+  }
+
+  .page-section-hint {
+    max-width: 880px;
+    margin-top: calc(var(--space-1) * -1);
+    padding: 0 var(--space-5) var(--space-2);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    line-height: var(--leading-meta);
+  }
+
+  .page-more {
+    display: flex;
+    justify-content: center;
+    max-width: 880px;
+    padding: var(--space-2) var(--space-3) var(--space-6);
+  }
+
+  .page-more-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    color: var(--danger-text);
+    font-size: var(--text-sidebar);
+  }
+
+  .page-skeleton {
+    max-width: 880px;
+    padding-top: var(--space-2);
+    padding-inline: var(--space-2);
+  }
+
+  .page .pane-empty {
+    margin-top: 12vh;
+  }
+
+  /* ── List row ──────────────────────────────────────────────────────────── */
+
+  .list-row {
+    display: grid;
+    grid-template-rows: 1fr;
+    max-width: 880px;
+    padding-inline: var(--space-3);
+  }
+
+  .list-row-clip {
+    min-height: 0;
+  }
+
+  .list-row-inner {
+    position: relative;
+    border-radius: var(--radius-md);
+    transition: background-color var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .list-row-inner:hover,
+  .list-row-inner:has(.list-row-bar [aria-expanded="true"]) {
+    background: var(--bg-hover);
+    transition-duration: var(--duration-micro);
+  }
+
+  .list-row-inner:has(> .list-row-open:focus-visible) {
+    background: var(--bg-hover);
+  }
+
+  /* A row that's leaving (handled, removed, cancelled): it fades and folds its height away. */
+  .list-row[data-motion="leave"] {
+    overflow: hidden;
+    animation: list-row-leave var(--duration-medium-exit) var(--ease-exit) forwards;
+    pointer-events: none;
+  }
+
+  @keyframes list-row-leave {
+    to {
+      grid-template-rows: 0fr;
+      opacity: 0;
+    }
+  }
+
+  /* The open target: the whole row (content inside it), or a cover over decorated content. */
+  .list-row-open {
+    display: flex;
+    width: 100%;
+    border-radius: var(--radius-md);
+    color: inherit;
+    text-align: start;
+  }
+
+  .list-row-open:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  .list-row-cover {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .list-row-cover + * {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .list-row-cover + * :is(time, a, button) {
+    pointer-events: auto;
+  }
+
+  /* Hover actions, the message hover bar's look, on hover intent or focus within. */
+  .list-row-bar {
+    position: absolute;
+    top: var(--space-1-5);
+    right: var(--space-2);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px;
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-raised);
+    opacity: 0;
+    translate: 0 var(--distance-micro);
+    pointer-events: none;
+    transition:
+      opacity var(--duration-micro-exit) var(--ease-exit),
+      translate var(--duration-micro-exit) var(--ease-exit);
+  }
+
+  .list-row-inner:hover > .list-row-bar,
+  .list-row-inner:focus-within > .list-row-bar,
+  .list-row-bar:has([aria-expanded="true"]) {
+    opacity: 1;
+    translate: 0 0;
+    pointer-events: auto;
+    transition-delay: var(--duration-intent);
+    transition-duration: var(--duration-micro);
+    transition-timing-function: var(--ease-enter);
+  }
+
+  .list-row-bar .button[data-variant="ghost"] {
+    --button-height: var(--control-sm);
+  }
+
+  /* Touch screens have no hover: the actions sit in the row, always there. */
+  @media (hover: none) {
+    .list-row-bar {
+      position: static;
+      justify-content: flex-end;
+      margin: calc(var(--space-1) * -1) var(--space-2) var(--space-2) auto;
+      padding: 0;
+      width: fit-content;
+      background: none;
+      box-shadow: none;
+      opacity: 1;
+      translate: none;
+      pointer-events: auto;
+    }
+  }
+
+  .point-menu-anchor {
+    position: fixed;
+    z-index: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ── Conversation label ────────────────────────────────────────────────── */
+
+  .conversation-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .conversation-glyph {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .conversation-room,
+  .conversation-thread {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .conversation-room {
+    flex-shrink: 0;
+    max-width: 60%;
+  }
+
+  /* ── Sidebar destinations (Saved, Scheduled) ───────────────────────────── */
+
+  .sidebar-destinations {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sidebar-row-gap);
+    margin: 0 0 var(--space-3);
+    padding: 0 var(--space-2);
+    list-style: none;
+  }
+
+  .sidebar-destination .sidebar-row-glyph {
+    color: var(--text-muted);
+  }
+
+  .sidebar-row[data-state="selected"] .sidebar-row-glyph {
+    color: var(--text);
+  }
+
+  .sidebar-destination-count {
+    flex-shrink: 0;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Phones ────────────────────────────────────────────────────────────── */
+
+  @media (width < 720px) {
+    .page-header {
+      padding: 0 var(--space-2) 0 var(--space-4);
+    }
+
+    .page-header:has(.page-back) {
+      padding-left: var(--space-2);
+    }
+
+    .page-back {
+      display: grid;
+    }
+
+    .page-toolbar {
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+    }
+
+    .page-toolbar .tabs {
+      flex: 1 1 100%;
+      margin-inline: calc(var(--space-3) * -1);
+      padding-inline: var(--space-3);
+    }
+
+    .list-row {
+      padding-inline: var(--space-1);
+    }
+
+    .page-section-title,
+    .page-section-hint {
+      padding-inline: var(--space-4);
+    }
+  }
+}
