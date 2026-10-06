@@ -157,8 +157,8 @@ fn compiled_files_are_byte_identical_to_the_reference_precompile() {
 #[test]
 fn approved_status_assets_are_served_byte_identically_and_stay_in_strict_baseline_checks() {
     let approved: [(&str, &[u8]); 2] = [
-        ("people.css", include_bytes!("../../../reference-tools/users/post-pin/app/assets/stylesheets/people.css")),
-        ("controllers/profile_card_controller.js", include_bytes!("../../../reference-tools/users/post-pin/app/javascript/controllers/profile_card_controller.js")),
+        ("people.css", include_bytes!("../../../test-support/post-pin/app/assets/stylesheets/people.css")),
+        ("controllers/profile_card_controller.js", include_bytes!("../../../test-support/post-pin/app/javascript/controllers/profile_card_controller.js")),
     ];
     let mapped = overridden();
     for (logical, bytes) in approved {

@@ -74,10 +74,11 @@ class HostSourceTests(unittest.TestCase):
             with patch('browser_host.prepare_source', return_value=root / 'generated'), \
                     patch('browser_host.audit_build') as audit, \
                     patch('browser_host.subprocess.run', return_value=result) as run:
-                self.assertEqual(build_host(root, {'CARGO_TARGET_DIR': str(root / 'target')}), artifact['executable'])
+                self.assertEqual(build_host(root, {'CARGO_TARGET_DIR': str(root / 'target'), 'CAMPFIRE_REFERENCE': str(root)}), artifact['executable'])
             audit.assert_called_once()
             self.assertEqual(run.call_args.kwargs['env']['CARGO_TARGET_DIR'], str(root / 'target/ws8bm-browser-host'))
-            self.assertEqual(run.call_args.kwargs['env']['CAMPFIRE_REFERENCE'], str(root))
+            # The generated tree reads its own copies of rust/web and rust/fixtures.
+            self.assertNotIn('CAMPFIRE_REFERENCE', run.call_args.kwargs['env'])
 
     def test_refreshes_outer_inputs_without_copying_targets_or_old_files(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -95,10 +96,10 @@ class HostSourceTests(unittest.TestCase):
                 "rust/reference-tools/messaging/browser-drive-client.rs": b"external Drive client",
                 "rust/reference-tools/users/new_harness.mjs": b"new included harness",
                 "public/500.html": b"original error page",
-                "rust/reference-tools/views/agents_ui/extreme_cast_inputs.json.gz": b"extreme",
-                "rust/reference-tools/views/agents_ui/normalized_cast_inputs.json.gz": b"normalized",
-                "rust/reference-tools/views/agents_ui/render_replay_inputs.json.gz": b"replay",
-                "rust/reference-tools/views/agents_ui/casting_followups_inputs.json": b"followups",
+                "rust/test-support/agents_ui/extreme_cast_inputs.json.gz": b"extreme",
+                "rust/test-support/agents_ui/normalized_cast_inputs.json.gz": b"normalized",
+                "rust/test-support/agents_ui/render_replay_inputs.json.gz": b"replay",
+                "rust/test-support/agents_ui/casting_followups_inputs.json": b"followups",
                 "rust/target/debug/stale": b"not an input",
             }
             for relative, content in inputs.items():
@@ -113,7 +114,7 @@ class HostSourceTests(unittest.TestCase):
                 self.assertEqual(callback.read_bytes(), b"callback")
                 self.assertEqual((generated / "reference-tools/users/new_harness.mjs").read_bytes(), b"new included harness")
                 for name in ("extreme_cast_inputs.json.gz", "normalized_cast_inputs.json.gz", "render_replay_inputs.json.gz", "casting_followups_inputs.json"):
-                    relative = "reference-tools/views/agents_ui/" + name
+                    relative = "test-support/agents_ui/" + name
                     self.assertEqual((generated / relative).read_bytes(), inputs["rust/" + relative])
                 self.assertEqual((generated / "parity/reference.sha").read_bytes(), b"pinned")
                 self.assertFalse((generated / "target").exists())

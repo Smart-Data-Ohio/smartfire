@@ -140,7 +140,8 @@ async fn google_lifecycle_matches_pinned_rails_state_jobs_and_remote_stop_order(
         if expected == StatusCode::INTERNAL_SERVER_ERROR {
             assert_eq!(
                 response.text(),
-                include_str!("../../../../../public/500.html")
+                std::fs::read_to_string(campfire_db::fixtures::reference_path("public/500.html"))
+                    .unwrap()
             );
         }
         let state=a.db().read(|c| {

@@ -1,9 +1,9 @@
 //! The reference's asset pipeline, precomputed at build time and embedded in the binary.
 //!
-//! `build.rs` digests and compiles `reference/app/assets`, `reference/app/javascript`,
-//! `reference/vendor/javascript` and the gem assets in `vendor/` exactly as Propshaft's
-//! `assets:precompile` does, renders the import map from `reference/config/importmap.rb`, and
-//! embeds everything along with `reference/public`.
+//! `build.rs` digests and compiles `web/app/assets`, `web/app/javascript`,
+//! `web/vendor/javascript` and the gem assets in `vendor/` exactly as Propshaft's
+//! `assets:precompile` does, renders the import map from `web/config/importmap.rb`, and
+//! embeds everything along with `web/public` (`web/` is the port's copy of the Rails inputs).
 //!
 //! - [`asset_path`] and friends: ActionView's asset URL helpers over the Propshaft manifest.
 //! - [`stylesheet_link_tag`] / [`stylesheet_link_tag_all`] and [`javascript_importmap_tags`]:

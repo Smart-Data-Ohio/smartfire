@@ -28,7 +28,7 @@ inputs = [
   {kind: "hello", data_base64: Base64.strict_encode64("hello")},
   {kind: "empty", data_base64: ""},
   {kind: "png", data_base64: png},
-  {kind: "pdf", data_base64: Base64.strict_encode64(File.binread(File.join(work, "reference-tools/attachments/fixtures/analysis.pdf")))}
+  {kind: "pdf", data_base64: Base64.strict_encode64(File.binread(File.join(work, "test-support/attachments/analysis.pdf")))}
 ]
 def direct_blob(name, bytes)
   blob = ActiveStorage::Blob.create_before_direct_upload!(filename: name, content_type: "application/octet-stream",

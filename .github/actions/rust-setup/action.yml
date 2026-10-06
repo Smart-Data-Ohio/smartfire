@@ -159,7 +159,6 @@ runs:
       with:
         context: rust
         file: rust/Dockerfile
-        build-contexts: reference=.
         target: toolchain
         tags: campfire-toolchain
         load: true

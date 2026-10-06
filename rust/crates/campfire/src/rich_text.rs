@@ -215,7 +215,7 @@ mod tests {
     fn vendored_icon_catalog_matches_reference() {
         let root = std::env::var_os("CAMPFIRE_REFERENCE")
             .map(std::path::PathBuf::from)
-            .unwrap_or_else(fixtures::reference_root);
+            .unwrap_or_else(fixtures::rails_root);
         if !check_icon_reference(&root, std::env::var_os("CI").is_some()).unwrap() {
             eprintln!(
                 "SKIPPED icon reference comparison: no config/icons.yml at {}",

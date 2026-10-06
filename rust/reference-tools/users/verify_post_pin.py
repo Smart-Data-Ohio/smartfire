@@ -6,7 +6,7 @@ import json
 import subprocess
 
 root=Path(__file__).resolve().parents[2]
-base=root / "reference-tools/users/post-pin"
+base=root / "test-support/post-pin"
 ledger=json.loads((base / "source-hashes.json").read_text())
 assert len(ledger)==10
 for path,digest in ledger.items():

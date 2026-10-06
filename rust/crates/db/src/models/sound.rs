@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn builtin_sounds_match_reference() {
         let ruby = std::fs::read_to_string(
-            crate::fixtures::reference_root().join("app/models/sound.rb"),
+            crate::fixtures::rails_root().join("app/models/sound.rb"),
         )
         .unwrap();
         let count = ruby

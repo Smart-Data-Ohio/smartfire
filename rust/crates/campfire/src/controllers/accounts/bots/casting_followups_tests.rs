@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 
 fn inputs() -> Value {
     serde_json::from_str(include_str!(
-        "../../../../../../reference-tools/views/agents_ui/casting_followups_inputs.json"
+        "../../../../../../test-support/agents_ui/casting_followups_inputs.json"
     ))
     .unwrap()
 }

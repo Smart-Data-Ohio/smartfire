@@ -16,6 +16,8 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 OUT=${OUT:-$ROOT/target/db-differential}
+source "$ROOT/reference-tools/rails_link_mounts.sh"
+mapfile -t LINK_MOUNTS < <(rails_link_mounts "${CAMPFIRE_REFERENCE:-$ROOT/..}")
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$ROOT/target/db-differential/cargo}
 rm -f "$OUT"/*.sqlite3 "$OUT"/*.sql "$OUT"/*.bot_key "$OUT"/*.json; mkdir -p "$OUT"
 
@@ -31,7 +33,7 @@ reference() {
     --user "$(id -u):$(id -g)" \
     --env-file "$ROOT/parity/.env.reference" \
     -e RAILS_ENV=test -e RAILS_LOG_LEVEL=warn -e SCHEMA_QUERY="$SCHEMA_QUERY" -e CAMPFIRE_FIXTURES_NOW \
-    -v "${CAMPFIRE_REFERENCE:-$ROOT/..}/test:/rails/test:ro" \
+    -v "${CAMPFIRE_REFERENCE:-$ROOT/..}/test:/rails/test:ro" "${LINK_MOUNTS[@]}" \
     -v "$ROOT/crates/db/ruby:/tools:ro" -v "$OUT:/out" \
     "${PARITY_IMAGE:-${REFERENCE_IMAGE:-campfire-reference:latest}}" sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
 }

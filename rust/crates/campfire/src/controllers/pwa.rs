@@ -67,14 +67,14 @@ mod tests {
         let app = TestApp::boot().await.expect("WS17 requires the Rails parity seed");
         let reply = app.anonymous().get("/service-worker.js").await;
         assert_eq!(reply.status, StatusCode::OK);
-        let reference = campfire_db::fixtures::reference_root().join("app/views/pwa/service_worker.js");
+        let reference = campfire_db::fixtures::rails_root().join("app/views/pwa/service_worker.js");
         assert_eq!(reply.body, std::fs::read(reference).unwrap());
         if let Ok(path) = std::env::var("WS17_SERVICE_WORKER_OUTPUT") {
             std::fs::write(path, &reply.body).unwrap();
         }
         let offline = app.anonymous().get("/offline.html").await;
         assert_eq!(offline.status, StatusCode::OK);
-        assert_eq!(offline.body, std::fs::read(campfire_db::fixtures::reference_root().join("public/offline.html")).unwrap());
+        assert_eq!(offline.body, std::fs::read(campfire_db::fixtures::reference_path("public/offline.html")).unwrap());
     }
     #[tokio::test]
     async fn original_service_worker_logic_checks_the_real_http_script() {
@@ -89,7 +89,7 @@ mod tests {
         std::fs::write(script, &reply.body).unwrap();
         std::fs::write(
             &harness,
-            include_str!("../../../../reference-tools/users/service_worker_original_harness.mjs"),
+            include_str!("../../../../test-support/service_worker_original_harness.mjs"),
         )
         .unwrap();
         let output = std::process::Command::new("node")
