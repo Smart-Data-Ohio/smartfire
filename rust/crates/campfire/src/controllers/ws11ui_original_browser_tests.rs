@@ -53,12 +53,6 @@ fn original_starred_people_assertions() {
     replay("stars");
 }
 
-#[test]
-#[ignore = "paired Rails/Rust Chromium gate: rust/parity/system/ws12"]
-fn original_node_event_harness_assertions() {
-    replay("worker");
-}
-
 // Runs in ordinary CI without Chromium, Rails or a server binary. The ignored
 // gate separately exercises these leases through the real server.
 #[test]

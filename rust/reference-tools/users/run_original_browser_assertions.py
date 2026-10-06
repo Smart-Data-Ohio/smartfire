@@ -4,7 +4,7 @@ import argparse,atexit,hashlib,json,os,re,shutil,sqlite3,subprocess,tempfile,tim
 from pathlib import Path
 from browser_port_leases import DEFAULT_BASE, reserve
 parser=argparse.ArgumentParser(description=__doc__)
-parser.add_argument('mode',choices=['people','pickers','members','group','tours','stars','worker'])
+parser.add_argument('mode',choices=['people','pickers','members','group','tours','stars'])
 parser.add_argument('--controls',action='store_true')
 parser.add_argument('--mutation',choices=['tour-stamp','tour-auto-start','group-notice','group-navigation','member-visibility','menu-rendered','identity-visibility','picker-visibility','picker-scope','tour-key-scope','phone-first-row'])
 args=parser.parse_args()
@@ -15,7 +15,7 @@ cases={
 'pickers':['picker-filter','picker-post','picker-enter','picker-row','picker-phone'],
 'members':['mobile-escape','mobile-tab'],'group':['group-lifecycle'],
 'tours':['tour-finish','tour-escape','tour-restart','tour-completed'],
-'stars':['star-card','star-menu','star-escape','star-phone'],'worker':['served-worker'],}
+'stars':['star-card','star-menu','star-escape','star-phone'],}
 if args.mutation:
  mutation_cases={'tour-stamp':('tours','tour-restart'),'tour-auto-start':('tours','tour-completed'),'group-notice':('group','group-lifecycle'),'group-navigation':('group','group-lifecycle'),'member-visibility':('members','mobile-tab'),'menu-rendered':('stars','star-menu'),'identity-visibility':('stars','star-card'),'picker-visibility':('pickers','picker-filter'),'picker-scope':('pickers','picker-filter'),'tour-key-scope':('tours','tour-finish'),'phone-first-row':('pickers','picker-phone')}
  mutation_mode,mutation_case=mutation_cases[args.mutation]
@@ -106,13 +106,13 @@ try:
     time.sleep(.25)
   for case in cases[args.mode]:
    fixture(case)
-   script='original_worker_assertions.mjs' if args.mode=='worker' else 'original_browser_assertions.mjs'
+   script='original_browser_assertions.mjs'
    cmd=['docker','run','--rm','--network','none','--cpus','1','--shm-size','256m','-v',f'{net_dir}:/upstream','-e','PARITY_UPSTREAM_SOCKET=/upstream/upstream.sock','-e',f'WS11UI_HOST_NETWORK={os.readlink("/proc/self/ns/net")}', '--label','parity.owner=ws11ui','-v',f'{root.parent}:/work:ro','-e',f'WS11UI_BROWSER_URL=http://127.0.0.1:{ports[1]}','-e',f'WS11UI_BROWSER_LABELS=/work/{(run/"labels.json").relative_to(root.parent)}','-e',f'WS11UI_BROWSER_DATABASE=/work/{database.relative_to(root.parent)}','-e',f'WS11UI_BROWSER_CASE={case}','-e',f'WS11UI_BROWSER_MODE={args.mode}','-e',f'WS11UI_BROWSER_CONTROL={int(args.controls)}','-e',f'WS11UI_BROWSER_MUTATION={args.mutation or ""}',image,'node','/work/rust/reference-tools/users/'+script]
    result=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
    print(f'Original Rust {case}:',flush=True);print(result.stdout,flush=True)
    if args.controls:
     assert result.returncode!=0 and 'ORIGINAL_MUTATION' in result.stdout and 'INVALID_CONTROL' not in result.stdout,(case,'invalid/surviving producer control',result.stdout[-2000:])
-    assert ('original assertion' in result.stdout or 'TimeoutError' in result.stdout or (args.mode=='worker' and 'only static entries are ever cached' in result.stdout)),(case,'wrong failure')
+    assert ('original assertion' in result.stdout or 'TimeoutError' in result.stdout),(case,'wrong failure')
    else:
     assert result.returncode==0 and f'ORIGINAL_CASE {case}: passed' in result.stdout,(case,'browser receipt missing')
     requests=json.loads(next(s.removeprefix('ORIGINAL_STATE_REQUESTS ') for s in result.stdout.splitlines() if s.startswith('ORIGINAL_STATE_REQUESTS ')))

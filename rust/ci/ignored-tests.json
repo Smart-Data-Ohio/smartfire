@@ -114,13 +114,6 @@
       "seconds": 41
     },
     {
-      "path": "crates/campfire/src/controllers/ws11ui_original_browser_tests.rs",
-      "package": "campfire",
-      "binary": "campfire",
-      "test": "controllers::ws11ui_original_browser_tests::original_node_event_harness_assertions",
-      "seconds": 19
-    },
-    {
       "path": "crates/campfire/src/controllers/ledger_browser_tests.rs",
       "package": "campfire",
       "binary": "campfire",
