@@ -1,6 +1,7 @@
 # The Rust app image (Dockerfile) builds from Cargo.toml, Cargo.lock and crates/ in this context,
-# plus the parts of web/ that crates/assets/build.rs embeds, the ops/ hooks it installs and, for
-# the CI toolchain stage, rust-toolchain.toml. ci/Dockerfile (the CI correctness prerequisites)
+# plus the parts of web/ that crates/assets/build.rs embeds, frontend/'s sources (the SPA that
+# crates/spa embeds, built in the image), the ops/ hooks it installs and, for the CI toolchain
+# stage, rust-toolchain.toml. ci/Dockerfile (the CI correctness prerequisites)
 # builds from the same context and copies from ci/. Everything else stays out.
 # deploy/huddles/Dockerfile has its own Dockerfile.dockerignore.
 
@@ -53,6 +54,13 @@
 /web/script
 /web/.bundle
 /web/public/assets
+# frontend/: the sources the image's spa stage builds from, never a local build or test output
+# (node_modules is excluded above).
+/frontend/dist
+/frontend/.vite
+/frontend/test-results
+/frontend/playwright-report
+/frontend/*.tsbuildinfo
 
 # crates: test data isn't compiled into the binary
 /crates/*/target

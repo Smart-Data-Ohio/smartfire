@@ -38,8 +38,10 @@ maps a Rails-relative path to its copy here.
 
 `frontend/` is the React 19 + Effect 4 single-page app that replaces the Hotwire UI in `web/`
 screen by screen, served under `/app/`. It's a pnpm project of its own (Vite 8, typescript@7,
-Biome, the vendored anti-slop Oxlint rules, Vitest, Playwright). No crate reads it yet, and the
-production image runs no Node. `effect` is imported only in `src/api` and `src/sync`; Biome
+Biome, the vendored anti-slop Oxlint rules, Vitest, Playwright). `crates/spa` embeds its
+`frontend/dist` build into the binary (a stub page when there's none, so cargo never needs Node;
+`SPA_DIST` names another dist), and the app serves it only with `SPA_ENABLED` set. The image
+builds the SPA in a Node stage; the runtime image has no Node. `effect` is imported only in `src/api` and `src/sync`; Biome
 rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing frontend work. CI is
 `.github/workflows/frontend.yml` (the `Frontend` check). Commands and rules:
 `frontend/README.md`.
@@ -57,6 +59,7 @@ rejects it anywhere else. Run `pnpm check` in `frontend/` before finishing front
 | `crates/cable` | `campfire_cable` | Action Cable protocol server, its WebSocket implementation, and in-process pub/sub |
 | `crates/assets` | `campfire_assets` | Propshaft-compatible digesting, importmap, vendored JS/CSS, port-owned overrides |
 | `crates/views` | `campfire_views` | Askama templates (at the ERB file's relative path) and view helpers |
+| `crates/spa` | `campfire_spa` | The built SPA embedded at compile time (brotli/gzip, immutable caching), the shell and its boot JSON |
 | `crates/campfire` | `campfire` (bin) | Controllers, router wiring, channels, jobs, integrations |
 | `frontend/` | — | The React SPA replacing the Hotwire UI (`frontend/README.md`) |
 | `parity/` | — | Frozen test seeds (`parity/seeds`), the pinned Playwright image the browser suites run in, template coverage |

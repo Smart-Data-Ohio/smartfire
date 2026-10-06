@@ -76,6 +76,7 @@ pub mod scheduled_messages;
 pub mod searches;
 pub mod sessions;
 pub mod slack;
+pub mod spa;
 pub mod sudos;
 pub mod switchers;
 pub mod two_factor;

@@ -22,6 +22,8 @@
 //!   reference caches fragments in Redis (`redis_cache_store`) with no `maxmemory`; this store is
 //!   in the process, so it's bounded like Rails' `MemoryStore` (default `size` 32 MB), evicting the
 //!   least recently used fragments. See `campfire_views::fragment_cache`.
+//! - `SPA_ENABLED`: serve the React SPA (`crates/spa`) under `/app` when `1`, `true`, `yes` or
+//!   `on`; otherwise `/app` is an unknown path, as it always was.
 //!
 //! Storage paths mirror `Rails.root.join("storage")`: the database under `db/`, blobs under
 //! `files/` (`config/storage.yml`), backups under `backups/` (`script/admin/prepare-backup`).
@@ -67,6 +69,8 @@ pub struct Config {
     pub sign_in_google_domains: Vec<String>,
     /// Shared provider configuration from the same injected environment lookup.
     pub google_client: crate::integrations::google::api::Config,
+    /// `SPA_ENABLED`: the React SPA under `/app` (`controllers::spa`).
+    pub spa_enabled: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -178,6 +182,8 @@ impl Config {
                 client_secret: get("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
                 webhook_url: present("GOOGLE_CALENDAR_WEBHOOK_URL"),
             },
+            spa_enabled: present("SPA_ENABLED")
+                .is_some_and(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on")),
         })
     }
 }
@@ -270,6 +276,21 @@ mod tests {
     fn disable_ssl_is_any_non_blank_value() {
         assert!(config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", "false")]).unwrap().disable_ssl);
         assert!(!config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", " ")]).unwrap().disable_ssl);
+    }
+
+    #[test]
+    fn spa_is_off_unless_enabled() {
+        let enabled = |value: Option<&str>| {
+            let mut vars = vec![("SECRET_KEY_BASE", "abc")];
+            vars.extend(value.map(|value| ("SPA_ENABLED", value)));
+            config(&vars).unwrap().spa_enabled
+        };
+        for value in ["1", "true", "TRUE", " yes ", "on"] {
+            assert!(enabled(Some(value)), "{value:?}");
+        }
+        for value in [None, Some(""), Some("0"), Some("false"), Some("off"), Some("no"), Some("enabled")] {
+            assert!(!enabled(value), "{value:?}");
+        }
     }
 
     #[test]
