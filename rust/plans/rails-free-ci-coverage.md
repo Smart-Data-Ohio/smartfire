@@ -27,7 +27,7 @@ recorded from Rails once, now.
 versions against `crates/db/src/schema_migrations.txt`), restores to `parity/.seed/NAME`, and
 migrates: `frozen-seeds migrate target/debug/campfire` runs P0's `campfire db-migrate DATABASE`
 on a copy of each seed, checkpoints, and re-records the manifest. That's the hook for future
-schema changes; until P0 lands, main's command still wants a MIGRATIONS_DIR argument.
+schema changes (`parity/test_frozen_seeds.py` runs it end to end with a `db-migrate` stand-in).
 
 The recorders (`reference-tools/messaging/record-fixtures.py`,
 `reference-tools/views/agents_ui/record-fixtures.py`) are committed with the recordings for
@@ -37,14 +37,14 @@ provenance and deleted with the Ruby in P2.
 
 | group | tests | retire | port |
 |---|---|---|---|
-| WS14/WS15 messaging originals | 53 | 6 | 47 (44 browser, 3 HTTP) |
-| behavior-check cases | 145 | 6 | 139 (Rust-only harness on recorded fixtures) |
+| WS14/WS15 messaging originals | 53 | 5 | 48 (45 browser, 3 HTTP) |
+| behavior-check cases | 145 | 6 | 139 (Rust-only harness on recorded fixtures); 1 retired case also gets a Rust HTTP port |
 | WS11-UI originals | 7 | 1 | 6 |
 | Ledger browser | 4 | 0 | 4 (drop the `browser-profile` case) |
 | agents-ui `system_behavior.py` scenarios | 3 | 0 | 3 |
 | C221–C223 cutover | 3 | 0 | 3 (drop the Rails pass and "Rails must pass" gate) |
 | Database differential | 3 | 1 | 2 (frozen snapshots) |
-| **total** | **218** | **14** | **204** |
+| **total** | **218** | **13** | **205** |
 
 Already Rust-only, unchanged: C224–C227 (`compare` on `vectors/ws12_browser_remaining.json`),
 the huddle gateway Node suite, `huddle_system_cases_in_real_browser`, LiveKit, ACME.
@@ -57,7 +57,7 @@ expectation is a literal in the Ruby, so the ports need no recording. Paths are 
 
 | id | title (Rails source) | Rust-only coverage today | action |
 |---|---|---|---|
-| WS14e-101 | scheduling an event announces it in the room with a card members respond from (`events_test.rb:102`) | `rooms/events/tests/cutover/interactions.rs::cutover_interaction_announcement_card_response_stays_in_requested_frame` (forms, card, response, frame headers, DB). Only the browser's current path is unproven: plain Turbo frame behaviour | **Retire** |
+| WS14e-101 | scheduling an event announces it in the room with a card members respond from (`events_test.rb:102`) | `rooms/events/tests/cutover/interactions.rs::cutover_interaction_announcement_card_response_stays_in_requested_frame` (forms, card, response, frame headers, DB). HTTP can't show `:136`, the browser staying on the room after Going | **Ported** (review of #261): `drive_browser_tests::drive_browser_ws14e_101` runs the whole declaration in Playwright (`parity/system/events.test.mjs`). A frame that pushes its URL (`data-turbo-action="advance"`) fails it at `:136`; one targeting `_top` fails at `:132` |
 | WS14g-224 | attach Drive files from the picker, send textless, and remove through edit (`drive_attachments_test.rb:10`) | Server only: `messages/drive_tests.rs::root_and_thread_drive_requests_match_rails_bytes_order_json_validation_and_rollback`, `app/cutover_c_tests.rs::cutover_c_drive_edit_form_has_two_removable_chips_and_exact_hidden_sentinels`. Missing: picker and chip JS, 24px target, textless send | Port: Rust-only Playwright suite A (Drive/sudo), fake Google client with `google_calendar_test_helper.rb` payloads |
 | WS14g-225 | edit a room message in the composer and remove one of two attachments (`drive_attachments_test.rb:79`) | Server PATCH replace/clear rows in `drive_tests.rs`. Missing: menu → composer edit mode → chips | Port: Rust-only Playwright suite A (Drive/sudo), fake Google client with `google_calendar_test_helper.rb` payloads |
 | WS14g-226 | attach a Drive file from the thread composer (`drive_attachments_test.rb:116`) | Thread rows in `drive_tests.rs`. Missing: thread composer picker JS | Port: Rust-only Playwright suite A (Drive/sudo), fake Google client with `google_calendar_test_helper.rb` payloads |
@@ -124,7 +124,7 @@ that runs inside the Rails image. Rails is about 75–85% of this suite's runtim
 | file | cases | fixture(s) | Rust-only coverage outside the browser | action |
 |---|---|---|---|---|
 | drive_attachments | 3 | `drive--*` | Same titles as WS14g-224/225/226 | **Retire 3** (ported once, as originals) |
-| channel_threads_controller | 8 | `work-controller--*` | :331, :433, :496 fully covered (`ws12_browser_remaining` c229/c230 HTTP, `ws12_work_remaining_tests.rs::ws12_ordinary_work_owner_options_batch_agent_profiles_at_two_sizes`); :304, :356, :375, :413, :480 at model level only (`work_mutations_test.rs`, `agent_assignment_cases_test.rs`) | **Retire 3**, port 5 on recorded fixtures |
+| channel_threads_controller | 8 | `work-controller--*` | :433, :496 fully covered (`ws12_browser_remaining` c229/c230 HTTP, `ws12_work_remaining_tests.rs::ws12_ordinary_work_owner_options_batch_agent_profiles_at_two_sizes`); :331 only partly (the deactivated owner's thread JSON and clearing the owner were uncovered), so it's ported as `channel_threads::write_tests::work_owner_must_be_an_eligible_parent_room_member_and_a_revoked_owner_stays_visible_as_unavailable` (Rust HTTP, Rails fixtures); :304, :356, :375, :413, :480 at model level only (`work_mutations_test.rs`, `agent_assignment_cases_test.rs`) | **Retire 3** from the harness (:331 as a Rust HTTP test), port 5 on recorded fixtures |
 | motion | 9 | `motion--*` | `views/tests/core.rs::application_test_environment_matches_rails_motion_attribute` (attribute only) | Port 9; "mobile drawer animates in…" moves from native Capybara to Playwright |
 | mobile_layout | 5 | `mobile-layout` | Markup goldens only | Port 5 |
 | sending_messages | 4 | seed, `workspace-upload` | Message create/edit/destroy HTTP tests | Port 4; "uploading a fresh video…" to Playwright |
@@ -196,9 +196,9 @@ schema-identity and Rails-reads-Rust checks never ran in CI.
 | test | guards | plan |
 |---|---|---|
 | `schema.rs` `schema_sha1_matches_reference_schema_rb` | `schema_sha1.txt` = SHA1 of `db/schema.rb` | **Delete**; covered by the hash lock below |
-| `schema.rs` `migration_versions_match_reference_migrations` | version list = `db/migrate` | **Freeze**: `baseline_is_frozen` checks 129 unique versions (20231215043540…20261003180000) and sha256 of the baseline files (`schema.sql`, `schema_migrations.txt`, `schema_sequences.txt`, `schema_sha1.txt`) against a committed `SHA256SUMS` |
+| `schema.rs` `migration_versions_match_reference_migrations` | version list = `db/migrate` | **Freeze**: `baseline_is_frozen` checks 129 unique versions (20231215043540…20261003180000) and sha256 of the baseline files (`schema.sql`, `schema_migrations.txt`, `schema_sequences.txt`, `schema_sha1.txt`) pinned in the test (`crates/db/baseline/` after P0) |
 | `schema.rs` `schema_sql_is_the_whole_reference_schema` | every Rails table exists | **Trim**: drop the `schema.rb` loop, keep the FTS/metadata/partial-index assertions; completeness is `a_prepared_database_has_exactly_schema_sql` plus the hash lock |
-| `models/sound.rs` `builtin_sounds_match_reference` | `BUILTIN` = `app/models/sound.rb` | **Freeze**: `BUILTIN` is the source of truth; keep `deeper` → `sounds/top.webp`, assert every name has an mp3 under `rust/web` |
+| `models/sound.rs` `builtin_sounds_match_reference` | `BUILTIN` = `app/models/sound.rb` | **Freeze**: `builtin_sounds_are_the_reference_list` pins a SHA-256 of every name, text and image (computed from `sound.rb` at removal) and keeps `deeper` → `sounds/top.webp`; `builtin_sound_assets_exist` checks each `NAME.mp3` and image under `rust/web` |
 | `pwa.rs` `ws17_service_worker_is_served_byte_identical_to_rails` | served bytes = Rails files | **Trim**: drop the `app/views/pwa/service_worker.js` read; `pwa_http_bodies_match_rails_before_and_after_first_run` already compares against `vectors/users_pwa_*.json` (verified equal to Rails) |
 | `rich_text.rs` `vendored_icon_catalog_matches_reference` + 3 helper tests | vendored `icons.yml` = `config/icons.yml` (identical today) | **Delete** all four and `check_icon_reference`; the vendored file is the source |
 | `views/tests/template_coverage.rs` (two tests) | every Rails template has a disposition | **Freeze**: the 284 `rails_templates` keys in `parity/template-coverage.json` are the list; drop the `app/views` directory-equality pair and the `is_file` check for two sources outside `rust/` |

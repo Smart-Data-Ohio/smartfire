@@ -23,7 +23,7 @@ filter = 'package(campfire) & (test(ws12_browser_) | test(huddle_system_cases_in
 test-group = "browser"
 
 [[profile.ci.overrides]]
-# Each Drive declaration runs its own app and a pinned Chromium container.
+# Each Drive browser declaration runs its own app and a pinned Chromium container.
 filter = 'package(campfire) & test(/^controllers::drive_browser_tests::drive_browser_ws14/)'
 threads-required = 2
 

@@ -42,7 +42,8 @@ SEED = RUST / "parity/.seed/default"
 # - channel_threads_controller_test.rb's "work owner must be an eligible parent-room member and a
 #   revoked owner stays visible as unavailable", "the owner picker lists eligible agents with
 #   profiles and excludes ineligible ones" and "ordinary thread fields remain separate from work
-#   tracking" are covered by Rust HTTP tests (ws12_browser_remaining c229/c230 and
+#   tracking" are covered by Rust HTTP tests (channel_threads::write_tests ports the first whole;
+#   ws12_browser_remaining c229/c230 and
 #   ws12_work_remaining_tests.rs::ws12_ordinary_work_owner_options_batch_agent_profiles_at_two_sizes).
 CASES = {
     "motion": ["motion is off by default in the test environment",'mobile drawer animates in, lands in place, and returns focus with motion on', 'member selection mode moves no rows and resizes nothing', 'people directory bar shifts no rows when toggling', 'people directory bar stays stuck while scrolling', 'room menu measures at full scale when clamping to the viewport edge', 'mobile drawer keeps the room list scroll position across close and reopen', 'mobile drawer reveals a current room far down the list on first open', 'mobile drawer reopens on the current room when it is already in view'],

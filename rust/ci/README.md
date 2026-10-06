@@ -44,7 +44,7 @@ messaging behaviour shards' case receipts must cover all 139 named cases once
 
 `CORRECTNESS_SHARD=K/N` runs one deterministic slice of a suite: browsers split their
 ignored tests by the recorded `seconds` in `ignored-tests.json`, messaging behaviour
-splits whole case batches, and the Drive job runs its 44 declarations on four nextest
+splits whole case batches, and the Drive job runs its 45 declarations on four nextest
 threads (each holds two: an app and a pinned Chromium container). The behaviour
 shards use the two Rust hosts the `Rust messaging host (app|test)` jobs build once with
 behavior-check.py's own commands, and load the prerequisite image the `app` job exports
@@ -55,7 +55,7 @@ instead of building it sixteen times.
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
 | browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `web/bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
-| drive | The pinned Chromium image, then exactly the 44 ignored Drive attachment, share and sudo declarations (`drive_browser_tests`, listed in `parity/system/drive-declarations.json`) |
+| drive | The pinned Chromium image, then exactly the 45 ignored Drive attachment, share, sudo and event-card declarations (`drive_browser_tests`, listed in `parity/system/drive-declarations.json`) |
 | messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget and work on Rust, against the recorded `test-support/agents-ui-fixtures`) |
 
@@ -105,7 +105,7 @@ sequence and writer-control receipts. The first test shard additionally runs `ne
 --exclude html5ever --run-ignored only --ignore-default-filter --message-format json`
 against every compiled test binary. The package/binary/full-test-name set must
 equal the correctness selectors plus the explicit `ignored-utilities.json` list
-(65 correctness tests + 6 compiled utilities). This covers expanded conditional
+(66 correctness tests + 6 compiled utilities). This covers expanded conditional
 attributes, procedural macros and `include!` without inferring their output from source.
 Real compiler mutation probes exercise eight formatting/conditional/macro/include
 forms. A lexical source guard also covers inactive `cfg_attr` branches and the

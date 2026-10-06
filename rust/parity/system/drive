@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rust-only browser ports of the pinned Drive and sudo system tests (drive_browser_tests.rs).
+# Rust-only browser ports of the pinned Drive, sudo and events system tests (drive_browser_tests.rs).
 # Pass a test-name filter to run a subset, e.g. parity/system/drive drive_browser_ws14g_232.
 set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
