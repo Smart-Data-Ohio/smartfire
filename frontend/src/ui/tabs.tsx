@@ -28,6 +28,30 @@ interface TabsProps {
   readonly children?: ReactNode;
 }
 
+/** How far past a scrolled-to tab its strip scrolls, so the tab clears a fading edge. */
+const REVEAL_MARGIN = 24;
+
+/**
+ * Scrolls a tab strip that overflows its container sideways (a phone's filter tabs) just enough
+ * to show the selected tab; a strip that fits never moves.
+ */
+function revealTab(list: HTMLElement, tab: HTMLElement): void {
+  const scroller = list.parentElement;
+
+  if (scroller === null || scroller.scrollWidth <= scroller.clientWidth) {
+    return;
+  }
+
+  const view = scroller.getBoundingClientRect();
+  const box = tab.getBoundingClientRect();
+
+  if (box.left < view.left) {
+    scroller.scrollLeft -= view.left - box.left + REVEAL_MARGIN;
+  } else if (box.right > view.right) {
+    scroller.scrollLeft += box.right - view.right + REVEAL_MARGIN;
+  }
+}
+
 /**
  * Tabs with a pill that slides to the selected tab (the transitions.dev "tabs sliding" recipe).
  * WAI-ARIA tabs with automatic activation: arrows move and select, Home/End jump, and only the
@@ -57,6 +81,7 @@ export function Tabs({ items, value, onValueChange, label, children }: TabsProps
 
       pill.style.width = `${tab.offsetWidth}px`;
       pill.style.transform = `translateX(${tab.offsetLeft}px)`;
+      revealTab(list, tab);
     };
 
     measure();
