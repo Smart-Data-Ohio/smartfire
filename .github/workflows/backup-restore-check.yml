@@ -2,9 +2,10 @@ name: Monthly backup restore check
 
 # Proves the nightly backups in the separate backup project actually restore:
 # downloads the latest daily backup into a scratch runner, decrypts it with
-# the CI-held key, verifies checksums and PRAGMA integrity_check, boots the
-# app against a copy read-only (Rails runner row counts), and fails loudly on
-# any error. See docs/backups.md.
+# the CI-held key, verifies checksums and PRAGMA integrity_check, then has the
+# Rust image built from this revision migrate a disposable copy and run its
+# strict schema check with row counts (`campfire db-migrate`, `campfire
+# db-check`), and fails loudly on any error. See docs/backups.md.
 #
 # Authentication is Workload Identity Federation against the BACKUP project
 # (reader identity, no long-lived keys), mirroring deploy-gcp.yml.
@@ -31,12 +32,11 @@ jobs:
       BACKUP_GCP_WIF_PROVIDER: ${{ vars.BACKUP_GCP_WIF_PROVIDER }}
       BACKUP_GCP_READER_SA: ${{ vars.BACKUP_GCP_READER_SA }}
     steps:
-      # Same packages as the CI test job: restore-check.sh boots the Rails
-      # app against the restored database, and the boot needs libvips
-      # (config/initializers/vips.rb) and the sqlite client library.
+      # restore-check.sh itself needs only the sqlite3 client; the app checks
+      # run inside the Rust image.
       - name: Install packages
         timeout-minutes: 10
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsqlite3-0 libvips curl ffmpeg
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y sqlite3
 
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -44,12 +44,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
-        timeout-minutes: 15
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        timeout-minutes: 5
+
+      # Built from this checkout rather than pulled, so the check needs no
+      # registry credentials. It reads the publish workflow's layer cache and
+      # never writes it or pushes.
+      - name: Build the Rust image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        timeout-minutes: 60
         with:
-          ruby-version: .ruby-version
-          bundler-cache: true
+          context: rust
+          file: rust/Dockerfile
+          build-args: |
+            CARGO_BUILD_JOBS=4
+            GIT_REVISION=${{ github.sha }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: smartfire-restore-check:${{ github.sha }}
+          cache-from: type=gha,scope=rust-image
+          sbom: false
+          provenance: false
 
       - name: Authenticate to the backup project
         id: auth
@@ -97,6 +114,7 @@ jobs:
         env:
           BACKUP_RESTORE_AGE_IDENTITY: ${{ secrets.BACKUP_RESTORE_AGE_IDENTITY }}
           BACKUP_RESTORE_GPG_KEY: ${{ secrets.BACKUP_RESTORE_GPG_KEY }}
+          CHECK_IMAGE: smartfire-restore-check:${{ github.sha }}
         run: |
           set -euo pipefail
           test -n "$BACKUP_GCP_BUCKET" || { echo "::error::BACKUP_GCP_BUCKET is not set"; exit 1; }
@@ -136,12 +154,13 @@ jobs:
           # empty file passes integrity_check, and missing tables only fail
           # here. Tune them if the workspace ever legitimately shrinks.
           bash deploy/backups/restore-check.sh "${args[@]}" \
-            --rails-root "$GITHUB_WORKSPACE" --min-users 1 --min-messages 1
+            --image "$CHECK_IMAGE" --min-users 1 --min-messages 1
 
           {
             echo "## Backup restore check passed"
             echo
             echo "Downloaded, decrypted and verified \`${latest}\`: checksums,"
-            echo "\`PRAGMA integrity_check\`, and a read-only Rails boot with row"
-            echo "counts all succeeded. See the step log for the counts."
+            echo "\`PRAGMA integrity_check\`, and the Rust image's \`campfire db-migrate\`"
+            echo "and strict \`campfire db-check\` on a disposable copy all succeeded."
+            echo "See the step log for the row counts."
           } >> "$GITHUB_STEP_SUMMARY"
