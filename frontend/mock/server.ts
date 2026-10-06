@@ -66,6 +66,7 @@ import {
   S3_SCHEDULED_IDS,
   S3_THREAD_IDS,
 } from "./s3/seed.ts";
+import { createHuddles } from "./s5/huddles.ts";
 import { realScheduler, type Scheduler } from "./scheduler.ts";
 import {
   BOT_ID,
@@ -689,7 +690,10 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
     scheduledInboxHooks(ctx, activity),
   );
 
+  const huddles = createHuddles(ctx, simulate);
+
   const routes = [
+    ...huddles.routes,
     ...uploads.routes,
     ...threads.routes,
     ...messageActions.routes,
@@ -941,8 +945,18 @@ export function createMockServer(options: MockServerOptions = {}): MockServer {
         server.reset();
 
         return ok;
-      default:
-        throw notFound(`No mock control named ${action}`);
+      default: {
+        const handled = huddles.control(action, {
+          int,
+          text,
+          flag,
+          optionalText: (key) => stringField(body, key) ?? query.get(key),
+        });
+
+        if (handled === null) throw notFound(`No mock control named ${action}`);
+
+        return handled;
+      }
     }
   };
 
