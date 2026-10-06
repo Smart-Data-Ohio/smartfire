@@ -3,7 +3,7 @@
 
 Each case asserts the fixed expectations of its original Rails system/controller declaration.
 Its fixture is the frozen default seed plus the Rails fixture step recorded for it
-(rust/test-support/behavior-fixtures, made by record-fixtures.py). Each writing case gets an
+(rust/test-support/behavior-fixtures, recorded from Rails before it was removed). Each writing case gets an
 independent copy; read-only message-list regressions share one verified fixture/server but get
 fresh viewer contexts. All cases exercise real HTTP/Action Cable. No screenshot or response mask.
 """

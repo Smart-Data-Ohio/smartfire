@@ -1,7 +1,0 @@
-{
-  "app/controllers/users/profiles_controller.rb": "3c5abb50d70d3fb938cd35e4675bc3ec09562f7164a2cf8d50c7d04b46230357",
-  "app/models/user.rb": "41c18c8325200bf8034554c4b107cc722d7b89aba32ade9d9944a7055587dd5b",
-  "app/models/user/status_settings.rb": "8d77c63951da6e429585d7cf0171355719f82d14e2e83f0efd1ad1b0e18336d1",
-  "app/views/users/profiles/_appearance.html.erb": "6ebcb819c1414a353316a7753f22fd13ef2fb09140a5c47cef88be0afe78fa5a",
-  "app/helpers/users/profiles_helper.rb": "2793cc9d9baa15468b9b84ac813878b8af1d26f922c32aedec1c435d0b8d2f71"
-}

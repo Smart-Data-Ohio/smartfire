@@ -1,8 +1,0 @@
-{
-  "app/controllers/welcome_controller.rb": "7ccfbfea51a7babfb98dd19332affec30a8c1aa6645f590de203866b9cafb4e9",
-  "app/controllers/first_runs_controller.rb": "bb8dbae31dbc2067013caa50a8919e650f5169233200b41bafdab2b72671387f",
-  "app/models/first_run.rb": "e34534ad5062df46693e18f68b6014b7f7da580761dce0ad4c8b04259fdda66f",
-  "app/views/welcome/show.html.erb": "79c210b6225ee1ad33c3e502c0374dde6f380ebd41f3d31e55a9dfe390b6a6c7",
-  "app/views/first_runs/show.html.erb": "4141820776081075e790ad4ee6378c64a92064c34bebe7d51c7eab766d24e066",
-  "app/controllers/concerns/tracked_room_visit.rb": "2ed96abc1f7908cec00eb470ab0d50b3be7ab55ffe1fb7c3d71f0ea149b451c9"
-}

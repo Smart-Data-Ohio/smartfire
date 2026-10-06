@@ -1,9 +1,0 @@
-{
-  "app/models/board_sla_rule.rb": "7a880a76caf78e92fcc3c440509e7697cc37a4ef6e8b4fbfe9582d1edddf0466",
-  "app/models/board_sla_nudge.rb": "87713ffa62183b6290b7f00b582134a944a84a6e6aa802ebfa83eafe57cbaa0a",
-  "app/models/board_stale_digest.rb": "d79a859fa0b3a5ad67ea7eaf4b2d2305f7ca7c7924fa6921afb3961874ab5394",
-  "app/models/board_automations/sla_dispatcher.rb": "90a35ebb35ec9473018bfb960ad144bc45c6cefc6df9b2f7b14cafe65d92c9d4",
-  "app/models/board_automations/digest_dispatcher.rb": "4acec792a19c901a458e877666d745143e0f57d71ffdcfffe02ee0c9ca34fac7",
-  "app/services/periodic/runner.rb": "1f0dcfe5be7e8d1765bba3b52dc8357977454a61db6e8d1a4c944c48ca5f7b91",
-  "app/jobs/room/destroy_job.rb": "6b235969d66615c6a4ae9c391a99635d7d5ad0111f0fec34cacd59ab3cf62bc1"
-}

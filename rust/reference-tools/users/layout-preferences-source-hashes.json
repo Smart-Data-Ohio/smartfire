@@ -1,7 +1,0 @@
-{
-  "app/helpers/application_helper.rb": "c9fffbf18eb6be2c438171222145c57246d68cd51bd8f788e4da08c5941dd85e",
-  "app/models/calendar/meeting_cache.rb": "8974cd2fc7731402aebc2f147884efed76ac786909ea55cf28b56126990fc8a0",
-  "app/models/google_account.rb": "90b8c2abb86a530c9d77bb2e2397882c8bb843fb79c2d569c3f5a044c11f2b9a",
-  "app/models/user/status_settings.rb": "8d77c63951da6e429585d7cf0171355719f82d14e2e83f0efd1ad1b0e18336d1",
-  "app/views/layouts/application.html.erb": "53008a50df6bf20f53013c146ef0584690cdd1061b5b748d5bf2035f3fd854c9"
-}
