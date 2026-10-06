@@ -16,7 +16,7 @@ wording before public rollout and Google verification.
 
 ## Configuration
 
-The public policy configuration (`crates/campfire/src/public_policy.rs`) reads the operator identity
+The public policy configuration (`crates/app/src/public_policy.rs`) reads the operator identity
 from the environment. There are no company defaults.
 
 | Variable | Purpose |

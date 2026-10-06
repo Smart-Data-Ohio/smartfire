@@ -14,6 +14,8 @@ use campfire_kit::{Ctx, Kit, KitConfig, RailsCrypto, Result};
 use tower::ServiceExt;
 
 use super::*;
+use campfire_app::config::Config;
+use std::sync::Arc;
 use crate::server::*;
 use crate::concerns::{Before, before_actions, current_user};
 

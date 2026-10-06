@@ -15,7 +15,7 @@ use campfire_kit::{Crypto, RailsCrypto};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
-use super::*;
+use campfire_app::config::Config;
 use crate::server::*;
 use crate::controllers::presenters::test_support::masked_session_token;
 

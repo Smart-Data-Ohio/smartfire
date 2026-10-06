@@ -2,39 +2,320 @@
 
 mod active_storage;
 mod admin;
-mod app;
 mod authentication;
-// The cable server's user, stream names and typed broadcasts.
-mod cable;
-mod account_security;
 mod channels;
 mod concerns;
-mod config;
-mod errors;
-// Slash launch readiness delegates to the WS13 configuration API.
-mod huddle_readiness;
-mod picker_configuration;
 mod controllers;
-mod integrations;
-mod huddle;
-// The icon catalog: config/icons.yml's brands and the workspace's own.
-mod icons;
 mod jobs;
 mod mail;
 mod rich_text;
 mod messaging;
-// The outbound HTTP stack every client shares.
-mod net;
-mod public_policy;
-// The job queue's enqueueing side: job classes, queues and the durable sink.
-mod queue;
-// Ruby core conversions.
-mod ruby;
-mod security;
-// App state whose behaviour lives in the layers above.
-mod state;
 // Boot, the HTTP stack and the binary's commands.
 mod server;
+
+// The app layer (crates/app), at the paths its modules had in this crate. `app`, `huddle` and
+// `integrations` also hold the tests of theirs that boot the whole app or reach the layers
+// above, until the test crate takes them (plans/crate-split-plan.md, "Tests").
+use campfire_app::{account_security, cable, config, errors, icons, net, queue, ruby, security, state};
+#[cfg(test)]
+use campfire_app::test_support;
+
+mod app {
+    pub(crate) use campfire_app::app::*;
+
+    #[cfg(test)]
+    mod security_tests;
+    #[cfg(test)]
+    mod sudo_tests;
+    #[cfg(test)]
+    mod two_factor_tests;
+    #[cfg(test)]
+    mod challenge_tests;
+    #[cfg(test)]
+    mod enforcement_tests;
+    #[cfg(test)]
+    mod direct_upload_tests;
+    #[cfg(test)]
+    mod session_management_tests;
+    #[cfg(test)]
+    mod admin_two_factor_tests;
+    #[cfg(test)]
+    mod full_page_tests;
+    #[cfg(test)]
+    mod profile_security_tests;
+    #[cfg(test)]
+    mod round_four_security_tests;
+    #[cfg(test)]
+    mod round_three_security_tests;
+    #[cfg(test)]
+    mod tests;
+    #[cfg(test)]
+    mod google_tests;
+    #[cfg(test)]
+    mod google_webhook_tests;
+    #[cfg(test)]
+    pub(crate) mod google_api_tests;
+    #[cfg(test)]
+    mod google_connection_tests;
+    #[cfg(test)]
+    mod google_drive_tests;
+    #[cfg(test)]
+    mod google_calendar_job_tests;
+    #[cfg(test)]
+    mod google_meeting_refresh_tests;
+    #[cfg(test)]
+    mod ws14_profile_status_tests;
+    #[cfg(test)]
+    mod google_push_channel_tests;
+    #[cfg(test)]
+    pub(crate) mod google_test_support;
+    #[cfg(test)]
+    #[path = "../../../../test-support/asset_goldens.rs"]
+    pub(crate) mod asset_goldens;
+    #[cfg(test)]
+    mod google_review_tests;
+    #[cfg(test)]
+    mod google_consumer_tests;
+    #[cfg(test)]
+    mod google_lifecycle_tests;
+    #[cfg(test)]
+    mod google_admin_tests;
+    #[cfg(test)]
+    mod google_page_tests;
+    #[cfg(test)]
+    mod google_reporting_tests;
+    #[cfg(test)]
+    mod google_message_tests;
+    #[cfg(test)]
+    pub(crate) mod cutover_c_tests;
+    #[cfg(test)]
+    mod cutover_d_tests;
+}
+
+mod huddle {
+    pub(crate) use campfire_app::huddle::*;
+
+    #[cfg(test)]
+    mod tests;
+}
+
+mod integrations {
+    pub(crate) use campfire_app::integrations::*;
+
+    #[cfg(test)]
+    pub(crate) mod action_claims {
+        pub(crate) use campfire_app::integrations::action_claims::*;
+
+        mod tests;
+    }
+    #[cfg(test)]
+    pub(crate) mod agent_repositories {
+        pub(crate) use campfire_app::integrations::agent_repositories::*;
+
+        mod tests;
+        mod live_tests;
+        mod bot_plaintext_cases;
+        mod review_tests;
+    }
+    #[cfg(test)]
+    pub(crate) mod agent_streaming {
+        pub(crate) use campfire_app::integrations::agent_streaming::*;
+
+        mod tests;
+        mod case_tests;
+    }
+    pub(crate) mod fizzy {
+        pub(crate) use campfire_app::integrations::fizzy::*;
+
+        #[cfg(test)]
+        mod tests;
+        #[cfg(test)]
+        pub(crate) mod accounts {
+            pub(crate) use campfire_app::integrations::fizzy::accounts::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod agent_job {
+            pub(crate) use campfire_app::integrations::fizzy::agent_job::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod agent_reads {
+            pub(crate) use campfire_app::integrations::fizzy::agent_reads::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod agent_requests {
+            pub(crate) use campfire_app::integrations::fizzy::agent_requests::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod cards {
+            pub(crate) use campfire_app::integrations::fizzy::cards::*;
+
+            mod tests;
+        }
+    }
+    pub(crate) mod github {
+        pub(crate) use campfire_app::integrations::github::*;
+
+        #[cfg(test)]
+        pub(crate) mod tests;
+        #[cfg(test)]
+        pub(crate) mod agent_actions {
+            pub(crate) use campfire_app::integrations::github::agent_actions::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod fetcher {
+            pub(crate) use campfire_app::integrations::github::fetcher::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod health {
+            pub(crate) use campfire_app::integrations::github::health::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod notifier {
+            pub(crate) use campfire_app::integrations::github::notifier::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod pull_requests {
+            pub(crate) use campfire_app::integrations::github::pull_requests::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod references {
+            pub(crate) use campfire_app::integrations::github::references::*;
+
+            pub(super) mod tests;
+        }
+    }
+    #[cfg(test)]
+    pub(crate) mod image_proxy {
+        pub(crate) use campfire_app::integrations::image_proxy::*;
+
+        mod tests;
+    }
+    pub(crate) mod link_embed {
+        pub(crate) use campfire_app::integrations::link_embed::*;
+
+        #[cfg(test)]
+        mod rails_reference_tests;
+        #[cfg(test)]
+        mod rails_fetcher_tests;
+        #[cfg(test)]
+        pub(crate) mod fetcher {
+            pub(crate) use campfire_app::integrations::link_embed::fetcher::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod store {
+            pub(crate) use campfire_app::integrations::link_embed::store::*;
+
+            mod tests;
+        }
+    }
+    pub(crate) mod slack {
+        pub(crate) use campfire_app::integrations::slack::*;
+
+        #[cfg(test)]
+        mod sequence_tests;
+        #[cfg(test)]
+        pub(crate) mod client {
+            pub(crate) use campfire_app::integrations::slack::client::*;
+
+            pub(crate) mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod conversations {
+            pub(crate) use campfire_app::integrations::slack::conversations::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod jobs {
+            pub(crate) use campfire_app::integrations::slack::jobs::*;
+
+            pub(crate) mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod oauth {
+            pub(crate) use campfire_app::integrations::slack::oauth::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        mod payload {
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod runner {
+            pub(crate) use campfire_app::integrations::slack::runner::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod store {
+            pub(crate) use campfire_app::integrations::slack::store::*;
+
+            pub(crate) mod tests;
+            mod lifecycle_tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod undoer {
+            pub(crate) use campfire_app::integrations::slack::undoer::*;
+
+            pub(crate) mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod users {
+            pub(crate) use campfire_app::integrations::slack::users::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod writer {
+            pub(crate) use campfire_app::integrations::slack::writer::*;
+
+            mod tests;
+        }
+    }
+    pub(crate) mod twitter {
+        pub(crate) use campfire_app::integrations::twitter::*;
+
+        #[cfg(test)]
+        pub(crate) mod fetcher {
+            pub(crate) use campfire_app::integrations::twitter::fetcher::*;
+
+            mod tests;
+        }
+        #[cfg(test)]
+        pub(crate) mod references {
+            pub(crate) use campfire_app::integrations::twitter::references::*;
+
+            mod tests;
+        }
+    }
+    pub(crate) mod web_push {
+        pub(crate) use campfire_app::integrations::web_push::*;
+
+        #[cfg(test)]
+        mod tests;
+    }
+}
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many
 /// threads as the blocking pool grows to.
@@ -104,5 +385,3 @@ mod layering_tests;
 #[cfg(test)]
 mod slash_commands_tests;
 
-#[cfg(test)]
-mod test_support;

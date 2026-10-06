@@ -7,6 +7,12 @@ path = "junit.xml"
 # Count #[ignore] tests, without counting tests excluded by the database/workspace filters.
 report-skipped = "ignored"
 
+# The panic-recovery job (rust.yml's CAMPFIRE_LLVM_ONLY_TESTS): the app's crates, which are the
+# packages built on campfire_app.
+[profile.ci-llvm]
+inherits = "ci"
+default-filter = "rdeps(campfire_app)"
+
 [test-groups]
 acme = { max-threads = 1 }
 browser = { max-threads = 1 }
@@ -19,19 +25,19 @@ test-group = "acme"
 [[profile.ci.overrides]]
 # Browser/Node suites own their workers and the gateway asserts 60 ms deadlines.
 # Keep them sequential while the job's nextest/build caps stay at four.
-filter = 'package(campfire) & (test(ws12_browser_) | test(huddle_system_cases_in_real_browser) | test(livekit_stage_system_cases_in_real_browser) | test(huddle_gateway_own_node_suite_against_rust_endpoints))'
+filter = 'rdeps(campfire_app) & (test(ws12_browser_) | test(huddle_system_cases_in_real_browser) | test(livekit_stage_system_cases_in_real_browser) | test(huddle_gateway_own_node_suite_against_rust_endpoints))'
 test-group = "browser"
 
 [[profile.ci.overrides]]
 # Each Drive browser declaration runs its own app and a pinned Chromium container.
-filter = 'package(campfire) & test(/^controllers::drive_browser_tests::drive_browser_ws14/)'
+filter = 'rdeps(campfire_app) & test(/^controllers::drive_browser_tests::drive_browser_ws14/)'
 threads-required = 2
 
 [[profile.ci.overrides]]
 # A paired wrapper owns Rails/Redis, Rust, Chromium and byte-forwarder workers.
 # Account for those child workers in the four-slot CI budget; the default
 # profile still exercises the eleven wrappers concurrently at -j 4.
-filter = 'package(campfire) & (test(ws11ui_original_browser_tests) | test(ledger_browser_tests)) & not test(original_browser_port_leases)'
+filter = 'rdeps(campfire_app) & (test(ws11ui_original_browser_tests) | test(ledger_browser_tests)) & not test(original_browser_port_leases)'
 threads-required = 4
 
 [[profile.ci.overrides]]

@@ -18,7 +18,7 @@ The read uses `events.list` on the primary calendar under the existing
   `nextPageToken` up to 4 pages (1000 events), so the 30-day calendar-OOO
   lookahead is never truncated at 250 events on a busy calendar.
 - A `fields` mask (`items(eventType,start,end,status,transparency,...)`,
-  see `crates/campfire/src/integrations/google/api.rs`) keeps titles,
+  see `crates/app/src/integrations/google/api.rs`) keeps titles,
   descriptions, locations, and attendee identities out of the response
   entirely. Only the event type, start/end times, the status, the
   transparency, and each attendee's self/declined flags arrive.

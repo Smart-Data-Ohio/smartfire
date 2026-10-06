@@ -1,4 +1,7 @@
 use super::*;
+use campfire_jobs::JobKind;
+use campfire_app::integrations::link_embed::Embed;
+use std::time::Duration;
 use crate::controllers::presenters::test_support::TestApp;
 use crate::integrations::test_support::*;
 use std::collections::HashSet;

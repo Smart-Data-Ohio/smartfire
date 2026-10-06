@@ -1,4 +1,8 @@
 use super::*;
+use campfire_db::ActivityItem;
+use campfire_db::Database;
+use campfire_db::Message;
+use serde_json::Value;
 use crate::integrations::test_support::TestDb;
 use campfire_db::{Env, Event, EventSink, TestClock, Timestamp, Tx};
 use campfire_jobs::{JobQueue, QueueConfig, Registry, RunnerConfig};

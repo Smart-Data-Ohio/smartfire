@@ -1,5 +1,6 @@
 //! Four one-to-one assertions from the pinned FizzyConnectedAccountTest.
 use super::*;
+use rails_compat::ar_encryption::ArEncryption;
 use crate::controllers::presenters::test_support::{DAVID, TestApp};
 use std::time::Duration;
 

@@ -16,8 +16,8 @@ nightly and manual runs, empty diffs and unavailable history always run everythi
 | Job | Runs |
 | --- | --- |
 | `Rust seeds` | `parity/bin/frozen-seeds check`: the committed seeds in `parity/seeds/frozen` match their manifest, the test keys and this checkout's schema migrations; its unit tests prove changed, missing, added or out-of-date seeds are rejected. |
-| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (campfire on Cranelift; the nightly run builds campfire with LLVM). Shard 1 also lists the tests the shards and the LLVM job must run, and runs `verify-ignored.sh`, against the harnesses it compiled. |
-| `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with campfire on LLVM: Cranelift can't unwind. Fails unless exactly those four ran and passed. |
+| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (the campfire crates on Cranelift; the nightly run builds them with LLVM, `--config ci/llvm.toml`). Shard 1 also lists the tests the shards and the LLVM job must run, and runs `verify-ignored.sh`, against the harnesses it compiled. |
+| `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with the campfire crates on LLVM (`ci/llvm.toml`, the `ci-llvm` nextest profile): Cranelift can't unwind. Fails unless exactly those four ran and passed. |
 | `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with, from its own `stable` Cargo cache. |
 | `Rust clippy, binaries and doctests` | ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
 

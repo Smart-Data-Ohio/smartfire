@@ -1,4 +1,7 @@
 use super::*;
+use campfire_app::integrations::link_embed::metadata_parser::Metadata;
+use campfire_db::Message;
+use rusqlite::params;
 use crate::controllers::presenters::test_support::*;
 use campfire_db::NewMessage;
 

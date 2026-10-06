@@ -17,11 +17,8 @@ use regex::Regex;
 /// children but not the module itself; otherwise it covers the module and everything inside it.
 /// The longest match wins; anything unmatched is the server's.
 const LAYERS: &[(&str, &[&str])] = &[
-    ("app", &[
-        "account_security", "app", "cable", "config", "errors", "huddle", "huddle_readiness",
-        "icons", "integrations", "net", "picker_configuration", "public_policy", "queue", "ruby",
-        "security", "state", "test_support",
-    ]),
+    // `campfire_app`'s modules that still hold tests here (the rest are `use`s of campfire_app).
+    ("app", &["app", "huddle", "integrations"]),
     ("web", &[
         "active_storage", "authentication", "concerns", "controllers::messages::rendered",
         "controllers::presenters", "mail", "messaging", "rich_text",
@@ -47,7 +44,7 @@ const LAYERS: &[(&str, &[&str])] = &[
 fn modules_name_only_their_own_layer_and_below() {
     let tree = ModuleTree::read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src"));
     // A walk that stopped early would pass vacuously.
-    assert!(tree.modules.len() > 800, "found only {} modules", tree.modules.len());
+    assert!(tree.modules.len() > 700, "found only {} modules", tree.modules.len());
     let violations = tree.violations();
     assert!(
         violations.is_empty(),
@@ -60,16 +57,16 @@ fn modules_name_only_their_own_layer_and_below() {
 #[test]
 fn an_upward_reference_is_a_violation() {
     let tree = ModuleTree::from_sources(&[
-        ("main.rs", "mod cable;\nmod controllers;\n#[cfg(test)]\nmod tests;"),
-        ("cable.rs", "use crate::controllers::rooms::pins::list;\nfn f() { super::controllers::rooms::show(); }"),
+        ("main.rs", "mod huddle;\nmod controllers;\n#[cfg(test)]\nmod tests;"),
+        ("huddle.rs", "use crate::controllers::rooms::pins::list;\nfn f() { super::controllers::rooms::show(); }"),
         ("controllers.rs", "pub mod rooms;"),
-        ("controllers/rooms.rs", "pub mod pins;\nuse crate::cable;\nmod inline { use super::super::super::cable::Cable; }"),
+        ("controllers/rooms.rs", "pub mod pins;\nuse crate::huddle;\nmod inline { use super::super::super::huddle::Config; }"),
         ("controllers/rooms/pins.rs", "pub fn list() {}"),
         ("tests.rs", "use crate::controllers::rooms;"),
     ]);
     assert_eq!(tree.violations(), [
-        "cable.rs:1 (app) -> crate::controllers::rooms::pins (rooms)",
-        "cable.rs:2 (app) -> crate::controllers::rooms (rooms)",
+        "huddle.rs:1 (app) -> crate::controllers::rooms::pins (rooms)",
+        "huddle.rs:2 (app) -> crate::controllers::rooms (rooms)",
     ]);
 }
 
@@ -204,6 +201,12 @@ impl ModuleTree {
                     continue;
                 }
                 let Some(target) = self.resolve(&module.path, &path) else { continue };
+                // A path that names no module under the root names an item of `main.rs` or a
+                // module `main.rs` brings in from a crate below (`use campfire_app::config`),
+                // whose boundary the compiler checks.
+                if target.is_empty() {
+                    continue;
+                }
                 let (from, to) = (layer(&module.path), layer(&target));
                 if to.0 > from.0 {
                     let line = file.text[..at].matches('\n').count() + 1;

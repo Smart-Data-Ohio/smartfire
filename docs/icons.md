@@ -8,7 +8,7 @@ search keep working on the typed text.
 
 ## The set
 
-The workspace ships 33 built-in brand icons, registered in `crates/campfire/vendor/icons.yml`
+The workspace ships 33 built-in brand icons, registered in `crates/app/vendor/icons.yml`
 with a `name`, `file`, `title`, and optional `aliases` (for example `gpt` for
 `openai`, `gemini` for `googlegemini`, `hf` for `huggingface`):
 
@@ -40,7 +40,7 @@ shares its reaction chip. The eight quick reactions are unchanged.
 1. Copy the `<slug>.svg` from the pinned Simple Icons release (see below) into
    `web/app/assets/images/icons/brands/`, unmodified.
 2. Add a `name`, `file`, and `title` entry to
-   `crates/campfire/vendor/icons.yml`, plus any `aliases`. Names are
+   `crates/app/vendor/icons.yml`, plus any `aliases`. Names are
    lowercase `[a-z0-9_]+`. Add the name and its aliases to
    `crates/db/data/icon-names.json` too, which validates room and bot
    icon names.

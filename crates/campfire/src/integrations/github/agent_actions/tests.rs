@@ -1,4 +1,6 @@
 use super::*;
+use campfire_app::integrations::github::accounts::Accounts;
+use campfire_db::Database;
 use crate::integrations::{
     github::{
         client::AppClient,

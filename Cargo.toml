@@ -22,6 +22,7 @@ campfire_assets   = { path = "crates/assets" }
 campfire_views    = { path = "crates/views" }
 campfire_jobs     = { path = "crates/jobs" }
 campfire_mail     = { path = "crates/mail" }
+campfire_app      = { path = "crates/app" }
 mailparse        = "0.16"
 lettre           = { version = "0.11", default-features = false, features = ["smtp-transport", "tokio1-rustls", "ring", "rustls-native-certs", "hostname", "builder"] }
 
@@ -72,7 +73,7 @@ tempfile     = "3"
 md-5         = "0.10"
 multer       = "3"
 http-body-util = "0.1"
-# integrations (crates/campfire/src/integrations): HTTP/1.1 client, TLS, Web Push crypto
+# integrations (crates/app/src/integrations): HTTP/1.1 client, TLS, Web Push crypto
 hyper-util   = { version = "0.1", features = ["tokio"] }
 http         = "1"
 bytes        = "1"

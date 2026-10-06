@@ -7,7 +7,7 @@ exist. For the audit log's action vocabulary see
 ## Content Security Policy
 
 The policy built by `content_security_policy` in
-`crates/campfire/src/security.rs` is **enforced** (not report-only). Browsers block anything outside it and
+`crates/app/src/security.rs` is **enforced** (not report-only). Browsers block anything outside it and
 report violations to `/csp_reports`, which logs one line per violation,
 rate-limited, without query strings. The main pages (room, huddle,
 stage, board, search, account settings, profile, event form, and the
@@ -26,7 +26,7 @@ Every response carries `X-Content-Type-Options: nosniff`,
 `Referrer-Policy: strict-origin-when-cross-origin`, and a
 `Permissions-Policy` of `camera=(self), display-capture=(self),
 microphone=(self), notifications=(self)`, pinned in
-`crates/campfire/src/security.rs` (`PERMISSIONS_POLICY`). `notifications` is not a
+`crates/app/src/security.rs` (`PERMISSIONS_POLICY`). `notifications` is not a
 real Permissions-Policy directive (the Notifications API is gated by
 its own user prompt), so browsers log a console note and ignore that
 entry; it is listed for completeness.

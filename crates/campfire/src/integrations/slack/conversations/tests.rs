@@ -1,5 +1,11 @@
 use super::super::jobs::tests::{run, setup, start};
 use super::*;
+use campfire_app::integrations::slack::users;
+use campfire_db::Room;
+use campfire_db::RoomType;
+use campfire_db::User;
+use indexmap::IndexMap;
+use serde_json::Value;
 use serde_json::json;
 
 #[tokio::test]

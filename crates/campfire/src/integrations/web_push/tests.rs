@@ -7,6 +7,9 @@ use p256::ecdsa::{Signature, VerifyingKey};
 use p256::elliptic_curve::sec1::ToEncodedPoint;
 
 use super::*;
+use campfire_app::net::Network;
+use campfire_db::PushSubscription;
+use std::time::Duration;
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, TestDb, network};
 
 /// `DnsTestHelper::WEB_PUSH_PUBLIC_TEST_IP`
@@ -18,7 +21,7 @@ const VAPID_PRIVATE_KEY: &str = "qfXLHghuG1rSHZUVo9SscNRI-0EIHRbIrfeGCqbAwak=";
 const REFERENCE_SUBJECT: &str = "mailto:support@smartdata.net";
 
 fn expected() -> serde_json::Value {
-    serde_json::from_str(include_str!("../testdata/web_push_expected.json")).unwrap()
+    serde_json::from_str(include_str!("../../../../app/src/integrations/testdata/web_push_expected.json")).unwrap()
 }
 
 fn vapid() -> VapidConfig {

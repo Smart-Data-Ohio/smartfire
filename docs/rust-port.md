@@ -12,7 +12,7 @@ Smartfire's boards, threads, huddles and stages, Slack import, Google and GitHub
 agent APIs, and two-factor authentication have controllers, jobs and views in this tree.
 The former stock-Campfire-only status is obsolete; the current handler table is
 [`crates/campfire/src/controllers.rs`](../crates/campfire/src/controllers.rs#L195), with integration
-routes also registered in [`app.rs`](../crates/campfire/src/app.rs#L303). Deliberate behavioral
+routes also registered in [`app.rs`](../crates/app/src/app.rs#L303). Deliberate behavioral
 differences from the Rails app are listed under [Known differences](#known-differences).
 
 The Rails app's behavior is pinned by the recorded golden vectors, fixtures and frozen seeds the
@@ -43,10 +43,10 @@ These contracts supersede the imported upstream operational claims:
 - **Web Push:** 410 and OpenSSL-equivalent key/TLS failures invalidate a subscription; 404 is
   retained. Notification titles and bodies are preserved, and oversized encryption raises rather
   than truncating. The VAPID subject is fixed to `mailto:support@smartdata.net`; `VAPID_SUBJECT` and
-  `TLS_DOMAIN` do not configure it ([delivery/build](../crates/campfire/src/integrations/web_push.rs#L48),
-  [invalidation](../crates/campfire/src/integrations/web_push.rs#L115),
-  [size regression](../crates/campfire/src/integrations/web_push/encryption.rs#L192),
-  [configuration regression](../crates/campfire/src/config.rs#L282)).
+  `TLS_DOMAIN` do not configure it ([delivery/build](../crates/app/src/integrations/web_push.rs#L48),
+  [invalidation](../crates/app/src/integrations/web_push.rs#L115),
+  [size regression](../crates/app/src/integrations/web_push/encryption.rs#L192),
+  [configuration regression](../crates/app/src/config.rs#L282)).
 - **Routes, assets and rich text:** `/rooms/directs/:id` preserves Rails' inherited nil-room 500;
   the working conversation page is `/rooms/:id`
   ([handler](../crates/campfire/src/controllers/rooms/directs.rs#L14)). Copy-link markup uses Rails'
@@ -108,7 +108,7 @@ defaults to 3000 and `TARGET_BIND` to `127.0.0.1`; callers outside the container
 front listener unless explicitly configured otherwise
 ([front configuration](../crates/kit/src/front/config.rs#L75)). Web Push uses `VAPID_PUBLIC_KEY` and
 `VAPID_PRIVATE_KEY`, with the fixed subject described above. Other settings are in
-[`crates/campfire/src/config.rs`](../crates/campfire/src/config.rs).
+[`crates/app/src/config.rs`](../crates/app/src/config.rs).
 
 For a local source image, from the repository root:
 
@@ -125,7 +125,7 @@ older approvals remain scoped to their recorded inputs.
 | Difference | Reason and evidence |
 |---|---|
 | Relative-duration overflow at unit-dependent ranges | Shared arithmetic is fixed-width I512 rather than Ruby's unbounded integers: power-of-ten inputs first overflow at 10^147 minutes, 10^145 hours, or 10^143 days/weeks (the preceding power still fits, including 10^144 hours); the 12 recorded hour/day inputs produce 24 mismatched outcomes. [Timestamp limit:23](../crates/db/src/time.rs#L23), [parser:235](../crates/db/src/slash_commands/time_parser.rs#L235), [boundary vectors](../vectors/messaging/extreme_range.json), [diagnostic test:84](../crates/campfire/src/controllers/message_features/extreme_range_tests.rs#L84), the strict probe that recorded them (removed with the Rails app). |
-| Security response headers on HTTP/1.1 Active Storage proxies | Rust retains six security defaults that Rails' Live responses omit, including successful streams and handled 404/416 responses. [Defaults:26](../crates/campfire/src/security.rs#L26), [all-header regression:118](../crates/campfire/src/controllers/agent_review_r5_tests.rs#L118), [scoped header list](../plans/ws11api-approved-differences.md#http11-proxy-security-headers-pr-203-follow-up). |
+| Security response headers on HTTP/1.1 Active Storage proxies | Rust retains six security defaults that Rails' Live responses omit, including successful streams and handled 404/416 responses. [Defaults:26](../crates/app/src/security.rs#L26), [all-header regression:118](../crates/campfire/src/controllers/agent_review_r5_tests.rs#L118), [scoped header list](../plans/ws11api-approved-differences.md#http11-proxy-security-headers-pr-203-follow-up). |
 | Huge-integer password-confirmation replay → 302 | Rust discards optional replay parameters when the encrypted session would overflow, avoiding Rails' 500 for 1,001/1,002-digit JSON integers; this evidence concerns replay parameters, not arbitrary path IDs. [Sudo guard:57](../crates/campfire/src/concerns/sudo.rs#L57), [HTTP regression:233](../crates/campfire/src/controllers/accounts/bots/casting_followups_tests.rs#L233). |
 | Committed-file retention | Successful COMMIT transfers file ownership before fallible callbacks, so an earlier callback error cannot leave committed rows without their staged files as Rails can. [Callback/file regression:47](../crates/campfire/src/controllers/agent_review_r4_tests.rs#L47), [retention contract](../plans/ws11api-approved-differences.md#committed-file-ownership-and-missing-file-serving-pr-192-fourth-and-fifth-reviews). |
 | Malformed SLA arrays → 400 | Rust rejects retained hashes/nested arrays before mutation instead of Rails' 500, preserving rules and audits; accepted empty/scalar arrays keep Rails behavior. [Validation:15](../crates/campfire/src/controllers/rooms/board_automations/sla.rs#L15), [complete-response regression:142](../crates/campfire/src/controllers/rooms/board_automation_tests.rs#L142). |
@@ -141,8 +141,8 @@ older approvals remain scoped to their recorded inputs.
 | Rich-text hardening limits | Attribute angle brackets are escaped before autolinking, `name` is anchor-only, and content attachments stop after eight levels to bound unsafe/expensive input. [Sanitizer:244](../crates/richtext/src/sanitizer.rs#L244), [hardening regressions:55](../crates/richtext/tests/hardening.rs#L55). |
 | Resource and listener bounds | Rust caps buffered JSON/form parameter bodies at 16 MiB before parsing and Cable subscriptions/identifiers at 64/4 KiB; its app listener defaults to loopback. These bound resource use and the forwarded-header trust boundary. [Body limits:19](../crates/kit/src/body.rs#L19), [Cable limits:92](../crates/cable/src/connection.rs#L92), [front defaults:75](../crates/kit/src/front/config.rs#L75). |
 | Media subprocess deadlines | Rust kills and reaps ffprobe after 30 seconds and ffmpeg preview extraction after 60 seconds; Rails' analyzer/previewer subprocesses have no such deadlines. [ffprobe:15](../crates/storage/src/analyze.rs#L15), [ffmpeg:20](../crates/storage/src/process.rs#L20), [kill/reap regression:168](../crates/storage/src/process.rs#L168). |
-| Composer unfurl budget | Rust adds a 10-second overall budget including slot waits, DNS, redirects and image validation, with at most 16 unfurls in flight; Rails' composer has no overall budget. Both use 5-second open/read/write operation timeouts. [Unfurl:27](../crates/campfire/src/integrations/opengraph.rs#L27), [deadline regression:190](../crates/campfire/src/integrations/opengraph/tests.rs#L190), Rails `app/models/opengraph/fetch.rb`. |
-| Push HTTP-exchange deadline | Rust uses 10-second open/read and 60-second write timeouts, plus a 30-second HTTP-exchange deadline after DNS resolution; Rails uses 60-second operation timeouts without that overall exchange deadline. These bound time spent awaiting a push service, not DNS. [Timeouts:28](../crates/campfire/src/integrations/web_push.rs#L28), [DNS before delivery:75](../crates/campfire/src/integrations/web_push.rs#L75), [exchange deadline:182](../crates/campfire/src/integrations/web_push.rs#L182). |
+| Composer unfurl budget | Rust adds a 10-second overall budget including slot waits, DNS, redirects and image validation, with at most 16 unfurls in flight; Rails' composer has no overall budget. Both use 5-second open/read/write operation timeouts. [Unfurl:27](../crates/app/src/integrations/opengraph.rs#L27), [deadline regression:190](../crates/app/src/integrations/opengraph/tests.rs#L190), Rails `app/models/opengraph/fetch.rb`. |
+| Push HTTP-exchange deadline | Rust uses 10-second open/read and 60-second write timeouts, plus a 30-second HTTP-exchange deadline after DNS resolution; Rails uses 60-second operation timeouts without that overall exchange deadline. These bound time spent awaiting a push service, not DNS. [Timeouts:28](../crates/app/src/integrations/web_push.rs#L28), [DNS before delivery:75](../crates/app/src/integrations/web_push.rs#L75), [exchange deadline:182](../crates/app/src/integrations/web_push.rs#L182). |
 
 ## Imported upstream history
 

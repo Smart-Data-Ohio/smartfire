@@ -1,4 +1,5 @@
 use super::*;
+use campfire_db::Database;
 use crate::integrations::{
     github::{client::ReadClient, jobs::FetchPullRequestJob, tests::fake},
     test_support::{Route, TestDb},

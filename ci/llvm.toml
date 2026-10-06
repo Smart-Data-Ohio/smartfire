@@ -1,0 +1,11 @@
+# The campfire crates on LLVM, for the panic-recovery tests: Cranelift (.cargo/config.toml) can't
+# unwind, and a panic unwinds through every crate between it and its catch_unwind. One section
+# per crate that .cargo/config.toml builds with Cranelift:
+#
+#   cargo nextest run --config ci/llvm.toml --profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS"
+
+[profile.dev.package.campfire]
+codegen-backend = "llvm"
+
+[profile.dev.package.campfire_app]
+codegen-backend = "llvm"

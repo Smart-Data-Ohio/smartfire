@@ -1,14 +1,16 @@
 # Build-speed settings for development, tests and CI (plans/build-speed-report.md).
 #
-# The `campfire` crate's dev/test builds use the Cranelift codegen backend, which needs the nightly
-# in rust-toolchain.toml. Every other crate stays on LLVM: Cranelift builds them no faster, and
+# The campfire crates' dev/test builds (`campfire` and the crates split from it, one section each
+# below) use the Cranelift codegen backend, which needs the nightly in rust-toolchain.toml. Every
+# other crate stays on LLVM: Cranelift builds them no faster, and
 # LLVM keeps their panic handling (catch_unwind, unwinding destructors) and SIMD intrinsics exact.
 #
 # Cranelift caveat: rustup's Cranelift doesn't support unwinding. A panic in campfire's own code
 # isn't caught by catch_unwind there and skips destructors on its way out, so the few tests of
-# panic recovery fail and a failing test can leave a lock held. For those, rebuild with LLVM:
+# panic recovery fail and a failing test can leave a lock held. For those, rebuild with LLVM
+# (ci/llvm.toml names each crate below):
 #
-#   cargo test -p campfire --config 'profile.dev.package.campfire.codegen-backend="llvm"'
+#   cargo test -p campfire -p campfire_app --config ci/llvm.toml
 #
 # Release builds always use LLVM: the release profile names it below, and the production image
 # (the Dockerfile's build stage) neither copies this file nor uses the nightly.
@@ -17,6 +19,9 @@
 codegen-backend = true
 
 [profile.dev.package.campfire]
+codegen-backend = "cranelift"
+
+[profile.dev.package.campfire_app]
 codegen-backend = "cranelift"
 
 [profile.release]
