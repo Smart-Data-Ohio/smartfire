@@ -67,8 +67,8 @@ mod tests {
         let app = TestApp::boot().await.expect("WS17 requires the Rails parity seed");
         let reply = app.anonymous().get("/service-worker.js").await;
         assert_eq!(reply.status, StatusCode::OK);
-        let reference = campfire_db::fixtures::reference_root().join("app/views/pwa/service_worker.js");
-        assert_eq!(reply.body, std::fs::read(reference).unwrap());
+        // The Rails body is frozen in vectors/users_pwa_*.json
+        // (`pwa_http_bodies_match_rails_before_and_after_first_run`).
         if let Ok(path) = std::env::var("WS17_SERVICE_WORKER_OUTPUT") {
             std::fs::write(path, &reply.body).unwrap();
         }

@@ -229,46 +229,30 @@ mod tests {
         }
     }
 
+    /// The schema files were generated from the Rails app, which is gone: they are the frozen
+    /// record of the schema it last migrated to (129 migrations through 2026-10-03), so any
+    /// change to them is a mistake.
     #[test]
-    fn schema_sha1_matches_reference_schema_rb() {
-        let schema_rb = crate::fixtures::reference_root().join("db/schema.rb");
-        let contents = std::fs::read(schema_rb).unwrap();
-        assert_eq!(schema_sha1(&contents), SCHEMA_SHA1);
-    }
-
-    #[test]
-    fn migration_versions_match_reference_migrations() {
-        let migrate = crate::fixtures::reference_root().join("db/migrate");
-        let mut versions: Vec<String> = std::fs::read_dir(migrate)
-            .unwrap()
-            .map(|e| {
-                e.unwrap()
-                    .file_name()
-                    .to_string_lossy()
-                    .split('_')
-                    .next()
-                    .unwrap()
-                    .to_string()
-            })
-            .collect();
-        versions.sort();
-        let mut ours: Vec<&str> = migration_versions().collect();
-        ours.sort();
-        assert_eq!(versions, ours);
+    fn schema_files_are_frozen() {
+        let versions: BTreeSet<&str> = migration_versions().collect();
+        assert_eq!((migration_versions().count(), versions.len()), (129, 129));
+        assert_eq!(versions.first(), Some(&"20231215043540"));
+        assert_eq!(versions.last(), Some(&"20261003180000"));
+        for (name, contents, sha256) in [
+            ("schema.sql", SCHEMA_SQL, "8087be3847f61d3d390881f0d9a714da6c89bfed6a49c6d013c33c65353dabc1"),
+            ("schema_migrations.txt", SCHEMA_MIGRATIONS, "eee52ef4996494591474c15f4dd5c54c7a2b0b8d40ae5cb2b79503a60714f7fa"),
+            ("schema_sequences.txt", SCHEMA_SEQUENCES, "5dbef42959e66e2389c3b9a4b3a9ca74b7df176d471e84ea5c19fb79a48b25ad"),
+            ("schema_sha1.txt", include_str!("schema_sha1.txt"), "4649da67165b760883605a1a3c038e6016269971e70c758d210425cc7334f499"),
+        ] {
+            assert_eq!(hex::encode(sha2::Sha256::digest(contents)), sha256, "{name} changed");
+        }
     }
 
     #[test]
     fn schema_sql_is_the_whole_reference_schema() {
-        // Every table in schema.rb, plus the FTS5 index and Rails' own two tables.
-        let schema_rb =
-            std::fs::read_to_string(crate::fixtures::reference_root().join("db/schema.rb")).unwrap();
+        // The FTS5 index and Rails' own two tables (every other table is `schema.sql`'s, which
+        // `a_prepared_database_has_exactly_schema_sql` and `schema_files_are_frozen` cover).
         let conn = prepared();
-        for line in schema_rb.lines() {
-            let line = line.trim();
-            let Some(rest) = line.strip_prefix("create_table \"") else { continue };
-            let table = rest.split('"').next().unwrap();
-            assert!(table_exists(&conn, table).unwrap(), "missing table {table}");
-        }
         for table in ["message_search_index", "schema_migrations", "ar_internal_metadata"] {
             assert!(table_exists(&conn, table).unwrap(), "missing table {table}");
         }

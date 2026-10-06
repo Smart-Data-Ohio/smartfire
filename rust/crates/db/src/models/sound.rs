@@ -125,31 +125,12 @@ pub const BUILTIN: &[Sound] = &[
 mod tests {
     use super::*;
 
+    /// `BUILTIN` is the list from the reference's `app/models/sound.rb` (56 sounds, checked
+    /// against it until Rails was removed); it is the source of truth now.
     #[test]
-    fn builtin_sounds_match_reference() {
-        let ruby = std::fs::read_to_string(
-            crate::fixtures::reference_root().join("app/models/sound.rb"),
-        )
-        .unwrap();
-        let count = ruby
-            .lines()
-            .filter(|l| l.trim_start().starts_with("new(name:"))
-            .count();
-        assert_eq!(count, BUILTIN.len());
-        for sound in BUILTIN {
-            assert!(
-                ruby.contains(&format!("new(name: \"{}\"", sound.name)),
-                "{}",
-                sound.name
-            );
-            if let Some(text) = sound.text {
-                assert!(
-                    ruby.contains(&format!("text: \"{text}\"")),
-                    "{}",
-                    sound.name
-                );
-            }
-        }
+    fn builtin_sounds_are_the_reference_list() {
+        let names: std::collections::BTreeSet<_> = BUILTIN.iter().map(|s| s.name).collect();
+        assert_eq!((BUILTIN.len(), names.len()), (56, 56));
         assert_eq!(
             Sound::find_by_name("deeper")
                 .unwrap()
