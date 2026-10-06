@@ -1,0 +1,156 @@
+import rows from "../gen/screens.json";
+
+/**
+ * One row of the screen map (`crates/spa/src/screens.rs`, written to `src/gen/screens.json`):
+ * a classic page and where it lives in the SPA. `ported` says whether the SPA has built it; the
+ * server sends people who use the new UI from a ported classic page to its SPA URL.
+ */
+export interface Screen {
+  readonly endpoint: string;
+  /** The classic path pattern: literal segments, and `:param` (optionally after a prefix: `@:id`). */
+  readonly classic: string;
+  /** The SPA path pattern, with the same parameters. */
+  readonly spa: string;
+  readonly ported: boolean;
+}
+
+export const SCREENS: readonly Screen[] = rows;
+
+/** The SPA's base path (`/app/`), which the router's `basepath` is too. */
+const BASE = import.meta.env.BASE_URL;
+
+function segments(path: string): string[] {
+  return path.split("/").filter((segment) => segment !== "");
+}
+
+/** A record id, as the server matches one: a positive integer below 2^53, digits only. */
+function isId(segment: string): boolean {
+  return /^\d+$/.test(segment) && Number.isSafeInteger(Number(segment)) && Number(segment) > 0;
+}
+
+/** `path`'s parameters by name when it matches `pattern`, else `null`. */
+function capture(pattern: string, path: string): Map<string, string> | null {
+  const expected = segments(pattern);
+  const actual = segments(path);
+
+  if (expected.length !== actual.length) {
+    return null;
+  }
+
+  const captured = new Map<string, string>();
+
+  for (const [index, part] of expected.entries()) {
+    const segment = actual[index] ?? "";
+    const colon = part.indexOf(":");
+
+    if (colon === -1) {
+      if (part !== segment) {
+        return null;
+      }
+
+      continue;
+    }
+
+    const prefix = part.slice(0, colon);
+    const value = segment.slice(prefix.length);
+
+    if (!segment.startsWith(prefix) || !isId(value)) {
+      return null;
+    }
+
+    captured.set(part.slice(colon + 1), String(Number(value)));
+  }
+
+  return captured;
+}
+
+function fill(pattern: string, captured: Map<string, string>): string {
+  const filled = segments(pattern).map((part) => {
+    const colon = part.indexOf(":");
+
+    return colon === -1
+      ? part
+      : `${part.slice(0, colon)}${captured.get(part.slice(colon + 1)) ?? ""}`;
+  });
+
+  const path = `/${filled.join("/")}`;
+
+  return pattern.endsWith("/") && path !== "/" ? `${path}/` : path;
+}
+
+/** `search` (with or without its `?`) less any `classic` parameter, as `?...` or "". */
+function keptSearch(search: string): string {
+  const params = new URLSearchParams(search);
+
+  params.delete("classic");
+
+  const kept = params.toString();
+
+  return kept === "" ? "" : `?${kept}`;
+}
+
+/**
+ * The SPA URL of a classic `path` the SPA has ported (`/rooms/12` is `/app/r/12`), else `null`.
+ * The search carries over, less `classic`.
+ */
+export function spaUrlFor(path: string, search = ""): string | null {
+  for (const screen of SCREENS) {
+    if (!screen.ported) {
+      continue;
+    }
+
+    const captured = capture(screen.classic, path);
+
+    if (captured !== null) {
+      return `${fill(screen.spa, captured)}${keptSearch(search)}`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * The classic URL of an SPA `path` (`/app/r/12` is `/rooms/12`), ported or not, else `null`:
+ * where a destination the SPA hasn't built opens, with a full page load.
+ */
+export function classicUrlFor(path: string, search = ""): string | null {
+  for (const screen of SCREENS) {
+    const captured = capture(screen.spa, path);
+
+    if (captured !== null) {
+      return `${fill(screen.classic, captured)}${keptSearch(search)}`;
+    }
+  }
+
+  return null;
+}
+
+/** `url` with `?classic=1`, which keeps a person who uses the SPA on the classic page. */
+export function withClassicBypass(url: string): string {
+  const parsed = new URL(url, "http://x");
+
+  parsed.searchParams.set("classic", "1");
+
+  return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+}
+
+/**
+ * An SPA path the router can't open: forward it to its classic page with a full page load
+ * (`replace`, so Back skips it). Returns whether it did.
+ */
+export function openUnportedInClassic(path: string, search: string): boolean {
+  const classic = classicUrlFor(path, search);
+
+  if (classic === null) {
+    return false;
+  }
+
+  window.location.replace(withClassicBypass(classic));
+
+  return true;
+}
+
+/** Whether `path` is the SPA's (under `/app/`). */
+export function isSpaPath(path: string): boolean {
+  return path === BASE.replace(/\/$/, "") || path.startsWith(BASE);
+}

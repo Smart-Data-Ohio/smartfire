@@ -255,7 +255,50 @@ pub async fn before_actions_with_authentication(
         restore_authentication(c).await?;
         redirect_signed_in_user_to_root(c)?;
     }
+    redirect_to_spa(c).await?;
     Ok(())
+}
+
+// --- The new UI ----------------------------------------------------------------------------------
+
+/// Someone who uses the SPA (`ui_preference`, else `SPA_DEFAULT`) and opens a classic page it has
+/// ported goes to that page's SPA URL (`campfire_spa::screens`), with a 302. Only with
+/// `SPA_ENABLED`, and only for a signed-in person's `GET` or `HEAD` that navigates to an HTML page:
+/// not a Turbo frame's, a script's or a JSON request, and not with `?classic=1`, which keeps them
+/// on the classic page. It runs last in the chain, so signing in, two-step enforcement and the
+/// rest come first, and a page's own checks (room access) are the SPA's to make.
+pub async fn redirect_to_spa(c: &mut Ctx) -> Result<()> {
+    use campfire_db::models::user::ui_preference::{self, UiPreference};
+    use campfire_kit::format;
+
+    let config = &c.app().config;
+    let default_next = config.spa_default_next;
+    if !config.spa_enabled || !(c.request.is_get() || c.request.is_head()) {
+        return Ok(());
+    }
+    if authenticated_by(c) != AuthenticatedBy::Session || c.is_turbo_frame_request() || c.request.is_xhr() {
+        return Ok(());
+    }
+    let Some(endpoint) = c.current::<MatchedRoute>().map(|route| route.endpoint) else {
+        return Ok(());
+    };
+    let query = Some(c.request.query_string()).filter(|query| !query.is_empty());
+    if campfire_spa::screens::bypassed(query) {
+        return Ok(());
+    }
+    let Some(location) = campfire_spa::screens::spa_url(endpoint, c.request.path(), query) else {
+        return Ok(());
+    };
+    if !matches!(c.format()?, Some(f) if f == &format::HTML || f == &format::ALL) {
+        return Ok(());
+    }
+    let user_id = require_current_user(c)?.id;
+    let stored = c.app().db.read(move |conn| ui_preference::stored(conn, user_id)).await.map_err(Error::internal)?;
+    if UiPreference::effective(stored, default_next) != UiPreference::Next {
+        return Ok(());
+    }
+    let location = c.url_for(&location);
+    halt(c.redirect_to(&location)?)
 }
 
 // --- VersionHeaders ----------------------------------------------------------------------------

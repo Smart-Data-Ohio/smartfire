@@ -391,6 +391,25 @@
     background: color-mix(in oklch, var(--bg-sidebar), var(--bg-app) 55%);
   }
 
+  .sidebar-you-button {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: calc(var(--space-1) * -1);
+    padding: var(--space-1);
+    border-radius: var(--radius-md);
+    color: inherit;
+    text-align: start;
+    transition: background-color var(--duration-micro) var(--ease-enter);
+  }
+
+  .sidebar-you-button:hover,
+  .sidebar-you-button[aria-expanded="true"] {
+    background: var(--bg-hover);
+  }
+
   .sidebar-you-text {
     display: flex;
     flex: 1;

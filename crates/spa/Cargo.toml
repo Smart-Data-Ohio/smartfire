@@ -17,5 +17,6 @@ flate2.workspace = true
 
 # The tests run build/embed.rs over tests/fixture and decompress what it made.
 [dev-dependencies]
+campfire_routes.workspace = true
 brotli.workspace = true
 flate2.workspace = true

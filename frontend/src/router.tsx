@@ -9,6 +9,7 @@ import {
 import { RoomRoute } from "./features/room/room-route.tsx";
 import { AppShell } from "./features/shell/app-shell.tsx";
 import { HomeView } from "./features/shell/home-view.tsx";
+import { NotFound } from "./features/shell/not-found.tsx";
 
 /** A path segment that must be a positive integer id; anything else is a 404. */
 function parseId(segment: string): number {
@@ -127,6 +128,8 @@ export const router = createRouter({
   routeTree,
   basepath: import.meta.env.BASE_URL,
   defaultPreload: false,
+  // A destination the SPA hasn't ported yet opens on its classic page (src/lib/screens.ts).
+  defaultNotFoundComponent: NotFound,
   scrollRestoration: false,
 });
 

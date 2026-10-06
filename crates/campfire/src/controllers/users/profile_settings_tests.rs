@@ -175,6 +175,7 @@ async fn appearance_partial_matches_all_pinned_rails_bytes() {
             theme_errors: errors("theme"),
             text_size_errors: errors("text_size"),
             time_zone_errors: errors("time_zone"),
+            next_ui: None,
         };
         let actual = super::people_tests::render(&app, |ctx| {
             campfire_views::users::Appearance { ctx, data }

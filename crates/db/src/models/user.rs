@@ -20,6 +20,7 @@ use crate::time::Timestamp;
 
 pub mod presentation;
 pub mod profile_settings;
+pub mod ui_preference;
 
 /// `enum :role, %i[ member administrator bot ]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

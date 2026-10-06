@@ -11,14 +11,18 @@
 //!   classic page. A file at the dist's root (Vite's `public/`) is served as it is.
 //! - `GET /api/v1/boot`: the shell's boot JSON and CSRF token, for the Vite dev server (whose own
 //!   `index.html` has neither) and for the SPA to refresh its token without a reload.
+//! - `POST /app/ui_preference`: the person's UI (`ui=next` or `classic`), from the classic
+//!   profile's "Try the new Smartfire" and the SPA's "Switch to classic". While it says `next`,
+//!   classic pages the SPA has ported redirect there (`concerns::redirect_to_spa`).
 
 use axum::Router;
 use axum::extract::{Request, State};
 use axum::handler::Handler as _;
 use axum::http::{HeaderName, HeaderValue, header};
 use axum::response::Response;
+use campfire_db::models::user::ui_preference::{self, UiPreference};
 use campfire_db::{Account, UserStatusSettings};
-use campfire_kit::{Ctx, Error, Kit, Result, StatusCode};
+use campfire_kit::{Ctx, Error, Kit, Redirect, Result, StatusCode};
 use campfire_spa::{Boot, BootAccount, BootResponse, BootUser};
 
 use crate::app::AppCtx;
@@ -49,6 +53,49 @@ pub fn routes(enabled: bool, immutable_cache_control: &'static str) -> Router<Ki
         .route("/app/", axum::routing::get(campfire_kit::action(show)))
         .route("/app/{*path}", axum::routing::get(page))
         .route("/api/v1/boot", axum::routing::get(campfire_kit::action(boot)))
+        .route("/app/ui_preference", axum::routing::post(campfire_kit::action(update_ui_preference)))
+}
+
+/// `POST /app/ui_preference`, a form post: `ui` (`next` or `classic`) becomes the person's UI.
+/// `next` goes to `/app/`. `classic` goes back to `return_to`: an SPA path becomes its classic
+/// page (`/app/r/5` is `/rooms/5`; one with none is `/`), a classic path stays as it is, and
+/// anything but a local path is `/`. Any other `ui` is a 422.
+pub async fn update_ui_preference(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default()).await?;
+    let Some(preference) = c.param_str("ui").and_then(UiPreference::parse) else {
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
+    };
+    let user_id = concerns::require_current_user(c)?.id;
+    c.app().db.write(move |tx| ui_preference::store(tx, user_id, preference)).await.map_err(Error::internal)?;
+    let location = match preference {
+        UiPreference::Next => format!("{}/", campfire_spa::PREFIX),
+        UiPreference::Classic => classic_return_path(c.param_str("return_to")),
+    };
+    let location = c.url_for(&location);
+    c.redirect_to_with(&location, Redirect { status: Some(StatusCode::SEE_OTHER), ..Redirect::default() })
+}
+
+/// Where "Switch to classic" lands for `return_to` (see [`update_ui_preference`]).
+pub fn classic_return_path(return_to: Option<&str>) -> String {
+    let Some(return_to) = return_to.filter(|path| local_path(path)) else {
+        return "/".into();
+    };
+    let (path, query) = match return_to.split_once('?') {
+        Some((path, query)) => (path, Some(query)),
+        None => (return_to, None),
+    };
+    let under_spa = path == campfire_spa::PREFIX || path.starts_with(&format!("{}/", campfire_spa::PREFIX));
+    if under_spa {
+        campfire_spa::screens::classic_url(path, query).unwrap_or_else(|| "/".into())
+    } else {
+        return_to.to_string()
+    }
+}
+
+/// A path on this host: one leading `/`, no backslash (browsers read it as a slash, so `/\evil`
+/// names another host) and no control character.
+fn local_path(path: &str) -> bool {
+    path.starts_with('/') && !path.starts_with("//") && !path.bytes().any(|b| b.is_ascii_control() || b == b'\\')
 }
 
 /// The shell: the dist's `index.html` with the CSRF meta tags, the CSP nonce and the boot JSON.

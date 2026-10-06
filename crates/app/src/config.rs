@@ -24,6 +24,8 @@
 //!   least recently used fragments. See `campfire_views::fragment_cache`.
 //! - `SPA_ENABLED`: serve the React SPA (`crates/spa`) under `/app` when `1`, `true`, `yes` or
 //!   `on`; otherwise `/app` is an unknown path, as it always was.
+//! - `SPA_DEFAULT`: `next` makes the SPA the UI of everyone who hasn't chosen one (the end of the
+//!   migration); anything else leaves them on the classic pages. Only with `SPA_ENABLED`.
 //!
 //! Storage paths mirror `Rails.root.join("storage")`: the database under `db/`, blobs under
 //! `files/` (`config/storage.yml`), backups under `backups/` (`script/admin/prepare-backup`).
@@ -71,6 +73,8 @@ pub struct Config {
     pub google_client: crate::integrations::google::api::Config,
     /// `SPA_ENABLED`: the React SPA under `/app` (`controllers::spa`).
     pub spa_enabled: bool,
+    /// `SPA_DEFAULT=next`: the SPA for people who haven't chosen a UI (`ui_preference`).
+    pub spa_default_next: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -184,6 +188,7 @@ impl Config {
             },
             spa_enabled: present("SPA_ENABLED")
                 .is_some_and(|value| matches!(value.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on")),
+            spa_default_next: present("SPA_DEFAULT").is_some_and(|value| value.trim().eq_ignore_ascii_case("next")),
         })
     }
 }
@@ -290,6 +295,21 @@ mod tests {
         }
         for value in [None, Some(""), Some("0"), Some("false"), Some("off"), Some("no"), Some("enabled")] {
             assert!(!enabled(value), "{value:?}");
+        }
+    }
+
+    #[test]
+    fn the_spa_is_the_default_ui_only_when_spa_default_says_next() {
+        let default_next = |value: Option<&str>| {
+            let mut vars = vec![("SECRET_KEY_BASE", "abc")];
+            vars.extend(value.map(|value| ("SPA_DEFAULT", value)));
+            config(&vars).unwrap().spa_default_next
+        };
+        for value in ["next", "NEXT", " next "] {
+            assert!(default_next(Some(value)), "{value:?}");
+        }
+        for value in [None, Some(""), Some("classic"), Some("1"), Some("true"), Some("nextt")] {
+            assert!(!default_next(value), "{value:?}");
         }
     }
 
