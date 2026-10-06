@@ -10,6 +10,7 @@ import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
 import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { SidebarDestinations } from "../destinations/sidebar-destinations.tsx";
+import { HuddleDock } from "../huddle/huddle-dock.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { useDestination } from "../shell/view-store.ts";
@@ -329,6 +330,7 @@ export function Sidebar() {
           </SkeletonReveal>
         )}
       </div>
+      <HuddleDock />
       <YouPanel />
     </aside>
   );

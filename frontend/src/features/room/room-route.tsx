@@ -4,6 +4,7 @@ import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Button } from "../../ui/button.tsx";
 import { Composer } from "../composer/composer.tsx";
+import { CallView } from "../huddle/call-view.tsx";
 import { RightPane } from "../panes/right-pane.tsx";
 import { usePhoneLayout, useRightPaneView } from "../panes/use-right-pane.ts";
 import { prefetchThreadMemberships } from "../threads/prefetch.ts";
@@ -77,6 +78,7 @@ function RoomPane({ roomId, focusMessageId }: RoomPaneProps) {
         inert={covered}
       >
         <RoomHeader roomId={roomId} />
+        <CallView roomId={roomId} />
         <Timeline roomId={roomId} focusMessageId={focusMessageId} />
         <Composer roomId={roomId} />
       </section>

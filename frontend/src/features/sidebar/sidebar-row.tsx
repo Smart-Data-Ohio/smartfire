@@ -4,6 +4,7 @@ import { useStore } from "../../store/store.ts";
 import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Badge } from "../../ui/badge.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { CallMark, VoiceParticipants } from "../huddle/voice-participants.tsx";
 import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
@@ -92,12 +93,16 @@ export function SidebarRow({ row, selected }: SidebarRowProps) {
         )}
         <span className="sidebar-row-name">{row.displayName}</span>
         {muted ? <Icon name="bell-off" size={14} className="sidebar-row-muted" /> : null}
+        <CallMark roomId={room.id} />
         <Badge
           count={muted ? 0 : pill}
           tone="danger"
           label={`${pill} ${room.kind === "direct" ? "unread" : "mentions"}`}
         />
       </Link>
+      {room.kind === "voice" || room.kind === "stage" ? (
+        <VoiceParticipants roomId={room.id} />
+      ) : null}
     </li>
   );
 }

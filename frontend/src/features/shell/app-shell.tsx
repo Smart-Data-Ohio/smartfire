@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { useStore } from "../../store/store.ts";
 import { actions } from "../../sync/runtime.ts";
 import { Toaster } from "../../ui/toast.tsx";
+import { HuddleDock } from "../huddle/huddle-dock.tsx";
+import { HuddleRoot } from "../huddle/huddle-root.tsx";
 import { sidebarTotals } from "../sidebar/sections.ts";
 import { Sidebar } from "../sidebar/sidebar.tsx";
 import { GlobalOverlays } from "../switcher/global-overlays.tsx";
@@ -73,8 +75,12 @@ export function AppShell() {
       )}
       <main className="app-main">
         <ConnectionBanner />
+        <div className="app-main-dock">
+          <HuddleDock compact />
+        </div>
         <Outlet />
       </main>
+      <HuddleRoot />
       <GlobalOverlays />
       <Toaster />
     </div>

@@ -7,6 +7,6 @@ export const ROOM_KIND_ICON = {
   closed: "lock",
   direct: "dms",
   voice: "volume",
-  stage: "volume",
+  stage: "radio",
   board: "boards",
 } as const satisfies Record<RoomKind, IconName>;

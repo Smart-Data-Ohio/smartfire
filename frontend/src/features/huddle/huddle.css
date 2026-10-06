@@ -1,0 +1,684 @@
+/* Huddles: the dock, the call view, the device check, the launcher and sidebar call presence. */
+@layer app {
+  /* ── The dock (Discord's "Voice connected" panel) ───────────────────────── */
+
+  .huddle-dock {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+    margin: 0 var(--space-2) var(--space-2);
+    padding: var(--space-2);
+    border-radius: 10px;
+    background: color-mix(in oklch, var(--bg-sidebar), var(--bg-app) 55%);
+    box-shadow: inset 0 0 0 1px var(--border);
+    font-size: var(--text-meta);
+  }
+
+  .huddle-dock[data-compact] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .huddle-dock-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .huddle-dock[data-compact] .huddle-dock-head {
+    flex: 1 1 60%;
+  }
+
+  .huddle-dock-signal {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    color: var(--success);
+  }
+
+  .huddle-dock[data-tone="pending"] .huddle-dock-signal,
+  .huddle-dock-signal[data-quality="poor"] {
+    color: var(--warning);
+  }
+
+  .huddle-dock[data-tone="warning"] .huddle-dock-signal,
+  .huddle-dock-signal[data-quality="lost"] {
+    color: var(--danger);
+  }
+
+  .huddle-dock-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .huddle-dock-status {
+    overflow: hidden;
+    color: var(--success-text);
+    font-weight: var(--weight-semibold);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .huddle-dock[data-tone="pending"] .huddle-dock-status {
+    color: var(--text);
+  }
+
+  .huddle-dock[data-tone="warning"] .huddle-dock-status {
+    color: var(--warning-text);
+  }
+
+  .huddle-dock-elapsed {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    font-weight: var(--weight-regular);
+  }
+
+  .huddle-dock-room {
+    overflow: hidden;
+    color: var(--text-muted);
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .huddle-dock-room:hover {
+    color: var(--text);
+    text-decoration: underline;
+  }
+
+  .huddle-dock-leave {
+    --button-fg: var(--danger-text);
+    --button-bg-hover: var(--danger-soft);
+  }
+
+  .huddle-dock-notice {
+    margin: 0;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  .huddle-dock-live {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    color: var(--danger-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .huddle-dock-resume {
+    width: 100%;
+  }
+
+  .huddle-dock-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-1);
+  }
+
+  .huddle-dock-controls .button[data-off] {
+    --button-fg: var(--danger-text);
+  }
+
+  .huddle-dock-controls .button[data-on] {
+    --button-fg: var(--on-accent);
+    --button-bg: var(--accent-solid);
+    --button-bg-hover: var(--accent-solid);
+  }
+
+  .huddle-dock-failed {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1-5);
+  }
+
+  .huddle-dock-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--danger-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .huddle-dock-actions {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  .huddle-dock-settings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* The phone bar sits over the conversation; the sidebar's own dock covers wider screens. */
+  .app-main-dock {
+    display: none;
+  }
+
+  @media (width < 720px) {
+    .app-main-dock {
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .app-main-dock:empty {
+      display: none;
+    }
+
+    .sidebar .huddle-dock {
+      display: none;
+    }
+  }
+
+  /* ── Pickers, meter and connection details ──────────────────────────────── */
+
+  .huddle-pickers {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .huddle-picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .huddle-picker-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+  }
+
+  .huddle-select {
+    width: 100%;
+    min-width: 0;
+    height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-pane);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-meta);
+  }
+
+  .huddle-select:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 1px;
+  }
+
+  .huddle-meter {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: var(--radius-pill);
+    background: var(--bg-active);
+  }
+
+  .huddle-meter-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--success);
+    transform-origin: left center;
+    scale: var(--meter, 0) 1;
+    transition: scale 80ms linear;
+  }
+
+  .huddle-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-1) var(--space-3);
+    margin: 0;
+  }
+
+  .huddle-stats div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .huddle-stats dt {
+    color: var(--text-muted);
+  }
+
+  .huddle-stats dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── The device check ───────────────────────────────────────────────────── */
+
+  .huddle-prejoin {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .huddle-preview {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--bg-sunken);
+  }
+
+  .huddle-preview video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    scale: -1 1;
+  }
+
+  .huddle-preview-empty {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .huddle-prejoin-error {
+    margin: 0;
+    color: var(--danger-text);
+    font-size: var(--text-meta);
+  }
+
+  /* ── The header launcher ────────────────────────────────────────────────── */
+
+  .huddle-launch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .huddle-launcher[data-active] {
+    --button-fg: var(--success-text);
+  }
+
+  .huddle-stack {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 4px;
+  }
+
+  .huddle-stack .avatar {
+    --avatar-ring: var(--bg-pane);
+
+    margin-left: -4px;
+    box-shadow: 0 0 0 2px var(--bg-pane);
+  }
+
+  .huddle-stack-more {
+    margin-left: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  @media (width < 720px) {
+    .huddle-launcher-label {
+      display: none;
+    }
+  }
+
+  /* ── The call view ──────────────────────────────────────────────────────── */
+
+  .call-view {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: var(--space-2);
+    max-height: 55%;
+    padding: var(--space-2) var(--space-3) var(--space-3);
+    overflow: auto;
+    background: var(--bg-sunken);
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .call-view[data-theater] {
+    position: absolute;
+    z-index: 5;
+    inset: 0;
+    max-height: none;
+  }
+
+  .call-view-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+  }
+
+  .call-view-title {
+    margin: 0;
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-semibold);
+  }
+
+  .call-view-count {
+    font-size: var(--text-meta);
+  }
+
+  .call-view-hide {
+    margin-left: auto;
+  }
+
+  .call-view-connecting {
+    margin: 0;
+    color: var(--text-muted);
+  }
+
+  .room:has(> .call-view) {
+    position: relative;
+  }
+
+  .call-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: var(--space-2);
+  }
+
+  @media (width < 720px) {
+    .call-grid {
+      grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    }
+
+    .huddle-stack {
+      display: none;
+    }
+  }
+
+  .call-tile-button {
+    display: block;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    cursor: pointer;
+  }
+
+  .call-tile-button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .call-tile {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--bg-raised);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .call-tile[data-speaking][data-camera] {
+    box-shadow: inset 0 0 0 2px var(--presence-online);
+  }
+
+  .call-tile > .speaking-ring {
+    margin-bottom: 20px;
+  }
+
+  .call-tile-initial {
+    display: grid;
+    place-items: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: var(--bg-active);
+    font-size: 24px;
+    font-weight: var(--weight-semibold);
+  }
+
+  .call-tile-name {
+    position: absolute;
+    bottom: var(--space-1-5);
+    left: var(--space-1-5);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    max-width: calc(100% - var(--space-3));
+    padding: 2px var(--space-1-5);
+    border-radius: var(--radius-sm);
+    background: color-mix(in oklch, var(--bg-app), transparent 25%);
+    font-size: var(--text-meta);
+  }
+
+  .call-tile-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* After the base tile so the phone's square tiles win. */
+  @media (width < 720px) {
+    .call-tile {
+      aspect-ratio: 1;
+    }
+  }
+
+  .call-video {
+    width: 100%;
+    height: 100%;
+    background: #000;
+    object-fit: cover;
+  }
+
+  .call-video[data-screen] {
+    object-fit: contain;
+  }
+
+  .call-share {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    background: #000;
+    aspect-ratio: 16 / 10;
+  }
+
+  .call-share[data-expanded] {
+    flex: 1;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .call-share .call-video {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .call-share-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    background: color-mix(in oklch, var(--bg-app), transparent 10%);
+    font-size: var(--text-meta);
+  }
+
+  .call-share-label {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .call-share-watching {
+    color: var(--text-muted);
+  }
+
+  .call-share-quality {
+    width: auto;
+  }
+
+  .call-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
+    background: var(--danger-solid);
+    color: var(--on-danger);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* ── Per-person menu ────────────────────────────────────────────────────── */
+
+  .huddle-participant-menu {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    width: 260px;
+    padding: var(--space-3);
+  }
+
+  .huddle-participant-menu-name {
+    margin: 0;
+    font-weight: var(--weight-semibold);
+  }
+
+  .huddle-volume {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .huddle-volume-label {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .huddle-volume input {
+    width: 100%;
+    accent-color: var(--accent-solid);
+  }
+
+  .huddle-volume-hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .huddle-moderation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Sidebar call presence (plain CSS rings, never voice-glow) ──────────── */
+
+  .voice-participants {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 2px 0 var(--space-1);
+    padding: 0 0 0 28px;
+    list-style: none;
+  }
+
+  .voice-participant {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-height: 24px;
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .voice-participant-avatar {
+    position: relative;
+    display: inline-flex;
+    border-radius: 50%;
+  }
+
+  .voice-participant-avatar .avatar {
+    --avatar-ring: var(--bg-sidebar);
+  }
+
+  .voice-participant-avatar::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--presence-online);
+    opacity: 0;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .voice-participant[data-speaking] .voice-participant-avatar::after {
+    opacity: 1;
+  }
+
+  .voice-participant[data-speaking] {
+    color: var(--text);
+  }
+
+  .voice-participant-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .voice-participant-muted {
+    display: grid;
+    margin-right: var(--space-2);
+    color: var(--danger-text);
+  }
+
+  .sidebar-call-mark {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+    color: var(--success-text);
+  }
+
+  .sidebar-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger-solid);
+    box-shadow: 0 0 0 3px var(--danger-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .huddle-meter-fill,
+    .voice-participant-avatar::after,
+    .call-tile {
+      transition: none;
+    }
+  }
+}
