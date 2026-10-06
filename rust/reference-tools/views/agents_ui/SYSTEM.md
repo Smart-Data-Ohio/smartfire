@@ -1,25 +1,25 @@
 `system_behavior.py --binary /absolute/path/to/campfire` runs nine ported Rails
-system assertions on separate private copies of the committed `agents_ui`
-seed. Build that seed with the pinned image, build the normal Rust binary and
-the pinned Playwright Docker image supplies its committed browser dependencies.
-Ports 52797–52799 are the defaults. Concurrent worktrees must use their own
-`PARITY_NAMESPACE` and `PARITY_OWNER`, plus unused `WS11UI_SYSTEM_REFERENCE_PORT`,
-`WS11UI_SYSTEM_CANDIDATE_PORT` and `WS11UI_SYSTEM_TARGET_PORT` values.
+system assertions against Rust, on separate private copies of the frozen `agents_ui`
+seed (`parity/bin/frozen-seeds restore`). Build the normal Rust binary; the pinned
+Playwright Docker image supplies its committed browser dependencies. Ports come
+from host-wide kernel leases (`users/browser_port_leases.py`).
 
-This runner compares behavior; it captures no screenshots and performs no
-pixel work. Rails uses the pin plus exactly the approved status-popup layout.
-The pinned Rails models create the original Bender message, steps and approval,
-including all parent timestamps and callback-created activity. A SQLite backup
-copies that exact persisted state to Rust before boot. The fixture records the
-Rails DOM identifier too: messages use their client ID rather than database ID. Failure counts are reported per original
-Rails file and cause a nonzero exit, even when the other runtime passes.
+This runner checks behavior; it captures no screenshots and performs no
+pixel work. The pinned Rails models once created the original Bender message,
+steps and approval, including all parent timestamps and callback-created activity
+(`system_fixture.rb` and friends). `record-fixtures.py` recorded that persisted
+state as `test-support/agents-ui-fixtures/SCENARIO/patch.sql` plus the labels the
+fixture printed (`labels.json`); the runner applies both to the seed copy before
+boot. The labels record the Rails DOM identifier too: messages use their client ID
+rather than database ID. Failure counts are reported per original Rails file and
+cause a nonzero exit.
 
 The directory case includes the agent profile page; the inbox case includes
 its persisted approval and ledger decision. These reveal missing shared user
 profile/inbox routes rather than treating successful directory/history HTML
 renders as complete system parity. The budget scenario boots a separate private copy one day later, so fixture
-messages do not count against its initially empty daily window. Both apps
-receive one real bot-key post and two rejected overflows. Those overflow
+messages do not count against its initially empty daily window. Rust
+receives one real bot-key post and two rejected overflows. Those overflow
 requests call the owner budget checker, reproducing the original test’s two
 checks without a synthetic database write or callback bypass. Its inbox
 contains exactly one notice, and its owner suspends the agent with the kill

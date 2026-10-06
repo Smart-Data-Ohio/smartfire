@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import {DatabaseSync} from 'node:sqlite'
-import path from 'node:path'
 import {chromium} from 'playwright'
 import {network} from './original_browser_network.mjs'
 import {visit,waitForController} from './browser_navigation.mjs'
@@ -65,7 +64,8 @@ try {
   await unread(loud.id,database.prepare('SELECT name FROM rooms WHERE id=?').get(labels['rooms.watercooler']).name,file,76)
   await selector('test/test_helpers/system_test_helper.rb',127,'.rooms a:not(.unread)','Designers',{wait:5000})
   console.log(`ORIGINAL_ASSERTION ${file}:77`)
-  const mention=JSON.parse(fs.readFileSync(path.join(path.dirname(process.env.WS11UI_BROWSER_DATABASE),'ledger-mention.json'),'utf8'))
+  // The mention attachment rendered by the pinned Rails users/mention partial.
+  const {mention}=JSON.parse(fs.readFileSync(new URL('../../test-support/ledger-lifecycle.json',import.meta.url),'utf8'))
   const message=await fixtureAction({action:'message',room:labels['rooms.designers'],creator:labels['users.kevin'],body:'Hey '+mention,key:'mute-quiet-3'})
   await unread(message.id,'Designers',file,82)
  } else if(selected==='calendar-lifecycle') {

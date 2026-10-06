@@ -1,8 +1,7 @@
-"""Pinned navigation fixtures and persisted observations for the paired browser runner."""
+"""Pinned navigation fixtures and persisted observations for the original browser runner."""
 import hashlib
 import json
-from ledger_browser_lifecycle import host_command, start_bridge, stop
-after_start = start_bridge
+from ledger_browser_lifecycle import host_command
 
 CASES = [
  'key-help','key-typing-help','key-typing-switcher','key-rooms','key-unread-rooms',
