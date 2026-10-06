@@ -7,8 +7,8 @@ Goal: a pull request's slowest required Rust check in about 10 minutes, the full
 
 | | Before | After |
 | --- | --- | --- |
-| Pull request (`Rust port`) | 43–70 min | **8–9 min** (slowest shard 7.5–8.6 min) |
-| Full matrix | 69–84 min (77 min on this base) | **22–23 min** |
+| Pull request (`Rust port`) | 43–70 min (80 min for #256's Cranelift run) | **7.7 min** with Cranelift (8–9 min before it) |
+| Full matrix | 69–84 min (77 min on this base) | **21.6 min** with Cranelift (22–23 min before it) |
 
 The pull-request target is met. The full matrix is not: its floor is one test (below).
 
@@ -23,7 +23,11 @@ and full dispatch [37389035197](https://github.com/Smart-Data-Ohio/smartfire/act
 Those numbers predate Cranelift (#256), which merged into this branch afterwards. On main,
 #256's own serial PR run took 80 min ([37393465943](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37393465943):
 campfire tests 50 min, LLVM panic tests 3.4 min, stable check 2 min). The pull request lists
-the measured runs on this branch's final head, with Cranelift.
+the measured runs on this branch's final head, with Cranelift: PR run
+[37404706659](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37404706659) (7.7 min; test shards
+4.9–7.1 min, each ~4 min compiling the workspace crates and under a minute testing) and full
+dispatch [37404703019](https://github.com/Smart-Data-Ohio/smartfire/actions/runs/37404703019)
+(21.6 min, green first time; browser shards 13.7–21.2 min, messaging done by 13.4 min).
 
 ## Where the time went (before)
 
@@ -119,12 +123,14 @@ browser tests, the originals' exactly the 53 declarations, and the behaviour sha
 
 ## What blocks the 15-minute full matrix
 
-The critical path is browsers shard 1/4, which holds a single test,
-`ledger_browser_tests::original_ledger_navigation_assertions` (631–771 s across runs),
-after setup (~80 s) and a serial compile of the `campfire` server binary and test
-harness (~7 min, overlapping the prerequisite image). One test can't be split across
-shards without changing it, so the full matrix stays around 20–22 min until that test or
-the `campfire` compile gets faster.
+The critical path is the browser shards: about 46 min of serial browser tests in all, one of
+them (`ledger_browser_tests::original_ledger_navigation_assertions`) 7–13 min on its own,
+after setup (~80 s) and a stable/LLVM compile of the `campfire` server binary and test
+harness (4–7 min, overlapping the prerequisite image; correctness builds stay on production's
+toolchain, so Cranelift doesn't shorten them). Four shards land at 12–13 min of tests each,
+so the full matrix stays around 20–22 min. More browser shards would add another
+compile-and-image job per shard for a few minutes at most; reaching 15 min needs faster
+browser tests or a shared prebuilt server binary and harness.
 
 ## The stage join test
 
