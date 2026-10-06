@@ -8,14 +8,14 @@ the tests `cargo nextest list` selects for their filter, each passed once, with 
 `#[ignore]` test reported; the same for the LLVM job's four; and libtest's doctest logs
 account for every doctest they ran. Both gates run `check_gate_needs.py`, which fails if
 any job in `rust.yml` is missing from their `needs`. It reports on every pull request:
-`Rust changes` checks the PR's diff, and when it touches no Rust input (`rust/`, the
-Rails app the port reads as its reference, this workflow or its setup action) the jobs
+`Rust changes` checks the PR's diff, and when it touches no Rust input (`rust/`, this
+workflow or its setup action) the jobs
 below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
 nightly and manual runs, empty diffs and unavailable history always run everything:
 
 | Job | Runs |
 | --- | --- |
-| `Rust seeds` | Builds or restores the pinned reference image and seeds, validates them with Rails, and proves the parity gates reject bad inputs. Saves both caches on main. |
+| `Rust seeds` | `parity/bin/frozen-seeds check`: the committed seeds in `parity/seeds/frozen` match their manifest, the test keys and this checkout's schema migrations; its unit tests prove changed, missing, added or out-of-date seeds are rejected. |
 | `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --no-tests fail --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (campfire on Cranelift; the nightly run builds campfire with LLVM). Shard 1 also lists the tests the shards and the LLVM job must run, and runs `verify-ignored.sh`, against the harnesses it compiled. |
 | `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with campfire on LLVM: Cranelift can't unwind. Fails unless exactly those four ran and passed. |
 | `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with, from its own `stable` Cargo cache. |
@@ -29,41 +29,40 @@ toolchains, build inputs and `Cargo.lock`, not the commit: a push to main saves 
 no entry with that key exists. Every artifact upload overwrites its earlier attempt's, so a
 failed job can be re-run on its own.
 
-Test and correctness jobs restore the seed cache entry by its exact key, the same
-immutable entry `Rust seeds` validates in that run; on a miss they build and validate
-their own. Test failures are retained for the summary, then explicit gates fail the job.
+Test and correctness jobs restore the committed seeds (`frozen-seeds restore`, through the
+setup action's `parity: seeds`); nothing in the workflow runs Ruby, Rails or a reference
+image. Test failures are retained for the summary, then explicit gates fail the job.
 No advisory correctness group remains.
 
 The correctness jobs run on main, nightly, and manual workflows, through the same
 setup action. `Rust correctness` is their aggregator: every job must succeed, each
 must report exit 0 for the tested commit, the shards' JUnit receipts together must
 contain exactly each suite's registered ignored tests (`correctness_gate.py`), and the
-messaging behaviour shards' case receipts must cover all 145 named cases once
+messaging behaviour shards' case receipts must cover all 139 named cases once
 (`behavior-check.py --verify-receipts`). The slim pull-request gate runs only the
 `Rust port` jobs. Branch protection is managed separately by the release lead.
 
 `CORRECTNESS_SHARD=K/N` runs one deterministic slice of a suite: browsers split their
 ignored tests by the recorded `seconds` in `ignored-tests.json`, messaging behaviour
-splits whole case batches. `CORRECTNESS_PART` selects messaging's `behavior` cases or
-its `originals` (the WS14/WS15 declarations); unset runs both as before. The behaviour
+splits whole case batches, and the Drive job runs its 44 declarations on four nextest
+threads (each holds two: an app and a pinned Chromium container). The behaviour
 shards use the two Rust hosts the `Rust messaging host (app|test)` jobs build once with
 behavior-check.py's own commands, and load the prerequisite image the `app` job exports
 instead of building it sixteen times.
 
 | Job suffix | Execution |
 | --- | --- |
-| database | `reference-tools/db/differential.sh --prepare-only`, `reference-tools/auth/rollback.sh --prepare-only`, then exactly 3 ignored Ruby DB/rollback comparisons |
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
-| browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 7 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
+| browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 6 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests, all on Rust from the frozen seeds; C221–C223 run the three inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `web/bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
-| messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16` (paired Rails/Rust cases) |
-| messaging originals (2 shards) | `behavior-check.py --prepare-only`, then the 53 registered original WS14/WS15 browser declarations against Rust via the pinned native Selenium image |
-| agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget, work against Rails and Rust) |
+| drive | The pinned Chromium image, then exactly the 44 ignored Drive attachment, share and sudo declarations (`drive_browser_tests`, listed in `parity/system/drive-declarations.json`) |
+| messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16`: the 139 named cases on Rust, each from the frozen default seed and its recorded Rails fixture step (`test-support/behavior-fixtures`) |
+| agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget and work on Rust, against the recorded `test-support/agents-ui-fixtures`) |
 
 No external harness in the requested messaging/WS11 scope lacks a scripted entry
 point. The screen-matrix pixel harness is outside this correctness package.
 
-The main Rust/Debian images, archived Rails Ruby base, Playwright/Chromium image,
+The main Rust/Debian images, Playwright/Chromium image,
 Node and Docker CLI images, and Pebble are digest-pinned. Nextest, libfaketime,
 media sources, util-linux 2.42.4 (unshare), ChromeDriver (matching Chromium 153.0.8010.12), and LiveKit are
 checksum-pinned. npm dependencies use committed lockfile integrity hashes.
@@ -78,25 +77,22 @@ against the CI toolchain, follow their installed Depends/Pre-Depends closure
 the complete graph, and record the authenticated APT archive identities/hashes.
 Build the prerequisite image to verify the complete graph.
 
-This locks the CI-only additions. The earlier Rust/Rails/parity image layers still
-use distribution repositories, the BuildKit/frontend defaults are mutable, and
-the Rails gem lockfile has no archive checksums. Those inherited inputs need a
+This locks the CI-only additions. The Rust toolchain image layers still use
+distribution repositories, and the BuildKit/frontend defaults are mutable. Those inherited inputs need a
 separate reproducibility change before claiming every transitive build input is pinned.
 
 Run from the repository root with Docker available:
 
 ```sh
 python3 -m unittest discover -s rust/ci -p 'test_*.py'
-python3 -m unittest discover -s rust/parity -p test_ci_seed.py
-rust/parity/bin/ci-seed prepare
-rust/parity/bin/ci-seed image
-rust/parity/bin/ci-seed build
-rust/parity/bin/ci-seed validate
+python3 -m unittest discover -s rust/parity -p test_frozen_seeds.py
+python3 rust/parity/bin/frozen-seeds check
+python3 rust/parity/bin/frozen-seeds restore
 docker build --target toolchain -f rust/Dockerfile -t campfire-toolchain rust
 docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t campfire-correctness rust
 RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/verify-ignored.sh
-RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/exec.sh bash rust/ci/correctness.sh database
-# Repeat the last command for acme, browsers, livekit, messaging, and agents-ui.
+RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/exec.sh bash rust/ci/correctness.sh acme
+# Repeat the last command for browsers, drive, livekit, messaging, and agents-ui.
 # CI's slices: CORRECTNESS_SHARD=2/4 ... correctness.sh browsers (exec.sh passes it through).
 ```
 
@@ -109,7 +105,7 @@ sequence and writer-control receipts. The first test shard additionally runs `ne
 --exclude html5ever --run-ignored only --ignore-default-filter --message-format json`
 against every compiled test binary. The package/binary/full-test-name set must
 equal the correctness selectors plus the explicit `ignored-utilities.json` list
-(74 correctness tests + 6 compiled utilities). This covers expanded conditional
+(65 correctness tests + 6 compiled utilities). This covers expanded conditional
 attributes, procedural macros and `include!` without inferring their output from source.
 Real compiler mutation probes exercise eight formatting/conditional/macro/include
 forms. A lexical source guard also covers inactive `cfg_attr` branches and the
@@ -125,7 +121,7 @@ executables use their own cache under `target/ws8bm-browser-host/`.
 On Ubuntu runners, the messaging container uses a named AppArmor profile with an
 explicit `userns` permission. The host's namespace restriction remains enabled.
 `native-network-smoke.mjs` checks a real isolated driver endpoint and prints its
-startup log on failure before the full 145-case paired suite starts.
+startup log on failure before the full 139-case suite starts.
 
 Each correctness job uploads its full log, selected-test JUnit (where applicable),
 and a JSON head/duration/exit receipt under `target/ci-receipts`. A red external
