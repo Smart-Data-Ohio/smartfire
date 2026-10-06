@@ -7,6 +7,7 @@ import { Liquid } from "liquid-gooey";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import { Icon } from "../../../ui/icons/icon.tsx";
+import { Kbd } from "../../../ui/kbd.tsx";
 import type { PlusAction } from "./plus-menu.tsx";
 
 interface GooeyPlusMenuProps {
@@ -226,7 +227,7 @@ export default function GooeyPlusMenu({ actions, label }: GooeyPlusMenuProps) {
                   <span className="gooey-plus-label">{action.label}</span>
                   {action.shortcut === undefined ? null : (
                     <span className="gooey-plus-shortcut" aria-hidden="true">
-                      {action.shortcut.join("")}
+                      <Kbd keys={action.shortcut} />
                     </span>
                   )}
                 </button>

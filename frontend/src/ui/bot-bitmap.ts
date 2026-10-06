@@ -18,9 +18,10 @@ function hashString(value: string): number {
 function render(seed: string, size: number, theme: "light" | "dark", dpr: number): string {
   const type = bots.botAvatarTypes[hashString(seed) % bots.botAvatarTypes.length] ?? "clover";
   const preset = bots.botAvatarPresets[type];
-  // The toy fills 80 % of the tile; the library draws into a canvas OVERSCAN times the toy, with
-  // the toy RISE of its size below centre (room for hats and bounce).
-  const box = size * 0.8;
+  // The toy fills 80 % of the tile (90 % at sidebar sizes, where every pixel counts); the library
+  // draws into a canvas OVERSCAN times the toy, with the toy RISE of its size below centre (room
+  // for hats and bounce).
+  const box = size * (size <= 24 ? 0.9 : 0.8);
   const path = new Path2D(bots.botAvatarShapes[type]);
   const partsSource = bots.botAvatarParts[type];
   const work = document.createElement("canvas");

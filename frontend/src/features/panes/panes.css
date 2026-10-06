@@ -406,17 +406,18 @@
   .pane-button-wrap .badge[data-floating] {
     --badge-ring: var(--bg-pane);
 
-    top: -1px;
-    right: -3px;
+    top: -3px;
+    right: -5px;
     pointer-events: none;
   }
 
+  /* A small pill on the button's corner, clear of the pin glyph. */
   .pane-button-wrap .badge-pill {
-    min-width: 16px;
-    height: 16px;
-    padding-inline: 4px;
+    min-width: 14px;
+    height: 14px;
+    padding-inline: 3px;
     box-shadow: 0 0 0 2px var(--badge-ring);
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .pane-button.button[aria-pressed="true"],

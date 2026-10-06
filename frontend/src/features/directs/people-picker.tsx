@@ -16,6 +16,8 @@ interface PeoplePickerProps {
   readonly onSelectedChange: (selected: readonly number[]) => void;
   /** People who can't be picked (a DM's current members). */
   readonly excluded?: ReadonlySet<number>;
+  /** People already in, shown as chips that can't be taken off (a 1:1's other person). */
+  readonly fixed?: readonly number[];
   /** How many chips fit. */
   readonly limit?: number;
   /** Enter in an empty field with people chosen, or ⌘/Ctrl+Enter any time. */
@@ -24,8 +26,24 @@ interface PeoplePickerProps {
   readonly placeholder: string;
 }
 
-function Chip({ userId, onRemove }: { readonly userId: number; readonly onRemove: () => void }) {
+function Chip({
+  userId,
+  onRemove,
+}: {
+  readonly userId: number;
+  /** Absent for a fixed chip. */
+  readonly onRemove?: () => void;
+}) {
   const name = useUser(userId)?.name ?? UNKNOWN_NAME;
+
+  if (onRemove === undefined) {
+    return (
+      <span className="picker-chip" data-fixed>
+        <UserAvatar userId={userId} size={20} decorative />
+        <span className="picker-chip-name">{name}</span>
+      </span>
+    );
+  }
 
   return (
     <span className="picker-chip enter-chip">
@@ -69,6 +87,7 @@ export function PeoplePicker({
   selected,
   onSelectedChange,
   excluded,
+  fixed = [],
   limit = MAX_OTHERS,
   onSubmit,
   label,
@@ -146,6 +165,9 @@ export function PeoplePicker({
         <span className="picker-to" id={`${id}-label`}>
           {label}
         </span>
+        {fixed.map((userId) => (
+          <Chip key={userId} userId={userId} />
+        ))}
         {selected.map((userId) => (
           <Chip key={userId} userId={userId} onRemove={() => pick(userId)} />
         ))}
@@ -161,7 +183,7 @@ export function PeoplePicker({
           aria-activedescendant={
             activeOption === undefined ? undefined : `${id}-${activeOption.userId}`
           }
-          placeholder={selected.length === 0 ? placeholder : ""}
+          placeholder={selected.length === 0 && fixed.length === 0 ? placeholder : ""}
           autoComplete="off"
           spellCheck={false}
           value={query}

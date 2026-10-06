@@ -35,8 +35,8 @@ import { ComposerEmojiButton } from "./emoji-button.tsx";
 import { useKeyboardInset } from "./keyboard-inset.ts";
 import { insertLink, markerForChord, type TextEdit, toggleWrap } from "./markdown-keys.ts";
 import { type PlusAction, PlusMenu } from "./plus-menu/plus-menu.tsx";
-import { PreviewPanel } from "./preview/preview-panel.tsx";
-import { CustomTimeDialog } from "./schedule/custom-time-dialog.tsx";
+import { LazyPreviewPanel } from "./preview/lazy-preview-panel.tsx";
+import { LazyCustomTimeDialog } from "./schedule/lazy-custom-time-dialog.tsx";
 import { type SchedulePreset, sendAtLabel } from "./schedule/presets.ts";
 import { ScheduledPopover } from "./schedule/scheduled-popover.tsx";
 import { scheduled, useScheduled } from "./schedule/scheduled-store.ts";
@@ -672,7 +672,7 @@ export function Composer({
       <Beam active={agentReplying} radius={12}>
         <AutocompleteList autocomplete={autocomplete} onPick={pick} />
         <div className="composer-card" data-drop={drop.active || undefined}>
-          <PreviewPanel
+          <LazyPreviewPanel
             open={previewOpen}
             roomId={roomId}
             markdown={text}
@@ -784,7 +784,7 @@ export function Composer({
         label={dropLabelFor(conversation, threadId !== null || creating)}
       />
       {creating ? null : (
-        <CustomTimeDialog
+        <LazyCustomTimeDialog
           open={customOpen}
           onOpenChange={setCustomOpen}
           title="Schedule message"

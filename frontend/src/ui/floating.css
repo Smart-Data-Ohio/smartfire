@@ -62,6 +62,29 @@
       margin-right: var(--floating-gap);
     }
 
+    /*
+     * Phones: a surface above or below its anchor spans the screen's width, so one wider than
+     * the room left beside its anchor centres on it and stops short of either edge instead of
+     * sitting flush against one.
+     */
+    @media (width < 720px) {
+      .floating:is([data-placement^="top"], [data-placement^="bottom"]) {
+        --floating-edge: var(--space-2);
+
+        inset-inline: var(--floating-edge);
+        max-inline-size: calc(100vw - 2 * var(--floating-edge));
+        justify-self: anchor-center;
+      }
+
+      .floating[data-placement^="top"] {
+        position-area: top span-all;
+      }
+
+      .floating[data-placement^="bottom"] {
+        position-area: bottom span-all;
+      }
+    }
+
     /* Submenus line their first item up with the item that opened them. */
     .floating[data-placement="right-start"] {
       position-area: right span-bottom;

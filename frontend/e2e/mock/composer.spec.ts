@@ -17,11 +17,12 @@ async function openApp(page: Page, path: string, theme: Theme = "light"): Promis
 /** Waits for the finite animations and transitions (not spinners), so a shot never catches a fade. */
 async function settle(page: Page): Promise<void> {
   await page.evaluate(() => {
-    const finishing = document
-      .getAnimations()
-      .flatMap((animation) =>
-        animation.effect?.getComputedTiming().iterations === Infinity ? [] : [animation.finished],
-      );
+    const finishing = document.getAnimations().flatMap((animation) =>
+      animation.effect?.getComputedTiming().iterations === Infinity
+        ? []
+        : // A cancelled animation (its element left) rejects; it's settled all the same.
+          [animation.finished.catch(() => animation)],
+    );
 
     return Promise.all(finishing);
   });

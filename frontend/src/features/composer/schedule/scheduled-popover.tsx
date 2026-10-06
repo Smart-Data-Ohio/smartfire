@@ -4,7 +4,7 @@ import { Button } from "../../../ui/button.tsx";
 import { IconButton } from "../../../ui/icon-button.tsx";
 import { Popover } from "../../../ui/popover.tsx";
 import { toast } from "../../../ui/toast-store.ts";
-import { CustomTimeDialog } from "./custom-time-dialog.tsx";
+import { LazyCustomTimeDialog } from "./lazy-custom-time-dialog.tsx";
 import { sendAtLabel } from "./presets.ts";
 import { scheduled } from "./scheduled-store.ts";
 
@@ -118,7 +118,7 @@ export function ScheduledPopover({ items }: ScheduledPopoverProps) {
           )}
         </div>
       </Popover>
-      <CustomTimeDialog
+      <LazyCustomTimeDialog
         open={editing !== null}
         onOpenChange={(open) => {
           if (!open) {

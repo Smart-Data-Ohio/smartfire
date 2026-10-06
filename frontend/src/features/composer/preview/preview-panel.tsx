@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { inlineMentions } from "../../../lib/body-html.ts";
 import { usePresence } from "../../../motion/presence.ts";
 import { composerActions } from "../../../sync/composer-actions.ts";
 import { IconButton } from "../../../ui/icon-button.tsx";
@@ -121,7 +122,7 @@ function PreviewBody({ source, state }: { readonly source: string; readonly stat
       className="message-body composer-preview-body"
       data-stale={state.status === "loading" || undefined}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-      dangerouslySetInnerHTML={{ __html: state.html }}
+      dangerouslySetInnerHTML={{ __html: inlineMentions(state.html) }}
     />
   );
 }

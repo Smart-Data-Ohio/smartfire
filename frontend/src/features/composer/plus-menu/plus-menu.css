@@ -136,8 +136,14 @@
   }
 
   .gooey-plus-shortcut {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  /* Quiet keys: the menu's own row hover carries the emphasis. */
+  .gooey-plus-shortcut .kbd-key {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border);
     color: var(--text-faint);
-    font-size: var(--text-meta);
-    letter-spacing: 0.04em;
   }
 }

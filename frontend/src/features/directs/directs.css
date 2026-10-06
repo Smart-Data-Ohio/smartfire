@@ -61,6 +61,13 @@
     font-weight: var(--weight-medium);
   }
 
+  /* Already in the conversation: a quiet chip with no remove button. */
+  .picker-chip[data-fixed] {
+    padding-right: var(--space-2);
+    background: var(--bg-sunken);
+    color: var(--text-muted);
+  }
+
   .picker-chip .avatar {
     --avatar-radius: 4px;
   }

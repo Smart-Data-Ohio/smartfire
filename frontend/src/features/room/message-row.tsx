@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { formatFull, formatTime } from "../../lib/time.ts";
 import type { MessageDTO, PendingMessage } from "../../store/model.ts";
 import { actions } from "../../sync/runtime.ts";
@@ -5,7 +6,6 @@ import { AgentThinking } from "../../ui/agent-thinking.tsx";
 import { Button, Spinner } from "../../ui/button.tsx";
 import { Tooltip } from "../../ui/tooltip.tsx";
 import { MessageContent, MessageFlags, ReplyQuote } from "../messages/message-content.tsx";
-import { MessageEditor } from "../messages/message-editor.tsx";
 import { ReactionsRow } from "../messages/reactions.tsx";
 import { useRowInteractions } from "../messages/row-interactions.tsx";
 import { useViewerId } from "../messages/use-message.ts";
@@ -14,6 +14,11 @@ import { UserAvatar } from "../people/user-avatar.tsx";
 import { ThreadIndicator } from "../threads/thread-indicator.tsx";
 import { InlineMarkdown } from "./inline-markdown.tsx";
 import "../messages/messages.css";
+
+/** The inline editor, loaded the first time someone edits; the row keeps its text meanwhile. */
+const MessageEditor = lazy(() =>
+  import("../messages/message-editor.tsx").then((module) => ({ default: module.MessageEditor })),
+);
 
 interface HeaderProps {
   readonly creatorId: number;
@@ -136,11 +141,13 @@ export function MessageRow({
           </span>
         ) : null}
         {row.editing ? (
-          <MessageEditor
-            message={message}
-            onClose={row.closeEditor}
-            onRequestDelete={row.requestDelete}
-          />
+          <Suspense fallback={<MessageContent message={message} trailing={null} />}>
+            <MessageEditor
+              message={message}
+              onClose={row.closeEditor}
+              onRequestDelete={row.requestDelete}
+            />
+          </Suspense>
         ) : (
           <MessageContent
             message={message}

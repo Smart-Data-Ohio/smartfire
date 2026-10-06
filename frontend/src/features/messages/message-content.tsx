@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { inlineMentions } from "../../lib/body-html.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
 import { Icon } from "../../ui/icons/icon.tsx";
@@ -92,7 +93,7 @@ function Body({ message }: { readonly message: MessageDTO }) {
     <div
       className="message-body"
       // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-      dangerouslySetInnerHTML={{ __html: message.bodyHtml }}
+      dangerouslySetInnerHTML={{ __html: inlineMentions(message.bodyHtml) }}
     />
   );
 }

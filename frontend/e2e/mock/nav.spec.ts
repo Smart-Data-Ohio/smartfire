@@ -232,6 +232,9 @@ test("adding people to a one-to-one starts a new group", async ({ page }) => {
   const dialog = page.getByRole("dialog", { name: /Add people/ });
 
   await expect(dialog.getByText(/new group conversation/)).toBeVisible();
+  // The other person is already in: a chip that can't be taken off.
+  await expect(dialog.getByText("Maya Okafor", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "Remove Maya Okafor" })).toHaveCount(0);
   await page.keyboard.type("sam");
   await page.keyboard.press("Enter");
   await dialog.getByRole("button", { name: "Start group conversation" }).click();

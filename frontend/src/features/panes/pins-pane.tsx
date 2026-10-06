@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Pin } from "../../gen/Pin.ts";
 import type { PinList } from "../../gen/PinList.ts";
+import { inlineMentions } from "../../lib/body-html.ts";
 import { formatFull } from "../../lib/time.ts";
 import type { MessageDTO } from "../../store/model.ts";
 import { useStore } from "../../store/store.ts";
@@ -88,7 +89,7 @@ function PinCard({ entry, now, onJump, onUnpin }: PinCardProps) {
       <div
         className="pin-card-body message-body"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: bodyHtml is the server's sanitizer output (crates/richtext), the HTML the classic views render
-        dangerouslySetInnerHTML={{ __html: message.bodyHtml }}
+        dangerouslySetInnerHTML={{ __html: inlineMentions(message.bodyHtml) }}
       />
       {message.attachment === null ? null : (
         <p className="pin-card-file">{message.attachment.filename}</p>

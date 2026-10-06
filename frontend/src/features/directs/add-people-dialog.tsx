@@ -122,6 +122,7 @@ export default function AddPeopleDialog({ roomId, open, onOpenChange }: AddPeopl
         selected={selected}
         onSelectedChange={changeSelected}
         excluded={excluded}
+        fixed={plan.kind === "new-group" ? memberIds : []}
         limit={Math.max(MAX_OTHERS - memberIds.length, 0)}
         onSubmit={submit}
         label="Add:"

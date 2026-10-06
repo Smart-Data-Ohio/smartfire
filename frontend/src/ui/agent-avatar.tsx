@@ -47,7 +47,7 @@ export function AgentAvatar({ seed, name, size = 36, decorative = false }: Agent
 
   const content =
     src === null ? (
-      <Icon name="bot" size={Math.round(size * 0.5)} />
+      <Icon name="bot" size={Math.round(size * 0.6)} />
     ) : (
       <img className="avatar-image" src={src} alt="" width={size} height={size} />
     );

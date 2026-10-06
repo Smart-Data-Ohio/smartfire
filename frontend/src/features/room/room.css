@@ -14,6 +14,8 @@
     flex-direction: column;
     min-height: 0;
     min-width: 0;
+    /* Keeps the header, timeline and composer layers inside, under a right-pane sheet. */
+    isolation: isolate;
   }
 
   .room-error,
