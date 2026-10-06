@@ -1,4 +1,13 @@
-"""Local release decision harness. No real Docker, ONCE, or cloud command runs."""
+"""Local release decision harness for deploy/gcp/campfire-release.sh.
+
+Runs the real script, phase by phase, against fakes for docker, once, curl and
+the host tools. No real container, ONCE or cloud command runs. The fakes model
+the one thing every decision hangs on: the live database's bytes in the
+storage volume, which the candidate's `campfire db-migrate` and a serving
+candidate can change. The real-Docker rehearsal of the same flow is
+rust/ops/tests/simulate_release.sh.
+"""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -8,9 +17,9 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "deploy/gcp/campfire-release.sh"
-BASELINE = Path(__file__).with_name("rails-release-baseline.json")
 CANDIDATE = "fixture/image@sha256:" + "1" * 64
 PREVIOUS = "fixture/image@sha256:" + "2" * 64
+ROLLBACK_TAG = "campfire-rollback:before-fixture"
 
 FAKE = r'''#!/usr/bin/env python3
 import json, os, pathlib, sys
@@ -19,34 +28,50 @@ args = sys.argv[1:]
 if name == "id":
     print("0")
     sys.exit(0)
+work = pathlib.Path(os.environ["STATE_ROOT"])
+state_file = work / "fake.json"
+state = json.loads(state_file.read_text())
+def save():
+    state_file.write_text(json.dumps(state))
 with open(os.environ["TRACE"], "a") as f:
     f.write(json.dumps([name, *args]) + "\n")
+db = work / "volume/db/production.sqlite3"
+candidate = os.environ["CANDIDATE"]
+def serving():
+    return state["running"] and not (state["image"] == candidate and os.environ.get("CANDIDATE_UNHEALTHY"))
+def boot():
+    crash = state["image"] == candidate and os.environ.get("CANDIDATE_CRASHES")
+    state["running"] = not crash
+    if state["running"] and state["image"] == candidate and os.environ.get("CANDIDATE_WRITES"):
+        db.write_bytes(db.read_bytes() + b"+write")
+    save()
+def migrations(var):
+    return [v for v in os.environ.get(var, os.environ.get("MIGRATIONS", "")).split(",") if v]
 if name == "gcloud":
     sys.exit("cloud commands are forbidden in this harness")
 if name == "docker":
     if args[0] == "ps":
-        print("once-app-fixture")
+        if "-a" in args or state["running"]:
+            print("once-app-fixture")
     elif args[0] == "inspect":
         fmt = args[args.index("--format") + 1]
         if ".State.Running" in fmt:
-            print("true")
+            print("true" if state["running"] else "false")
         elif ".Mounts" in fmt:
             print("fixture-volume")
         elif '"once"' in fmt:
-            print(json.dumps({"host":"fixture.invalid", "image":os.environ.get("SETTINGS_IMAGE", os.environ["IMAGE_REF"]),
-                "env":{"SECRET_KEY_BASE":"fixture"}, "autoUpdate":False}))
+            print(json.dumps({"host": "fixture.invalid", "image": state["image"],
+                "env": {"SECRET_KEY_BASE": "fixture"}, "autoUpdate": False}))
+        elif fmt == "{{.Image}}":
+            print("sha256:" + "9" * 64)
         else:
             sys.exit("unhandled inspect " + fmt)
     elif args[:2] == ["image", "inspect"]:
         if "--format" not in args:
             sys.exit(0)
         fmt = args[args.index("--format") + 1]
-        if '"net.smartdata.campfire.runtime"' in fmt:
-            counter = pathlib.Path(os.environ["STATE_ROOT"]) / "runtime-inspected"
-            if os.environ.get("FAIL_FIRST_RUNTIME_INSPECT") and not counter.exists():
-                counter.touch()
-                sys.exit("injected one-shot image-inspect failure")
-            print(os.environ.get("PREVIOUS_RUNTIME", "") if "2" * 64 in args[2] else os.environ.get("RUNTIME", ""))
+        if "net.smartdata.campfire.runtime" in fmt:
+            print(os.environ.get("PREVIOUS_RUNTIME", "rust") if "2" * 64 in args[2] else os.environ.get("RUNTIME", "rust"))
         elif fmt == "{{.Architecture}}":
             print("amd64")
         elif fmt == "{{.Os}}":
@@ -58,23 +83,65 @@ if name == "docker":
         else:
             sys.exit("unhandled image inspect " + fmt)
     elif args[:2] == ["volume", "inspect"]:
-        print(pathlib.Path(os.environ["STATE_ROOT"]) / "volume")
+        print(work / "volume")
     elif args[0] == "top":
         print("PID COMMAND")
-        print("100 " + os.environ.get("PROCESSES", "puma resque-pool"))
+        print("100 " + os.environ.get("PROCESSES", "/usr/local/bin/campfire server"))
+    elif args[0] == "exec":
+        backups = work / "volume/backups"
+        backups.mkdir(exist_ok=True)
+        (backups / "production.sqlite3").write_bytes(db.read_bytes())
     elif args[0] == "run":
-        if os.environ.get("ROLLBACK_STATUS") and "2" * 64 in " ".join(args):
-            sys.exit(int(os.environ["ROLLBACK_STATUS"]))
-        if os.environ.get("RUN_STATUS"):
-            sys.exit(int(os.environ["RUN_STATUS"]))
-        print("MATCH: 88 preexisting tables preserved")
-        print("ADDITIVE: 0 tables, 0 columns")
-        root = pathlib.Path(os.environ["STATE_ROOT"]) / "campfire-fixture"
-        (root / "rehearsal/rehearsal-after.sqlite3").write_bytes(b"fixture")
-    elif args[0] not in ["rm", "exec", "login", "pull"]:
+        if state["running"]:
+            sys.exit("a release container ran while the application was running")
+        image = next(a for a in args if a in (candidate, os.environ["PREVIOUS"], os.environ["ROLLBACK_TAG"]))
+        command = " ".join(args[args.index(image) + 1:])
+        if image != candidate:
+            if "db-check" not in command:
+                sys.exit("the previous image may only check a copy: " + command)
+            print("SCHEMA: previous image" if not os.environ.get("PREVIOUS_REFUSES") else "unknown migrations")
+            sys.exit(1 if os.environ.get("PREVIOUS_REFUSES") else 0)
+        if command.startswith("bash -c"):
+            if os.environ.get("REHEARSAL_STATUS"):
+                print("ERROR: injected rehearsal failure")
+                sys.exit(int(os.environ["REHEARSAL_STATUS"]))
+            for version in migrations("MIGRATIONS"):
+                print("MIGRATED: " + version)
+            print("MIGRATIONS: %d applied" % len(migrations("MIGRATIONS")))
+            print("MATCH: 88 preexisting tables preserved")
+            print("ADDITIVE: 0 tables, %d columns" % len(migrations("MIGRATIONS")))
+            (work / "campfire-fixture/rehearsal/rehearsal-after.sqlite3").write_bytes(b"fixture")
+        elif command == "campfire db-migrate /rails/storage/db/production.sqlite3":
+            if "fixture-volume:/rails/storage" not in args:
+                sys.exit("the live migration must mount the live volume")
+            if os.environ.get("LIVE_STATUS"):
+                print("ERROR: injected live migration failure")
+                sys.exit(int(os.environ["LIVE_STATUS"]))
+            applied = migrations("LIVE_MIGRATIONS")
+            if applied:
+                db.write_bytes(db.read_bytes() + b"+migrated")
+            for version in applied:
+                print("MIGRATED: " + version)
+            print("MIGRATIONS: %d applied" % len(applied))
+        else:
+            sys.exit("unhandled candidate run " + command)
+    elif args[0] not in ["rm", "login", "logout", "pull", "tag"]:
         sys.exit("unhandled docker " + repr(args))
+elif name == "once":
+    if args[0] == "stop":
+        state["running"] = False
+        save()
+    elif args[0] == "start":
+        boot()
+    elif args[0] == "update":
+        state["image"] = args[args.index("--image") + 1]
+        boot()
+    elif args[0] == "backup":
+        pathlib.Path(args[2]).write_bytes(b"once backup")
+    elif args[0] != "version":
+        sys.exit("unhandled once " + repr(args))
 elif name == "curl":
-    print("200", end="")
+    print("200" if serving() else "000", end="")
 elif name == "df":
     print("Filesystem 1M-blocks Used Available Use% Mounted on")
     print("fixture 100000 100 99900 1% /")
@@ -85,272 +152,299 @@ elif name == "pgrep":
 elif name == "systemctl":
     print("disabled" if args[0] == "is-enabled" else "inactive")
     sys.exit(1)
-elif name != "once":
+else:
     sys.exit("unhandled fake " + name)
 '''
 
 
-def run_decision(source, decision, **overrides):
-    scratch = ROOT / ".scratch"
-    scratch.mkdir(exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="release-", dir=scratch) as tmp:
-        work = Path(tmp)
-        state = work / "campfire-fixture"
-        state.mkdir()
-        volume = work / "volume"
-        (volume / "files").mkdir(parents=True)
-        (state / "before.sqlite3").write_bytes(b"fixture")
-        before = {"app_host": "fixture.invalid", "volume": "fixture-volume",
-                  "volume_mountpoint": str(volume), "current_image": PREVIOUS,
-                  "envKeys": ["SECRET_KEY_BASE"]}
-        preflight = {**before, "target_image": overrides.pop("RECORDED_IMAGE", CANDIDATE)}
-        if not overrides.pop("LEGACY_RECORD", False):
-            preflight.update(target_runtime=overrides.pop("RECORDED_RUNTIME", "rails"),
-                             current_runtime=overrides.pop("RECORDED_PREVIOUS_RUNTIME", "rails"))
-        record = state / "preflight-result.json"
-        if decision != "preflight":
-            record.write_text(json.dumps(preflight))
-        (state / "freeze-result.json").write_text(json.dumps({"previous_image": PREVIOUS}))
-        (state / "before-settings.json").write_text(json.dumps(before))
-        (state / "attachment-hashes-before.json").write_text("{}")
-        source_file = work / "release.sh"
-        assert source.rstrip().endswith('main "$@"')
-        # Keep the real main invocation and dispatcher. The recorded rehearsal
-        # decision isolates the helper from the rest of freeze's host mutations.
-        phase = {"rehearse_migration": "freeze", "phase_cutover": "cutover"}.get(decision, decision)
-        setup = ''
-        if decision == "rehearse_migration":
-            setup = 'phase_freeze() { rehearse_migration; }\n'
-        elif decision.startswith("dispatcher_"):
-            phase = decision.removeprefix("dispatcher_")
-            setup = 'run_phase() { printf "PHASE=%s RUNTIME=%s\\n" "$1" "${CANDIDATE_RUNTIME:-rails}"; }\n'
-        source_file.write_text(source.replace('\nmain "$@"', '\n' + setup + 'main "$@"'))
-        bin_dir = work / "bin"
-        bin_dir.mkdir()
+class Host:
+    """A scratch VM: the volume, the release state root and the fakes."""
+
+    def __init__(self, work):
+        self.work = work
+        self.volume = work / "volume"
+        (self.volume / "db").mkdir(parents=True)
+        (self.volume / "files").mkdir()
+        (self.volume / "files/upload").write_text("kept")
+        self.db.write_bytes(b"SQLite fixture database")
+        self.state = work / "campfire-fixture"
+        self.trace = work / "trace.jsonl"
+        (work / "fake.json").write_text(json.dumps({"running": True, "image": PREVIOUS}))
+        self.bin = work / "bin"
+        self.bin.mkdir()
         for name in ["docker", "gcloud", "once", "curl", "id", "df", "du", "pgrep", "systemctl"]:
-            fake = bin_dir / name
+            fake = self.bin / name
             fake.write_text(FAKE)
             fake.chmod(0o755)
-        trace = work / "trace.jsonl"
-        env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}",
-               "IMAGE_REF": CANDIDATE, "RELEASE_LABEL": "fixture", "STATE_ROOT": str(work),
-               "LOCK_FILE": str(work / "release.lock"), "ALLOW_BACKUP_WINDOW": "1",
-               "TRACE": str(trace), **overrides}
-        result = subprocess.run(["bash", str(source_file), phase],
-                                env=env, input="fixture\n", text=True, capture_output=True)
-        commands = trace.read_text() if trace.exists() else ""
-        commands = json.loads("[" + ",".join(commands.splitlines()) + "]")
-        commands = json.loads(json.dumps(commands).replace(str(work), "<scratch>"))
-        return result, commands, json.loads(record.read_text()) if record.exists() else None
+
+    @property
+    def db(self):
+        return self.volume / "db/production.sqlite3"
+
+    def fake(self):
+        return json.loads((self.work / "fake.json").read_text())
+
+    def run(self, phase, **env):
+        before = len(self.commands())
+        environment = {**os.environ, "PATH": f"{self.bin}:{os.environ['PATH']}",
+            "IMAGE_REF": CANDIDATE, "CANDIDATE": CANDIDATE, "PREVIOUS": PREVIOUS, "ROLLBACK_TAG": ROLLBACK_TAG,
+            "RELEASE_LABEL": "fixture", "STATE_ROOT": str(self.work), "LOCK_FILE": str(self.work / "release.lock"),
+            "ALLOW_BACKUP_WINDOW": "1", "HEALTH_TIMEOUT": "0", "FEED_DRAIN_TIMEOUT": "0",
+            "OPEN_ROLES_PATHS": str(self.work / "no-feed"), "TRACE": str(self.trace), **env}
+        result = subprocess.run(["bash", str(SCRIPT), phase], env=environment, input="token\n",
+                                text=True, capture_output=True)
+        return result, self.commands()[before:]
+
+    def commands(self):
+        if not self.trace.exists():
+            return []
+        return [json.loads(line) for line in self.trace.read_text().splitlines()]
+
+    def json(self, name):
+        return json.loads((self.state / name).read_text())
+
+    def release(self, **env):
+        """preflight, freeze and cutover, stopping at the first failure."""
+        results = {}
+        for phase in ["preflight", "freeze", "cutover"]:
+            results[phase] = self.run(phase, **env)
+            if results[phase][0].returncode:
+                break
+        return results
 
 
-class ReleaseDecisionsTest(unittest.TestCase):
-    def test_rails_trace_matches_committed_origin_baseline(self):
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+class ReleaseTest(unittest.TestCase):
+    def setUp(self):
+        scratch = ROOT / ".scratch"
+        scratch.mkdir(exist_ok=True)
+        self._tmp = tempfile.TemporaryDirectory(prefix="release-", dir=scratch)
+        self.host = Host(Path(self._tmp.name))
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def assertOk(self, result):
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_the_script_has_no_rails_paths_left(self):
         source = SCRIPT.read_text()
-        baseline = json.loads(BASELINE.read_text())
-        for decision, expected in baseline["decisions"].items():
-            with self.subTest(decision=decision):
-                result, trace, _ = run_decision(source, decision)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(trace, expected)
+        for rails in ["bin/rails", "bin/start-app", "bundle exec", "db:prepare", "db:migrate", "puma", "resque"]:
+            self.assertNotIn(rails, source)
 
-    def test_original_rails_script_matches_baseline_with_main_invoked(self):
-        baseline = json.loads(BASELINE.read_text())
-        source = subprocess.check_output(
-            ["git", "show", baseline["source_sha"] + ":deploy/gcp/campfire-release.sh"],
-            cwd=ROOT, text=True)
-        for decision, expected in baseline["decisions"].items():
-            with self.subTest(decision=decision):
-                result, trace, _ = run_decision(source, decision)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(trace, expected)
+    def test_a_release_without_migrations(self):
+        results = self.host.release()
+        for phase, (result, _) in results.items():
+            with self.subTest(phase=phase):
+                self.assertOk(result)
+        self.assertEqual(self.host.json("preflight-result.json")["target_runtime"], "rust")
+        self.assertEqual(self.host.json("preflight-result.json")["current_runtime"], "rust")
+        rehearsal = self.host.json("freeze-result.json")["rehearsal"]
+        self.assertEqual(rehearsal["migrations"], [])
+        self.assertTrue(rehearsal["verified"])
+        live = self.host.json("live-migration-result.json")
+        self.assertEqual(live["applied"], [])
+        self.assertEqual(live["frozen_live_database_sha256"], live["migrated_live_database_sha256"])
+        self.assertEqual(self.host.fake(), {"running": True, "image": CANDIDATE})
 
-    def test_rehearsal_failure_refuses_candidate(self):
-        result, _, _ = run_decision(SCRIPT.read_text(), "rehearse_migration", RUN_STATUS="7")
+    def test_a_release_with_migrations_rehearses_then_migrates_the_stopped_live_database(self):
+        versions = "20261006120000,20261007120000"
+        results = self.host.release(MIGRATIONS=versions)
+        for phase, (result, _) in results.items():
+            with self.subTest(phase=phase):
+                self.assertOk(result)
+        freeze = self.host.json("freeze-result.json")
+        self.assertEqual(freeze["rehearsal"]["migrations"], versions.split(","))
+        self.assertEqual(freeze["rehearsal"]["database_sha256"], freeze["frozen_live_database_sha256"])
+        # The rehearsal ran on a copy, in a scratch directory, with no network.
+        rehearsal = next(c for c in results["freeze"][1] if c[:2] == ["docker", "run"])
+        self.assertIn("none", rehearsal)
+        self.assertIn(f"{self.host.state}/rehearsal:/rails/storage", rehearsal)
+        for step in ["campfire db-migrate", "campfire db-check", "campfire verify-additive-sqlite-migration"]:
+            self.assertIn(step, rehearsal[-1])
+        # The frozen bytes are kept, and the live database is migrated while stopped,
+        # strictly between the freeze and the image switch.
+        self.assertEqual((self.host.state / "frozen-live/db/production.sqlite3").read_bytes(), b"SQLite fixture database")
+        cutover = results["cutover"][1]
+        migrate = next(i for i, c in enumerate(cutover) if c[:2] == ["docker", "run"])
+        update = next(i for i, c in enumerate(cutover) if c[:2] == ["once", "update"])
+        self.assertLess(migrate, update)
+        self.assertEqual(cutover[migrate][-2:], ["db-migrate", "/rails/storage/db/production.sqlite3"])
+        self.assertIn("fixture-volume:/rails/storage", cutover[migrate])
+        self.assertIn("none", cutover[migrate])
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database+migrated")
+        self.assertEqual(self.host.json("deploy-result.json")["migrations"], versions.split(","))
+        self.assertTrue(self.host.json("live-migration-result.json")["matches_rehearsal"])
+
+    def test_preflight_refuses_anything_but_rust_to_rust(self):
+        for env in [{"RUNTIME": "rails"}, {"RUNTIME": ""}, {"RUNTIME": "<no value>"}, {"PREVIOUS_RUNTIME": "rails"},
+                    {"PREVIOUS_RUNTIME": ""}]:
+            with self.subTest(env=env):
+                result, _ = self.host.run("preflight", **env)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("this script only releases Rust to Rust", result.stderr)
+                self.assertFalse((self.host.state / "preflight-result.json").exists())
+
+    def test_later_phases_require_the_preflight_candidate_and_a_rust_record(self):
+        self.assertOk(self.host.run("preflight")[0])
+        other = "fixture/other@sha256:" + "3" * 64
+        for phase in ["freeze", "cutover"]:
+            with self.subTest(phase=phase):
+                result, commands = self.host.run(phase, IMAGE_REF=other)
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("does not match IMAGE_REF", result.stderr)
+                self.assertEqual(commands, [], "refused before Docker or ONCE ran")
+        record = self.host.json("preflight-result.json")
+        del record["target_runtime"], record["current_runtime"]
+        (self.host.state / "preflight-result.json").write_text(json.dumps(record))
+        result, commands = self.host.run("freeze")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("did not record a Rust-to-Rust release", result.stderr)
+        self.assertEqual(commands, [])
+
+    def test_a_failed_rehearsal_refuses_and_brings_the_previous_image_back(self):
+        results = self.host.release(MIGRATIONS="20261006120000", REHEARSAL_STATUS="2")
+        result, commands = results["freeze"]
         self.assertEqual(result.returncode, 1)
         self.assertIn("refusing to cut over", result.stderr)
+        self.assertNotIn("cutover", results)
+        self.assertIn(["once", "start", "fixture.invalid"], commands)
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database")
+        self.assertFalse(self.host.json("rehearsal-result.json")["verified"])
 
-    def test_missing_process_fails_after_health(self):
-        result, _, _ = run_decision(SCRIPT.read_text(), "phase_cutover", PROCESSES="unrelated")
+    def test_cutover_refuses_a_database_that_moved_after_the_freeze(self):
+        self.assertOk(self.host.run("preflight")[0])
+        self.assertOk(self.host.run("freeze")[0])
+        self.host.db.write_bytes(b"someone else wrote")
+        result, commands = self.host.run("cutover")
+        self.assertEqual(result.returncode, 10)
+        self.assertIn("changed since the freeze", result.stderr)
+        self.assertFalse(any(c[:2] in (["docker", "run"], ["once", "update"]) for c in commands))
+
+    def test_cutover_refuses_without_a_rehearsal_of_this_database(self):
+        self.assertOk(self.host.run("preflight")[0])
+        self.assertOk(self.host.run("freeze")[0])
+        freeze = self.host.json("freeze-result.json")
+        freeze["rehearsal"]["database_sha256"] = "0" * 64
+        (self.host.state / "freeze-result.json").write_text(json.dumps(freeze))
+        result, commands = self.host.run("cutover")
+        self.assertEqual(result.returncode, 10)
+        self.assertIn("verified rehearsal", result.stderr)
+        self.assertFalse(any(c[:2] in (["docker", "run"], ["once", "update"]) for c in commands))
+
+    def test_simulated_failure_one_stops_before_the_migration(self):
+        results = self.host.release(MIGRATIONS="20261006120000", CAMPFIRE_RELEASE_SIMULATE_FAILURE="1")
+        result, commands = results["cutover"]
+        self.assertEqual(result.returncode, 10)
+        self.assertFalse(any(c[:2] in (["docker", "run"], ["once", "update"]) for c in commands))
+        result, _ = self.host.run("rollback")
+        self.assertOk(result)
+        self.assertEqual(self.host.json("rollback-result.json")["action"], "image-rolled-back")
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+
+    def test_a_failed_live_migration_never_switches_images_and_rolls_back(self):
+        results = self.host.release(MIGRATIONS="20261006120000", LIVE_STATUS="2")
+        result, commands = results["cutover"]
+        self.assertEqual(result.returncode, 10)
+        self.assertIn("db-migrate failed on the live database", result.stderr)
+        self.assertFalse(any(c[:2] == ["once", "update"] for c in commands))
+        result, _ = self.host.run("rollback")
+        self.assertOk(result)
+        self.assertEqual(self.host.json("rollback-result.json")["action"], "image-rolled-back")
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+
+    def test_a_live_migration_that_differs_from_the_rehearsal_is_reverted(self):
+        results = self.host.release(MIGRATIONS="20261006120000", LIVE_MIGRATIONS="20261006120000,20261007120000")
+        result, commands = results["cutover"]
+        self.assertEqual(result.returncode, 10)
+        self.assertIn("but the rehearsal applied", result.stderr)
+        self.assertFalse(any(c[:2] == ["once", "update"] for c in commands))
+        self.assertFalse(self.host.json("live-migration-result.json")["matches_rehearsal"])
+        result, _ = self.host.run("rollback")
+        self.assertOk(result)
+        self.assertEqual(self.host.json("rollback-result.json")["action"], "migration-reverted")
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database")
+
+    def test_an_unhealthy_candidate_that_never_wrote_gets_the_frozen_bytes_back(self):
+        results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1")
+        self.assertEqual(results["cutover"][0].returncode, 10)
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database+migrated")
+        result, commands = self.host.run("rollback")
+        self.assertOk(result)
+        rollback = self.host.json("rollback-result.json")
+        self.assertEqual(rollback["action"], "migration-reverted")
+        self.assertTrue(rollback["database_restored"])
+        self.assertEqual(rollback["health"], "healthy")
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database")
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+        self.assertIn(["once", "update", "fixture.invalid", "--image", PREVIOUS, "--auto-update=false"], commands)
+
+    def test_an_unhealthy_candidate_without_migrations_rolls_back_the_image_only(self):
+        results = self.host.release(CANDIDATE_CRASHES="1")
+        self.assertEqual(results["cutover"][0].returncode, 10)
+        result, _ = self.host.run("rollback")
+        self.assertOk(result)
+        self.assertEqual(self.host.json("rollback-result.json")["action"], "image-rolled-back")
+        self.assertFalse(self.host.json("rollback-result.json")["database_restored"])
+
+    def test_writes_after_the_migration_are_never_discarded(self):
+        for refuses, action, image in [("", "refused-database-changed", PREVIOUS),
+                                       ("1", "refused-database-incompatible", CANDIDATE)]:
+            with self.subTest(action=action):
+                self.tearDown()
+                self.setUp()
+                results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1", CANDIDATE_WRITES="1")
+                self.assertEqual(results["cutover"][0].returncode, 10)
+                written = self.host.db.read_bytes()
+                self.assertEqual(written, b"SQLite fixture database+migrated+write")
+                result, commands = self.host.run("rollback", PREVIOUS_REFUSES=refuses)
+                self.assertEqual(result.returncode, 30, result.stdout + result.stderr)
+                self.assertIn("OPERATOR ACTION REQUIRED", result.stderr)
+                rollback = self.host.json("rollback-result.json")
+                self.assertEqual(rollback["action"], action)
+                self.assertFalse(rollback["database_restored"])
+                self.assertEqual(self.host.fake()["image"], image)
+                # The database bytes are whatever the writes left, plus nothing.
+                self.assertTrue(self.host.db.read_bytes().startswith(written))
+                check = next(c for c in commands if c[:2] == ["docker", "run"])
+                self.assertIn(ROLLBACK_TAG, check)
+                self.assertIn("none", check)
+                self.assertNotIn("fixture-volume:/rails/storage", check, "the check reads a copy")
+
+    def test_a_healthy_cutover_is_never_rolled_back(self):
+        results = self.host.release(MIGRATIONS="20261006120000")
+        self.assertOk(results["cutover"][0])
+        result, commands = self.host.run("rollback")
+        self.assertEqual(result.returncode, 30)
+        self.assertEqual(self.host.json("rollback-result.json")["action"], "refused-application-healthy")
+        self.assertFalse(any(c[:2] == ["once", "stop"] for c in commands))
+        self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database+migrated")
+
+    def test_a_missing_server_process_fails_after_health(self):
+        results = self.host.release(PROCESSES="unrelated")
+        result, _ = results["cutover"]
         self.assertEqual(result.returncode, 20)
         self.assertIn("read-only check(s) failed", result.stderr)
 
-    def test_rust_rehearsal_is_readonly_and_checks_previous_rails_boot(self):
-        result, trace, _ = run_decision(SCRIPT.read_text(), "rehearse_migration", RECORDED_RUNTIME="rust")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        runs = [args for args in trace if args[:2] == ["docker", "run"]]
-        self.assertEqual(len(runs), 2)
-        self.assertIn("<scratch>/campfire-fixture/rehearsal:/rails/storage:ro", runs[0])
-        self.assertIn("db-check", runs[0])
-        for args in runs:
-            self.assertIn("768m", args)
-            self.assertIn("none", args)
-        self.assertIn(PREVIOUS, runs[1])
-        self.assertIn("bin/start-app", runs[1][-1])
-        self.assertIn("http://127.0.0.1:3000/up", runs[1][-1])
-        self.assertNotIn("bin/rails db:migrate", json.dumps(runs))
-
-    def test_rust_cutover_checks_the_single_server_process(self):
-        result, trace, _ = run_decision(SCRIPT.read_text(), "phase_cutover", RECORDED_RUNTIME="rust", PROCESSES="/usr/local/bin/campfire server")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("Rust server present", result.stdout)
-        self.assertNotIn("resque-pool", result.stdout)
-        self.assertIn(["docker", "top", "once-app-fixture", "-eo", "pid,args"], trace)
-
-    def test_unknown_runtime_label_is_refused(self):
-        result, _, record = run_decision(SCRIPT.read_text(), "preflight", RUNTIME="unknown")
-        self.assertEqual(result.returncode, 1)
-        self.assertIsNone(record)
-
-    def test_unlabelled_image_selects_rails(self):
-        result, _, record = run_decision(SCRIPT.read_text(), "preflight")
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(record["target_runtime"], "rails")
-
-    def test_transient_inspection_failure_cannot_abort_later_dispatch(self):
-        # Review reproduction: the first label inspect fails, later ones would
-        # succeed. No label inspection belongs to either phase after preflight.
-        for decision in ["dispatcher_freeze", "dispatcher_cutover"]:
-            for runtime in ["rails", "rust"]:
-                with self.subTest(decision=decision, runtime=runtime):
-                    result, trace, _ = run_decision(
-                        SCRIPT.read_text(), decision, RECORDED_RUNTIME=runtime,
-                        FAIL_FIRST_RUNTIME_INSPECT="1")
-                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                    self.assertIn(f"RUNTIME={runtime}", result.stdout)
-                    self.assertEqual(trace, [])
-
-    def test_stale_runtime_record_refuses_both_candidate_runtime_changes(self):
-        candidate = "fixture/other@sha256:" + "3" * 64
-        for recorded, processes in [("rust", "puma resque-pool"),
-                                    ("rails", "/usr/local/bin/campfire server")]:
-            for decision in ["dispatcher_freeze", "dispatcher_cutover",
-                             "rehearse_migration", "phase_cutover"]:
-                with self.subTest(recorded=recorded, decision=decision):
-                    result, trace, record = run_decision(
-                        SCRIPT.read_text(), decision, RECORDED_RUNTIME=recorded,
-                        IMAGE_REF=candidate, PROCESSES=processes)
-                    self.assertNotEqual(record["target_image"], candidate)
-                    self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                    self.assertIn("preflight target image", result.stderr)
-                    self.assertIn(CANDIDATE, result.stderr)
-                    self.assertIn(candidate, result.stderr)
-                    self.assertEqual(trace, [], "refuse before Docker or ONCE runs")
-
-    def test_matching_runtime_record_accepts_the_same_candidate_reference(self):
-        for runtime in ["rails", "rust"]:
-            for decision in ["dispatcher_freeze", "dispatcher_cutover"]:
-                with self.subTest(runtime=runtime, decision=decision):
-                    result, trace, _ = run_decision(
-                        SCRIPT.read_text(), decision, RECORDED_RUNTIME=runtime,
-                        RECORDED_IMAGE=CANDIDATE, IMAGE_REF=CANDIDATE,
-                        FAIL_FIRST_RUNTIME_INSPECT="1")
-                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                    self.assertIn(f"RUNTIME={runtime}", result.stdout)
-                    self.assertEqual(trace, [])
-
-    def test_runtime_record_requires_a_usable_candidate_reference(self):
-        for image in [None, ""]:
-            with self.subTest(image=image):
-                result, trace, _ = run_decision(
-                    SCRIPT.read_text(), "dispatcher_cutover", RECORDED_IMAGE=image)
-                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-                self.assertIn("target_image", result.stderr)
-                self.assertEqual(trace, [])
-
-    def test_legacy_records_do_not_gain_a_candidate_binding_check(self):
-        baseline = json.loads(BASELINE.read_text())
-        original = subprocess.check_output(
-            ["git", "show", baseline["source_sha"] + ":deploy/gcp/campfire-release.sh"],
-            cwd=ROOT, text=True)
-        candidate = "fixture/other@sha256:" + "3" * 64
-        for image in [CANDIDATE, None]:
-            for decision in baseline["decisions"]:
-                with self.subTest(image=image, decision=decision):
-                    args = dict(LEGACY_RECORD=True, RECORDED_IMAGE=image,
-                                IMAGE_REF=candidate, FAIL_FIRST_RUNTIME_INSPECT="1")
-                    before, expected, _ = run_decision(original, decision, **args)
-                    after, trace, _ = run_decision(SCRIPT.read_text(), decision, **args)
-                    self.assertEqual(before.returncode, 0, before.stdout + before.stderr)
-                    self.assertEqual(after.returncode, 0, after.stdout + after.stderr)
-                    self.assertEqual(trace, expected)
-
-    def test_legacy_preflight_record_means_rails_without_inspection(self):
-        baseline = json.loads(BASELINE.read_text())
-        for decision, expected in baseline["decisions"].items():
-            with self.subTest(decision=decision):
-                result, trace, record = run_decision(
-                    SCRIPT.read_text(), decision, LEGACY_RECORD=True,
-                    RUNTIME="rust", FAIL_FIRST_RUNTIME_INSPECT="1")
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertNotIn("target_runtime", record)
-                self.assertEqual(trace, expected)
-
-    def test_preflight_records_each_verified_runtime_once(self):
-        for label, runtime in [("", "rails"), ("rails", "rails"), ("rust", "rust")]:
-            with self.subTest(label=label):
-                result, trace, record = run_decision(
-                    SCRIPT.read_text(), "preflight", RUNTIME=label, SETTINGS_IMAGE=PREVIOUS)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertEqual(record["target_runtime"], runtime)
-                self.assertEqual(record["current_runtime"], "rails")
-                inspections = [args for args in trace if args[:3] == ["docker", "image", "inspect"]
-                               and "net.smartdata.campfire.runtime" in " ".join(args)]
-                self.assertEqual([args[3] for args in inspections], [CANDIDATE, PREVIOUS])
-
-    def test_preflight_inspection_failure_writes_no_verified_record(self):
-        result, trace, record = run_decision(
-            SCRIPT.read_text(), "preflight", FAIL_FIRST_RUNTIME_INSPECT="1")
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("injected one-shot image-inspect failure", result.stderr)
-        self.assertIsNone(record)
-        self.assertFalse(any(args[:2] == ["once", "stop"] for args in trace))
-
-    def test_rust_later_phases_never_reinspect_images(self):
-        for decision in ["rehearse_migration", "phase_cutover"]:
-            result, trace, _ = run_decision(
-                SCRIPT.read_text(), decision, RECORDED_RUNTIME="rust",
-                FAIL_FIRST_RUNTIME_INSPECT="1", PROCESSES="/usr/local/bin/campfire server")
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertFalse(any(args[:3] == ["docker", "image", "inspect"] for args in trace))
-
-    def test_rust_rehearsal_requires_recorded_previous_rails_runtime(self):
-        result, trace, _ = run_decision(
-            SCRIPT.read_text(), "rehearse_migration", RECORDED_RUNTIME="rust",
-            RECORDED_PREVIOUS_RUNTIME="rust")
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("requires a previous Rails image", result.stderr)
-        self.assertFalse(any(args[:2] == ["docker", "run"] for args in trace))
-
-    def test_invalid_recorded_runtime_is_not_a_legacy_record(self):
-        for runtime in [None, "", "unknown"]:
-            with self.subTest(runtime=runtime):
-                result, trace, _ = run_decision(
-                    SCRIPT.read_text(), "dispatcher_cutover", RECORDED_RUNTIME=runtime)
-                self.assertEqual(result.returncode, 1)
-                self.assertEqual(trace, [])
-
-    def test_rust_schema_failure_and_rails_rollback_failure_refuse_cutover(self):
-        for failure in [{"RUN_STATUS": "7"}, {"ROLLBACK_STATUS": "8"}]:
-            result, _, _ = run_decision(SCRIPT.read_text(), "rehearse_migration", RECORDED_RUNTIME="rust", **failure)
-            self.assertEqual(result.returncode, 1)
-            self.assertIn("refusing to cut over", result.stderr)
+    def test_resume_reuses_a_rehearsal_only_for_the_same_database(self):
+        self.assertOk(self.host.run("preflight")[0])
+        self.assertOk(self.host.run("freeze")[0])
+        (self.host.work / "fake.json").write_text(json.dumps({"running": True, "image": PREVIOUS}))
+        result, commands = self.host.run("freeze", RESUME="1")
+        self.assertOk(result)
+        self.assertIn("already rehearsed", result.stdout)
+        self.assertFalse(any(c[:2] == ["docker", "run"] for c in commands))
+        (self.host.work / "fake.json").write_text(json.dumps({"running": True, "image": PREVIOUS}))
+        self.host.db.write_bytes(b"SQLite fixture database with later writes")
+        result, commands = self.host.run("freeze", RESUME="1")
+        self.assertOk(result)
+        self.assertIn("rehearsing again", result.stderr)
+        self.assertTrue(any(c[:2] == ["docker", "run"] for c in commands))
 
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) == 3 and sys.argv[1] == "--record":
-        revision = sys.argv[2]
-        source = subprocess.check_output(["git", "show", f"{revision}:deploy/gcp/campfire-release.sh"],
-                                         cwd=ROOT, text=True)
-        decisions = {}
-        for decision in ["rehearse_migration", "phase_cutover"]:
-            result, trace, _ = run_decision(source, decision)
-            if result.returncode:
-                raise RuntimeError(result.stdout + result.stderr)
-            decisions[decision] = trace
-        sha = subprocess.check_output(["git", "rev-parse", revision], cwd=ROOT, text=True).strip()
-        BASELINE.write_text(json.dumps({"source_sha": sha, "decisions": decisions}, indent=2) + "\n")
-        print(f"Recorded Rails release baseline from {sha}")
-    else:
-        unittest.main()
+    unittest.main()
