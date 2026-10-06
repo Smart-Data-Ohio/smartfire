@@ -372,6 +372,22 @@ impl Broadcasts {
             Some(html),
             true,
         );
+        sync::message_reactions_later(&self.server, &self.sync, message.id);
+    }
+
+    /// `broadcast_replace_to` a thread reply's conversation over `dom_id(message, part)`,
+    /// keeping the scroll position (ChannelThreadMessagesController#update's edit frames).
+    pub fn message_thread_part_replace(&self, room: &Room, message: &Message, part: &str, html: &str) {
+        self.turbo(
+            &Stream::conversation(room, message),
+            Action::Replace,
+            &message_dom_id(message, Some(part)),
+            Some(html),
+            true,
+        );
+        if part == "presentation" {
+            sync::message_updated_later(&self.server, &self.sync, message.id);
+        }
     }
 
     // Messages::BoostsController's `broadcast_create`/`broadcast_remove`

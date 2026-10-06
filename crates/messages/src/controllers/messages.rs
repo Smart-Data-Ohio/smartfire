@@ -356,6 +356,20 @@ pub async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thread_id: 
         drive_file_ids: params.get("drive_file_ids").map(|_| attributes.drive_file_ids),
         ..Default::default()
     };
+    apply_human_edit(c, thread_id, message, changes, attachment, attachment_given).await
+}
+
+/// The SPA's edit (`PATCH /api/v1/messages/:id`): the classic update given only
+/// `message[markdown_source]`.
+pub async fn update_markdown_source(c: &Ctx, thread_id: Option<i64>, message: Message, markdown_source: String) -> Result<Message> {
+    let changes = campfire_db::MessageChanges { markdown_source: Some(markdown_source), ..Default::default() };
+    let attachment = Assignment::Unchanged.stage(c.app()).await?;
+    apply_human_edit(c, thread_id, message, changes, attachment, false).await
+}
+
+/// The write half of [`update_human_message`]: a locked thread refuses, a rich-text message
+/// edited into Markdown keeps its attachments, then `assign_attributes` + `save!`.
+async fn apply_human_edit(c: &Ctx, thread_id: Option<i64>, message: Message, changes: campfire_db::MessageChanges, attachment: Assignment<Staged>, attachment_given: bool) -> Result<Message> {
     let preserve = !message.markdown() && changes.markdown_source.as_ref().is_some_and(|source| !source.chars().all(char::is_whitespace));
     let id = message.id;
     let app = c.app().clone();

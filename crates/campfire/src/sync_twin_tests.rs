@@ -25,8 +25,13 @@ const PRIMITIVES: &[&str] = &[
 ];
 
 /// Points the sources don't declare in a way this test reads: the free function every read goes
-/// through, and the channel whose frames the clients send.
-const FIXED: &[&str] = &["broadcasts::read_room", "TypingNotificationsChannel"];
+/// through, the channel whose frames the clients send, and the API's saved items (the classic
+/// app has no broadcast for them).
+const FIXED: &[&str] = &[
+    "broadcasts::read_room",
+    "TypingNotificationsChannel",
+    "campfire_api::saved_items",
+];
 
 fn read(path: &str) -> String {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");

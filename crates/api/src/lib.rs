@@ -5,9 +5,22 @@
 //! are `campfire_cable::sync`; the JSON twins of the classic broadcasts are published from
 //! `campfire_app::cable::sync`, rendered by this crate's [`sync::Renderer`].
 
+/// A `/api/v1` endpoint: `$body` runs with the JSON error envelope around it.
+macro_rules! endpoint {
+    ($(#[$doc:meta])* $name:ident => $body:ident) => {
+        $(#[$doc])*
+        pub async fn $name(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+            crate::error::prepare(c);
+            let result = $body(c).await;
+            crate::error::respond(c, result)
+        }
+    };
+}
+
 mod dto;
 pub mod endpoints;
 mod error;
+pub mod message_actions;
 pub mod sync;
 #[cfg(feature = "test-support")]
 pub mod test_hooks;
@@ -15,7 +28,7 @@ pub mod test_hooks;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::routing::get;
+use axum::routing::{delete, get, patch, post};
 use campfire_app::app::AppState;
 use campfire_kit::{Kit, action, unparsed_action};
 
@@ -46,8 +59,46 @@ pub fn routes(app: &AppState) -> Router<Kit> {
         )
         .route(
             "/api/v1/rooms/{room_id}/read",
-            axum::routing::post(unparsed_action(endpoints::mark_read))
+            post(unparsed_action(endpoints::mark_read))
                 .delete(unparsed_action(endpoints::mark_unread)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/pins",
+            get(action(message_actions::pins)),
+        )
+        .route(
+            "/api/v1/messages/{message_id}",
+            patch(unparsed_action(message_actions::update))
+                .delete(action(message_actions::destroy)),
+        )
+        .route(
+            "/api/v1/messages/{message_id}/source",
+            get(action(message_actions::source)),
+        )
+        .route(
+            "/api/v1/messages/{message_id}/boosts",
+            post(unparsed_action(message_actions::create_boost)),
+        )
+        .route(
+            "/api/v1/messages/{message_id}/boosts/{boost_id}",
+            delete(action(message_actions::destroy_boost)),
+        )
+        .route(
+            "/api/v1/messages/{message_id}/pin",
+            post(action(message_actions::pin)).delete(action(message_actions::unpin)),
+        )
+        .route(
+            "/api/v1/messages/{message_id}/forwards",
+            post(unparsed_action(message_actions::forward)),
+        )
+        .route(
+            "/api/v1/forward_destinations",
+            get(action(message_actions::forward_destinations)),
+        )
+        .route("/api/v1/saved", post(unparsed_action(message_actions::save)))
+        .route(
+            "/api/v1/saved/{saved_id}",
+            delete(action(message_actions::unsave)),
         )
         .route("/api/v1/users", get(action(endpoints::users)))
         .route("/api/v1/presence", get(action(endpoints::presence)))

@@ -15,8 +15,8 @@ import type { User } from "./User";
  */
 export type MessagePage = { messages: Array<MessageDTO>, 
 /**
- * Every creator of a message on the page, once each, so the page renders without another
- * request.
+ * Every creator of a message on the page and every replier its thread indicators name,
+ * once each, so the page renders without another request.
  */
 users: Array<User>, 
 /**

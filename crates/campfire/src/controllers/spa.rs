@@ -11,3 +11,7 @@ mod tests;
 #[cfg(test)]
 #[path = "spa_api_tests.rs"]
 mod api_tests;
+
+#[cfg(test)]
+#[path = "spa_api_s2_tests.rs"]
+mod api_s2_tests;

@@ -14,8 +14,8 @@
 use std::sync::{Arc, OnceLock};
 
 use campfire_api_types::{
-    MessageDTO, MessageRemoved, Presence, RoomRead, RoomUnread, SidebarRow, SidebarRowRemoved,
-    SyncPayload, Typing, UserPresence,
+    MessageDTO, MessageReactions, MessageRemoved, PinState, Presence, RoomRead, RoomUnread,
+    SavedChanged, SidebarRow, SidebarRowRemoved, SyncPayload, Typing, UserPresence,
 };
 use campfire_cable::sync::{Audience, SyncPublication};
 use campfire_db::{Connection, Database, Membership, Message, Room};
@@ -26,6 +26,8 @@ use super::Cable;
 pub trait SyncRenderer: Send + Sync + 'static {
     /// The message as `GET /api/v1/rooms/:id/messages` serves it.
     fn message(&self, conn: &Connection, message: &Message) -> Option<MessageDTO>;
+    /// The message's reactions and boosts, as `POST /api/v1/messages/:id/boosts` answers them.
+    fn reactions(&self, conn: &Connection, message: &Message) -> Option<MessageReactions>;
     /// The membership's sidebar row, or `None` when the room isn't in that sidebar (an
     /// invisible membership, a deleted room).
     fn sidebar_row(
@@ -69,6 +71,8 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ("Broadcasts::message_remove", &["message.removed"]),
     ("Broadcasts::message_replace", &["message.updated"]),
     ("Broadcasts::message_part_replace", &["message.updated"]),
+    ("Broadcasts::message_thread_part_replace", &["message.updated"]),
+    ("Broadcasts::message_reactions_replace", &["message.reactions"]),
     ("Broadcasts::room_remove", &["sidebar.row.removed"]),
     ("Broadcasts::open_room_create", &["sidebar.row.upserted"]),
     ("Broadcasts::open_room_update", &["sidebar.row.upserted"]),
@@ -81,9 +85,10 @@ pub const TWINS: &[(&str, &[&str])] = &[
     ),
     ("broadcasts::read_room", &["room.read"]),
     ("TypingNotificationsChannel", &["typing"]),
-    // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`, and
-    // `user_<id>_unreads`/`user_<id>_reads`. Its other frames (message features, room
-    // composition, polls, pins, threads and directory partials) have no twin yet.
+    // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
+    // `user_<id>_unreads`/`user_<id>_reads`, and the pin badge (`Partial::PinBadge`). Its other
+    // frames (message features, room composition, polls, threads and directory partials) have
+    // no twin yet.
     (
         "broadcasts::Broadcast",
         &[
@@ -91,8 +96,11 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "message.updated",
             "room.unread",
             "room.read",
+            "message.pinned",
         ],
     ),
+    // `POST /api/v1/saved` and `DELETE /api/v1/saved/:id` publish to the person's other tabs.
+    ("campfire_api::saved_items", &["saved.changed"]),
     ("RoomRemovalBroadcast", &["sidebar.row.removed"]),
     (
         "user_status_settings::updates::StatusBadgeBroadcast",
@@ -103,7 +111,6 @@ pub const TWINS: &[(&str, &[&str])] = &[
 
 /// Broadcast points with no sync event yet: the SPA slices after S1 port them.
 pub const NOT_YET_TWINNED: &[&str] = &[
-    "Broadcasts::message_reactions_replace",
     "Broadcasts::boost_create",
     "Broadcasts::boost_remove",
     "board_automations::DigestNotes",
@@ -129,15 +136,12 @@ pub const NOT_YET_TWINNED: &[&str] = &[
 /// their endpoints and twins come with the S2 and S3 server work). The coverage test fails when
 /// an event is in neither this list nor [`TWINS`], or in both.
 pub const NOT_YET_EMITTED: &[&str] = &[
-    "message.reactions",
-    "message.pinned",
     "thread.indicator",
     "thread.created",
     "thread.updated",
     "thread.removed",
     "thread.unread",
     "thread.read",
-    "saved.changed",
     "activity.item",
     "activity.removed",
     "scheduled.changed",
@@ -220,6 +224,81 @@ pub fn message_updated_later(server: &Cable, slot: &RendererSlot, message_id: i6
         };
         message(&server, &slot, conn, &found, false);
     }));
+}
+
+/// `message.reactions` on the message's conversation, read afresh later (the boost
+/// broadcasts have no connection at hand).
+pub fn message_reactions_later(server: &Cable, slot: &RendererSlot, message_id: i64) {
+    let Some(renderer) = slot.get(server) else {
+        return;
+    };
+    let (server, slot) = (server.downgrade(), slot.clone());
+    renderer.defer(Box::new(move |conn| {
+        let (Some(server), Ok(Some(found))) =
+            (server.upgrade(), Message::find_by_id(conn, message_id))
+        else {
+            return;
+        };
+        let Some(renderer) = slot.get(&server) else {
+            return;
+        };
+        if let Some(reactions) = renderer.reactions(conn, &found) {
+            send(
+                &server,
+                Audience::Topic(message_topic(&found)),
+                &SyncPayload::MessageReactions(reactions),
+                |publication| publication,
+            );
+        }
+    }));
+}
+
+/// `message.pinned` on the message's room: the pin badge's twin, sent as the badge is
+/// replaced. Nothing for a message that's gone (its `message.removed` says so).
+pub fn message_pinned(server: &Cable, conn: &Connection, message_id: i64) {
+    if !server.sync_wanted() {
+        return;
+    }
+    let state = (|| -> campfire_db::Result<Option<PinState>> {
+        let Some(message) = Message::find_by_id(conn, message_id)? else {
+            return Ok(None);
+        };
+        Ok(Some(PinState {
+            message_id,
+            room_id: message.room_id,
+            pinned: campfire_db::MessagePin::pinned(conn, message_id)?,
+            pin_count: campfire_db::MessagePin::count_for_room(conn, message.room_id)?,
+        }))
+    })();
+    match state {
+        Ok(Some(state)) => send(
+            server,
+            Audience::Topic(room_topic(state.room_id)),
+            &SyncPayload::MessagePinned(state),
+            |publication| publication,
+        ),
+        Ok(None) => {}
+        Err(error) => tracing::warn!(%error, message_id, "sync: pin state not read"),
+    }
+}
+
+/// `saved.changed` on the person's `user` topic: they saved (`Some` item, as it is now) or
+/// unsaved a message.
+pub fn saved_changed(
+    server: &Cable,
+    user_id: i64,
+    message_id: i64,
+    item: Option<campfire_api_types::SavedItem>,
+) {
+    if !server.sync_wanted() {
+        return;
+    }
+    send(
+        server,
+        Audience::User(user_id),
+        &SyncPayload::SavedChanged(SavedChanged { message_id, item }),
+        |publication| publication,
+    );
 }
 
 /// `message.removed` on the message's conversation.

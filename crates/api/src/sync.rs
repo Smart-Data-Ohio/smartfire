@@ -40,6 +40,13 @@ impl SyncRenderer for Renderer {
             .ok()
     }
 
+    fn reactions(&self, conn: &Connection, message: &Message) -> Option<api::MessageReactions> {
+        let app = self.app.upgrade()?;
+        dto::message_reactions(conn, &app, message)
+            .inspect_err(|error| tracing::warn!(%error, message_id = message.id, "sync: reactions not rendered"))
+            .ok()
+    }
+
     fn sidebar_row(
         &self,
         conn: &Connection,

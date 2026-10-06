@@ -37,8 +37,7 @@ async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given:
         }).map_err(|error| campfire_db::Error::Other(error.to_string()))?;
         for (part, html) in parts {
             if thread_scoped {
-                app.broadcasts.turbo(&Stream::conversation(&room, &message), campfire_cable::turbo::Action::Replace,
-                    &message_dom_id(&message, Some(part)), Some(&html), true);
+                app.broadcasts.message_thread_part_replace(&room, &message, part, &html);
             } else { app.broadcasts.message_part_replace(&room, &message, part, &html); }
         }
         Ok(presenter.take_render_refreshes())
