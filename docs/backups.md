@@ -286,10 +286,11 @@ sqlite3 production.sqlite3 'SELECT count(*) FROM users; SELECT count(*) FROM mes
 ```
 
 Compare the database SHA-256 with `manifest.json`, and the manifest's file
-count with what you see. `restore-check.sh` additionally boots the Rails
-app against a disposable copy of the database with `PRAGMA query_only` and
-counts rows through the models (`--rails-root`), then re-verifies the
-extracted files are byte-identical. If any check fails, stop: pick the
+count with what you see. With `--image <local Rust image>`,
+`restore-check.sh` additionally has that image migrate a disposable copy of
+the database (`campfire db-migrate`) and run the strict boot schema check
+with row counts (`campfire db-check`), then re-verifies the extracted files
+are byte-identical. If any check fails, stop: pick the
 previous daily (or the newest weekly) and verify that one instead.
 
 ## Restore onto the VM
@@ -344,13 +345,32 @@ a release does, because two writers must never share one SQLite database.
    unable to write. `cp -a` alone is not enough, because it preserves the
    *extracting* machine's owner ids.
 
-5. Start the app and validate like a release cutover: `/up` returns 200,
+5. Bring the restored database up to the image the app runs. The Rust app
+   refuses at boot a database whose migrations differ from its own and never
+   migrates by itself, so a backup taken before a later release needs this
+   step (it changes nothing when the versions already match):
+
+   ```sh
+   IMAGE="$(sudo docker inspect --format '{{.Config.Image}}' "$CONTAINER")"
+   sudo docker run --rm --network none -v "$VOLUME:/rails/storage" "$IMAGE" \
+     campfire db-migrate /rails/storage/db/production.sqlite3
+   ```
+
+   It applies the pending migrations in one transaction, or writes nothing.
+   It refuses a backup that already has migrations this image doesn't know
+   (one taken after a newer release): then run the image the backup's
+   manifest records as `app_image`, or a newer one
+   (`sudo once update chat.smartdata.net --image <reference> --auto-update=false`,
+   then stop it again), and repeat this step. `once restore` does the same
+   through the image's `/hooks/post-restore`.
+
+6. Start the app and validate like a release cutover: `/up` returns 200,
    recent messages and uploads are present, the signing keys are unchanged
    (the restore does not touch ONCE settings), and the huddle reconciler
    process is running. See [deploy/README.md](../deploy/README.md#cutover-and-rollback)
    for the checklist. If the restore drops messages the Open Roles feed
    already announced, reconcile its delivery state as in a rollback.
-6. Resume normal timers. Record what was restored, from which object, and
+7. Resume normal timers. Record what was restored, from which object, and
    which writes were dropped.
 
 ## Restore onto a fresh VM
@@ -377,7 +397,8 @@ holds settings and keys) or from a manual reconfiguration.
    decrypted `production.sqlite3` and `files/` to the new VM (scp).
 4. On the new VM, lay the verified files over the volume exactly as in
    step 4 of [Restore onto the VM](#restore-onto-the-vm) (stopped-container
-   discovery, ownership preserved, WAL sidecars moved aside).
+   discovery, ownership preserved, WAL sidecars moved aside), then migrate
+   it as in step 5 there.
 5. Start the app and validate like a release cutover: `/up` returns 200,
    recent messages and uploads are present, and the huddle reconciler is
    running.
@@ -417,7 +438,9 @@ was picked): the pre-restore copies from step 4 above are the way back.
    sudo cp -a "/var/backups/pre-restore-files-$STAMP" "$MOUNT/files"
    ```
 
-4. Start the app and validate as in step 5 above.
+4. Start the app and validate as in step 6 above. The pre-restore copies
+   already match the running image's migrations unless the image changed in
+   between; if it did, migrate them as in step 5 first.
 5. Keep the pre-restore copies until the rollback is proven good, then
    delete them: they hold user data.
 
@@ -466,10 +489,10 @@ from main) it:
    or `BACKUP_RESTORE_GPG_KEY` for gpg backups), which lives only in a
    GitHub secret and a 0600 file for the duration of the step;
 4. runs `deploy/backups/restore-check.sh`: tarball listing, SHA256SUMS,
-   `PRAGMA integrity_check`, row counts, and a Rails boot against a
-   disposable copy of the database with `PRAGMA query_only`, counting rows
-   through the models and then re-verifying the extracted backup is
-   byte-identical;
+   `PRAGMA integrity_check`, row counts, and, with the Rust image built
+   from the checked-out revision, `campfire db-migrate` and the strict
+   `campfire db-check` against a disposable copy of the database, then
+   re-verifies the extracted backup is byte-identical;
 5. gates on `--min-users 1 --min-messages 1`: an empty file passes
    `integrity_check`, so the minimums are what catch an empty or wrong
    database. Tune them if the workspace could legitimately shrink.

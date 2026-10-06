@@ -162,6 +162,9 @@ COPY web/config/initializers/assets.rb web/config/initializers/assets.rb
 RUN --mount=type=cache,id=${CARGO_CACHE_SCOPE}-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=${CARGO_CACHE_SCOPE}-target,target=/src/target \
     if [ "$TARGETARCH" = arm64 ]; then export JEMALLOC_SYS_WITH_LG_PAGE=14; fi && \
+    # The cache mount's target/ outlives this tree, so mtimes can't prove the migration catalog
+    # current: crates/db/build.rs reruns whenever this digest of the files' names and contents changes.
+    export CAMPFIRE_MIGRATIONS_DIGEST="$(cd crates/db/migrations && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)" && \
     cargo build --profile "$CARGO_PROFILE" --locked -j "$CARGO_BUILD_JOBS" -p campfire && \
     profile_dir="$CARGO_PROFILE" && if [ "$profile_dir" = dev ]; then profile_dir=debug; fi && \
     install -D -m 755 "target/$profile_dir/campfire" /out/campfire

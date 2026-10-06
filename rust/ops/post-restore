@@ -13,4 +13,16 @@ if [ -f "$snapshot" ]; then
   cp "$snapshot" "$db"
   rm -f "$db-wal" "$db-shm"
 fi
+
+# Boot refuses a database whose migrations differ from this build's, so a backup
+# taken before a later release is brought up to this image here, exactly as a
+# release does: one transaction, nothing written on failure. db-migrate refuses a
+# database that already has migrations this image doesn't know (a backup from a
+# newer release); restore that onto an image at least as new instead.
+if [ -f "$db" ]; then
+  if ! campfire db-migrate "$db"; then
+    echo "post-restore: campfire db-migrate refused the restored database; it was left as restored and this image will not boot on it" >&2
+    exit 1
+  fi
+fi
 # Redis removal is an explicit cutover step, never a Rust restore side effect.

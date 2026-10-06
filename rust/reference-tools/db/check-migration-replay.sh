@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks that crates/db/src/schema.sql, which regenerate-schema.sh takes from `db:prepare` on an
+# Checks that crates/db/baseline/schema.sql, which regenerate-schema.sh takes from `db:prepare` on an
 # empty database (schema.rb), describes the same schema as a database built the way production
 # ones were: every migration in db/migrate replayed from empty (`db:migrate`).
 #
@@ -23,7 +23,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 IMAGE=${PARITY_IMAGE:-campfire-reference}
 
-compare() { python3 - "$ROOT/crates/db/src/schema.sql" "$ROOT/crates/db/src/schema_migrations.txt" "$@" <<'PY'
+compare() { python3 - "$ROOT/crates/db/baseline/schema.sql" "$ROOT/crates/db/baseline/schema_migrations.txt" "$@" <<'PY'
 import re, sqlite3, sys
 
 schema_sql, versions_txt, mode = sys.argv[1:4]

@@ -2,7 +2,7 @@
 use campfire_db::{Connection, additive, migrations, schema};
 use std::path::Path;
 
-const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrate DATABASE MIGRATIONS_DIR | verify-additive-sqlite-migration BEFORE AFTER | twitter-backfill-references DATABASE";
+const USAGE: &str = "usage: campfire db-check [--immutable] DATABASE | db-migrate DATABASE | verify-additive-sqlite-migration BEFORE AFTER | twitter-backfill-references DATABASE";
 
 pub fn run(args: &[String]) -> Option<i32> {
     if !matches!(
@@ -49,9 +49,7 @@ fn execute(args: &[String]) -> Result<String, (i32, String)> {
         }
         ["db-check", database] => check(Path::new(database), false).map_err(fail),
         ["db-check", "--immutable", database] => check(Path::new(database), true).map_err(fail),
-        ["db-migrate", database, directory] => {
-            migrate(Path::new(database), Path::new(directory)).map_err(fail)
-        }
+        ["db-migrate", database] => migrate(Path::new(database)).map_err(fail),
         ["verify-additive-sqlite-migration", before, after] => {
             additive::verify(Path::new(before), Path::new(after)).map_err(|error| {
                 let status = if matches!(error, additive::Error::Mismatch(_)) {
@@ -184,34 +182,17 @@ fn check(database: &Path, immutable: bool) -> anyhow::Result<String> {
     ))
 }
 
-fn migrate(database: &Path, directory: &Path) -> anyhow::Result<String> {
-    let mut catalog = Vec::new();
-    for entry in std::fs::read_dir(directory)? {
-        let path = entry?.path();
-        if path.extension().is_none_or(|extension| extension != "sql") {
-            continue;
-        }
-        anyhow::ensure!(
-            path.is_file(),
-            "migration must be a regular file: {}",
-            path.display()
-        );
-        let name = path
-            .file_stem()
-            .and_then(|name| name.to_str())
-            .ok_or_else(|| anyhow::anyhow!("invalid migration filename"))?;
-        let version = name.split('_').next().unwrap_or_default();
-        catalog.push(migrations::Migration {
-            version: version.into(),
-            sql: std::fs::read_to_string(&path)?,
-        });
-    }
+/// Applies this build's pending migrations (`crates/db/migrations`, compiled in) in one
+/// transaction. Refuses a database a newer build migrated. Writes nothing when it's up to date.
+fn migrate(database: &Path) -> anyhow::Result<String> {
     // No CREATE: a mistyped path must never initialize a second production database.
     let mut conn =
         Connection::open_with_flags(database, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE)?;
     conn.busy_timeout(std::time::Duration::from_millis(schema::BUSY_TIMEOUT_MS))?;
     conn.pragma_update(None, "foreign_keys", true)?;
-    let applied = migrations::apply_pending(&mut conn, &catalog)?;
+    let integrity: String = conn.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
+    anyhow::ensure!(integrity == "ok", "database integrity check failed");
+    let applied = migrations::migrate(&mut conn)?;
     let mut output = applied
         .iter()
         .map(|version| format!("MIGRATED: {version}\n"))
@@ -289,26 +270,33 @@ mod tests {
     }
 
     #[test]
-    fn explicit_migrate_reads_a_directory_and_reports_pending_versions() {
+    fn migrate_applies_the_compiled_catalog_and_refuses_newer_databases() {
         let dir = tempfile::tempdir().unwrap();
         let database = dir.path().join("production.sqlite3");
         let mut conn = Connection::open(&database).unwrap();
         schema::prepare(&mut conn, "production", &campfire_db::SystemClock).unwrap();
+        conn.pragma_update(None, "journal_mode", "wal").unwrap();
         drop(conn);
-        let migrations = dir.path().join("migrations");
-        std::fs::create_dir(&migrations).unwrap();
-        std::fs::write(
-            migrations.join("29990101000000_add_ops.sql"),
-            "CREATE TABLE ws18_ops(id INTEGER);",
-        )
-        .unwrap();
+        let before = std::fs::read(&database).unwrap();
+        let args = ["db-migrate".into(), database.display().to_string()];
+        assert_eq!(execute(&args).unwrap(), "MIGRATIONS: 0 applied\n");
+        assert_eq!(std::fs::read(&database).unwrap(), before, "nothing pending, nothing written");
+        assert!(!dir.path().join("production.sqlite3-wal").exists());
+
+        Connection::open(&database)
+            .unwrap()
+            .execute("INSERT INTO schema_migrations VALUES ('29990101000000')", [])
+            .unwrap();
+        let (status, message) = execute(&args).unwrap_err();
+        assert_eq!(status, 2);
+        assert!(message.contains("unknown migrations 29990101000000"), "{message}");
+
+        let missing = dir.path().join("missing.sqlite3");
+        assert!(migrate(&missing).is_err());
+        assert!(!missing.exists());
         assert_eq!(
-            migrate(&database, &migrations).unwrap(),
-            "MIGRATED: 29990101000000\nMIGRATIONS: 1 applied\n"
-        );
-        assert_eq!(
-            migrate(&database, &migrations).unwrap(),
-            "MIGRATIONS: 0 applied\n"
+            execute(&["db-migrate".into(), "a".into(), "b".into()]).unwrap_err().0,
+            2
         );
     }
 
