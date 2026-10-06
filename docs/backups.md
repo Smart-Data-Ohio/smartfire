@@ -286,10 +286,11 @@ sqlite3 production.sqlite3 'SELECT count(*) FROM users; SELECT count(*) FROM mes
 ```
 
 Compare the database SHA-256 with `manifest.json`, and the manifest's file
-count with what you see. `restore-check.sh` additionally boots the Rails
-app against a disposable copy of the database with `PRAGMA query_only` and
-counts rows through the models (`--rails-root`), then re-verifies the
-extracted files are byte-identical. If any check fails, stop: pick the
+count with what you see. With `--image <local Rust image>`,
+`restore-check.sh` additionally has that image migrate a disposable copy of
+the database (`campfire db-migrate`) and run the strict boot schema check
+with row counts (`campfire db-check`), then re-verifies the extracted files
+are byte-identical. If any check fails, stop: pick the
 previous daily (or the newest weekly) and verify that one instead.
 
 ## Restore onto the VM
@@ -466,10 +467,10 @@ from main) it:
    or `BACKUP_RESTORE_GPG_KEY` for gpg backups), which lives only in a
    GitHub secret and a 0600 file for the duration of the step;
 4. runs `deploy/backups/restore-check.sh`: tarball listing, SHA256SUMS,
-   `PRAGMA integrity_check`, row counts, and a Rails boot against a
-   disposable copy of the database with `PRAGMA query_only`, counting rows
-   through the models and then re-verifying the extracted backup is
-   byte-identical;
+   `PRAGMA integrity_check`, row counts, and, with the Rust image built
+   from the checked-out revision, `campfire db-migrate` and the strict
+   `campfire db-check` against a disposable copy of the database, then
+   re-verifies the extracted backup is byte-identical;
 5. gates on `--min-users 1 --min-messages 1`: an empty file passes
    `integrity_check`, so the minimums are what catch an empty or wrong
    database. Tune them if the workspace could legitimately shrink.

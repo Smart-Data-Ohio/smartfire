@@ -12,7 +12,6 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 IMAGE = os.environ.get("WS18_IMAGE")
-REFERENCE = os.environ.get("WS18_REFERENCE_IMAGE", os.environ.get("PARITY_IMAGE", "campfire-reference"))
 
 FAKE_DOCKER = r'''#!/usr/bin/env python3
 import json, os, pathlib, sys
@@ -40,7 +39,7 @@ else:
 
 @unittest.skipUnless(IMAGE, "set WS18_IMAGE to a locally built image")
 class BackupContainerTest(unittest.TestCase):
-    def test_nightly_archive_roundtrips_with_rust_and_rails_image_checks(self):
+    def test_nightly_archive_roundtrips_through_the_rust_image_restore_check(self):
         with tempfile.TemporaryDirectory(dir=ROOT / ".scratch", prefix="nightly-") as tmp:
             work = Path(tmp)
             volume = work / "volume"
@@ -100,23 +99,24 @@ class BackupContainerTest(unittest.TestCase):
                 self.assertEqual(list(out.iterdir()), [archive])
                 calls = [json.loads(line) for line in (work / "docker-trace.jsonl").read_text().splitlines()]
                 self.assertIn(["exec", "once-app-fixture", "/rails/script/admin/prepare-backup"], calls)
-                # Restore checks run against separate disposable copies, with real Docker again.
-                for index, image in enumerate([IMAGE, REFERENCE]):
-                    restore = work / f"restore-{index}"
-                    result = subprocess.run([str(ROOT / "deploy/backups/restore-check.sh"), "--backup", str(archive),
-                        "--work-dir", str(restore), "--age-identity", str(identity), "--image", image,
-                        "--container-name", f"ws18-restore-check-{index}", "--min-users", "1"], text=True, capture_output=True)
-                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                    stage = restore / "extracted/smartfire-backup-20260930-000000"
-                    self.assertEqual((stage / "files/sentinel").read_text(), "ws18 upload preserved")
-                    with closing(sqlite3.connect(stage / "production.sqlite3")) as conn:
-                        self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
-                        snapshot_count = conn.execute("SELECT count(*) FROM ws18_backup_writes").fetchone()[0]
-                    with closing(sqlite3.connect(volume / "db/production.sqlite3")) as conn:
-                        live_count = conn.execute("SELECT count(*) FROM ws18_backup_writes").fetchone()[0]
-                    self.assertGreaterEqual(snapshot_count, 1)
-                    self.assertLessEqual(snapshot_count, live_count)
-                print("NIGHTLY BACKUP: real Rust shim with concurrent writer -> encrypted archive -> Rust and Rails image restore checks passed")
+                # The restore check migrates and checks a disposable copy, with real Docker again.
+                restore = work / "restore"
+                result = subprocess.run([str(ROOT / "deploy/backups/restore-check.sh"), "--backup", str(archive),
+                    "--work-dir", str(restore), "--age-identity", str(identity), "--image", IMAGE,
+                    "--container-name", "ws18-restore-check", "--min-users", "1"], text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("MIGRATIONS: 0 applied", result.stdout)
+                self.assertIn("COUNTS: users=", result.stdout)
+                stage = restore / "extracted/smartfire-backup-20260930-000000"
+                self.assertEqual((stage / "files/sentinel").read_text(), "ws18 upload preserved")
+                with closing(sqlite3.connect(stage / "production.sqlite3")) as conn:
+                    self.assertEqual(conn.execute("PRAGMA integrity_check").fetchone()[0], "ok")
+                    snapshot_count = conn.execute("SELECT count(*) FROM ws18_backup_writes").fetchone()[0]
+                with closing(sqlite3.connect(volume / "db/production.sqlite3")) as conn:
+                    live_count = conn.execute("SELECT count(*) FROM ws18_backup_writes").fetchone()[0]
+                self.assertGreaterEqual(snapshot_count, 1)
+                self.assertLessEqual(snapshot_count, live_count)
+                print("NIGHTLY BACKUP: real Rust shim with concurrent writer -> encrypted archive -> Rust image restore check (migrate + check) passed")
             finally:
                 stopping.set()
                 if writer is not None:
