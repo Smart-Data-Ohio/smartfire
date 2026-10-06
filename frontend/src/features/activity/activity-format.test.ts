@@ -107,10 +107,12 @@ describe("activityTarget", () => {
 });
 
 describe("emptyCopy", () => {
-  it("says caught up under Unread and nothing yet otherwise", () => {
-    expect(emptyCopy("all", true).title).toBe("You're all caught up");
-    expect(emptyCopy("mentions", true).title).toBe("No unread mentions or replies");
-    expect(emptyCopy("huddles", false).title).toBe("No huddles yet");
+  it("says caught up under Unread, nothing handled under Handled, nothing yet under Read", () => {
+    expect(emptyCopy("all", "unread").title).toBe("You're all caught up");
+    expect(emptyCopy("mentions", "unread").title).toBe("No unread mentions or replies");
+    expect(emptyCopy("huddles", "read").title).toBe("No huddles yet");
+    expect(emptyCopy("all", "handled").title).toBe("Nothing handled yet");
+    expect(emptyCopy("github", "handled").title).toBe("No handled review requests");
   });
 });
 

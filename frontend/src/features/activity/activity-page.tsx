@@ -6,6 +6,7 @@ import type { ActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
 import { useActivityList, useActivityUnread } from "../../store/inbox-hooks.ts";
 import { actions } from "../../sync/runtime.ts";
+import type { IconName } from "../../ui/icons/icon.tsx";
 import { Tabs } from "../../ui/tabs.tsx";
 import { toast } from "../../ui/toast-store.ts";
 import { useListMotion } from "../destinations/list-motion.ts";
@@ -33,6 +34,13 @@ const STATUS_ITEMS = [
 function isStatus(value: string): value is ActivityState {
   return STATUS_ITEMS.some((item) => item.value === value);
 }
+
+/** An empty list's glyph: caught up, nothing handled, or nothing at all. */
+const EMPTY_ICON = {
+  unread: "check-check",
+  read: "inbox",
+  handled: "circle-check",
+} as const satisfies Record<ActivityState, IconName>;
 
 const ACTION_FAILED = {
   read: "Couldn't mark it as read",
@@ -136,7 +144,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
     requestMenu(id, event, (request) => setMenu({ request, item }));
   };
 
-  const copy = emptyCopy(tab, status === "unread");
+  const copy = emptyCopy(tab, status);
 
   return (
     <PageFrame
@@ -184,13 +192,7 @@ export function ActivityPage({ tab, status, onFilterChange }: ActivityPageProps)
         label={`${ACTIVITY_TABS.find((item) => item.value === tab)?.label ?? "All"} activity`}
         errorText="Your activity couldn't be loaded."
         isEmpty={rows.length === 0}
-        empty={
-          <PaneEmpty
-            icon={status === "unread" ? "check-check" : "inbox"}
-            title={copy.title}
-            text={copy.text}
-          />
-        }
+        empty={<PaneEmpty icon={EMPTY_ICON[status]} title={copy.title} text={copy.text} />}
       >
         {rows.map((row) => (
           <ActivityRow

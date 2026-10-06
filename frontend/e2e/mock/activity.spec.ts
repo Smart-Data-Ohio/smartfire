@@ -46,7 +46,7 @@ matrix("the activity inbox", async ({ page, theme, phone }) => {
     route.fulfill({ json: { items: [], users: [], unreadCount: 0, nextCursor: null } }),
   );
   await openApp(page, "activity?tab=github&status=handled", theme);
-  await expect(page.getByText("No review requests yet")).toBeVisible();
+  await expect(page.getByText("No handled review requests")).toBeVisible();
   await shot(page, "activity-empty", theme);
 });
 

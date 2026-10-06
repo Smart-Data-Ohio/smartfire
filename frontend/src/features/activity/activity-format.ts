@@ -5,6 +5,7 @@
  */
 import type { ActivityEventType } from "../../gen/ActivityEventType.ts";
 import type { ActivityItem } from "../../gen/ActivityItem.ts";
+import type { ActivityState } from "../../gen/ActivityState.ts";
 import type { ActivityTab } from "../../gen/ActivityTab.ts";
 import type { AgentApprovalStatus } from "../../gen/AgentApprovalStatus.ts";
 import type { AgentBudgetCap } from "../../gen/AgentBudgetCap.ts";
@@ -134,19 +135,31 @@ export interface EmptyCopy {
   readonly text: string;
 }
 
-/** An empty tab's title and hint: caught up on unread, or nothing at all yet. */
-export function emptyCopy(tab: ActivityTab, unreadOnly: boolean): EmptyCopy {
-  if (unreadOnly) {
-    return {
-      title: tab === "all" ? "You're all caught up" : `No unread ${TAB_NOUN[tab]}`,
-      text: TAB_HINT[tab],
-    };
-  }
+/** What the Handled list holds, for its empty state. */
+const HANDLED_HINT = "Mark an item handled once you've dealt with it, and it moves here.";
 
-  return {
-    title: tab === "all" ? "No activity yet" : `No ${TAB_NOUN[tab]} yet`,
-    text: TAB_HINT[tab],
-  };
+/**
+ * An empty list's title and hint: caught up under Unread, nothing handled under Handled, and
+ * nothing yet under Read.
+ */
+export function emptyCopy(tab: ActivityTab, status: ActivityState): EmptyCopy {
+  switch (status) {
+    case "unread":
+      return {
+        title: tab === "all" ? "You're all caught up" : `No unread ${TAB_NOUN[tab]}`,
+        text: TAB_HINT[tab],
+      };
+    case "handled":
+      return {
+        title: tab === "all" ? "Nothing handled yet" : `No handled ${TAB_NOUN[tab]}`,
+        text: HANDLED_HINT,
+      };
+    case "read":
+      return {
+        title: tab === "all" ? "No activity yet" : `No ${TAB_NOUN[tab]} yet`,
+        text: TAB_HINT[tab],
+      };
+  }
 }
 
 /** Agent approval statuses as a chip reads them. */
