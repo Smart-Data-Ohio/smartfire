@@ -1,6 +1,16 @@
 import type { Locator, Page } from "@playwright/test";
 import { MESSAGE_IDS } from "../../mock/s2/seed.ts";
-import { expect, matrix, ROOM_IDS, shot, synced, type Theme, test } from "./support.ts";
+import {
+  expect,
+  holdSync,
+  matrix,
+  postMessage,
+  ROOM_IDS,
+  shot,
+  type Theme,
+  test,
+  USER_IDS,
+} from "./support.ts";
 
 /** A message row by id. */
 function row(page: Page, messageId: number): Locator {
@@ -15,7 +25,6 @@ async function openRoom(page: Page, path: string, theme: Theme = "light") {
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path}`);
   await page.getByRole("log", { name: "Messages" }).waitFor();
-  await synced(page);
 }
 
 /** Takes the shot once every finite animation (a popup's entrance, a fade) has played out. */
@@ -246,6 +255,8 @@ test.describe("message actions", () => {
 
   test("Home and End reach the ends of the window, past the rows drawn", async ({ page }) => {
     await openRoom(page, `r/${ROOM_IDS.general}`);
+    // The socket's first welcome refetches the window; let that land before reading the rows.
+    await page.waitForLoadState("networkidle");
 
     const drawn = () =>
       page.evaluate(() =>
@@ -271,32 +282,97 @@ test.describe("message actions", () => {
     const ids = await drawn();
     const newest = Math.max(...ids);
 
-    // Start on a row already on screen: focusing one in the virtualiser's overscan would scroll
-    // the list, and a scroll near the window's end pages in newer messages while Home runs.
-    const onScreen = await page.evaluate(() => {
-      const log = document.querySelector('[role="log"][aria-label="Messages"]');
-      const view = log?.getBoundingClientRect();
-
-      return [...(log?.querySelectorAll("[data-message-row]") ?? [])].flatMap((element) => {
-        const box = element.getBoundingClientRect();
-
-        return view !== undefined && box.top >= view.top && box.bottom <= view.bottom
-          ? [Number(element.getAttribute("data-message-id"))]
-          : [];
-      });
-    });
-
-    await row(page, onScreen.at(-1) ?? newest).focus();
+    await row(page, newest).focus();
     await page.keyboard.press("Home");
 
-    // The list scrolls first and focuses the edge row a frame or more later, so the row focused
-    // before the key can still be the one read: poll until focus has moved.
     // The first message wasn't among the rows drawn at the bottom.
-    await expect.poll(focusedId).toBeLessThan(Math.min(...ids));
+    expect(await focusedId()).toBeLessThan(Math.min(...ids));
 
     await page.keyboard.press("End");
-    await expect.poll(focusedId).toBeGreaterThanOrEqual(newest);
+    expect(await focusedId()).toBeGreaterThanOrEqual(newest);
   });
+});
+
+test("the sync welcome's refetch leaves a reader on the unread divider", async ({
+  page,
+  request,
+}) => {
+  const release = await holdSync(page);
+  const messages = `/api/v1/rooms/${ROOM_IDS.general}/messages`;
+  // The newer page can load on its own as the room opens, so listen from the start.
+  const newer = page.waitForResponse((response) => response.url().includes(`${messages}?after=`));
+
+  // #general opens on a window around its first unread, many messages back.
+  await openRoom(page, `r/${ROOM_IDS.general}`);
+
+  const log = page.getByRole("log", { name: "Messages" });
+  const divider = log.locator(".unread-divider");
+
+  await expect(divider).toBeInViewport();
+
+  // Page down to the present and back up to the divider before the welcome arrives.
+  const top = await log.evaluate((element) => {
+    const at = element.scrollTop;
+
+    element.scrollTop = element.scrollHeight;
+
+    return at;
+  });
+
+  await (await newer).finished();
+  await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
+  await log.evaluate((element, at) => {
+    element.scrollTop = at;
+  }, top);
+  await expect(divider).toBeInViewport();
+
+  // Someone posts while the socket is held. The welcome refetches the newest page, which holds
+  // their message: it joins the window below the reader, counted, without moving them.
+  await postMessage(request, {
+    roomId: ROOM_IDS.general,
+    userId: USER_IDS.maya,
+    markdown: "posted while away",
+  });
+
+  const newest = page.waitForResponse((response) => response.url().endsWith(messages));
+
+  release();
+  await (await newest).finished();
+  await expect(page.getByRole("button", { name: "1 new message" })).toBeVisible();
+  await expect(divider).toBeInViewport();
+});
+
+test("a reader at the bottom through a long absence is paged on to the present", async ({
+  page,
+  request,
+}) => {
+  const release = await holdSync(page, { missed: true });
+
+  // #engineering is read: it opens at the present, the reader at the bottom.
+  await openRoom(page, `r/${ROOM_IDS.engineering}`);
+
+  const log = page.getByRole("log", { name: "Messages" });
+
+  await expect(log.getByRole("status", { name: "Loading messages" })).toHaveCount(0);
+
+  // More is posted while the socket is down than the welcome's newest page holds, so that page no
+  // longer meets the window: it stops short of the present until the reader is paged on.
+  for (let at = 1; at <= 45; at++) {
+    await postMessage(request, {
+      roomId: ROOM_IDS.engineering,
+      userId: USER_IDS.maya,
+      markdown: `while away ${at}`,
+    });
+  }
+
+  // The welcome also re-reads the window around its middle, which adds older rows and so scrolls
+  // the list; fail that re-read, so nothing the reader does or sees moves the list.
+  await page.route(
+    (url) => url.searchParams.has("around"),
+    (route) => route.abort(),
+  );
+  release();
+  await expect(log.getByText("while away 45", { exact: true })).toBeInViewport();
 });
 
 matrix("message hover bar", async ({ page, theme, phone }) => {

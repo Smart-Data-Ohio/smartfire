@@ -27,11 +27,11 @@ import { SyncSocket, SyncSocketError } from "./socket.ts";
 import { Topics } from "./topics.ts";
 
 /**
- * A loaded window that stops short of the present: a permalink, or a jump back. A resync's newest
- * page would replace it and yank the reader away, so the page around its middle is re-read in
- * place instead (dropping what was deleted meanwhile); the pages towards the present load fresh as
- * they scroll down. (Checked when the newest page lands, so a permalink that loads while the
- * refetch is in flight wins.)
+ * A loaded window that stops short of the present: a permalink, a jump back, or a window the
+ * newest page no longer meets. A resync's newest page would replace it and yank the reader away,
+ * so the page around its middle is re-read in place instead (dropping what was deleted meanwhile);
+ * the pages towards the present load fresh as they scroll down. (Checked when the newest page
+ * lands, so a permalink that loads while the refetch is in flight wins.)
  */
 function readingHistory(timeline: Timeline | undefined): boolean {
   return timeline !== undefined && timeline.status === "ready" && timeline.after !== null;
@@ -134,18 +134,19 @@ export class Engine extends Context.Service<
       const snapshotThrough = yield* Ref.make(Number.NEGATIVE_INFINITY);
 
       /**
-       * A room's newest page as its window, or, for a window away from the present, the page
-       * around its middle re-read in place.
+       * A room's newest page, merged into the window the reader is on (`resync`); then, for a
+       * window away from the present, the page around its middle re-read in place.
        */
       const resyncRoom = Effect.fnUntraced(function* (roomId: number) {
         mutations.setPageReplacing(roomId);
 
         const newest = yield* messages(roomId, null);
+
+        mutations.applyPage(roomId, newest, "resync");
+
         const anchor = middleOf(store.getState().timelines[roomId]);
 
         if (anchor === null) {
-          mutations.applyPage(roomId, newest, "replace");
-
           return;
         }
 
@@ -169,11 +170,11 @@ export class Engine extends Context.Service<
           mutations.loadThreadDetail(detail.success);
         }
 
+        mutations.applyThreadPage(threadId, newest, "resync");
+
         const anchor = middleOf(store.getState().threadTimelines[threadId]);
 
         if (anchor === null) {
-          mutations.applyThreadPage(threadId, newest, "replace");
-
           return;
         }
 

@@ -12,6 +12,7 @@ import { useEditingId } from "../messages/editing-store.ts";
 import { useListEdges } from "../messages/list-edges.ts";
 import { isUnreadHeld, releaseUnread } from "../messages/unread-hold.ts";
 import { DayDivider, RoomIntro, UnreadDivider } from "./dividers.tsx";
+import { useFollowPosted } from "./follow-posted.ts";
 import { MessageRow, PendingRow } from "./message-row.tsx";
 import {
   type CommittedEdges,
@@ -176,6 +177,22 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     }
   });
 
+  useFollowPosted(`room:${roomId}`, items, listRef);
+
+  // A resync can leave the window short of the present with the reader at its end (more was
+  // posted than a page holds while they were away): page on and offer the jump without a scroll.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when the window's end moves, not on every render
+  useEffect(() => {
+    const list = listRef.current;
+
+    if (!ready || list === null || timeline.after === null) {
+      return;
+    }
+
+    setFarFromPresent(true);
+    loadNewerNear(list.scrollSize - list.scrollOffset - list.viewportSize);
+  }, [ready, timeline.after]);
+
   // An edit opened from elsewhere (the composer's ↑) brings its row into view.
   const editingId = useEditingId();
 
@@ -227,6 +244,13 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
     };
   });
 
+  /** The next newer page, when the view is within `PAGE_AHEAD` of a window short of the present. */
+  const loadNewerNear = (distance: number) => {
+    if (distance < PAGE_AHEAD && timeline.after !== null && !timeline.loadingNewer) {
+      void actions.loadNewer(roomId);
+    }
+  };
+
   const onScroll = (offset: number) => {
     const list = listRef.current;
 
@@ -249,10 +273,7 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
       void actions.loadOlder(roomId);
     }
 
-    if (distance < PAGE_AHEAD && timeline.after !== null && !timeline.loadingNewer) {
-      void actions.loadNewer(roomId);
-    }
-
+    loadNewerNear(distance);
     setFloatingDay(offset > 24 ? dayAt(items, list.findItemIndex(offset + 8)) : null);
     window.clearTimeout(dayTimerRef.current);
     dayTimerRef.current = window.setTimeout(() => setFloatingDay(null), 1200);
@@ -322,6 +343,8 @@ export function Timeline({ roomId, focusMessageId }: TimelineProps) {
             data={items}
             aria-label="Messages"
             role="log"
+            // Focusable from script only: Home/End hold focus here while the edge row is drawn.
+            tabIndex={-1}
             data-message-list
           >
             {renderItem}

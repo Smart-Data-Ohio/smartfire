@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { boardDeckPdf, onboardingMockupPng } from "../../mock/s2/assets.ts";
-import { expect, matrix, ROOM_IDS, shot, synced, type Theme, test } from "./support.ts";
+import { expect, matrix, ROOM_IDS, shot, type Theme, test } from "./support.ts";
 
 const GENERAL = `r/${ROOM_IDS.general}`;
 
@@ -12,7 +12,6 @@ async function openApp(page: Page, path: string, theme: Theme = "light"): Promis
   await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
   await page.goto(`/app/${path}`);
   await composer(page).waitFor();
-  await synced(page);
 }
 
 /** Waits for the finite animations and transitions (not spinners), so a shot never catches a fade. */
@@ -29,9 +28,8 @@ async function settle(page: Page): Promise<void> {
   });
 }
 
-/** The room's composer (#general's, unless a test opens another room). */
 function composer(page: Page) {
-  return page.getByRole("textbox", { name: /^Message #/ });
+  return page.getByRole("textbox", { name: "Message #general" });
 }
 
 function suggestions(page: Page) {
@@ -294,11 +292,7 @@ test("schedules at a custom time", async ({ page }) => {
 });
 
 test("slash commands run, // escapes, unknown words post", async ({ page }) => {
-  // Not #general: its 52 unread open it on a window around the first unread that stops short of
-  // the present (unless a page of newer messages lands before the sync welcome's refetch), and a
-  // `/shrug`, posted by the server with no pending row, isn't drawn past such a window. #quiet
-  // has no messages, so the room is its present and every post shows.
-  await openApp(page, `r/${ROOM_IDS.quiet}`);
+  await openApp(page, GENERAL);
 
   await typeInto(page, "/shrug fine by me");
   await composer(page).press("Enter");
@@ -311,6 +305,21 @@ test("slash commands run, // escapes, unknown words post", async ({ page }) => {
   await typeInto(page, "/nope not a command");
   await composer(page).press("Enter");
   await expect(posted(page, "/nope not a command")).toBeVisible();
+});
+
+test("a command's post takes a reader far back in the room to it", async ({ page }) => {
+  // #general opens on a window around its first unread, many messages back; with no newer pages
+  // to be had, it stays short of the present, where the post lands.
+  await page.route(
+    (url) => url.searchParams.has("after"),
+    (route) => route.abort(),
+  );
+  await openApp(page, GENERAL);
+  await expect(page.locator(".unread-divider")).toBeInViewport();
+
+  await typeInto(page, "/shrug far back");
+  await composer(page).press("Enter");
+  await expect(posted(page, "far back ¯_(ツ)_/¯")).toBeInViewport();
 });
 
 test("a command's usage shows while you type it", async ({ page }) => {

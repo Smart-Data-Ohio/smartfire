@@ -162,9 +162,10 @@ export function setRoomDetail(state: State, detail: RoomDetail): State {
 /**
  * How a page lands: `replace` makes it the window; `older` and `newer` add it at an end;
  * `refresh` re-reads part of a window in place (a resync of a window away from the present): the
- * window's messages inside the page's span that the page lacks are gone, the rest stay.
+ * window's messages inside the page's span that the page lacks are gone, the rest stay. `resync`
+ * lands a resync's newest page without moving the reader (see `landNewest`).
  */
-export type PageMode = "replace" | "older" | "newer" | "refresh";
+export type PageMode = "replace" | "older" | "newer" | "refresh" | "resync";
 
 /** A page merged into the store, and the window it makes. */
 interface LandedPage {
@@ -201,8 +202,60 @@ function withoutMissing(
   });
 }
 
+/** The newest message the window held when its fresh page was asked for (live arrivals aside). */
+function heldNewest(timeline: Timeline): number | undefined {
+  const arrived = new Set(timeline.arrived ?? []);
+
+  return timeline.ids.findLast((id) => !arrived.has(id));
+}
+
+/**
+ * A resync's newest page, landed where the reader is. A window at the present that the page still
+ * meets takes it in place (`refresh`), keeping the history above it and the reader's scroll
+ * position. One the page no longer meets (more was posted meanwhile than a page holds, or its
+ * newest message can't be placed) keeps its messages and now stops short of the present: the
+ * timeline pages on towards it from where the reader is. A window away from the present is left
+ * for the engine to re-read around its middle, and only a window with nothing loaded (or a room
+ * emptied meanwhile) takes the page as a fresh one.
+ */
+function landNewest(state: State, timeline: Timeline, page: MessagePage): LandedPage {
+  const newest = heldNewest(timeline);
+  const held = state.messages[newest ?? -1];
+  const oldest = page.messages[0];
+
+  if (timeline.status !== "ready" || newest === undefined || oldest === undefined) {
+    return landPage(state, timeline, page, "replace");
+  }
+
+  if (timeline.after !== null) {
+    return { state, timeline };
+  }
+
+  if (held !== undefined && (page.before === null || compareMessages(oldest, held) <= 0)) {
+    return landPage(state, timeline, page, "refresh");
+  }
+
+  // A gap between the window and the page: drop the live arrivals beyond it, which the pages
+  // towards the present bring back in order.
+  const arrived = new Set(timeline.arrived ?? []);
+
+  return {
+    state,
+    timeline: {
+      ...timeline,
+      ids: timeline.ids.filter((id) => !arrived.has(id)),
+      after: newest,
+      arrived: null,
+    },
+  };
+}
+
 /** The page's messages merged into the store, and the window they make with `timeline`. */
 function landPage(state: State, timeline: Timeline, page: MessagePage, mode: PageMode): LandedPage {
+  if (mode === "resync") {
+    return landNewest(state, timeline, page);
+  }
+
   const messages = { ...state.messages };
 
   for (const message of page.messages) {

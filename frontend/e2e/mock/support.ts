@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { test as base, type Page } from "@playwright/test";
+import { type APIRequestContext, test as base, type Page } from "@playwright/test";
 
 /** The seeded ids (mock/seed.ts). */
 export { ROOM_IDS, USER_IDS } from "../../mock/seed.ts";
@@ -15,96 +15,71 @@ export const TABLET = { width: 900, height: 1000 } as const;
 
 export type Theme = "light" | "dark";
 
-/** What `watchSync` keeps on `window`, per document. */
-interface SyncWatch {
-  welcomes: number;
-  inflight: number;
-  quietSince: number;
-}
-
-declare global {
-  interface Window {
-    __smartfireSync?: SyncWatch;
-  }
-}
-
-/**
- * Runs in every document before the app: counts the sync socket's `welcome` frames and the
- * `fetch`es in flight, for `synced`.
- */
-function watchSync(): void {
-  const watch: SyncWatch = { welcomes: 0, inflight: 0, quietSince: performance.now() };
-  const NativeWebSocket = window.WebSocket;
-  const nativeFetch = window.fetch.bind(window);
-
-  window.__smartfireSync = watch;
-
-  window.WebSocket = class extends NativeWebSocket {
-    constructor(url: string | URL, protocols?: string | string[]) {
-      super(url, protocols);
-      this.addEventListener("message", (event: MessageEvent) => {
-        // The refetches it starts begin a moment later: the quiet period restarts here.
-        if (String(event.data).includes('"t":"welcome"')) {
-          watch.welcomes += 1;
-          watch.quietSince = performance.now();
-        }
-      });
-    }
-  };
-
-  window.fetch = async (...args: Parameters<typeof fetch>) => {
-    watch.inflight += 1;
-
-    try {
-      return await nativeFetch(...args);
-    } finally {
-      watch.inflight -= 1;
-      watch.quietSince = performance.now();
-    }
-  };
-}
-
-/**
- * Each test starts on a fresh seed: `/__mock/reset` (it also drops sync connections). Every
- * document also gets `watchSync`, for `synced`.
- */
+/** Each test starts on a fresh seed: `/__mock/reset` (it also drops sync connections). */
 export const test = base.extend<{ resetMock: undefined }>({
   resetMock: [
-    async ({ request, page }, use) => {
+    async ({ request }, use) => {
       const state = await (await request.get("/__mock/state")).json();
 
       await request.post("/__mock/reset", { headers: { "X-CSRF-Token": state.csrfToken } });
-      await page.addInitScript(watchSync);
       await use(undefined);
     },
     { auto: true },
   ],
 });
 
-/** No request in flight for this long after the welcome counts as settled. */
-const SETTLED_MS = 300;
+export { expect } from "@playwright/test";
 
-/**
- * Waits until the sync socket's first `welcome` has been handled: a fresh connection refetches
- * the sidebar and every open room's newest page. In #general, whose 52 unread open it on a window
- * around the first unread, that refetch replaces the window (and the view jumps to the bottom,
- * closing menus and unmounting rows) whenever a page of newer messages reached the present first;
- * otherwise it re-reads the window in place. Either way, act once it has landed.
- */
-export async function synced(page: Page): Promise<void> {
-  await page.waitForFunction((settledMs) => {
-    const watch = window.__smartfireSync;
-
-    return (
-      watch !== undefined &&
-      watch.welcomes > 0 &&
-      watch.inflight === 0 &&
-      performance.now() - watch.quietSince >= settledMs
-    );
-  }, SETTLED_MS);
+interface HoldOptions {
+  /**
+   * Drops the frames other than the `welcome` that the server sends while held, as a socket that
+   * was down never sees them: the welcome's refetch is all that brings their changes in.
+   */
+  readonly missed?: boolean;
 }
 
-export { expect } from "@playwright/test";
+/**
+ * Holds every frame the sync socket sends until the returned function is called, so a test can
+ * arrange the timeline before the first `welcome` (and the refetch it starts) arrives.
+ */
+export async function holdSync(
+  page: Page,
+  { missed = false }: HoldOptions = {},
+): Promise<() => void> {
+  const held = Promise.withResolvers<void>();
+  let holding = true;
+
+  await page.routeWebSocket(/\/api\/v1\/sync/, (socket) => {
+    const server = socket.connectToServer();
+
+    server.onMessage(async (message) => {
+      if (missed && holding && !String(message).includes('"t":"welcome"')) {
+        return;
+      }
+
+      await held.promise;
+      socket.send(message);
+    });
+  });
+
+  return () => {
+    holding = false;
+    held.resolve();
+  };
+}
+
+interface MockPost {
+  readonly roomId: number;
+  readonly userId: number;
+  readonly markdown: string;
+}
+
+/** Has someone post in a room through the mock's `/__mock/post` control. */
+export async function postMessage(request: APIRequestContext, body: MockPost): Promise<void> {
+  const state = await (await request.get("/__mock/state")).json();
+
+  await request.post("/__mock/post", { headers: { "X-CSRF-Token": state.csrfToken }, data: body });
+}
 
 /** Opens the app at `path` (under /app/) in `theme`, with motion reduced so shots are settled. */
 export async function openApp(page: Page, path: string, theme: Theme = "light"): Promise<void> {
@@ -116,7 +91,6 @@ export async function openApp(page: Page, path: string, theme: Theme = "light"):
     .or(page.getByRole("main"))
     .first()
     .waitFor();
-  await synced(page);
 }
 
 const SHOTS = process.env.SMARTFIRE_SHOTS === "1";
