@@ -1311,4 +1311,7 @@ mod template_coverage_tests;
 mod ws14_original_browser_tests;
 
 #[cfg(test)]
+mod drive_browser_tests;
+
+#[cfg(test)]
 mod ws15_original_github_browser_tests;
