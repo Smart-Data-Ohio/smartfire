@@ -1,6 +1,17 @@
 //! Named WebhookTest cases use the real app, HTTP parser and reply writers.
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use campfire_jobs::JobResult;
+use campfire_channels::jobs::integrations as jobs;
+use campfire_db::Message;
+use campfire_db::Room;
+use campfire_db::User;
+use campfire_db::Webhook;
+use campfire_db::models::agent_delivery as domain;
+use campfire_db::models::agent_delivery::AgentEvent;
+use campfire_db::models::agent_delivery::AttemptOutcome;
+use crate::integrations::webhook;
+use crate::net::Network;
 use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use campfire_db::{ChannelThread, NewChannelThread, NewMessage, RoomType};
 use std::{

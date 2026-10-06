@@ -1,4 +1,5 @@
 use super::*;
+use campfire_db::models::agent_delivery as domain;
 use crate::controllers::presenters::test_support::TestApp;
 use campfire_db::models::{
     agent_delivery::AgentEvent,

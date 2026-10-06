@@ -387,6 +387,7 @@ dependencies = [
  "campfire_app",
  "campfire_assets",
  "campfire_cable",
+ "campfire_channels",
  "campfire_db",
  "campfire_jobs",
  "campfire_kit",
@@ -525,6 +526,36 @@ dependencies = [
  "sha1",
  "tokio",
  "tokio-tungstenite",
+ "tracing",
+]
+
+[[package]]
+name = "campfire_channels"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "async-trait",
+ "axum",
+ "campfire_app",
+ "campfire_cable",
+ "campfire_db",
+ "campfire_jobs",
+ "campfire_kit",
+ "campfire_routes",
+ "campfire_storage",
+ "campfire_views",
+ "campfire_web",
+ "futures-util",
+ "http",
+ "httpdate",
+ "jiff",
+ "rails_compat",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
  "tracing",
 ]
 

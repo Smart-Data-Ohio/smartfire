@@ -64,7 +64,7 @@ If rollback is needed before accepting new writes, stop the app and restore the 
 
 ## Periodic tasks
 
-The `campfire` server runs the recurring tasks on loops inside its one process ([`crates/campfire/src/jobs/periodic.rs`](../crates/campfire/src/jobs/periodic.rs)), so the box needs no extra long-running process. Each tick runs each task whose interval has elapsed; a failing task is logged without stopping the others. Delayed jobs and retries with backoff need no task of their own: the durable job queue in SQLite claims each job when its `run_at` comes. The tasks include:
+The `campfire` server runs the recurring tasks on loops inside its one process ([`crates/channels/src/jobs/periodic.rs`](../crates/channels/src/jobs/periodic.rs)), so the box needs no extra long-running process. Each tick runs each task whose interval has elapsed; a failing task is logged without stopping the others. Delayed jobs and retries with backoff need no task of their own: the durable job queue in SQLite claims each job when its `run_at` comes. The tasks include:
 
 - **Event reminders** (every `EVENT_REMINDERS_INTERVAL` seconds, default 30): dispatches due event reminders.
 - **Stuck rooms** (every 5 minutes): re-enqueues `Room::DestroyJob` for rooms marked deleted over 10 minutes ago that are still present, covering a destroy whose job never ran.

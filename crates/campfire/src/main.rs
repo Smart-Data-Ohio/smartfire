@@ -10,9 +10,9 @@ mod server;
 // The app layer (crates/app), at the paths its modules had in this crate. `app`, `huddle` and
 // `integrations` also hold the tests of theirs that boot the whole app or reach the layers
 // above, until the test crate takes them (plans/crate-split-plan.md, "Tests").
-use campfire_app::{account_security, cable, config, errors, net, queue, security};
+use campfire_app::{account_security, config, errors, net, queue, security};
 #[cfg(test)]
-use campfire_app::{state, test_support};
+use campfire_app::{cable, state, test_support};
 
 // The web layer (crates/web), likewise. `concerns`, `mail` and `controllers::presenters` (with
 // `controllers::messages::rendered`, mirrored in `controllers`) also hold tests of theirs that
@@ -132,6 +132,9 @@ mod integrations {
     }
     #[cfg(test)]
     pub(crate) mod agent_streaming {
+        // Nothing here names the app module's items now that the channels have moved out, but
+        // the path keeps reaching them.
+        #[allow(unused_imports)]
         pub(crate) use campfire_app::integrations::agent_streaming::*;
 
         mod tests;
@@ -221,20 +224,17 @@ mod integrations {
 
         mod tests;
     }
+    #[cfg(test)]
     pub(crate) mod link_embed {
         pub(crate) use campfire_app::integrations::link_embed::*;
 
-        #[cfg(test)]
         mod rails_reference_tests;
-        #[cfg(test)]
         mod rails_fetcher_tests;
-        #[cfg(test)]
         pub(crate) mod fetcher {
             pub(crate) use campfire_app::integrations::link_embed::fetcher::*;
 
             mod tests;
         }
-        #[cfg(test)]
         pub(crate) mod store {
             pub(crate) use campfire_app::integrations::link_embed::store::*;
 
@@ -322,10 +322,10 @@ mod integrations {
             mod tests;
         }
     }
+    #[cfg(test)]
     pub(crate) mod web_push {
         pub(crate) use campfire_app::integrations::web_push::*;
 
-        #[cfg(test)]
         mod tests;
     }
 }

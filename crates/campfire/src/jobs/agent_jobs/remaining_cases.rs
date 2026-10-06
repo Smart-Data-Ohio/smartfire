@@ -1,6 +1,14 @@
 //! Previously deferred queued bot and deleted-work cases. Only DNS/dialing uses a fixture.
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use campfire_channels::jobs::integrations as jobs;
+use campfire_db::Room;
+use campfire_db::User;
+use campfire_jobs::Execution;
+use campfire_jobs::Outcome;
+use crate::app::App;
+use crate::queue::Registry;
+use std::time::Duration;
 use crate::controllers::presenters::test_support::{SEED_NOW, TestApp};
 use campfire_db::models::channel_thread::WorkChanges;
 use campfire_db::{ChannelThread, NewChannelThread, ThreadMembership};

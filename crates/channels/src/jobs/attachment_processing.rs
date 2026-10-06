@@ -27,7 +27,7 @@ pub(super) fn register(registry: &mut Registry) {
     });
 }
 
-pub(crate) async fn perform(app: App, job: AttachmentProcessingJob, _: Execution) -> JobResult {
+pub async fn perform(app: App, job: AttachmentProcessingJob, _: Execution) -> JobResult {
     perform_owned(app, job).await.map_err(|error| match error {
         error @ JobError::Discard(_) => error,
         error => JobError::retry_group(anyhow::anyhow!("{:#}", error.error()), "StandardError", 3),

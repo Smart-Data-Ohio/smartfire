@@ -89,7 +89,8 @@ impl Intervals {
 }
 
 fn enabled<T>(label: &str, interval: anyhow::Result<T>) -> Option<T> {
-    interval.inspect_err(|error| tracing::error!(%error, "{label} disabled")).ok()
+    // The target this line had in the campfire crate, which operators and the tests match on.
+    interval.inspect_err(|error| tracing::error!(target: "campfire::jobs::periodic", %error, "{label} disabled")).ok()
 }
 
 /// The loops [`super::start`] runs; `None` when disabled.
@@ -174,7 +175,7 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     periodic
 }
 /// The pinned runner registers SLA at five minutes and quiet digests hourly.
-pub(crate) fn board_automation_tasks() -> [Task<App>;2] {
+pub fn board_automation_tasks() -> [Task<App>;2] {
     [
         Task::new("board sla nudges",Duration::from_secs(5*MINUTE),|app:App| async move {
             campfire_db::models::board_automations::dispatch_sla(&app.db,app.db.env().now()).await?;
@@ -195,7 +196,7 @@ pub(crate) fn message_delivery_tasks(interval: Duration) -> [Task<App>; 2] {
     ]
 }
 
-pub(crate) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
+pub async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::SavedItem::due_reminder_ids(conn, now))
@@ -211,7 +212,7 @@ pub(crate) async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub(super) async fn event_reminders(db: &Database) -> anyhow::Result<()> {
+pub async fn event_reminders(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db.read(move |conn| campfire_db::CalendarEvent::due_reminder_ids(conn, now)).await?;
     for id in ids {
@@ -221,7 +222,7 @@ pub(super) async fn event_reminders(db: &Database) -> anyhow::Result<()> {
     }
     Ok(())
 }
-pub(super) async fn scheduled_messages(db: &Database) -> anyhow::Result<()> {
+pub async fn scheduled_messages(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::ScheduledMessage::due_candidate_ids(conn, now))
@@ -236,7 +237,7 @@ pub(super) async fn scheduled_messages(db: &Database) -> anyhow::Result<()> {
     }
     Ok(())
 }
-pub(super) async fn poll_closing(db: &Database) -> anyhow::Result<()> {
+pub async fn poll_closing(db: &Database) -> anyhow::Result<()> {
     let now = db.env().now();
     let ids = db
         .read(move |conn| campfire_db::Poll::due(conn, now))
@@ -285,7 +286,7 @@ pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> 
 }
 
 /// `Bots::ClearPlaintextTokens.heal`: a reset after the snapshot wins the CAS.
-pub(crate) async fn heal_plaintext_bot_token(db: &Database, id: i64, plaintext: String) -> anyhow::Result<bool> {
+pub async fn heal_plaintext_bot_token(db: &Database, id: i64, plaintext: String) -> anyhow::Result<bool> {
     let digest = campfire_db::user::digest_bot_token(&plaintext);
     Ok(db.write(move |tx| {
         Ok(tx.conn().execute_cached(
@@ -297,7 +298,7 @@ pub(crate) async fn heal_plaintext_bot_token(db: &Database, id: i64, plaintext: 
 
 /// Rails rescues each recovery enqueue independently. Each row's job and stamp still commit
 /// atomically on the durable queue, including when a different candidate's queue write fails.
-pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
+pub async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
     use campfire_db::models::agent_delivery as domain;
     let now=db.env().now();
     let candidates=db.read(move |c|domain::recovery_candidates(c,now)).await?;
@@ -311,7 +312,7 @@ pub(crate) async fn stranded_agent_webhooks(db:&Database)->anyhow::Result<()> {
 }
 
 /// Each stream gets its own writer transaction; one failed finalize cannot stop the sweep.
-pub(crate) async fn streaming_messages(db:&Database)->anyhow::Result<()> {
+pub async fn streaming_messages(db:&Database)->anyhow::Result<()> {
     let now=db.env().now();
     let ids=db.write(move |tx|campfire_db::models::agent_streaming::overdue_ids(tx,now)).await?;
     for id in ids {

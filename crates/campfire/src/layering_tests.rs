@@ -21,6 +21,7 @@ const LAYERS: &[(&str, &[&str])] = &[
     ("app", &["app", "huddle", "integrations"]),
     // `campfire_web`'s mirrors here: the modules that hold tests, and `rendered` under its old path.
     ("web", &["concerns", "controllers::messages::rendered", "controllers::presenters", "mail"]),
+    // `campfire_channels`'s mirrors here, which hold tests of theirs.
     ("channels", &["channels", "jobs"]),
     ("message_features", &["controllers::message_features"]),
     ("messages", &["controllers::messages"]),

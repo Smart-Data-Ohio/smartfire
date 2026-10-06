@@ -55,7 +55,7 @@ fn render_batch(app: &App, ids: &[i64]) -> campfire_db::Result<Vec<(i64, Room, S
     })
 }
 
-pub(crate) fn render(
+pub fn render(
     app: &App,
     notes: &DigestNotes,
 ) -> campfire_db::Result<Vec<(i64, Room, String)>> {

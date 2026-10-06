@@ -1,6 +1,11 @@
 //! Root-controller attribution on the merged WS11 delivery path. Only external
 //! DNS/HTTP is redirected to a held listener; controller/model/jobs are real.
 use super::*;
+use campfire_db::Message;
+use campfire_db::Room;
+use campfire_db::User;
+use campfire_db::models::agent_delivery as domain;
+use crate::net::Network;
 use crate::controllers::presenters::test_support::*;
 use crate::integrations::test_support::{FakeResolver,FakeServer,MappingDialer,Route,network};
 use axum::http::{Method,StatusCode};

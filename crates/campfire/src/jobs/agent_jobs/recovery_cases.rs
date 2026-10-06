@@ -1,6 +1,11 @@
 //! DeliveryRecoveryTest through the production periodic sweep and durable queue.
 use crate::integrations::test_support::{FakeResolver, FakeServer, MappingDialer, Route, network};
 use super::*;
+use campfire_db::Message;
+use campfire_db::models::agent_delivery as domain;
+use campfire_db::models::agent_delivery::AgentEvent;
+use crate::app::App;
+use crate::net::Network;
 use crate::controllers::presenters::test_support::{ALL_TALK, BENDER, DAVID, TestApp};
 use rusqlite::params;
 use std::{

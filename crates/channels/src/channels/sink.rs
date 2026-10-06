@@ -347,7 +347,7 @@ pub fn huddle_configured(env: impl Fn(&str) -> Option<String>) -> bool {
     crate::huddle::Config::from_lookup(env).configured()
 }
 
-pub(crate) fn template_free_broadcast(
+pub fn template_free_broadcast(
     broadcast: &campfire_db::broadcasts::Broadcast,
 ) -> Option<(String, serde_json::Value)> {
     use campfire_db::broadcasts::{Broadcast, TurboAction};
@@ -382,7 +382,7 @@ mod tests {
 
     #[test]
     fn huddle_configuration_matches_ws13_rails_vectors() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../huddle/protocol_vectors.json")).unwrap();
+        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../campfire/src/huddle/protocol_vectors.json")).unwrap();
         for case in vectors["urls"].as_array().unwrap() {
             let configured = huddle_configured(|name| Some(match name {
                 "LIVEKIT_URL" => case["public_url"].as_str().unwrap(),
@@ -415,9 +415,3 @@ mod tests {
         assert!(!configured(&vars));
     }
 }
-
-#[cfg(test)]
-mod stream_tests;
-
-#[cfg(test)]
-mod stream_remaining_cases;

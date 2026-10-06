@@ -1,6 +1,8 @@
 //! Legacy pre-upgrade queued envelopes: actual synchronous emission is covered
 //! by the observed Rails differential; retained workers must not replay stale rings.
 use super::*;
+use campfire_jobs::Execution;
+use crate::app::App;
 use campfire_db::models::huddle_grant::HuddleGrant;
 use campfire_db::models::huddle_invitations::RingRequest;
 use campfire_db::models::room_delete::HuddleConfig;
