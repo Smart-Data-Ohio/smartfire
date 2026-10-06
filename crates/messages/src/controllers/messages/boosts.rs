@@ -63,7 +63,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 }
 
 /// Message#broadcast_reactions_replace, shared by human, bot and agent reactions.
-pub(crate) async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
+pub async fn broadcast_reactions(c: &Ctx, message: &Message) -> Result<()> {
     let (app, id, base) = (c.app().clone(), message.id, page::renderer_base_url(c));
     c.app().db.read(move |conn| {
         let message = Message::find(conn, id)?;

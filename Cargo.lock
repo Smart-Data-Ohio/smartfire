@@ -392,6 +392,7 @@ dependencies = [
  "campfire_jobs",
  "campfire_kit",
  "campfire_mail",
+ "campfire_messages",
  "campfire_richtext",
  "campfire_routes",
  "campfire_spa",
@@ -685,6 +686,27 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "campfire_messages"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "askama",
+ "campfire_app",
+ "campfire_channels",
+ "campfire_db",
+ "campfire_kit",
+ "campfire_richtext",
+ "campfire_routes",
+ "campfire_storage",
+ "campfire_views",
+ "campfire_web",
+ "jiff",
+ "rails_compat",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]
