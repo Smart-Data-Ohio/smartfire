@@ -81,6 +81,12 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("schedule", gate)
         self.assertNotIn("ci.yml", (ROOT / ".github/workflows/deploy-gcp.yml").read_text())
         self.assertIn('select(.name == "Rust port")', gate)
+        plan = steps["plan"]["run"]
+        self.assertIn('[ "$INPUT_ENVIRONMENT" = production ] && [ "$GITHUB_REF" != refs/heads/main ]', plan)
+        self.assertLess(plan.index("refs/heads/main"), plan.index("git fetch"), "check the ref before anything else")
+        preflight = steps["preflight"]
+        self.assertEqual(preflight["env"]["SHA"], "${{ steps.plan.outputs.sha }}")
+        self.assertIn("EXPECTED_GIT_REVISION='${SHA}'", preflight["run"])
         rust = yaml_json((ROOT / ".github/workflows/rust.yml").read_text())
         port = [job for job in rust["jobs"].values() if job.get("name") == "Rust port"]
         self.assertEqual(len(port), 1, "rust.yml must keep exactly one aggregate job named 'Rust port'")

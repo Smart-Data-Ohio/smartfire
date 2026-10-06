@@ -61,6 +61,8 @@ set -euo pipefail
 #                 that already completed. Off by default so a retry cannot
 #                 silently pair a new cutover with a stale backup.
 # EXPECTED_APP_HOST  when set, preflight refuses a VM serving a different host.
+# EXPECTED_GIT_REVISION  when set (deploy-gcp.yml passes the full commit SHA it
+#                    resolved), preflight refuses a candidate whose GIT_REVISION differs.
 # REGISTRY_HOST   registry to authenticate against.
 # TIMER_UNIT      feed timer to pause and restore.
 # SERVICE_UNIT    the oneshot service the timer activates; derived from
@@ -99,6 +101,7 @@ REGISTRY_HOST="${REGISTRY_HOST:-us-central1-docker.pkg.dev}"
 TIMER_UNIT="${TIMER_UNIT:-campfire-open-roles.timer}"
 SERVICE_UNIT="${SERVICE_UNIT:-${TIMER_UNIT%.timer}.service}"
 EXPECTED_APP_HOST="${EXPECTED_APP_HOST:-}"
+EXPECTED_GIT_REVISION="${EXPECTED_GIT_REVISION:-}"
 HEALTH_TIMEOUT="${HEALTH_TIMEOUT:-300}"
 FEED_DRAIN_TIMEOUT="${FEED_DRAIN_TIMEOUT:-300}"
 MIN_FREE_DISK_MB="${MIN_FREE_DISK_MB:-3072}"
@@ -351,16 +354,24 @@ sha256_of() { sha256sum "$1" | awk '{print $1}'; }
 # snapshot in before.sqlite3, which is a logically equivalent but physically
 # different file.
 live_database_fingerprint() {
-  local mountpoint="$1" db="$1/db/production.sqlite3" part
+  database_pair_fingerprint "$1/db/production.sqlite3" "$1/db/production.sqlite3-wal"
+}
+
+# The same fingerprint for a database and write-ahead log at any paths, so a
+# staged pair can be checked before it replaces the live one. A file that can't
+# be read hashes as "unreadable", which matches no real fingerprint.
+database_pair_fingerprint() {
+  local db="$1" wal="$2" hash
   [ -f "$db" ] || { printf 'missing'; return 0; }
   {
-    for part in "$db" "$db-wal"; do
-      if [ -f "$part" ]; then
-        printf '%s %s\n' "$(basename "$part")" "$(sha256_of "$part")"
-      else
-        printf '%s absent\n' "$(basename "$part")"
-      fi
-    done
+    hash="$(sha256_of "$db")" && [ -n "$hash" ] || hash=unreadable
+    printf 'production.sqlite3 %s\n' "$hash"
+    if [ -f "$wal" ]; then
+      hash="$(sha256_of "$wal")" && [ -n "$hash" ] || hash=unreadable
+      printf 'production.sqlite3-wal %s\n' "$hash"
+    else
+      printf 'production.sqlite3-wal absent\n'
+    fi
   } | sha256sum | awk '{print $1}'
 }
 
@@ -373,16 +384,20 @@ live_database_fingerprint() {
 FROZEN_DB_DIR_NAME="frozen-live"
 MIGRATED_DB_DIR_NAME="migrated-live"
 
+# Every function here returns 1 on any failed step, explicitly: callers use
+# them in `if`/`||` conditions, where bash ignores `set -e` for the whole
+# function body.
 keep_database_copy() {
   local mountpoint="$1" fingerprint="$2" name="$3" dir part
   dir="$(state_path "$name")"
-  rm -rf "$dir"
-  install -d -m 0700 "$dir" "$dir/db"
+  rm -rf "$dir" || return 1
+  install -d -m 0700 "$dir" "$dir/db" || return 1
   for part in production.sqlite3 production.sqlite3-wal; do
     if [ -f "$mountpoint/db/$part" ]; then
-      cp -p "$mountpoint/db/$part" "$dir/db/$part"
+      cp -p "$mountpoint/db/$part" "$dir/db/$part" || return 1
     fi
   done
+  sync "$dir/db" || return 1
   [ "$(live_database_fingerprint "$dir")" = "$fingerprint" ] || return 1
   log "kept a byte-exact copy of the stopped database in $dir"
 }
@@ -394,21 +409,52 @@ capture_frozen_database() {
 
 # Only ever called with the application stopped and the live database proven to
 # be exactly what this release's migration left (or what it found).
+#
+# The frozen pair is first staged next to the live database (same filesystem,
+# so the final moves are renames), fingerprinted and synced. Nothing live is
+# removed or replaced until the staged copy is proven whole, so a full disk or
+# a failed copy leaves the live database exactly as it was.
 restore_frozen_database() {
-  local mountpoint="$1" fingerprint="$2" dir db="$1/db/production.sqlite3" part
+  local mountpoint="$1" fingerprint="$2" dir db="$1/db/production.sqlite3" stage stage_wal
   dir="$(state_path "$FROZEN_DB_DIR_NAME")"
+  stage="$db.release-restore"
+  stage_wal="$db-wal.release-restore"
   [ "$(live_database_fingerprint "$dir")" = "$fingerprint" ] \
     || { warn "rollback: the kept copy in $dir no longer matches the frozen fingerprint"; return 1; }
-  for part in "" -wal; do
-    if [ -f "$dir/db/production.sqlite3$part" ]; then
-      cp -p "$dir/db/production.sqlite3$part" "$db$part.release-restore"
-    fi
-  done
-  rm -f "$db-wal" "$db-shm"
-  mv -f "$db.release-restore" "$db"
-  if [ -f "$db-wal.release-restore" ]; then
-    mv -f "$db-wal.release-restore" "$db-wal"
+
+  rm -f "$stage" "$stage_wal" \
+    || { warn "rollback: could not clear the staging files next to $db"; return 1; }
+  if ! cp -p "$dir/db/production.sqlite3" "$stage"; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: could not stage the frozen database next to $db; the live database was not touched"
+    return 1
   fi
+  if [ -f "$dir/db/production.sqlite3-wal" ] && ! cp -p "$dir/db/production.sqlite3-wal" "$stage_wal"; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: could not stage the frozen write-ahead log next to $db; the live database was not touched"
+    return 1
+  fi
+  if ! sync "$stage" || { [ -f "$stage_wal" ] && ! sync "$stage_wal"; }; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: could not sync the staged frozen database; the live database was not touched"
+    return 1
+  fi
+  if [ "$(database_pair_fingerprint "$stage" "$stage_wal")" != "$fingerprint" ]; then
+    rm -f "$stage" "$stage_wal" || true
+    warn "rollback: the staged frozen database does not match the frozen fingerprint; the live database was not touched"
+    return 1
+  fi
+
+  # The live log goes first: the frozen main file must never meet the newer log.
+  rm -f "$db-wal" "$db-shm" \
+    || { warn "rollback: could not remove the live write-ahead log; the frozen copy is staged at $stage"; return 1; }
+  mv -f "$stage" "$db" \
+    || { warn "rollback: could not move the staged frozen database into place; it is at $stage, and the frozen copy in $dir"; return 1; }
+  if [ -f "$stage_wal" ]; then
+    mv -f "$stage_wal" "$db-wal" \
+      || { warn "rollback: could not move the staged write-ahead log into place; it is at $stage_wal, and the frozen copy in $dir"; return 1; }
+  fi
+  sync "$mountpoint/db" || { warn "rollback: could not sync $mountpoint/db"; return 1; }
   [ "$(live_database_fingerprint "$mountpoint")" = "$fingerprint" ] \
     || { warn "rollback: the restored database does not match the frozen fingerprint"; return 1; }
   log "rollback: the live database is back to its frozen bytes ($fingerprint)"
@@ -514,7 +560,8 @@ purge_volume_scratch() {
         "$mountpoint"/backups/release-*.sqlite3-shm \
         "$mountpoint"/rehearsal-*.sqlite3 \
         "$mountpoint"/rehearsal-*.sqlite3-wal \
-        "$mountpoint"/rehearsal-*.sqlite3-shm 2>/dev/null || true
+        "$mountpoint"/rehearsal-*.sqlite3-shm \
+        "$mountpoint"/db/*.release-restore 2>/dev/null || true
 }
 
 remove_scratch() {
@@ -1024,20 +1071,31 @@ phase_preflight() {
   # anything is frozen. Preflight's existing inspections have no retry loop.
   require_rust_image "$IMAGE_REF" target
   require_rust_image "$current_image" current
+  # The tag names a commit, but only the image's own GIT_REVISION (baked in by
+  # publish-rust-image.yml) proves which commit was built into it.
+  if [ -n "$EXPECTED_GIT_REVISION" ]; then
+    local built_revision
+    built_revision="$(image_git_revision "$IMAGE_REF")"
+    [ "$built_revision" = "$EXPECTED_GIT_REVISION" ] \
+      || die "the candidate image was built from '${built_revision:-an unrecorded revision}', not the requested ${EXPECTED_GIT_REVISION}"
+    log "candidate image GIT_REVISION matches the requested ${EXPECTED_GIT_REVISION}"
+  fi
   target_runtime=rust
   current_runtime=rust
 
   # Now that the real sizes are known, size the requirement properly: the
-  # storage volume is archived once and copied once more, and the database is
-  # kept byte for byte (frozen and again migrated), copied for the rehearsal and
-  # snapshotted twice there, and kept once more as after.sqlite3. The live
-  # migration's write-ahead log can grow to about the database's size inside
-  # the volume.
+  # storage volume is archived once (the pre-release ONCE backup) and copied
+  # once more. At the peak the state directory holds seven copies of the
+  # database: before.sqlite3, frozen-live, the rehearsal's working copy, its
+  # backup-API snapshot, rehearsal-before, rehearsal-after and after.sqlite3.
+  # One more covers migrated-live and the rollback comparison copies made later.
+  # The live migration's write-ahead log grows inside the volume, on the Docker
+  # filesystem, and is counted there.
   image_mb=$(( $(docker image inspect "$IMAGE_REF" --format '{{.Size}}') / 1048576 ))
   volume_mb="$(du -sm "$mountpoint" | awk '{print $1}')"
   db_mb="$(du -sm "$mountpoint/db" | awk '{print $1}')"
   local need_state_mb need_docker_mb state_fs docker_fs
-  need_state_mb=$(( volume_mb * 2 + db_mb * 6 + 512 ))
+  need_state_mb=$(( volume_mb * 2 + db_mb * 8 + 512 ))
   need_docker_mb=$(( image_mb + db_mb + 512 ))
   state_fs="$(df -P "$STATE_ROOT" | awk 'NR==2 {print $1}')"
   docker_fs="$(df -P /var/lib/docker | awk 'NR==2 {print $1}')"
@@ -1653,34 +1711,93 @@ restore_previous_image() {
   fi
 }
 
-# True when the stopped live database holds exactly the rows of the reference
-# copy (the database as this release's migration left it, or as it was frozen
-# when nothing was migrated): every table, row for row, with no table or column
-# added. The new image's boot always writes something (its job queue and SQLite's
-# AUTOINCREMENT counters) even when it never served a request; this is how a
-# rollback tells that bookkeeping from real writes. Uses the previous image's
-# own preservation verifier on copies, with no network.
+# The one table whose changes a rollback may throw away: the durable job queue.
+# A candidate's boot claims due jobs, runs or fails them, enqueues its periodic
+# work and renews leases, all in this table, even when it never serves a
+# request. Reverting to the frozen copy discards those changes: jobs it
+# enqueued vanish and jobs it ran or failed are due again under the previous
+# image. That is the queue's at-least-once contract, the same as after a crash.
+# Any job that also wrote another table shows up there and is not tolerated.
+JOB_QUEUE_TABLE="background_jobs"
+
+# How one `verify-additive-sqlite-migration` run compared two databases:
+#   exact      every table, row and schema object matches, nothing was added;
+#   job-queue  both pass the integrity check and the single failed check is
+#              the job queue's row data (its schema still matches);
+#   other      anything else, including output this function doesn't recognise.
+verifier_outcome() {
+  local output="$1" status="$2"
+  if [ "$status" -eq 0 ] && grep -qx 'ADDITIVE: 0 tables, 0 columns' "$output"; then
+    printf exact
+  elif [ "$status" -eq 1 ] \
+       && grep -qx 'before: integrity MATCH' "$output" \
+       && grep -qx 'after: integrity MATCH' "$output" \
+       && grep -qx "${JOB_QUEUE_TABLE}: preexisting row data changed MISMATCH" "$output" \
+       && grep -qx 'MISMATCH: 1 preservation checks failed' "$output"; then
+    printf job-queue
+  else
+    printf other
+  fi
+}
+
+# live_rows_match_reference MOUNTPOINT REFERENCE IMAGE
+#
+# Compares the stopped live database with REFERENCE (the database as this
+# release left it before the new image started) using IMAGE's own preservation
+# verifier on copies, with no network. A booted image always changes bytes (its
+# job queue, SQLite's AUTOINCREMENT counters), so bytes can't decide this.
+# Returns 0 when every row of every table matches and nothing was added, 2 when
+# the only difference is the job queue's rows (checked in both directions, so
+# the live database also has no table, column, index or trigger the reference
+# lacks), and 1 otherwise, including when a copy or the verifier fails.
 live_rows_match_reference() {
-  local mountpoint="$1" reference="$2" image="$3" dir part status=0 output
+  local mountpoint="$1" reference="$2" image="$3" dir part status forward backward=""
+  local output reverse_output
   dir="$(state_path rollback-compare)"
   output="$(state_path rollback-compare.txt)"
-  rm -rf "$dir"
-  install -d -o 1000 -g 1000 -m 0700 "$dir" "$dir/reference" "$dir/live"
+  reverse_output="$(state_path rollback-compare-reverse.txt)"
+  rm -rf "$dir" "$reverse_output" || return 1
+  install -d -o 1000 -g 1000 -m 0700 "$dir" "$dir/reference" "$dir/live" || return 1
   for part in production.sqlite3 production.sqlite3-wal; do
     if [ -f "$reference/db/$part" ]; then
-      install -m 0600 -o 1000 -g 1000 "$reference/db/$part" "$dir/reference/$part"
+      install -m 0600 -o 1000 -g 1000 "$reference/db/$part" "$dir/reference/$part" \
+        || { warn "rollback: could not copy the reference database for the comparison"; rm -rf "$dir" || true; return 1; }
     fi
     if [ -f "$mountpoint/db/$part" ]; then
-      install -m 0600 -o 1000 -g 1000 "$mountpoint/db/$part" "$dir/live/$part"
+      install -m 0600 -o 1000 -g 1000 "$mountpoint/db/$part" "$dir/live/$part" \
+        || { warn "rollback: could not copy the live database for the comparison"; rm -rf "$dir" || true; return 1; }
     fi
   done
+  if [ "$(database_pair_fingerprint "$dir/reference/production.sqlite3" "$dir/reference/production.sqlite3-wal")" \
+         != "$(live_database_fingerprint "$reference")" ] \
+     || [ "$(database_pair_fingerprint "$dir/live/production.sqlite3" "$dir/live/production.sqlite3-wal")" \
+         != "$(live_database_fingerprint "$mountpoint")" ]; then
+    warn "rollback: the comparison copies are not byte-exact"
+    rm -rf "$dir" || true
+    return 1
+  fi
+  status=0
   docker run --rm --network none --memory 768m -v "$dir:/rails/storage" "$image" \
     campfire verify-additive-sqlite-migration \
       /rails/storage/reference/production.sqlite3 /rails/storage/live/production.sqlite3 \
     > "$output" 2>&1 || status=$?
-  chmod 0600 "$output"
-  rm -rf "$dir"
-  [ "$status" -eq 0 ] && grep -qx 'ADDITIVE: 0 tables, 0 columns' "$output"
+  chmod 0600 "$output" || true
+  forward="$(verifier_outcome "$output" "$status")"
+  if [ "$forward" = job-queue ]; then
+    status=0
+    docker run --rm --network none --memory 768m -v "$dir:/rails/storage" "$image" \
+      campfire verify-additive-sqlite-migration \
+        /rails/storage/live/production.sqlite3 /rails/storage/reference/production.sqlite3 \
+      > "$reverse_output" 2>&1 || status=$?
+    chmod 0600 "$reverse_output" || true
+    backward="$(verifier_outcome "$reverse_output" "$status")"
+  fi
+  rm -rf "$dir" || warn "rollback: could not remove $dir"
+  case "$forward/$backward" in
+    exact/) return 0 ;;
+    job-queue/job-queue) return 2 ;;
+  esac
+  return 1
 }
 
 # Runs the previous image's own `campfire db-check` against a copy of the live
@@ -1689,18 +1806,26 @@ live_rows_match_reference() {
 previous_image_accepts_database() {
   local mountpoint="$1" image="$2" dir part status=0
   dir="$(state_path rollback-check)"
-  rm -rf "$dir"
-  install -d -o 1000 -g 1000 -m 0700 "$dir" "$dir/db"
+  # A partial copy (a missing write-ahead log above all) could show the previous
+  # image an older schema than the live one, so any failed step counts as a refusal.
+  rm -rf "$dir" || return 1
+  install -d -o 1000 -g 1000 -m 0700 "$dir" "$dir/db" || return 1
   for part in production.sqlite3 production.sqlite3-wal; do
     if [ -f "$mountpoint/db/$part" ]; then
-      install -m 0600 -o 1000 -g 1000 "$mountpoint/db/$part" "$dir/db/$part"
+      install -m 0600 -o 1000 -g 1000 "$mountpoint/db/$part" "$dir/db/$part" \
+        || { warn "rollback: could not copy the live database for the previous image's check"; rm -rf "$dir" || true; return 1; }
     fi
   done
+  if [ "$(live_database_fingerprint "$dir")" != "$(live_database_fingerprint "$mountpoint")" ]; then
+    warn "rollback: the copy for the previous image's check is not byte-exact"
+    rm -rf "$dir" || true
+    return 1
+  fi
   docker run --rm --network none --memory 768m -v "$dir:/rails/storage" "$image" \
     campfire db-check /rails/storage/db/production.sqlite3 \
     > "$(state_path rollback-check.txt)" 2>&1 || status=$?
-  chmod 0600 "$(state_path rollback-check.txt)"
-  rm -rf "$dir"
+  chmod 0600 "$(state_path rollback-check.txt)" || true
+  rm -rf "$dir" || warn "rollback: could not remove $dir"
   if [ "$status" -eq 0 ]; then
     log "rollback: the previous image accepts the live database: $(head -n1 "$(state_path rollback-check.txt)")"
     return 0
@@ -1817,57 +1942,85 @@ phase_rollback() {
     warn "rollback: could not put the frozen bytes back; treating the database as changed"
     current_fingerprint="$(live_database_fingerprint "$mountpoint")"
   elif [ "$current_fingerprint" != "$frozen_fingerprint" ]; then
-    # The bytes moved, but maybe only by the new image's boot bookkeeping.
-    local reference reference_fingerprint="$frozen_fingerprint"
+    # The bytes moved, but maybe only by the new image's boot: its job queue and
+    # SQLite's AUTOINCREMENT counters (see live_rows_match_reference).
+    local reference reference_fingerprint="$frozen_fingerprint" rows=1 migrated=false
     reference="$(state_path "$FROZEN_DB_DIR_NAME")"
     if [ -n "$migrated_fingerprint" ] && [ "$migrated_fingerprint" != "$frozen_fingerprint" ]; then
       reference="$(state_path "$MIGRATED_DB_DIR_NAME")"
       reference_fingerprint="$migrated_fingerprint"
+      migrated=true
     fi
-    if [ "$(live_database_fingerprint "$reference")" = "$reference_fingerprint" ] \
-       && live_rows_match_reference "$mountpoint" "$reference" "$rollback_tag"; then
-      log "rollback: every row matches the database as this release left it before the new image started; only the new image's bookkeeping changed it"
-      if [ "$reference_fingerprint" = "$frozen_fingerprint" ]; then
-        # Nothing was migrated, so the previous image reads this database as is:
-        # there is nothing to put back, and no reason to write to it.
-        action="image-rolled-back"
-        reason="the new image changed only its own bookkeeping in the database, which the previous image reads as is; nothing was lost"
-        restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
-        if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
-        warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
-        jq -n \
-          --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
-          --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
-          --arg restored_image "$RESTORE_TARGET" --arg previous_image "$previous_image" \
-          --arg rollback_tag "$rollback_tag" \
-          --arg frozen "$frozen_fingerprint" --arg current "$current_fingerprint" \
-          --arg health "$health" --arg timer "$TIMER_UNIT" \
-          '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
-            reason:$reason, database_restored:false, rows_match_freeze:true,
-            restored_image:$restored_image, previous_image:$previous_image,
-            retained_local_tag:$rollback_tag, frozen_live_database_sha256:$frozen,
-            current_live_database_sha256:$current, health:$health, feed_timer:$timer,
-            feed_timer_state:"left paused for operator review"}' \
-          | write_state rollback-result.json
-        log "rollback: finished with health=$health"
-        return 0
+    if [ "$(live_database_fingerprint "$reference")" = "$reference_fingerprint" ]; then
+      rows=0
+      live_rows_match_reference "$mountpoint" "$reference" "$rollback_tag" || rows=$?
+    else
+      warn "rollback: the kept copy in $reference no longer matches its fingerprint; cannot compare rows"
+    fi
+
+    if [ "$rows" -eq 0 ] && [ "$migrated" = false ]; then
+      # Every row matches and nothing was migrated, so the previous image reads
+      # this database as is: there is nothing to put back, and no reason to write.
+      log "rollback: every row matches the frozen database; only the new image's bookkeeping changed its bytes"
+      action="image-rolled-back"
+      reason="the new image changed only its own bookkeeping in the database, which the previous image reads as is; nothing was lost"
+      restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
+      if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
+      warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
+      jq -n \
+        --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
+        --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
+        --arg restored_image "$RESTORE_TARGET" --arg previous_image "$previous_image" \
+        --arg rollback_tag "$rollback_tag" \
+        --arg frozen "$frozen_fingerprint" --arg current "$current_fingerprint" \
+        --arg health "$health" --arg timer "$TIMER_UNIT" \
+        '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
+          reason:$reason, database_restored:false, rows_match_freeze:true,
+          job_queue_changes_discarded:false,
+          restored_image:$restored_image, previous_image:$previous_image,
+          retained_local_tag:$rollback_tag, frozen_live_database_sha256:$frozen,
+          current_live_database_sha256:$current, health:$health, feed_timer:$timer,
+          feed_timer_state:"left paused for operator review"}' \
+        | write_state rollback-result.json
+      log "rollback: finished with health=$health"
+      return 0
+    fi
+
+    if [ "$rows" -eq 0 ] || [ "$rows" -eq 2 ]; then
+      local discarded=false
+      if [ "$rows" -eq 2 ]; then
+        discarded=true
+        log "rollback: every row outside ${JOB_QUEUE_TABLE} matches the database as this release left it; discarding the new image's job-queue changes"
+      else
+        log "rollback: every row matches the database as this release's migration left it"
       fi
       if restore_frozen_database "$mountpoint" "$frozen_fingerprint"; then
-        action="migration-reverted"
-        reason="only this release's migration and the new image's own bookkeeping had changed the live database, so its frozen bytes were put back and the previous image was restored; nothing was lost"
+        if [ "$migrated" = true ]; then
+          action="migration-reverted"
+          reason="only this release's migration and the new image's own bookkeeping had changed the live database, so its frozen bytes were put back and the previous image was restored"
+        else
+          action="image-rolled-back"
+          reason="only the new image's own bookkeeping had changed the live database, so its frozen bytes were put back and the previous image was restored"
+        fi
+        if [ "$discarded" = true ]; then
+          reason="${reason}; the new image's changes to ${JOB_QUEUE_TABLE} were discarded, so jobs it ran are due again and jobs it enqueued are gone"
+        else
+          reason="${reason}; nothing was lost"
+        fi
         restore_previous_image "$app_host" "$previous_image" "$rollback_tag"
         if wait_for_health "$app_host" "$HEALTH_TIMEOUT"; then health=healthy; else health=unhealthy; fi
         warn "rollback: the $TIMER_UNIT feed timer is deliberately left paused for operator review"
         jq -n \
           --arg phase rollback --arg at "$(now_utc)" --arg label "$RELEASE_LABEL" \
           --arg app_host "$app_host" --arg action "$action" --arg reason "$reason" \
-          --arg restored_image "$RESTORE_TARGET" --arg previous_image "$previous_image" \
-          --arg rollback_tag "$rollback_tag" \
+          --arg restored_image "$RESTORE_TARGET" \
+          --arg previous_image "$previous_image" --arg rollback_tag "$rollback_tag" \
           --arg frozen "$frozen_fingerprint" --arg migrated "$migrated_fingerprint" \
-          --arg replaced "$current_fingerprint" \
+          --arg replaced "$current_fingerprint" --argjson discarded "$discarded" \
           --arg health "$health" --arg timer "$TIMER_UNIT" \
           '{phase:$phase, at:$at, release_label:$label, app_host:$app_host, action:$action,
             reason:$reason, database_restored:true, rows_match_migration:true,
+            job_queue_changes_discarded:$discarded,
             restored_image:$restored_image,
             previous_image:$previous_image, retained_local_tag:$rollback_tag,
             frozen_live_database_sha256:$frozen, migrated_live_database_sha256:$migrated,

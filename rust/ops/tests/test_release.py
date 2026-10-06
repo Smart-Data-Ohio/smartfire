@@ -4,9 +4,11 @@ Runs the real script, phase by phase, against fakes for docker, once, curl and
 the host tools. No real container, ONCE or cloud command runs. The fakes model
 the one thing every decision hangs on: the live database's bytes in the
 storage volume, which the candidate's `campfire db-migrate` and a booted
-candidate can change, either with real writes ("+write") or with only its own
-bookkeeping ("+bookkeeping": bytes move, every row stays the same). The
-real-Docker rehearsal of the same flow is rust/ops/tests/simulate_release.sh.
+candidate can change, either with real writes ("+write"), with only its own
+bookkeeping ("+bookkeeping": bytes move, every row stays the same), or with
+changes to its job queue alone ("+jobs": background_jobs rows differ). The fake
+verifier answers in the real verifier's output format. The real-Docker
+rehearsal of the same flow is rust/ops/tests/simulate_release.sh.
 """
 import hashlib
 import json
@@ -29,6 +31,15 @@ args = sys.argv[1:]
 if name == "id":
     print("0")
     sys.exit(0)
+if name == "cp":
+    # CP_FAIL=<substring>: a copy to a matching destination writes half the
+    # file, as a full disk would, and fails.
+    target = os.environ.get("CP_FAIL")
+    if target and target in args[-1]:
+        source = pathlib.Path(args[-2]).read_bytes()
+        pathlib.Path(args[-1]).write_bytes(source[: len(source) // 2])
+        sys.exit("cp: error writing '%s': No space left on device" % args[-1])
+    os.execv("/usr/bin/cp", ["cp", *args])
 work = pathlib.Path(os.environ["STATE_ROOT"])
 state_file = work / "fake.json"
 state = json.loads(state_file.read_text())
@@ -45,6 +56,8 @@ def boot():
     state["running"] = not crash
     if state["running"] and state["image"] == candidate and os.environ.get("CANDIDATE_BOOKKEEPING"):
         db.write_bytes(db.read_bytes() + b"+bookkeeping")
+    if state["running"] and state["image"] == candidate and os.environ.get("CANDIDATE_JOBS"):
+        db.write_bytes(db.read_bytes() + b"+jobs")
     if state["running"] and state["image"] == candidate and os.environ.get("CANDIDATE_WRITES"):
         db.write_bytes(db.read_bytes() + b"+write")
     save()
@@ -107,13 +120,25 @@ if name == "docker":
             copies = pathlib.Path(mount.rsplit(":", 1)[0])
             if copies == work / "volume":
                 sys.exit("the rollback comparison must read copies")
-            reference = (copies / "reference/production.sqlite3").read_bytes()
-            live = (copies / "live/production.sqlite3").read_bytes()
-            if live.replace(b"+bookkeeping", b"") == reference:
+            files = [a for a in args if a.startswith("/rails/storage/")]
+            if files not in (["/rails/storage/reference/production.sqlite3", "/rails/storage/live/production.sqlite3"],
+                             ["/rails/storage/live/production.sqlite3", "/rails/storage/reference/production.sqlite3"]):
+                sys.exit("unexpected comparison " + repr(files))
+            reference = (copies / "reference/production.sqlite3").read_bytes().replace(b"+bookkeeping", b"")
+            live = (copies / "live/production.sqlite3").read_bytes().replace(b"+bookkeeping", b"")
+            print("before: integrity MATCH")
+            print("after: integrity MATCH")
+            if live == reference:
                 print("MATCH: 88 preexisting tables preserved")
                 print("ADDITIVE: 0 tables, 0 columns")
                 sys.exit(0)
-            print("MISMATCH: 1 preservation checks failed")
+            failures = []
+            if live.replace(b"+jobs", b"") != reference.replace(b"+jobs", b""):
+                failures.append("messages: preexisting row data changed MISMATCH")
+            if live.count(b"+jobs") != reference.count(b"+jobs"):
+                failures.append("background_jobs: preexisting row data changed MISMATCH")
+            print("\n".join(failures))
+            print("MISMATCH: %d preservation checks failed" % len(failures))
             sys.exit(1)
         if image != candidate:
             if "db-check" not in command:
@@ -191,7 +216,7 @@ class Host:
         (work / "fake.json").write_text(json.dumps({"running": True, "image": PREVIOUS}))
         self.bin = work / "bin"
         self.bin.mkdir()
-        for name in ["docker", "gcloud", "once", "curl", "id", "df", "du", "pgrep", "systemctl"]:
+        for name in ["docker", "gcloud", "once", "curl", "id", "df", "du", "pgrep", "systemctl", "cp"]:
             fake = self.bin / name
             fake.write_text(FAKE)
             fake.chmod(0o755)
@@ -307,6 +332,15 @@ class ReleaseTest(unittest.TestCase):
                 self.assertIn("this script only releases Rust to Rust", result.stderr)
                 self.assertFalse((self.host.state / "preflight-result.json").exists())
 
+    def test_preflight_refuses_an_image_built_from_another_revision(self):
+        result, _ = self.host.run("preflight", EXPECTED_GIT_REVISION="0123456789abcdef0123456789abcdef01234567")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("built from 'fixture', not the requested 0123456789abcdef0123456789abcdef01234567", result.stderr)
+        self.assertFalse((self.host.state / "preflight-result.json").exists())
+        result, _ = self.host.run("preflight", EXPECTED_GIT_REVISION="fixture")
+        self.assertOk(result)
+        self.assertIn("GIT_REVISION matches", result.stdout)
+
     def test_later_phases_require_the_preflight_candidate_and_a_rust_record(self):
         self.assertOk(self.host.run("preflight")[0])
         other = "fixture/other@sha256:" + "3" * 64
@@ -420,6 +454,86 @@ class ReleaseTest(unittest.TestCase):
         self.assertIn(ROLLBACK_TAG, compare)
         self.assertIn("none", compare)
         self.assertIn("verify-additive-sqlite-migration", compare)
+
+    def test_an_unhealthy_candidate_that_changed_only_its_job_queue_is_reverted(self):
+        # The candidate's boot claims, runs and enqueues jobs: background_jobs
+        # rows differ, every other table matches. Reverting discards only that.
+        for migrations, action, migrated in [("20261006120000", "migration-reverted", b"+migrated"),
+                                              ("", "image-rolled-back", b"")]:
+            with self.subTest(action=action):
+                self.tearDown()
+                self.setUp()
+                results = self.host.release(MIGRATIONS=migrations, CANDIDATE_UNHEALTHY="1",
+                                            CANDIDATE_BOOKKEEPING="1", CANDIDATE_JOBS="1")
+                self.assertEqual(results["cutover"][0].returncode, 10)
+                self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database" + migrated + b"+bookkeeping+jobs")
+                result, commands = self.host.run("rollback")
+                self.assertOk(result)
+                rollback = self.host.json("rollback-result.json")
+                self.assertEqual(rollback["action"], action)
+                self.assertTrue(rollback["database_restored"])
+                self.assertTrue(rollback["job_queue_changes_discarded"])
+                self.assertIn("background_jobs were discarded", rollback["reason"])
+                self.assertEqual(self.host.db.read_bytes(), b"SQLite fixture database")
+                self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
+                comparisons = [c for c in commands if c[:2] == ["docker", "run"] and "verify-additive-sqlite-migration" in c]
+                self.assertEqual(len(comparisons), 2, "the job-queue tolerance is checked in both directions")
+                self.assertTrue((self.host.state / "rollback-compare-reverse.txt").exists())
+                self.assertEqual(list((self.host.volume / "db").glob("*.release-restore")), [])
+
+    def test_job_queue_changes_alongside_any_other_write_are_never_discarded(self):
+        results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1",
+                                    CANDIDATE_JOBS="1", CANDIDATE_WRITES="1")
+        self.assertEqual(results["cutover"][0].returncode, 10)
+        written = self.host.db.read_bytes()
+        result, _ = self.host.run("rollback")
+        self.assertEqual(result.returncode, 30, result.stdout + result.stderr)
+        self.assertEqual(self.host.json("rollback-result.json")["action"], "refused-database-changed")
+        self.assertEqual(self.host.db.read_bytes(), written)
+        self.assertIn("messages: preexisting row data changed MISMATCH",
+                      (self.host.state / "rollback-compare.txt").read_text())
+
+    def test_a_failed_copy_while_restoring_the_frozen_database_leaves_the_live_one_untouched(self):
+        # Under `if restore_frozen_database ...` bash ignores set -e inside the
+        # function, so every step must be checked explicitly. A full disk while
+        # staging must never get as far as replacing the live database.
+        for target, extra in [("production.sqlite3.release-restore", {}),
+                              ("production.sqlite3.release-restore", {"CANDIDATE_BOOKKEEPING": "1", "CANDIDATE_JOBS": "1"})]:
+            with self.subTest(extra=extra):
+                self.tearDown()
+                self.setUp()
+                # A write-ahead log too, so the live -wal must survive as well.
+                (self.host.volume / "db/production.sqlite3-wal").write_bytes(b"frozen log")
+                results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1", **extra)
+                self.assertEqual(results["cutover"][0].returncode, 10)
+                live = {p.name: p.read_bytes() for p in (self.host.volume / "db").iterdir()}
+                result, _ = self.host.run("rollback", CP_FAIL=target)
+                self.assertEqual(result.returncode, 30, result.stdout + result.stderr)
+                self.assertIn("could not stage the frozen database", result.stderr)
+                self.assertEqual({p.name: p.read_bytes() for p in (self.host.volume / "db").iterdir()}, live)
+                rollback = self.host.json("rollback-result.json")
+                self.assertFalse(rollback["database_restored"])
+                # The frozen copy is still whole for an operator.
+                self.assertEqual((self.host.state / "frozen-live/db/production.sqlite3").read_bytes(),
+                                 b"SQLite fixture database")
+
+    def test_a_failed_copy_of_the_frozen_log_also_leaves_the_live_database_untouched(self):
+        (self.host.volume / "db/production.sqlite3-wal").write_bytes(b"frozen log")
+        results = self.host.release(MIGRATIONS="20261006120000", CANDIDATE_UNHEALTHY="1")
+        self.assertEqual(results["cutover"][0].returncode, 10)
+        live = {p.name: p.read_bytes() for p in (self.host.volume / "db").iterdir()}
+        result, _ = self.host.run("rollback", CP_FAIL="production.sqlite3-wal.release-restore")
+        self.assertEqual(result.returncode, 30, result.stdout + result.stderr)
+        self.assertIn("could not stage the frozen write-ahead log", result.stderr)
+        self.assertEqual({p.name: p.read_bytes() for p in (self.host.volume / "db").iterdir()}, live)
+
+    def test_a_failed_frozen_copy_at_the_freeze_stops_the_release(self):
+        result, _ = self.host.run("preflight")
+        self.assertOk(result)
+        result, _ = self.host.run("freeze", CP_FAIL="frozen-live")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("does not match its fingerprint", result.stderr)
+        self.assertEqual(self.host.fake(), {"running": True, "image": PREVIOUS})
 
     def test_rollback_removes_a_migration_container_only_when_one_was_left(self):
         for leftover in ["", "1"]:

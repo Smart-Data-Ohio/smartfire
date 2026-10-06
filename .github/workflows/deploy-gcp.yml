@@ -109,6 +109,12 @@ jobs:
         run: |
           set -euo pipefail
 
+          # The workflow and the deploy/gcp scripts it copies to the VM come from
+          # the dispatched ref, so production only runs them from main.
+          if [ "$INPUT_ENVIRONMENT" = production ] && [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::production releases must be dispatched from main, not ${GITHUB_REF}"; exit 1
+          fi
+
           case "$INPUT_SHA" in
             *[!0-9a-fA-F]*|'') echo "::error::git_sha must be hexadecimal"; exit 1 ;;
           esac
@@ -409,10 +415,11 @@ jobs:
         env:
           LABEL: ${{ steps.plan.outputs.label }}
           IMAGE_REF: ${{ steps.image.outputs.reference }}
+          SHA: ${{ steps.plan.outputs.sha }}
         run: |
           set -euo pipefail
           test -n "$GCP_IMAGE_PULLER_SA" || { echo "::error::GCP_IMAGE_PULLER_SA is not set"; exit 1; }
-          remote="sudo env RELEASE_LABEL='${LABEL}' IMAGE_REF='${IMAGE_REF}' EXPECTED_APP_HOST='${GCP_APP_HOST}' /opt/campfire-deploy/campfire-release.sh preflight"
+          remote="sudo env RELEASE_LABEL='${LABEL}' IMAGE_REF='${IMAGE_REF}' EXPECTED_APP_HOST='${GCP_APP_HOST}' EXPECTED_GIT_REVISION='${SHA}' /opt/campfire-deploy/campfire-release.sh preflight"
           # The VM receives a read-only Artifact Registry token, not the deployer's
           # own credential, and it arrives only on the SSH session's standard
           # input: never in argv or a file. It is registered as a secret first so
@@ -792,9 +799,11 @@ jobs:
               echo "## Rolled back"
               echo
               if [ "$action" = "migration-reverted" ]; then
-                echo "Only this release's migration (and, at most, the new image's own job-queue"
-                echo "bookkeeping, with every row unchanged) had touched the live database, so its"
-                echo "frozen bytes were put back before the previous image was restored."
+                echo "Only this release's migration and the new image's own boot bookkeeping (its"
+                echo "job queue and AUTOINCREMENT counters) had touched the live database; every"
+                echo "other table matched row for row, so its frozen bytes were put back before the"
+                echo "previous image was restored. Any job-queue changes the new image made were"
+                echo "discarded (see the reason below)."
               fi
               echo "${reason}."
               echo

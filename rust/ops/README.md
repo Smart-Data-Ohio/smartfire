@@ -128,15 +128,31 @@ Only then does `once update` start the candidate.
 serves: its job queue and SQLite's AUTOINCREMENT counters. So rollback doesn't
 compare bytes. It runs the previous image's preservation verifier on copies of two
 databases: the live one, and the one the cutover left (kept as `migrated-live/`, or
-`frozen-live/` when nothing was migrated). The check passes only if every row of
-every table matches and no table or column was added.
+`frozen-live/` when nothing was migrated). The verdict is one of:
 
-When that holds:
+- **every row of every table matches** and nothing was added;
+- **only `background_jobs` rows differ**: the single failed check is that table's
+  row data, its schema matches, and a second run with the two databases swapped
+  says the same, so the live database has no table, column, index or trigger the
+  reference lacks. The candidate claims due jobs, runs or fails them and enqueues
+  its periodic work at boot. Reverting discards that: jobs it enqueued are gone and
+  jobs it ran or failed are due again under the previous image, the queue's
+  at-least-once contract, as after a crash. A job that also wrote another table
+  shows up there and is not tolerated;
+- anything else.
+
+When the rows match:
 
 - If a migration ran, rollback puts the frozen copy back and returns to the
   previous image (`migration-reverted`).
-- If no migration ran, it returns to the previous image and leaves the database
-  as it is (`image-rolled-back`).
+- If no migration ran and every row matches, it returns to the previous image and
+  leaves the database as it is (`image-rolled-back`). If only the job queue
+  differs, it puts the frozen copy back first (`image-rolled-back`,
+  `database_restored: true`).
+
+`rollback-result.json` records `job_queue_changes_discarded`. The frozen copy is
+staged next to the live database, fingerprinted and synced before anything live is
+removed or replaced, so a failed copy leaves the live database as it was.
 
 If anything else has written since, rollback keeps those writes:
 
@@ -154,8 +170,14 @@ The nightly backup script uses the shared admin path.
 migrates a disposable copy and runs `db-check` on it.
 
 `publish-rust-image.yml` publishes `rust-git-<full SHA>` to `GCP_IMAGE` on pushes to
-main that touch the image's inputs. `deploy-gcp.yml` deploys only that tag. Its
-single gate is a successful `rust.yml` push or scheduled run for the revision.
+main that touch the image's inputs. `deploy-gcp.yml` deploys only that tag, and
+production only from a run dispatched on main. Its gate is a successful `rust.yml`
+push or scheduled run for the revision with a successful `Rust port` job. Preflight
+refuses an image whose `GIT_REVISION` isn't that revision (`EXPECTED_GIT_REVISION`).
+
+`/hooks/post-restore` copies the backup snapshot over the database and runs
+`campfire db-migrate` on it, so an older backup restored under a newer image boots.
+A backup with migrations the image doesn't know is refused and the hook fails.
 
 ## Runtime environment at this workstream's base
 
