@@ -1,5 +1,6 @@
 import type { ConversationName } from "../gen/ConversationName.ts";
 import { type ActivitySlice, emptyActivity } from "./activity.ts";
+import { type CardsState, emptyCards } from "./cards.ts";
 import type {
   Boot,
   ConnectionStatus,
@@ -64,6 +65,8 @@ export interface State {
   readonly scheduled: ScheduledSlice;
   /** Names for cross-room rows, by `conversationKey(roomId, threadId)` (S3). */
   readonly conversationNames: Readonly<Record<string, ConversationName>>;
+  /** Ballots, votes on their way and per-viewer card previews (see `cards.ts`). */
+  readonly cards: CardsState;
 }
 
 export interface SidebarState {
@@ -111,6 +114,7 @@ export const initialState: State = {
   savedList: emptySavedList,
   scheduled: emptyScheduled,
   conversationNames: {},
+  cards: emptyCards,
 };
 
 export const emptyTimeline: Timeline = {
