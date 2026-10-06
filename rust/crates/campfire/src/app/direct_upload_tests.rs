@@ -374,7 +374,7 @@ async fn direct_uploads_over_16_mib_match_rails_metadata_put_and_integrity() {
             .unwrap_or("application/octet-stream");
         let bytes = if let Some(fixture) = case["fixture"].as_str() {
             let mut bytes =
-                std::fs::read(campfire_db::fixtures::reference_root().join(fixture)).unwrap();
+                std::fs::read(campfire_db::fixtures::reference_path(fixture)).unwrap();
             bytes.resize(size as usize, 0);
             bytes
         } else {
@@ -481,7 +481,7 @@ async fn composer_accepts_a_100_mb_video_and_retains_the_rails_bytes() {
         .find(|case| case["name"] == "composer_video")
         .unwrap();
     let mut bytes = std::fs::read(
-        campfire_db::fixtures::reference_root().join(case["fixture"].as_str().unwrap()),
+        campfire_db::fixtures::reference_path(case["fixture"].as_str().unwrap()),
     )
     .unwrap();
     bytes.resize(case["byte_size"].as_u64().unwrap() as usize, 0);

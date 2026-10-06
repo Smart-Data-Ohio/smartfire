@@ -29,8 +29,6 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-# The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
-REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 BENCH=$ROOT/bench
 SEED=$ROOT/parity/.seed/default
 LABELS=$SEED/labels.json
@@ -236,7 +234,7 @@ run_rep() {
 
   if [ "$app" != rust-identity ] && suite upload; then
     upload_json=$(lg upload --base "$BASE" --cookie "$cookie" --room "$WRITE_ROOM" --csrf "$csrf" \
-      --file "$REFERENCE_ROOT/test/fixtures/files/black_hole.jpg" --reps "$UPLOAD_REPS")
+      --file "$ROOT/fixtures/files/black_hole.jpg" --reps "$UPLOAD_REPS")
     log "$app rep $rep: upload median $(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["median_total_ms"])' "$upload_json")ms"
   fi
 

@@ -43,7 +43,7 @@ const cases = ({ room, labels }) => [
     })
   }],
   ["the Files tab lists uploads and Drive rows with working filters", async page => {
-    const base64 = (await readFile(new URL("../../../test/fixtures/files/earth.png", import.meta.url))).toString("base64")
+    const base64 = (await readFile(new URL("../../fixtures/files/earth.png", import.meta.url))).toString("base64")
     await createMessage(page, room, { body: "system file rows" }, { base64, name: "system-cover.png", type: "image/png" })
     await createMessage(page, room, { body: "system drive rows", drive_file_ids: ["1a2b3c4d5e6f7g8h9i0j"] })
     await page.reload()

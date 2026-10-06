@@ -231,14 +231,14 @@ mod tests {
 
     #[test]
     fn schema_sha1_matches_reference_schema_rb() {
-        let schema_rb = crate::fixtures::reference_root().join("db/schema.rb");
+        let schema_rb = crate::fixtures::rails_root().join("db/schema.rb");
         let contents = std::fs::read(schema_rb).unwrap();
         assert_eq!(schema_sha1(&contents), SCHEMA_SHA1);
     }
 
     #[test]
     fn migration_versions_match_reference_migrations() {
-        let migrate = crate::fixtures::reference_root().join("db/migrate");
+        let migrate = crate::fixtures::rails_root().join("db/migrate");
         let mut versions: Vec<String> = std::fs::read_dir(migrate)
             .unwrap()
             .map(|e| {
@@ -261,7 +261,7 @@ mod tests {
     fn schema_sql_is_the_whole_reference_schema() {
         // Every table in schema.rb, plus the FTS5 index and Rails' own two tables.
         let schema_rb =
-            std::fs::read_to_string(crate::fixtures::reference_root().join("db/schema.rb")).unwrap();
+            std::fs::read_to_string(crate::fixtures::rails_root().join("db/schema.rb")).unwrap();
         let conn = prepared();
         for line in schema_rb.lines() {
             let line = line.trim();

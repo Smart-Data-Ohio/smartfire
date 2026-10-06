@@ -8,7 +8,7 @@ name: Publish Rust image to Artifact Registry
 on:
   push:
     branches: [main]
-    paths: ["rust/**", "app/assets/**", "app/javascript/**", "vendor/javascript/**", "public/**", "config/importmap.rb", "config/initializers/assets.rb", ".github/workflows/publish-rust-image.yml"]
+    paths: ["rust/**", ".github/workflows/publish-rust-image.yml"]
 
 concurrency:
   group: publish-rust-gcp-${{ github.workflow }}-${{ github.ref }}
@@ -146,7 +146,6 @@ jobs:
         with:
           context: rust
           file: rust/Dockerfile
-          build-contexts: reference=.
           build-args: |
             CARGO_BUILD_JOBS=4
             OCI_SOURCE=${{ env.SOURCE_URL }}

@@ -1,6 +1,6 @@
 //! Digests and compiles the reference's assets the way `bin/rails assets:precompile` does
 //! (Propshaft), renders the import map, and embeds the results plus the reference's public/ into the
-//! crate as `$OUT_DIR/embedded.rs`.
+//! crate as `$OUT_DIR/embedded.rs`. The inputs are the port's own copy in `rust/web/`.
 
 #[path = "build/importmap.rs"]
 mod importmap;
@@ -168,18 +168,18 @@ fn main() {
     fs::write(out_dir.join("embedded.rs"), code).unwrap();
 }
 
-/// The reference Rails app: `CAMPFIRE_REFERENCE` if set, else the repository root that contains
-/// `rust/` (crates/assets -> rust -> the Rails app).
+/// The Rails-shaped root of the frontend inputs: `rust/web/` (crates/assets -> rust -> web), or a
+/// reference Rails app's root named by `CAMPFIRE_REFERENCE`.
 fn reference_root(crate_dir: &Path) -> PathBuf {
     let root = env::var_os("CAMPFIRE_REFERENCE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| crate_dir.join("../../.."));
+        .unwrap_or_else(|| crate_dir.join("../../web"));
     root.canonicalize()
         .ok()
         .filter(|root| root.join("config/importmap.rb").is_file())
         .unwrap_or_else(|| {
             panic!(
-                "no reference Rails app at {} (set CAMPFIRE_REFERENCE to its root)",
+                "no reference frontend inputs at {} (rust/web, or set CAMPFIRE_REFERENCE to a Rails app's root)",
                 root.display()
             )
         })

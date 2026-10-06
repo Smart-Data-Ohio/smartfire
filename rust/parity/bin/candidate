@@ -173,7 +173,6 @@ build() {
   log "building $APP_IMAGE from /Dockerfile"
   docker build -t "$APP_IMAGE" -f "$ROOT/Dockerfile" \
     --build-arg APP_VERSION=parity --build-arg GIT_REVISION="$(git -C "$REFERENCE_ROOT" rev-parse HEAD)" \
-    --build-context reference="$REFERENCE_ROOT" \
     "$ROOT"
   log "building $IMAGE from parity/docker/candidate/Dockerfile"
   docker build -t "$IMAGE" --build-arg BASE_IMAGE="$APP_IMAGE" "$PARITY/docker/candidate"
