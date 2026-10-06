@@ -170,6 +170,20 @@ pub fn auth_inputs() -> Option<Arc<campfire_db::FixtureAuthInputs>> {
     AUTH_INPUTS.try_with(Arc::clone).ok()
 }
 
+// Fixture-only: the depth of each cable stream's ring for an app booted in this scope. A
+// subscriber that falls a full ring behind is disconnected, so a test that has one callback
+// broadcast tens of thousands of frames sizes the ring for all of them rather than racing the
+// runner's scheduler. Production keeps campfire_cable's default.
+tokio::task_local! {
+    static CABLE_STREAM_CAPACITY: usize;
+}
+pub async fn with_cable_stream_capacity<T>(capacity: usize, future: impl Future<Output = T>) -> T {
+    CABLE_STREAM_CAPACITY.scope(capacity, future).await
+}
+pub fn cable_stream_capacity() -> Option<usize> {
+    CABLE_STREAM_CAPACITY.try_with(|capacity| *capacity).ok()
+}
+
 // Supplied before boot and copied into this database's existing fixture provider.
 // Parallel apps and production entropy remain independent.
 tokio::task_local! {

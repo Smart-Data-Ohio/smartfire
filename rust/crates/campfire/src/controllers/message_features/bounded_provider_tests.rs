@@ -27,7 +27,10 @@ fn fixture_credentials_are_composed_at_runtime() {
 }
 async fn large_callback(index: usize) {
     let case = oracle()["cases"][index].clone();
-    let app = app_rows(case["rows"].clone()).await;
+    // Every frame of the callback's one burst fits in the stream's ring (see
+    // `with_cable_stream_capacity`), so a briefly descheduled cable connection doesn't lag out.
+    let capacity = case["count"].as_u64().unwrap() as usize;
+    let app = crate::test_support::with_cable_stream_capacity(capacity, app_rows(case["rows"].clone())).await;
     let input = case.clone();
     app.db().write(move |tx| {
         let count = input["count"].as_i64().unwrap();

@@ -140,6 +140,11 @@ pub(crate) async fn boot_with_integrations(config: Config, clock: SharedClock, i
         assume_ssl: !config.disable_ssl,
         ..campfire_cable::Config::default()
     };
+    #[cfg(test)]
+    let cable_config = campfire_cable::Config {
+        stream_capacity: crate::test_support::cable_stream_capacity().unwrap_or(cable_config.stream_capacity),
+        ..cable_config
+    };
     let deps = channels::Deps {
         db: db.clone(),
         secrets: secrets.clone(),
