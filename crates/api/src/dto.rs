@@ -1095,6 +1095,94 @@ pub fn thread_list(
     })
 }
 
+/// Files a page of `GET /api/v1/rooms/:id/files` holds.
+const FILES_PAGE: i64 = 30;
+/// The last page `rooms/files#index` serves.
+const FILES_LAST_PAGE: i64 = 20;
+
+/// `rooms/files#index`'s uploads, the `page`th 30 (from 1, at most 20), with their messages'
+/// creators.
+pub fn room_files(
+    conn: &Connection,
+    app: &AppState,
+    room_id: i64,
+    file_type: &str,
+    filename: &str,
+    page: i64,
+    now: Timestamp,
+) -> Result<api::FileList> {
+    use campfire_db::models::room_files;
+    let presenter = Presenter::new(conn, app, None);
+    let size = page * FILES_PAGE;
+    let rows = room_files::uploads(conn, room_id, file_type, filename, size)?;
+    let start = (((page - 1) * FILES_PAGE) as usize).min(rows.len());
+    let end = (size as usize).min(rows.len());
+    let files = room_file_rows(conn, &presenter, &rows[start..end])?;
+    // Another page only if a row past this one would show: rows whose message or file is
+    // gone are left out, so look on until one shows or none are left.
+    let mut more = false;
+    if page < FILES_LAST_PAGE && rows.len() > end {
+        let (mut seen, mut window) = (end, size);
+        loop {
+            window += FILES_PAGE;
+            let rows = room_files::uploads(conn, room_id, file_type, filename, window)?;
+            let upto = rows.len().min(window as usize);
+            if seen < upto && !room_file_rows(conn, &presenter, &rows[seen..upto])?.is_empty() {
+                more = true;
+                break;
+            }
+            if rows.len() <= window as usize {
+                break;
+            }
+            seen = upto;
+        }
+    }
+    let creators: Vec<i64> = files.iter().map(|file| file.creator_id).collect();
+    Ok(api::FileList {
+        users: users(conn, &app.secrets, creators, now)?,
+        files,
+        next_page: more.then_some(page + 1),
+    })
+}
+
+/// The rows that still show: a message and a file that both exist.
+fn room_file_rows(
+    conn: &Connection,
+    presenter: &Presenter<'_>,
+    rows: &[campfire_db::models::room_files::Upload],
+) -> Result<Vec<api::RoomFile>> {
+    let messages: HashMap<i64, Message> = Message::for_ids(
+        conn,
+        &rows.iter().map(|row| row.message_id).collect::<Vec<_>>(),
+    )?
+    .into_iter()
+    .map(|message| (message.id, message))
+    .collect();
+    let blobs = campfire_storage::Blob::find_many(
+        conn,
+        &rows.iter().map(|row| row.blob_id).collect::<Vec<_>>(),
+    )
+    .map_err(|error| campfire_db::Error::Other(error.to_string()))?;
+    let mut files = Vec::with_capacity(rows.len());
+    for row in rows {
+        let (Some(message), Some(blob)) = (messages.get(&row.message_id), blobs.get(&row.blob_id))
+        else {
+            continue;
+        };
+        let Some(view) = presenter.attachment(message)? else {
+            continue;
+        };
+        files.push(api::RoomFile {
+            message_id: message.id,
+            thread_id: row.thread_id,
+            creator_id: message.creator_id,
+            attachment: attachment(view, blob.content_type.as_deref(), blob.byte_size),
+            created_at: time(row.created_at),
+        });
+    }
+    Ok(files)
+}
+
 #[cfg(test)]
 mod tests {
     use super::inline_mentions;

@@ -17,11 +17,15 @@
 //! ([`crate::Server::sync_wanted`]); the ring records the gap instead ([`Ring::skip`]), so a
 //! client resuming from before it refetches rather than missing what was never built.
 //!
+//! The same holds per person for the costlier per-person events (sidebar rows): while someone has
+//! no sync socket open, those are skipped for them and the ring keeps a gap marker on their
+//! `user` topic instead ([`Ring::push_gap`]), so their next resume from before it refetches.
+//!
 //! What a connection may subscribe to, and what its typing, presence and heartbeat frames do, is
 //! the app's: [`SyncHandler`] opens a [`SyncSession`] per connection.
 mod connection;
 
-use std::collections::VecDeque;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -129,6 +133,9 @@ pub(crate) struct Entry {
     pub at: Instant,
     /// `{"seq":…,"topic":…,"type":…,"data":…}`
     pub json: Box<str>,
+    /// A marker, not an event: the audience's events were skipped here, so a connection that
+    /// reads it refetches instead ([`Ring::push_gap`]).
+    pub gap: bool,
 }
 
 impl Entry {
@@ -222,7 +229,32 @@ impl Ring {
             ephemeral,
             at: now,
             json,
+            gap: false,
         });
+        self.append(entry, now);
+    }
+
+    /// Appends a gap marker for `user_id` at `seq`: their events were skipped while they had no
+    /// socket open, so a cursor of theirs from before it has lost events. The caller holds the
+    /// hub lock, as for [`Ring::push`].
+    pub fn push_gap(&self, seq: u64, user_id: i64) {
+        let now = Instant::now();
+        let entry = Arc::new(Entry {
+            seq,
+            audience: Audience::User(user_id),
+            except_user: None,
+            coalesce: None,
+            unsubscribe: None,
+            ephemeral: false,
+            at: now,
+            json: "".into(),
+            gap: true,
+        });
+        self.append(entry, now);
+    }
+
+    fn append(&self, entry: Arc<Entry>, now: Instant) {
+        let seq = entry.seq;
         let mut state = self.state.lock().unwrap();
         state.entries.push_back(entry);
         state.head = seq;
@@ -349,6 +381,18 @@ pub(crate) struct Engine<U> {
     pub handler: Arc<dyn SyncHandler<U>>,
     /// Sync sockets open, from the upgrade until they close.
     pub connections: AtomicUsize,
+    /// Who has a sync socket open (from its `hello` until it closes), and who has a gap marker
+    /// in the ring since their last one opened.
+    pub people: Mutex<People>,
+}
+
+/// [`Engine::people`].
+#[derive(Default)]
+pub(crate) struct People {
+    /// Open sockets per person.
+    pub open: HashMap<i64, usize>,
+    /// People with a [`Ring::push_gap`] marker since their last socket opened: one is enough.
+    pub gapped: HashSet<i64>,
 }
 
 pub(crate) use connection::run;
@@ -463,7 +507,10 @@ mod tests {
         ring.push(1, publication("room:1", 1));
         assert!(ring.gap_needed());
         ring.skip(2);
-        assert!(!ring.gap_needed(), "the gap is recorded and nobody has read since");
+        assert!(
+            !ring.gap_needed(),
+            "the gap is recorded and nobody has read since"
+        );
         assert_eq!(ring.resume(Some((&epoch, 1))), (2, false));
         assert!(matches!(ring.read(1), Read::Lost(2)));
         assert_eq!(ring.resume(Some((&epoch, 2))), (2, true));
@@ -475,7 +522,10 @@ mod tests {
     fn a_fresh_ring_needs_no_gap_until_someone_reads_it() {
         let ring = ring(10, Duration::from_secs(60));
         let epoch = ring.epoch().to_string();
-        assert!(!ring.gap_needed(), "no client holds a cursor from this epoch");
+        assert!(
+            !ring.gap_needed(),
+            "no client holds a cursor from this epoch"
+        );
         // A welcome hands out the head of the empty ring: skipping now must end that resume point.
         assert_eq!(ring.resume(None), (0, false));
         assert!(ring.gap_needed());
@@ -515,6 +565,7 @@ mod tests {
             ephemeral: false,
             at: Instant::now(),
             json: "{}".into(),
+            gap: false,
         };
         let follows_room_1 = |topic: &str| topic == "room:1";
         assert!(entry(Audience::User(3), None).delivered_to(3, follows_room_1));

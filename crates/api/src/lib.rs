@@ -18,6 +18,7 @@ macro_rules! endpoint {
 }
 
 pub mod composer;
+pub mod directory;
 mod dto;
 pub mod endpoints;
 mod error;
@@ -30,7 +31,7 @@ pub mod test_hooks;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::routing::{delete, get, patch, post};
+use axum::routing::{delete, get, patch, post, put};
 use campfire_app::app::AppState;
 use campfire_kit::{Kit, action, unparsed_action};
 
@@ -160,6 +161,32 @@ pub fn routes(app: &AppState) -> Router<Kit> {
             "/api/v1/scheduled_messages/{id}/send_now",
             post(action(composer::send_scheduled_now)),
         )
+        .route(
+            "/api/v1/directs/candidates",
+            get(action(directory::direct_candidates)),
+        )
+        .route(
+            "/api/v1/directs",
+            post(unparsed_action(directory::create_direct)),
+        )
+        .route(
+            "/api/v1/directs/{room_id}",
+            patch(unparsed_action(directory::rename_direct)),
+        )
+        .route(
+            "/api/v1/directs/{room_id}/members",
+            post(unparsed_action(directory::add_direct_members)),
+        )
+        .route(
+            "/api/v1/rooms/{room_id}/members",
+            get(action(directory::members)),
+        )
+        .route("/api/v1/rooms/{room_id}/files", get(action(directory::files)))
+        .route(
+            "/api/v1/users/{user_id}/star",
+            put(action(directory::star)).delete(action(directory::unstar)),
+        )
+        .route("/api/v1/switcher", get(action(directory::switcher)))
         .route("/api/v1/users", get(action(endpoints::users)))
         .route("/api/v1/presence", get(action(endpoints::presence)))
         .merge(app.cable.sync_router::<Kit>(SYNC_PATH))

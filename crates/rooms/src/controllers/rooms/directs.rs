@@ -314,7 +314,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 }
 
 /// `broadcast_create_room`: `users/sidebars/rooms/_direct` for each membership, to its user.
-async fn broadcast_create_room(c: &Ctx, room: &Room) -> Result<()> {
+pub async fn broadcast_create_room(c: &Ctx, room: &Room) -> Result<()> {
     let (app, room) = (c.app().clone(), room.clone());
     let base_url = page::renderer_base_url(c);
     c.app()

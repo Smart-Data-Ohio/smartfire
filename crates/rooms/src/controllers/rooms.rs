@@ -344,7 +344,7 @@ pub(crate) async fn ensure_can_delete(c: &mut Ctx, room: &Room) -> Result<()> {
 
 /// Rails audits these actions after their domain transaction commits. Audit failure must not
 /// undo a completed write; durable job insertion still belongs to the domain transaction.
-pub(crate) async fn audit_room(
+pub async fn audit_room(
     c: &Ctx,
     room: &Room,
     action: &str,

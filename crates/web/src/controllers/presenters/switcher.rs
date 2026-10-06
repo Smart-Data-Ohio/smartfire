@@ -6,35 +6,38 @@ use std::collections::HashMap;
 
 #[derive(Serialize)]
 pub struct Switcher {
-    rooms: Vec<SwitcherRoom>,
-    people: Vec<SwitcherPerson>,
-    threads: Vec<SwitcherThread>,
+    pub rooms: Vec<SwitcherRoom>,
+    pub people: Vec<SwitcherPerson>,
+    pub threads: Vec<SwitcherThread>,
 }
 #[derive(Serialize)]
-struct SwitcherRoom {
-    id: i64,
-    name: Option<String>,
-    kind: &'static str,
-    url: String,
-    icon_name: Option<String>,
-    unread: bool,
-    muted: bool,
-    favorite: bool,
+pub struct SwitcherRoom {
+    pub id: i64,
+    pub name: Option<String>,
+    pub kind: &'static str,
+    pub url: String,
+    pub icon_name: Option<String>,
+    pub unread: bool,
+    pub muted: bool,
+    pub favorite: bool,
 }
 #[derive(Serialize)]
-struct SwitcherPerson {
-    id: i64,
-    name: String,
-    avatar_url: String,
-    dm_url: Option<String>,
+pub struct SwitcherPerson {
+    pub id: i64,
+    pub name: String,
+    pub avatar_url: String,
+    pub dm_url: Option<String>,
+    /// The one-to-one room `dm_url` opens.
+    #[serde(skip)]
+    pub dm_room_id: Option<i64>,
 }
 #[derive(Serialize)]
-struct SwitcherThread {
-    id: i64,
-    name: String,
-    room_name: Option<String>,
-    room_id: i64,
-    url: String,
+pub struct SwitcherThread {
+    pub id: i64,
+    pub name: String,
+    pub room_name: Option<String>,
+    pub room_id: i64,
+    pub url: String,
 }
 
 pub fn load(
@@ -105,12 +108,9 @@ pub fn load(
         .query_map([user.id], User::from_row)?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     let mut statement=conn.prepare("SELECT memberships.room_id, memberships.user_id FROM memberships WHERE memberships.user_id!=? AND memberships.room_id IN (SELECT peer.room_id FROM memberships peer INNER JOIN rooms ON rooms.id=peer.room_id WHERE peer.user_id=? AND rooms.type='Rooms::Direct') AND memberships.room_id IN (SELECT room_id FROM memberships GROUP BY room_id HAVING COUNT(*)=2)")?;
-    let urls: HashMap<i64, String> = statement
+    let rooms_by_user: HashMap<i64, i64> = statement
         .query_map([user.id, user.id], |row| {
-            Ok((
-                row.get::<_, i64>(1)?,
-                campfire_routes::room(row.get::<_, i64>(0)?),
-            ))
+            Ok((row.get::<_, i64>(1)?, row.get::<_, i64>(0)?))
         })?
         .collect::<rusqlite::Result<_>>()?;
     let people = users
@@ -119,7 +119,8 @@ pub fn load(
             id: u.id,
             name: u.name.clone(),
             avatar_url: format!("{base_url}{}", super::avatar_path(secrets, &u)),
-            dm_url: urls.get(&u.id).cloned(),
+            dm_url: rooms_by_user.get(&u.id).map(|id| campfire_routes::room(*id)),
+            dm_room_id: rooms_by_user.get(&u.id).copied(),
         })
         .collect();
     let mut statement=conn.prepare("SELECT channel_threads.id,channel_threads.name,rooms.name,rooms.id FROM channel_threads INNER JOIN rooms ON rooms.id=channel_threads.room_id WHERE rooms.deleted_at IS NULL AND rooms.id IN (SELECT room_id FROM memberships WHERE user_id=?) ORDER BY channel_threads.last_activity_at DESC LIMIT 15")?;

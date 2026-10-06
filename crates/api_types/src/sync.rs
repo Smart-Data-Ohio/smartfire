@@ -72,8 +72,9 @@ pub enum ServerFrame {
     },
     /// Events in sequence order, flushed every 25 ms or 64 events.
     Batch { events: Vec<SyncEvent> },
-    /// The server can't replay these topics (epoch changed or the replay ring rolled over):
-    /// refetch them over REST.
+    /// The server can't replay these topics (epoch changed, the replay ring rolled over, or
+    /// events were skipped for this person while they had no socket open): refetch them over
+    /// REST.
     Resync { topics: Vec<String>, reason: String },
     /// The server is closing the socket; reconnect if `reconnect`.
     Bye { reconnect: bool, reason: String },

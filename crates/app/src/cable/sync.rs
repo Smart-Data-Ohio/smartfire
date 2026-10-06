@@ -73,9 +73,12 @@ impl RendererSlot {
 pub const TWINS: &[(&str, &[&str])] = &[
     (
         "Broadcasts::message_create",
-        &["message.created", "room.unread"],
+        &["message.created", "room.unread", "sidebar.row.upserted"],
     ),
-    ("Broadcasts::unread_room", &["room.unread"]),
+    (
+        "Broadcasts::unread_room",
+        &["room.unread", "sidebar.row.upserted"],
+    ),
     ("Broadcasts::mark_room_unread", &["room.unread"]),
     ("Broadcasts::message_remove", &["message.removed"]),
     ("Broadcasts::message_replace", &["message.updated"]),
@@ -102,8 +105,9 @@ pub const TWINS: &[(&str, &[&str])] = &[
     // The domain's Turbo and cable frames: appends and replaces of `Partial::Message`,
     // `user_<id>_unreads`/`user_<id>_reads`/`user_<id>_unread_threads`, the pin badge
     // (`Partial::PinBadge`) and the thread indicator (`Partial::ThreadIndicator`, which also
-    // carries the thread's new count and activity). Its other frames (message features, room
-    // composition, polls, board rows and directory partials) have no twin yet.
+    // carries the thread's new count and activity), and a direct room's sidebar row
+    // (`Partial::DirectSidebar`, with the member's row). Its other frames (message features, room
+    // headers, polls, board rows and the other directory partials) have no twin yet.
     (
         "broadcasts::Broadcast",
         &[
@@ -115,6 +119,7 @@ pub const TWINS: &[(&str, &[&str])] = &[
             "thread.unread",
             "thread.indicator",
             "thread.updated",
+            "sidebar.row.upserted",
         ],
     ),
     // `POST /api/v1/saved` and `DELETE /api/v1/saved/:id` publish to the person's other tabs.
@@ -571,6 +576,10 @@ pub fn thread_removed(server: &Cable, thread_id: i64, room_id: i64) {
 /// room's members, or just `user_ids` among them. A member who hid the room is still a member:
 /// their connections keep following it, as the classic pages keep streaming it. A row that
 /// can't be read is skipped (and logged), not taken for gone.
+///
+/// Only members with a sync socket open get theirs: a row costs a few reads, and a big room
+/// has many members. For the others the ring records a gap on their `user` topic, so their
+/// next resume refetches the sidebar.
 pub fn sidebar_rows(
     server: &Cable,
     slot: &RendererSlot,
@@ -591,6 +600,10 @@ pub fn sidebar_rows(
         if user_ids.is_some_and(|ids| !ids.contains(&membership.user_id)) {
             continue;
         }
+        if !server.sync_connected(membership.user_id) {
+            server.sync_skipped_for(membership.user_id);
+            continue;
+        }
         match renderer.sidebar_row(conn, room, &membership) {
             Ok(Some(row)) => send(
                 server,
@@ -607,6 +620,22 @@ pub fn sidebar_rows(
                 "sync: sidebar row not rendered"
             ),
         }
+    }
+}
+
+/// `sidebar.row.upserted` for one membership's own row, when its person's sidebar shows it.
+pub fn membership_row(server: &Cable, slot: &RendererSlot, conn: &Connection, membership_id: i64) {
+    if slot.get(server).is_none() {
+        return;
+    }
+    let found = Membership::find(conn, membership_id)
+        .and_then(|membership| Ok((membership.room(conn)?, membership)));
+    match found {
+        Ok((room, membership)) => {
+            sidebar_rows(server, slot, conn, &room, Some(&[membership.user_id]));
+        }
+        Err(campfire_db::Error::RecordNotFound(_)) => {}
+        Err(error) => tracing::warn!(%error, membership_id, "sync: membership row not read"),
     }
 }
 

@@ -456,6 +456,7 @@ dependencies = [
  "campfire_db",
  "campfire_kit",
  "campfire_messages",
+ "campfire_richtext",
  "campfire_rooms",
  "campfire_storage",
  "campfire_views",

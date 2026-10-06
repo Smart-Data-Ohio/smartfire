@@ -198,6 +198,19 @@ impl Broadcasts {
         sync::thread_indicator(&self.server, &self.sync, conn, parent_message_id);
     }
 
+    /// `sidebar.row.upserted` for the people a new message made the room unread for, read
+    /// afresh later: their counts changed. For an unread ping a broadcast point outside this
+    /// type sent.
+    pub fn sync_unread_rows(&self, room_id: i64, user_ids: Vec<i64>) {
+        sync::sidebar_rows_later(&self.server, &self.sync, room_id, Some(user_ids));
+    }
+
+    /// `sidebar.row.upserted` for the membership's own row, for a direct room's sidebar row a
+    /// broadcast point outside this type replaced (its members or name changed).
+    pub fn sync_membership_row(&self, conn: &Connection, membership_id: i64) {
+        sync::membership_row(&self.server, &self.sync, conn, membership_id);
+    }
+
     // The primitives
 
     /// `broadcast_action_to stream, action:, target:, html:, attributes:` (`maintain_scroll: true`
@@ -353,7 +366,7 @@ impl Broadcasts {
                 .iter()
                 .map(|user| user.id)
                 .collect();
-            for user_id in user_ids {
+            for &user_id in &user_ids {
                 sync::room_unread(
                     &self.server,
                     user_id,
@@ -362,6 +375,7 @@ impl Broadcasts {
                     mentioned.contains(&user_id),
                 );
             }
+            sync::sidebar_rows_later(&self.server, &self.sync, room.id, Some(user_ids));
         }
         Ok(())
     }
