@@ -18,7 +18,7 @@ test('every registered mutant names an existing intended assertion',()=>{
     for(const spec of mutationTarget(name,variant)) for(const target of [spec,...(spec.phase?[spec.phase]:[])]) assert.ok(readFileSync(new URL(target.module,import.meta.url),'utf8').includes(target.anchor),`${name}: ${variant}: ${target.anchor}`);
     count++;
   }
-  assert.equal(count,206);
+  assert.equal(count,199);
 });
 test('earlier Loading timeout earns no delayed-marker rejection credit',()=>{
   const early=failure('behavior-search-forward.mjs',"waitForVisibility(filterVisibleText(message.locator('.x-post-card'),'Loading post')");
@@ -47,16 +47,18 @@ test('method-name stack columns preserve only their own receiver',()=>{
 
 test('release-menu failure requires the broken guard and a click into the mounted menu',()=>{
   const name='a release click landing on the just-opened menu does not activate it';
-  const error={code:'ERR_ASSERTION',stack:'AssertionError: native pinned release failed'};
-  const probe={...valid,nativeFailures:[{assertion:true,message:'menu closed',backtrace:['test/system/message_interactions_test.rb:60:in test_phone']}]};
-  assert.equal(rejectionEvidence(name,'default',probe,error).valid,false);
-  const observed=[{room:'/rooms/654632876',releaseClicks:[{releaseClick:true,brokenGuard:true,menuVisible:true,atPressPoint:true}]}];
-  assert.equal(rejectionEvidence(name,'default',{...probe,observed},error).valid,true);
-  for(const line of [56,59,80]) {
-    assert.equal(rejectionEvidence(name,'default',{...probe,observed,nativeFailures:[{assertion:true,message:'wrong phase',backtrace:[`test/system/message_interactions_test.rb:${line}:in test_phone`]}]},error).valid,false);
+  const probe={...valid,requiresReleaseClick:true};
+  const observed=[{releaseClick:true,brokenGuard:true,menuVisible:true}];
+  for(const anchor of ['await longPress(page);await assertMenuOpen(page)','await menuStillOpenAfterRelease()',`waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});\n  } else throw`]) {
+    const error=failure('behavior-actions.mjs',anchor.startsWith('await longPress')?'assertMenuOpen(page);\n    // The browser':anchor);
+    assert.equal(rejectionEvidence(name,'default',probe,error).valid,false,anchor);
+    assert.equal(rejectionEvidence(name,'default',{...probe,observed},error).valid,true,anchor);
   }
-  for(const property of ['brokenGuard','menuVisible','atPressPoint']) {
-    const wrong=structuredClone(observed);wrong[0].releaseClicks[0][property]=false;
+  const hit=failure('behavior-actions.mjs',"equal(hit,'menu'",'AssertionError');
+  assert.equal(rejectionEvidence(name,'default',{...probe,observed},{...hit,code:'ERR_ASSERTION'}).valid,false);
+  for(const property of ['brokenGuard','menuVisible']) {
+    const wrong=structuredClone(observed);wrong[0][property]=false;
+    const error=failure('behavior-actions.mjs','await menuStillOpenAfterRelease()');
     assert.equal(rejectionEvidence(name,'default',{...probe,observed:wrong},error).valid,false);
   }
 });
@@ -168,31 +170,40 @@ test('motion default fault requires removal of a real server-emitted test attrib
   assert.equal(rejectionEvidence(name,'default',{...probe,observed:[{before:'off',after:undefined}]},error).valid,true);
 });
 
-test('native motion requires the original off-canvas failure and actual zero-duration HQ drawer',()=>{
+test('the first motion case is credited only at its off-canvas assertion',()=>{
   const name='mobile drawer animates in, lands in place, and returns focus with motion on';
-  const state={room:'/rooms/201306877',open:true,duration:'0s',transform:'matrix(1, 0, 0, 1, 0, 0)'};
-  const failure={assertion:true,message:'expected the drawer to start off-canvas, got tx=0',backtrace:['test/system/motion_test.rb:43:in test_phone']};
-  const error={code:'ERR_ASSERTION',stack:''};
-  assert.equal(rejectionEvidence(name,'default',{...valid,observed:[state],nativeFailures:[failure]},error).valid,true);
-  for(const fault of [{...failure,backtrace:['test/system/motion_test.rb:38:in test_phone']},{...failure,message:'Stimulus startup'}])
-    assert.equal(rejectionEvidence(name,'default',{...valid,observed:[state],nativeFailures:[fault]},error).valid,false);
-  assert.equal(rejectionEvidence(name,'default',{...valid,observed:[{...state,room:'/rooms/654632876'}],nativeFailures:[failure]},error).valid,false);
+  const error={...failure('behavior-motion.mjs',"ok(start<-1,'motion: drawer starts off-canvas')"),code:'ERR_ASSERTION'};
+  assert.equal(rejectionEvidence(name,'default',valid,error).valid,true);
+  const later={...failure('behavior-motion.mjs','await waitUntil(page,start=>{'),code:'ERR_ASSERTION'};
+  assert.equal(rejectionEvidence(name,'default',valid,later).valid,false);
 });
 
 
 test('idle hidden context rejection requires the active composer and original post-click assertion',()=>{
   const name='a release click landing on the just-opened menu does not activate it';
-  const error={code:'ERR_ASSERTION',stack:'AssertionError: native pinned release failed'};
-  const failure={assertion:true,message:'#composer [data-composer-target hidden context not found',backtrace:['test/system/message_interactions_test.rb:83:in test_phone']};
-  const state={room:'/rooms/654632876',releaseGeometry:{inMenu:true},releaseClicks:[{releaseClick:true,brokenGuard:false,menuVisible:true,atPressPoint:true}],contextScopes:[{form:'composer',hidden:false},{form:'ws8bm-idle-composer',hidden:true}]};
-  const probe={...valid,nativeFailures:[failure],observed:[state]};
+  const error=failure('behavior-actions.mjs',`waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});\n  } else throw`);
+  const state={contextScopes:[{form:'composer',hidden:false},{form:'ws8bm-idle-composer',hidden:true}]};
+  const probe={...valid,requiresContextScopes:true,observed:[state]};
   assert.equal(rejectionEvidence(name,'unrelated-hidden-context',probe,error).valid,true);
-  for(const line of [56,60,80,82]) {
-    assert.equal(rejectionEvidence(name,'unrelated-hidden-context',{...probe,nativeFailures:[{...failure,backtrace:[`test/system/message_interactions_test.rb:${line}:in test_phone`]}]},error).valid,false);
+  for(const anchor of ['await menuStillOpenAfterRelease()',"equal(hit,'menu'"]) {
+    assert.equal(rejectionEvidence(name,'unrelated-hidden-context',probe,failure('behavior-actions.mjs',anchor)).valid,false,anchor);
   }
-  for(const missing of ['contextScopes','releaseClicks','releaseGeometry']) {
-    const wrong=structuredClone(state);delete wrong[missing];
-    assert.equal(rejectionEvidence(name,'unrelated-hidden-context',{...probe,observed:[wrong]},error).valid,false);
+  for(const scopes of [[{form:'composer',hidden:false}],[{form:'ws8bm-idle-composer',hidden:true}],[]]) {
+    assert.equal(rejectionEvidence(name,'unrelated-hidden-context',{...probe,observed:[{contextScopes:scopes}]},error).valid,false);
   }
-  assert.equal(rejectionEvidence(name,'unrelated-hidden-context',{...probe,nativeFailures:[{...failure,message:'unrelated hidden context'}]},error).valid,false);
+});
+
+test('upload mutants need the processed video or the delivered row to be reached',()=>{
+  const video='uploading a fresh video in the thread composer';
+  const poster=failure('behavior-uploads.mjs',"waitForVisibility(page.locator(\"#thread-panel div[style*='aspect-ratio'] video.message__attachment[poster]\")");
+  const probe={...valid,requiresVideoFault:true,videoJobPerformed:true,observed:[{videoFaultSeen:true}]};
+  assert.equal(rejectionEvidence(video,'default',probe,poster).valid,true);
+  assert.equal(rejectionEvidence(video,'default',{...probe,videoJobPerformed:false},poster).valid,false);
+  assert.equal(rejectionEvidence(video,'default',{...probe,observed:[]},poster).valid,false);
+  assert.equal(rejectionEvidence(video,'default',probe,failure('behavior-uploads.mjs',"waitForVisibility(panel.locator('video.message__attachment')")).valid,false);
+  const progress='late upload progress preserves a delivered attachment and reply preview';
+  const overwritten={...failure('behavior-uploads.mjs',"equal(await body(),delivered,'progress: delivered body unchanged')",'AssertionError'),code:'ERR_ASSERTION'};
+  const delivered={...valid,requiresProgressFault:true,observed:[{progressFault:{delivered:true}}]};
+  assert.equal(rejectionEvidence(progress,'default',delivered,overwritten).valid,true);
+  assert.equal(rejectionEvidence(progress,'default',{...delivered,observed:[{progressFault:{delivered:false}}]},overwritten).valid,false);
 });

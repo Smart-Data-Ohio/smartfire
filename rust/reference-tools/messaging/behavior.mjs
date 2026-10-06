@@ -1,5 +1,3 @@
-import {nativeUpload,uploadCases} from './behavior-native-uploads.mjs';
-import {PIN} from './reference-pin.mjs';
 // Observable behaviour from the pinned system cases, through real browser controls.
 import assert from 'node:assert/strict';
 import {waitForVisibility,installVisibility,setVisibilityTimeout,waitForVisibleCount,visibleCount,waitForVisibleProperty,waitForVisibleAttribute,waitForVisibleContentCount,actOnVisible,filterVisibleText,visibleText,waitForDomCount,waitForCondition} from './behavior-visibility.mjs';
@@ -13,7 +11,6 @@ import {installMutation,mutationVariants} from './behavior-mutations.mjs';
 import {unreadDivider} from './behavior-unread.mjs';
 import {destinationCases,messageDestinations} from './behavior-message-destinations.mjs';
 import {composer} from './behavior-composer.mjs';
-import {driveAttachments} from './behavior-drive.mjs';
 import {attachMenu} from './behavior-attach-menu.mjs';
 import {boosts} from './behavior-boosts.mjs';
 import {interactions,mobileActions,assertMenuOpen} from './behavior-actions.mjs';
@@ -25,46 +22,27 @@ import {mobileContinuation} from './behavior-mobile-continuation.mjs';
 import {workspace,WORKSPACE_CASE} from './behavior-workspace.mjs';
 import {motionDefault,MOTION_DEFAULT} from './behavior-motion-default.mjs';
 import {motion,motionCases} from './behavior-motion.mjs';
-import {nativeAttachment,ATTACHMENT_CASE} from './behavior-native-attachment.mjs';
-import {nativePhone,PHONE_CASE,captureUploadReferenceLog} from './behavior-native-phone.mjs';
-import {nativeMotion,NATIVE_MOTION_CASE} from './behavior-native-motion.mjs';
-import {nativeRelease,RELEASE_CASE} from './behavior-native-release.mjs';
+import {uploads,uploadCases} from './behavior-uploads.mjs';
 import {CAPYBARA_DEFAULT,DELIVERY_WAIT,CABLE_WAIT} from './behavior-deadlines.mjs';
 import {deferredBrowserCases,traceBrowserSetup,reportBrowserSetup} from './behavior-browser-setup.mjs';
 const require=createRequire(new URL('../../parity/package.json',import.meta.url));
 const {chromium}=require('playwright');
 const sessions=JSON.parse(readFileSync(new URL('../../vectors/campfire_sessions.json',import.meta.url))).sessions;
-const [rails,rust,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
+const [base,file,caseNames,fixtureJson='{}']=process.argv.slice(2);
 const cases=JSON.parse(caseNames);
 const fixture=JSON.parse(fixtureJson);
-assert.ok(['drive_attachments','motion','mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
+assert.ok(['motion','mobile_layout','channel_threads_controller','sending_messages','workspace_markdown','threads','message_list_a11y','search_forward_edit','unread_divider','composer','composer_attach_menu','boosting_messages','message_interactions','message_actions_mobile','message_toolbar','code_highlighting'].includes(file));
 const negative=process.env.WS8BM_NEGATIVE==='1';
 const keepGoing=process.env.WS8BM_KEEP_GOING==='1';
 const selectedMutant=process.env.WS8BM_MUTANT;
-// These paths execute the pinned Selenium driver. Starting an unused second
-// browser can block before any assertion; it supplies no test readiness.
-const nativeOnly=cases.every(name=>uploadCases.includes(name)||name===RELEASE_CASE||name===NATIVE_MOTION_CASE||(name===PHONE_CASE&&!negative&&!selectedMutant));
-const browser=nativeOnly?null:await chromium.launch({headless:true});
+const ATTACHMENT_CASE='Markdown replies and file attachments remain usable';
+const RELEASE_CASE='a release click landing on the just-opened menu does not activate it';
+// The pinned Rails sources the cases read their literals from.
+const pinned=path=>readFileSync(new URL(`../../test-support/behavior-sources/${path}`,import.meta.url),'utf8');
+const browser=await chromium.launch({headless:true});
 async function acceptance(base,caseName,probe={},variant='default') {
   const contexts=[],threadResponses=[];
   try {
-    if(uploadCases.includes(caseName)) {
-      await nativeUpload(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],caseName,probe,negative||!!selectedMutant);return;
-    }
-    if(caseName===RELEASE_CASE) {
-      await nativeRelease(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base],probe,negative||!!selectedMutant,variant);return;
-    }
-    // The positive phone control is the pinned Selenium sequence itself.
-    // Served negatives retain their translated initial creation checkpoint.
-    if(caseName===PHONE_CASE&&!negative&&!selectedMutant) {
-      await nativePhone(base);return;
-    }
-    if(caseName===ATTACHMENT_CASE&&!negative&&!selectedMutant) {
-      await nativeAttachment(base,JSON.parse(process.env.WS8BM_WORK_DATABASES)[base]);return;
-    }
-    if(caseName===NATIVE_MOTION_CASE) {
-      await nativeMotion(base,probe,negative||!!selectedMutant);return;
-    }
     async function viewer(name) {
       const height=file==='unread_divider'&&caseName.startsWith('many unread')?700:1000;
       // Mutation routes must remain observable across navigations; a service
@@ -74,10 +52,10 @@ async function acceptance(base,caseName,probe={},variant='default') {
       contexts.push(context);
       await installVisibility(context);
       // These pinned system cases run with Rails.env.test? and the layout's
-      // data-test-motion="off" input (application.html.erb:2). Our servers use
-      // the production reference image. Supply that test-only input before
-      // parsing either app; this does not claim the server emits the attribute.
-      const pinnedTestMotion = caseName===WORKSPACE_CASE || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
+      // data-test-motion="off" input (application.html.erb:2). Most of these
+      // cases run on a production-mode host. Supply that test-only input before
+      // parsing the app; this does not claim the server emits the attribute.
+      const pinnedTestMotion = caseName===WORKSPACE_CASE || caseName===RELEASE_CASE || continuationCases.includes(caseName) || file==='mobile_layout' || caseName.startsWith('text fields') || caseName==='thread code stays readable in both themes and scrolls within a narrow screen';
       if(file==='motion'&&caseName!==MOTION_DEFAULT) await context.addInitScript(()=>{
         const apply=()=>{if(!document.documentElement)return false;document.documentElement.dataset.testMotion='off';return true;};
         if(!apply()){const observer=new MutationObserver(()=>{if(apply())observer.disconnect();});observer.observe(document,{childList:true,subtree:true});}
@@ -115,7 +93,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       });
       const response=await page.goto(base+'/rooms/654632876');
       assert.equal(response.status(),200);
-      if(file==='drive_attachments'||caseName===MOTION_DEFAULT||caseName==='From Google Drive starts the legacy picker flow'||caseName==='Markdown replies and file attachments remain usable') {
+      if(caseName===MOTION_DEFAULT||caseName==='From Google Drive starts the legacy picker flow'||caseName==='Markdown replies and file attachments remain usable') {
         assert.equal(await page.locator('html').getAttribute('data-service-worker'),'false','pinned test host opts out of service-worker auto-registration');
       }
       assert.equal(new URL(page.url()).pathname,'/rooms/654632876');
@@ -129,9 +107,9 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
     const profileActors=file==='message_list_a11y'&&caseName==='profile message and ban buttons have accessible names';
     const author=await viewer('JZ');
-    // MotionTest has one signed-in browser. A second unused viewer adds an
-    // unrelated startup and is not part of its fixture/action sequence.
-    const recipient=file==='motion'?undefined:await viewer(profileActors||file==='message_interactions'?'David':'Kevin');
+    // MotionTest and the upload declarations have one signed-in browser. A second
+    // unused viewer adds an unrelated startup and is not part of their sequence.
+    const recipient=file==='motion'||uploadCases.includes(caseName)?undefined:await viewer(profileActors||file==='message_interactions'?'David':'Kevin');
     // Startup errors are never accepted as proof of assertion discrimination.
     probe.ready=true;
     const messages=page=>page.locator('.message[data-message-id]');
@@ -159,6 +137,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
     if(caseName===MOTION_DEFAULT) {await motionDefault(author,base,fixture);return;}
     if(file==='motion') {await motion({author,base,caseName,fixture});return;}
+    if(uploadCases.includes(caseName)) {await uploads({author,base,caseName,fixture,probe});return;}
     if(file==='mobile_layout'||caseName.startsWith('text fields')) {await mobileContinuation({author,base,caseName,fixture});return;}
     if(file==='channel_threads_controller') {await workControllers({author,recipient,base,caseName,fixture});return;}
     if(file==='message_list_a11y') {
@@ -176,12 +155,6 @@ async function acceptance(base,caseName,probe={},variant='default') {
     }
     if(file==='composer') {
       await composer({author,recipient,base,caseName,fixture,viewer,send,text,field});
-      return;
-    }
-    if(file==='drive_attachments') {
-      const responses=[];author.on('response',async response=>{if(new URL(response.url()).pathname.startsWith('/google/drive/files')) responses.push({url:response.url(),status:response.status(),body:await response.text().catch(()=>'<unavailable>')});});
-      try {await driveAttachments({author,base,caseName,fixture});}
-      catch(error){console.error('WS8bm Drive diagnostics:',base,responses,await author.locator('.drive-picker').evaluateAll(nodes=>nodes.map(node=>({html:node.outerHTML.slice(0,1400)}))));throw error;}
       return;
     }
     if(file==='composer_attach_menu') {
@@ -242,7 +215,8 @@ async function acceptance(base,caseName,probe={},variant='default') {
         // beginCreate hands focus to First message on the next animation
         // frame. Wait for that observable open-state transition before
         // typing the name, so insertText cannot land in the other field.
-        await page.waitForFunction(()=>document.activeElement===document.querySelector('[data-thread-panel-target="createMessage"]'));
+        // fill_in_thread_name's assert_focused (system_test_helper.rb), wait: 10.
+        await page.waitForFunction(()=>document.activeElement===document.querySelector('[data-thread-panel-target="createMessage"]'),null,{timeout:DELIVERY_WAIT});
         const nameField=panel.locator('[data-thread-panel-target="createName"]');
         assert.match(await nameField.evaluate(input=>input.closest('label')?.textContent||''),/Thread name/);
         await actOnVisible(nameField,'fill',{},[name]);
@@ -287,7 +261,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         const id=await message.getAttribute('id');
         await waitForVisibility(author.locator(`[id="${id}"][aria-haspopup="menu"]`),{state:'attached',timeout:DELIVERY_WAIT});
         await actOnVisible(message.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
-        await waitForVisibility(author.locator('#message-actions-menu:not([hidden])'),{timeout:10000});
+        await assertMenuOpen(author);
       }
       async function close(page) {
         await actOnVisible(page.getByRole('button',{name:'Close threads',exact:true,includeHidden:true}),'click',{});
@@ -396,7 +370,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
       return;
     }
     if (file==='workspace_markdown') {
-      const source=execFileSync('git',['show',`${PIN}:test/system/workspace_markdown_test.rb`],{encoding:'utf8'});
+      const source=pinned('test/system/workspace_markdown_test.rb');
       const heredoc=(start,indent)=>source.split(start)[1].split(`${' '.repeat(indent)}MARKDOWN`)[0].split('\n').map(line=>line.slice(indent+2)).join('\n');
       if(caseName===WORKSPACE_CASE) {await workspace({author,source,submit});return;}
       if (caseName==='Markdown messages reach other users and editing preserves the original source') {
@@ -487,6 +461,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         // Message#to_key uses client_message_id, not the database primary key.
         parent=author.locator(`[id=${JSON.stringify('message_'+parentIdentity[1])}]`);
         await actOnVisible(parent.locator('[data-message-edit-format], [data-reply-target="body"]').first(),'click',{button:'right'});
+        await assertMenuOpen(author);
         await actOnVisible(author.getByRole('menuitem',{name:'Reply',exact:true}),'click',{});
         await waitForVisibility(filterVisibleText(author.locator('#composer [data-composer-target="contextLabel"]'),'Replying to JZ'));
         await waitForVisibility(filterVisibleText(author.locator('#composer [data-composer-target="contextPreview"]'),'A useful point'));
@@ -523,7 +498,7 @@ async function acceptance(base,caseName,probe={},variant='default') {
         }
       } else if(caseName==='a rejected message can be recovered corrected and sent') {
         // SOURCE_LIMIT is read from the pin, rather than the candidate's input.
-        const model=execFileSync('git',['show',`${PIN}:app/models/message/markdown.rb`],{encoding:'utf8'});
+        const model=pinned('app/models/message/markdown.rb');
         const limit=Number(model.match(/SOURCE_LIMIT = ([\d_]+)/)[1].replaceAll('_',''));
         const invalid='A'.repeat(limit+1);
         await author.locator('#composer textarea').evaluate((editor,value)=>{
@@ -590,7 +565,6 @@ async function acceptance(base,caseName,probe={},variant='default') {
           'import sqlite3,json,sys; c=sqlite3.connect("file:"+sys.argv[1]+"?mode=ro",uri=True); rows=c.execute("SELECT messages.id,messages.reply_to_message_id,messages.reply_notify_author,blobs.filename,blobs.byte_size,blobs.content_type,blobs.service_name,blobs.metadata FROM messages LEFT JOIN active_storage_attachments AS a ON a.record_type=\'Message\' AND a.record_id=messages.id LEFT JOIN active_storage_blobs AS blobs ON blobs.id=a.blob_id WHERE messages.markdown_source=? OR blobs.filename=? ORDER BY messages.id",("**A useful point** with `inline code`.","markdown-workspace-attachment.txt")).fetchall(); print(json.dumps(rows)); c.close()',database],{encoding:'utf8'});
         console.error('WS8bm upload failure saved attachment rows:',base,rows.trim());
       }catch(diagnostic){console.error('WS8bm upload row diagnostic failed:',diagnostic.message);}
-      captureUploadReferenceLog(base,database);
     }
     if(caseName==='discusses a pull request from its card') {
       for(const context of contexts) for(const page of context.pages()) {
@@ -611,40 +585,33 @@ try {
   for(const caseName of cases) {
     try {
     if(negative) {
+      const uncredited=[];
       for(const variant of mutationVariants(caseName)) {
-      const invalidApps=[];
-      for(const [app,base] of [['Rails',rails],['Rust',rust]]) {
-      const probe={ready:false,applied:0};let failure;
-      try {await acceptance(base,caseName,probe,variant);} catch(error) {failure=error;}
-      const evidence=rejectionEvidence(caseName,variant,probe,failure);
-      if(!evidence.valid) {
-        const escaped=!failure&&probe.ready&&probe.applied;
-        console.error(`WS8bm ${escaped?'escaped':'invalid'} discrimination run:`,JSON.stringify({caseName,variant,app,...evidence}),failure?.stack);
-        const error=new Error(`No rejection credit: ${evidence.reasons.join('; ')}`);
-        error.code=escaped?'WS8BM_MUTANT_ESCAPED':'WS8BM_INVALID_DISCRIMINATION';
-        invalidApps.push(error);
-        continue;
-      }
-      console.log(`WS8bm intended assertion: ${app}: ${caseName}: ${variant}: ${JSON.stringify(evidence)}`);
-      if(probe.delayedWriteStarted) console.log(`WS8bm delayed-write probe: ${app}: ${Date.now()-probe.delayedWriteStarted} ms observed; actual write completed: ${!!probe.delayedWriteCompleted}`);
-      console.log(`WS8bm discrimination: ${file}: ${caseName}: ${variant}: ${app} served mutant REJECTED (${failure.code||failure.name})`);
-      }
-      if(invalidApps.length) throw new AggregateError(invalidApps,'Uncredited discrimination attempts');
-      }
-    } else {
-      const failedApps=[];
-      for(const [app,base] of [['Rails',rails],['Rust',rust]]) {
-        const probe={ready:false,applied:0};
-        try {await acceptance(base,caseName,probe,selectedMutant||'default');}
-        catch(error) {console.error(`WS8bm positive application FAILED: ${app}: ${caseName}:`,error.stack);failedApps.push(error);continue;}
-        if(selectedMutant) {
-          assert.ok(probe.ready&&probe.applied>0,'probe must actually apply after valid startup');
-          assert.equal(probe.networkFailures?.length||0,0);
-          console.log(`WS8bm review escape: ${file}: ${caseName}: ${selectedMutant}: ${app} ACCEPTED`);
+        const probe={ready:false,applied:0};let failure;
+        try {await acceptance(base,caseName,probe,variant);} catch(error) {failure=error;}
+        const evidence=rejectionEvidence(caseName,variant,probe,failure);
+        if(!evidence.valid) {
+          const escaped=!failure&&probe.ready&&probe.applied;
+          console.error(`WS8bm ${escaped?'escaped':'invalid'} discrimination run:`,JSON.stringify({caseName,variant,...evidence}),failure?.stack);
+          const error=new Error(`No rejection credit: ${evidence.reasons.join('; ')}`);
+          error.code=escaped?'WS8BM_MUTANT_ESCAPED':'WS8BM_INVALID_DISCRIMINATION';
+          uncredited.push(error);
+          continue;
         }
+        console.log(`WS8bm intended assertion: ${caseName}: ${variant}: ${JSON.stringify(evidence)}`);
+        if(probe.delayedWriteStarted) console.log(`WS8bm delayed-write probe: ${Date.now()-probe.delayedWriteStarted} ms observed; actual write completed: ${!!probe.delayedWriteCompleted}`);
+        console.log(`WS8bm discrimination: ${file}: ${caseName}: ${variant}: served mutant REJECTED (${failure.code||failure.name})`);
       }
-      if(failedApps.length) throw new AggregateError(failedApps,'Unpaired positive attempts');
-      if(!selectedMutant) console.log(`WS8bm browser flow: ${file}: ${caseName}: Rails PASS; Rust PASS`);
+      if(uncredited.length) throw new AggregateError(uncredited,'Uncredited discrimination attempts');
+    } else {
+      const probe={ready:false,applied:0};
+      try {await acceptance(base,caseName,probe,selectedMutant||'default');}
+      catch(error) {console.error(`WS8bm positive application FAILED: ${caseName}:`,error.stack);throw error;}
+      if(selectedMutant) {
+        assert.ok(probe.ready&&probe.applied>0,'probe must actually apply after valid startup');
+        assert.equal(probe.networkFailures?.length||0,0);
+        console.log(`WS8bm review escape: ${file}: ${caseName}: ${selectedMutant}: ACCEPTED`);
+      } else console.log(`WS8bm browser flow: ${file}: ${caseName}: PASS`);
     }
     } catch(error) {
       console.error(`WS8bm browser flow FAILED: ${file}: ${caseName}:`,error.stack);
@@ -654,4 +621,4 @@ try {
   }
   if(failures) process.exitCode=1;
 }
-finally {if(browser) await browser.close();}
+finally {await browser.close();}

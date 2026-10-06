@@ -178,5 +178,24 @@ export async function interactions({author:page,recipient,caseName,fixture,openE
     await quick(recipient);await reaction(recipient,1,true);await reaction(page,1,false);
     await quick(page);await reaction(page,2,true);await reaction(recipient,2,true);
     await actOnVisible(row.locator('.reaction-chip[data-reaction="👍"]'),'click',{});await reaction(page,1,false);await reaction(recipient,1,true);
+  } else if(caseName.startsWith('a release click')) {
+    await page.setViewportSize({width:390,height:844});
+    await longPress(page);await assertMenuOpen(page);
+    // The browser fires compatibility mouse events at the release point after
+    // every touch. When the menu opens under the finger first, that click
+    // lands on the menu item below it and must be swallowed.
+    const hit=await page.evaluate(messageId=>{
+      const rect=document.getElementById(messageId).getBoundingClientRect();
+      const x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+      const target=document.elementFromPoint(x,y);
+      if(!target||!target.closest('#message-actions-menu')) return target?target.tagName:'none';
+      target.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,clientX:x,clientY:y,view:window}));
+      return 'menu';
+    },await row.getAttribute('id'));
+    assert.equal(hit,'menu','expected the press point to hit the open menu');
+    async function menuStillOpenAfterRelease() {await assertMenuOpen(page);}
+    await menuStillOpenAfterRelease();
+    // Main's active-composer scope: an idle sibling composer is not this one.
+    await waitForVisibility(page.locator('#composer [data-composer-target="context"][hidden]'),{state:'attached'});
   } else throw new Error(`unimplemented interaction case ${caseName}`);
 }
