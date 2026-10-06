@@ -4,4 +4,4 @@ import type { SyncEvent } from "./SyncEvent";
 /**
  * A frame the server sends.
  */
-export type ServerFrame = { "t": "welcome", epoch: string, seq: number, resumed: boolean, } | { "t": "batch", events: Array<SyncEvent>, } | { "t": "resync", topics: Array<string>, reason: string, } | { "t": "bye", reconnect: boolean, reason: string, };
+export type ServerFrame = { "t": "welcome", epoch: string, seq: number, resumed: boolean, } | { "t": "batch", events: Array<SyncEvent>, } | { "t": "resync", topics: Array<string>, reason: string, } | { "t": "bye", reconnect: boolean, reason: string, } | { "t": "ping" };

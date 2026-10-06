@@ -49,3 +49,12 @@ pub struct CustomStatus {
     pub text: Option<String>,
     pub expires_at: Option<Timestamp>,
 }
+
+/// `GET /api/v1/users?ids=1,2,3`: the directory entries for up to 100 ids, in id order. Unknown
+/// ids are left out. The client asks for authors it hasn't seen (a live message from someone new).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct UserList {
+    pub users: Vec<User>,
+}

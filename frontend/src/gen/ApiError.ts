@@ -4,4 +4,4 @@
  * A typed API error, tagged by `_tag`. Each variant has one HTTP status
  * ([`ApiError::status`]); the front end decodes them into `Schema.TaggedError` classes.
  */
-export type ApiError = { "_tag": "Unauthorized", message: string, } | { "_tag": "Forbidden", message: string, } | { "_tag": "SudoRequired", message: string, } | { "_tag": "TwoFactorRequired", message: string, } | { "_tag": "NotFound", message: string, } | { "_tag": "Conflict", message: string, } | { "_tag": "Validation", message: string, fields: { [key in string]: Array<string> }, } | { "_tag": "RateLimited", message: string, retryAfter: number, };
+export type ApiError = { "_tag": "Unauthorized", message: string, } | { "_tag": "Forbidden", message: string, } | { "_tag": "SudoRequired", message: string, } | { "_tag": "TwoFactorRequired", message: string, } | { "_tag": "NotFound", message: string, } | { "_tag": "Conflict", message: string, } | { "_tag": "InvalidAuthenticityToken", message: string, } | { "_tag": "Validation", message: string, fields: { [key in string]: Array<string> }, } | { "_tag": "RateLimited", message: string, retryAfter: number, };

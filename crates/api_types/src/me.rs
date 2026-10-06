@@ -17,6 +17,10 @@ pub struct Me {
     pub quiet_hours: Option<QuietHours>,
     /// `null` when not out of office.
     pub out_of_office: Option<OutOfOffice>,
+    /// Where `/app/` opens: the room in the `last_room` cookie if the person is still a member
+    /// (`last_room_visited`), else their original room (`Room::original_for_user`); `null` when
+    /// they belong to no room.
+    pub last_room_id: Option<i64>,
 }
 
 /// Appearance and huddle settings, already normalized the way the layouts read them.

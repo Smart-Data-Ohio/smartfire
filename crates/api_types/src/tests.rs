@@ -104,8 +104,10 @@ fn me_round_trips() {
             end_minute: 420,
         }),
         out_of_office: None,
+        last_room_id: Some(12),
     };
     let wire = serde_json::to_value(&me).unwrap();
+    assert_eq!(wire["lastRoomId"], 12);
     assert_eq!(wire["emailAddress"], "ada@example.com");
     assert_eq!(
         wire["preferences"],
@@ -273,6 +275,13 @@ fn api_errors_are_tagged_unions_under_error() {
             409,
         ),
         (
+            ApiError::InvalidAuthenticityToken {
+                message: "Can't verify CSRF token authenticity".into(),
+            },
+            json!({"_tag": "InvalidAuthenticityToken", "message": "Can't verify CSRF token authenticity"}),
+            422,
+        ),
+        (
             ApiError::Validation {
                 message: "Name can't be blank".into(),
                 fields: BTreeMap::from([("name".into(), vec!["can't be blank".into()])]),
@@ -350,7 +359,10 @@ fn client_frames_match_the_protocol() {
             ClientFrame::Absent { room: 12 },
             json!({"t": "absent", "room": 12}),
         ),
-        (ClientFrame::Hb, json!({"t": "hb"})),
+        (
+            ClientFrame::Hb { active: true },
+            json!({"t": "hb", "active": true}),
+        ),
     ];
     for (frame, wire) in cases {
         assert_wire(&frame, wire);
@@ -381,6 +393,7 @@ fn server_frames_match_the_protocol() {
         },
         json!({"t": "bye", "reconnect": true, "reason": "server_restart"}),
     );
+    assert_wire(&ServerFrame::Ping, json!({"t": "ping"}));
 
     let batch = ServerFrame::Batch {
         events: vec![
@@ -436,4 +449,254 @@ fn server_frames_match_the_protocol() {
         serde_json::to_value(&updated).unwrap()["type"],
         "message.updated"
     );
+}
+
+fn room() -> Room {
+    Room {
+        id: 12,
+        kind: RoomKind::Open,
+        name: Some("general".into()),
+        icon_name: None,
+        creator_id: 7,
+        created_at: "2026-01-01T00:00:00.000Z".into(),
+        updated_at: "2026-10-06T09:15:00.123Z".into(),
+    }
+}
+
+fn membership() -> Membership {
+    Membership {
+        id: 40,
+        room_id: 12,
+        user_id: 7,
+        involvement: Involvement::Everything,
+        unread_at: Some("2026-10-06T09:15:00.123Z".into()),
+        last_read_message_id: Some(8999),
+        room_category_id: Some(3),
+        favorite_position: None,
+        stage_role: None,
+    }
+}
+
+fn row() -> SidebarRow {
+    SidebarRow {
+        room: room(),
+        membership: membership(),
+        display_name: "general".into(),
+        direct_member_ids: vec![],
+        unread_count: 4,
+        mention_count: 1,
+    }
+}
+
+#[test]
+fn room_detail_round_trips() {
+    let detail = RoomDetail {
+        room: room(),
+        membership: membership(),
+        display_name: "general".into(),
+        member_count: 23,
+        pins_count: 2,
+        direct_member_ids: vec![],
+        member_preview_ids: vec![7],
+        users: vec![user()],
+        unread: Some(UnreadDivider {
+            first_unread_message_id: 9000,
+            count: 4,
+        }),
+    };
+    let wire = serde_json::to_value(&detail).unwrap();
+    assert_eq!(wire["room"], serde_json::to_value(room()).unwrap());
+    assert_eq!(wire["membership"]["roomCategoryId"], 3);
+    assert_eq!(wire["displayName"], "general");
+    assert_eq!(wire["memberCount"], 23);
+    assert_eq!(wire["pinsCount"], 2);
+    assert_eq!(wire["directMemberIds"], json!([]));
+    assert_eq!(wire["memberPreviewIds"], json!([7]));
+    assert_eq!(wire["users"][0]["name"], "Ada Lovelace");
+    assert_eq!(
+        wire["unread"],
+        json!({"firstUnreadMessageId": 9000, "count": 4})
+    );
+    assert_wire(&detail, wire);
+
+    let read = RoomDetail {
+        unread: None,
+        ..detail
+    };
+    assert_eq!(serde_json::to_value(&read).unwrap()["unread"], Value::Null);
+}
+
+#[test]
+fn message_page_carries_its_authors_and_cursors() {
+    let page = MessagePage {
+        messages: vec![message()],
+        users: vec![user()],
+        before: Some(9001),
+        after: None,
+    };
+    let wire = serde_json::to_value(&page).unwrap();
+    assert_eq!(
+        wire["messages"][0],
+        serde_json::to_value(message()).unwrap()
+    );
+    assert_eq!(wire["users"][0]["id"], 7);
+    assert_eq!(wire["before"], 9001);
+    assert_eq!(wire["after"], Value::Null);
+    assert_wire(&page, wire);
+}
+
+#[test]
+fn create_message_requests_round_trip() {
+    assert_wire(
+        &CreateMessage {
+            client_message_id: "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11".into(),
+            markdown_source: "Ship it :rocket:".into(),
+            reply_to_message_id: None,
+            reply_notify_author: None,
+        },
+        json!({
+            "clientMessageId": "0192f0c4-7e8a-7b3c-9d0a-6f3b2d1e8c11",
+            "markdownSource": "Ship it :rocket:",
+            "replyToMessageId": null,
+            "replyNotifyAuthor": null,
+        }),
+    );
+}
+
+#[test]
+fn sidebar_round_trips() {
+    let sidebar = Sidebar {
+        rows: vec![row()],
+        categories: vec![RoomCategory {
+            id: 3,
+            name: "Projects".into(),
+            collapsed: false,
+            position: 0,
+        }],
+        users: vec![user()],
+        direct_placeholder_user_ids: vec![7],
+        can_create_rooms: true,
+    };
+    let wire = serde_json::to_value(&sidebar).unwrap();
+    assert_eq!(
+        wire["rows"][0],
+        json!({
+            "room": serde_json::to_value(room()).unwrap(),
+            "membership": serde_json::to_value(membership()).unwrap(),
+            "displayName": "general",
+            "directMemberIds": [],
+            "unreadCount": 4,
+            "mentionCount": 1,
+        })
+    );
+    assert_eq!(
+        wire["categories"],
+        json!([{"id": 3, "name": "Projects", "collapsed": false, "position": 0}])
+    );
+    assert_eq!(wire["directPlaceholderUserIds"], json!([7]));
+    assert_eq!(wire["canCreateRooms"], true);
+    assert_wire(&sidebar, wire);
+}
+
+#[test]
+fn read_state_round_trips() {
+    assert_wire(
+        &ReadState {
+            room_id: 12,
+            unread: false,
+            first_unread_message_id: None,
+        },
+        json!({"roomId": 12, "unread": false, "firstUnreadMessageId": null}),
+    );
+    assert_wire(
+        &ReadState {
+            room_id: 12,
+            unread: true,
+            first_unread_message_id: Some(9000),
+        },
+        json!({"roomId": 12, "unread": true, "firstUnreadMessageId": 9000}),
+    );
+    assert_wire(&MarkUnread { message_id: 9000 }, json!({"messageId": 9000}));
+}
+
+#[test]
+fn users_and_presence_round_trip() {
+    let list = UserList {
+        users: vec![user()],
+    };
+    assert_wire(
+        &list,
+        json!({"users": [serde_json::to_value(user()).unwrap()]}),
+    );
+    for (presence, wire) in [
+        (Presence::Online, "online"),
+        (Presence::Idle, "idle"),
+        (Presence::Offline, "offline"),
+        (Presence::Dnd, "dnd"),
+    ] {
+        assert_wire(&presence, json!(wire));
+    }
+    assert_wire(
+        &PresenceList {
+            presences: vec![UserPresence {
+                user_id: 7,
+                presence: Presence::Idle,
+                status_text: Some("In a meeting".into()),
+            }],
+        },
+        json!({"presences": [{"userId": 7, "presence": "idle", "statusText": "In a meeting"}]}),
+    );
+}
+
+#[test]
+fn s1_events_match_the_protocol() {
+    let cases = [
+        (
+            SyncPayload::RoomUnread(RoomUnread {
+                room_id: 12,
+                message_id: Some(9001),
+                mentioned: true,
+            }),
+            json!({"type": "room.unread", "data": {"roomId": 12, "messageId": 9001, "mentioned": true}}),
+        ),
+        (
+            SyncPayload::RoomUnread(RoomUnread {
+                room_id: 12,
+                message_id: None,
+                mentioned: false,
+            }),
+            json!({"type": "room.unread", "data": {"roomId": 12, "messageId": null, "mentioned": false}}),
+        ),
+        (
+            SyncPayload::RoomRead(RoomRead { room_id: 12 }),
+            json!({"type": "room.read", "data": {"roomId": 12}}),
+        ),
+        (
+            SyncPayload::SidebarRowUpserted(row()),
+            json!({"type": "sidebar.row.upserted", "data": serde_json::to_value(row()).unwrap()}),
+        ),
+        (
+            SyncPayload::SidebarRowRemoved(SidebarRowRemoved { room_id: 12 }),
+            json!({"type": "sidebar.row.removed", "data": {"roomId": 12}}),
+        ),
+        (
+            SyncPayload::Presence(UserPresence {
+                user_id: 7,
+                presence: Presence::Online,
+                status_text: None,
+            }),
+            json!({"type": "presence", "data": {"userId": 7, "presence": "online", "statusText": null}}),
+        ),
+    ];
+    for (payload, wire) in cases {
+        let event = SyncEvent {
+            seq: 5,
+            topic: "user".into(),
+            payload,
+        };
+        let mut expected = wire;
+        expected["seq"] = json!(5);
+        expected["topic"] = json!("user");
+        assert_wire(&event, expected);
+    }
 }

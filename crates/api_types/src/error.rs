@@ -28,6 +28,9 @@ pub enum ApiError {
     NotFound { message: String },
     /// 409: the record changed underneath the request.
     Conflict { message: String },
+    /// 422: the request's `X-CSRF-Token` header was missing or stale. The client fetches a fresh
+    /// token (`GET /api/v1/boot`'s `csrfToken`) and retries once.
+    InvalidAuthenticityToken { message: String },
     /// 422: the input didn't validate. `fields` maps each attribute to its messages.
     Validation {
         message: String,
@@ -47,7 +50,7 @@ impl ApiError {
             | ApiError::TwoFactorRequired { .. } => 403,
             ApiError::NotFound { .. } => 404,
             ApiError::Conflict { .. } => 409,
-            ApiError::Validation { .. } => 422,
+            ApiError::InvalidAuthenticityToken { .. } | ApiError::Validation { .. } => 422,
             ApiError::RateLimited { .. } => 429,
         }
     }

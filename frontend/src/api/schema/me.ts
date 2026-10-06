@@ -8,6 +8,7 @@ import type { QuietHours as GeneratedQuietHours } from "../../gen/QuietHours.ts"
 import type { TextSize as GeneratedTextSize } from "../../gen/TextSize.ts";
 import type { Theme as GeneratedTheme } from "../../gen/Theme.ts";
 import type { VoiceMode as GeneratedVoiceMode } from "../../gen/VoiceMode.ts";
+import { RoomId } from "./ids.ts";
 import type { Assert, Pinned } from "./pin.ts";
 import { Timestamp } from "./time.ts";
 import { User } from "./user.ts";
@@ -72,6 +73,8 @@ export const Me = Schema.Struct({
   doNotDisturb: DoNotDisturb,
   quietHours: Schema.NullOr(QuietHours),
   outOfOffice: Schema.NullOr(OutOfOffice),
+  /** Where `/app/` opens: the last room visited, else the person's original room. */
+  lastRoomId: Schema.NullOr(RoomId),
 });
 
 export type Me = typeof Me.Type;
