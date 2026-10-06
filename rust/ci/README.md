@@ -1,21 +1,56 @@
 # Rust correctness gates
 
 `Rust port` gates clippy, the production-input binary build, all ordinary workspace
-nextest tests, and runnable doctests. App/workspace failures are retained for the
-summary, then explicit gates fail the job. No advisory correctness group remains.
+nextest tests, and runnable doctests. It is an aggregator: it fails unless each of
+these jobs succeeded (a failed, cancelled or skipped one fails it), and its summary
+adds up every shard's JUnit receipt and doctest log. It reports on every pull request:
+`Rust changes` checks the PR's diff, and when it touches no Rust input (`rust/`, the
+Rails app the port reads as its reference, this workflow or its setup action) the jobs
+below are skipped and `Rust port` passes only if every one of them was skipped. Pushes,
+nightly and manual runs, empty diffs and unavailable history always run everything:
 
-The `Rust correctness (database|acme|browsers|livekit|messaging|agents-ui)` jobs share
-the same seed/reference/toolchain setup through `.github/actions/rust-setup`.
-The slim pull-request gate runs only `Rust port`; correctness jobs run on main,
-nightly, and manual workflows. Branch protection is managed separately by the release lead.
+| Job | Runs |
+| --- | --- |
+| `Rust seeds` | Builds or restores the pinned reference image and seeds, validates them with Rails, and proves the parity gates reject bad inputs. Saves both caches on main. |
+| `Rust tests (K/12)` | `cargo nextest run --workspace --exclude html5ever --profile ci --partition slice:K/12`: nextest's round-robin slice of every ordinary test but the four panic-recovery tests below (campfire on Cranelift; the nightly run builds campfire with LLVM). Shard 1 also runs `verify-ignored.sh` against the harnesses it compiled. |
+| `Rust tests (campfire panic recovery, LLVM)` | The four `CAMPFIRE_LLVM_ONLY_TESTS`, with campfire on LLVM: Cranelift can't unwind. Fails unless exactly those four ran and passed. |
+| `Rust production toolchain check` | `cargo check --workspace` on the image's stable toolchain, which production builds with. |
+| `Rust clippy, binaries and doctests` | rust/ci unit tests, clippy, the production-input binary build, then the database and workspace doctests. |
+
+Correctness builds run from the repository root, where neither `rust-toolchain.toml` nor
+`.cargo/config.toml` applies, so they use the stable toolchain and LLVM and restore their
+own `correctness` Cargo cache (saved on main by browsers shard 2/4); the test shards' cache
+holds nightly artifacts.
+
+Test and correctness jobs restore the seed cache entry by its exact key, the same
+immutable entry `Rust seeds` validates in that run; on a miss they build and validate
+their own. Test failures are retained for the summary, then explicit gates fail the job.
+No advisory correctness group remains.
+
+The correctness jobs run on main, nightly, and manual workflows, through the same
+setup action. `Rust correctness` is their aggregator: every job must succeed, each
+must report exit 0 for the tested commit, the shards' JUnit receipts together must
+contain exactly each suite's registered ignored tests (`correctness_gate.py`), and the
+messaging behaviour shards' case receipts must cover all 145 named cases once
+(`behavior-check.py --verify-receipts`). The slim pull-request gate runs only the
+`Rust port` jobs. Branch protection is managed separately by the release lead.
+
+`CORRECTNESS_SHARD=K/N` runs one deterministic slice of a suite: browsers split their
+ignored tests by the recorded `seconds` in `ignored-tests.json`, messaging behaviour
+splits whole case batches. `CORRECTNESS_PART` selects messaging's `behavior` cases or
+its `originals` (the WS14/WS15 declarations); unset runs both as before. The behaviour
+shards use the two Rust hosts the `Rust messaging host (app|test)` jobs build once with
+behavior-check.py's own commands, and load the prerequisite image the `app` job exports
+instead of building it sixteen times.
 
 | Job suffix | Execution |
 | --- | --- |
 | database | `reference-tools/db/differential.sh --prepare-only`, `reference-tools/auth/rollback.sh --prepare-only`, then exactly 3 ignored Ruby DB/rollback comparisons |
 | acme | Digest-pinned Pebble, then exactly 1 ignored TLS-ALPN certificate/cache test |
-| browsers | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`), then exactly 7 WS11-UI, 7 WS12, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
+| browsers (4 shards) | Pinned Playwright image, gateway `ws` lockfile, and normal `campfire` binary (`WS11UI_BROWSER_BINARY`, compiled with the test harnesses while the prerequisite image builds), then exactly 7 WS11-UI, 7 WS12, 4 ledger, 1 WS13, and 1 gateway ignored tests; C221–C223 also run the three paired inbox/filter/work sequences and reject their writer-defect controls |
 | livekit | `bin/livekit-local setup/start` (checksum-pinned 1.13.7), polling/media transport regression tests, then exactly 1 ignored real-media test |
-| messaging | Python/Node harness regression tests, `python3 reference-tools/messaging/behavior-check.py --keep-going` (paired Rails/Rust cases), then 53 registered original WS14/WS15 browser declarations against Rust via the pinned native Selenium image |
+| messaging behaviour (16 shards) | Python/Node harness regression tests (shard 1), then `python3 reference-tools/messaging/behavior-check.py --keep-going --shard K/16` (paired Rails/Rust cases) |
+| messaging originals (2 shards) | `behavior-check.py --prepare-only`, then the 53 registered original WS14/WS15 browser declarations against Rust via the pinned native Selenium image |
 | agents-ui | `python3 reference-tools/views/agents_ui/system_behavior.py --binary target/debug/campfire --scenario all` (pages, budget, work against Rails and Rust) |
 
 No external harness in the requested messaging/WS11 scope lacks a scripted entry
@@ -55,6 +90,7 @@ docker build --build-arg BASE_IMAGE=campfire-toolchain -f rust/ci/Dockerfile -t 
 RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/verify-ignored.sh
 RUNNER_TEMP=/tmp/campfire-ci bash rust/ci/exec.sh bash rust/ci/correctness.sh database
 # Repeat the last command for acme, browsers, livekit, messaging, and agents-ui.
+# CI's slices: CORRECTNESS_SHARD=2/4 ... correctness.sh browsers (exec.sh passes it through).
 ```
 
 The ignored runner uses `cargo nextest run --locked -p PACKAGE
@@ -62,7 +98,7 @@ The ignored runner uses `cargo nextest run --locked -p PACKAGE
 "$(python3 ci/ignored_tests.py --filter SUITE)"`. Exact selectors come from
 `ignored-tests.json`; the post-run check rejects missing, skipped, or failed
 selected tests. `--success-output final` retains the successful nested browser
-sequence and writer-control receipts. The ordinary job additionally runs `nextest list --workspace
+sequence and writer-control receipts. The first test shard additionally runs `nextest list --workspace
 --exclude html5ever --run-ignored only --ignore-default-filter --message-format json`
 against every compiled test binary. The package/binary/full-test-name set must
 equal the correctness selectors plus the explicit `ignored-utilities.json` list

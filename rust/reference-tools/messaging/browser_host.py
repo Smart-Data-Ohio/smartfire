@@ -1,6 +1,7 @@
 """Build the existing TestApp boundary from reproducible, tools-only test inputs."""
 import json
 import importlib.util
+import os
 import re
 import shlex
 from pathlib import Path
@@ -236,7 +237,8 @@ def build_host(root, env):
     # binary, despite different source roots. Keep this cache under target/.
     host_target = Path(env.get("CARGO_TARGET_DIR", source / "target")).resolve() / 'ws8bm-browser-host'
     host_env = dict(env, CAMPFIRE_REFERENCE=str(root), CARGO_TARGET_DIR=str(host_target))
-    command = shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["test", "--locked", "-j2",
+    jobs = env.get("WS8BM_HOST_BUILD_JOBS", "2")  # parallelism only; the output is the same
+    command = shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["test", "--locked", f"-j{jobs}",
                "--manifest-path", str(generated / "Cargo.toml"), "-p", "campfire", "--bin", "campfire",
                "--no-run", "--message-format=json"]
     result = subprocess.run(command, cwd=root, env=host_env, stdout=subprocess.PIPE, text=True)
@@ -253,3 +255,10 @@ def build_host(root, env):
                 and entry.get("profile", {}).get("test") and entry.get("executable")):
             return entry["executable"]
     raise RuntimeError("current-source browser test host executable missing")
+
+
+if __name__ == "__main__":
+    # CI builds and audits this host once, then hands the executable to every sharded
+    # behaviour job (.github/workflows/rust.yml); behavior-check.py otherwise builds it.
+    root = Path(__file__).resolve().parents[3]
+    print(build_host(root, dict(os.environ, CAMPFIRE_REFERENCE=str(root))))

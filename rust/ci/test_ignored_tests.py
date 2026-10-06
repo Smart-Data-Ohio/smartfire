@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from ignored_tests import ROOT, check, check_compiled, inventory, verify_junit
+from ignored_tests import ROOT, check, check_compiled, inventory, shard, verify_junit, workflow_suites
 
 
 class IgnoredTestCoverage(unittest.TestCase):
@@ -87,3 +87,41 @@ class IgnoredTestCoverage(unittest.TestCase):
                     verify_junit(records, path)
             path.write_text('<testsuites><testsuite><testcase name="selected"/></testsuite></testsuites>')
             verify_junit(records, path)
+
+    def test_shards_partition_every_selected_test_exactly_once(self):
+        records = [{"package": "p", "binary": "b", "test": f"t{index}", "seconds": index % 5} for index in range(17)]
+        for count in (1, 2, 3, 17):
+            with self.subTest(count=count):
+                parts = [shard(records, (index, count)) for index in range(1, count + 1)]
+                names = [record["test"] for part in parts for record in part]
+                self.assertEqual(sorted(names), sorted(record["test"] for record in records))
+                self.assertTrue(all(parts))
+                self.assertEqual(parts, [shard(list(reversed(records)), (index, count)) for index in range(1, count + 1)])
+        with self.assertRaisesRegex(ValueError, "empty"):
+            shard(records, (1, 18))
+
+    def test_union_of_shard_receipts_must_be_exact(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            first, second = Path(scratch) / "1.xml", Path(scratch) / "2.xml"
+            records = [{"test": "a"}, {"test": "b"}]
+            first.write_text('<testsuites><testsuite><testcase name="a"/></testsuite></testsuites>')
+            with self.assertRaises(ValueError):
+                verify_junit(records, [first])
+            second.write_text('<testsuites><testsuite><testcase name="b"><failure/></testcase></testsuite></testsuites>')
+            with self.assertRaises(ValueError):
+                verify_junit(records, [first, second])
+            second.write_text('<testsuites><testsuite><testcase name="a"/></testsuite></testsuites>')
+            with self.assertRaises(ValueError):
+                verify_junit(records, [first, second])
+            second.write_text('<testsuites><testsuite><testcase name="b"/></testsuite></testsuites>')
+            verify_junit(records, [first, second])
+
+    def test_workflow_shards_must_cover_one_to_n(self):
+        runner = 'bash rust/ci/correctness.sh "$SUITE"\n'
+        self.assertEqual(workflow_suites(runner + 'suite: [a, b]\nsuite: [c]\n        shard: ["1/2", "2/2"]'),
+                         {"a": [[]], "b": [[]], "c": [["1/2", "2/2"]]})
+        for shards in ('["1/2"]', '["1/3", "2/3", "2/3"]', '["0/1"]', '["2/2", "1/2"]'):
+            with self.subTest(shards=shards), self.assertRaisesRegex(ValueError, "1/N"):
+                workflow_suites(runner + f"suite: [c]\n  shard: {shards}")
+        with self.assertRaisesRegex(ValueError, "not invoked"):
+            workflow_suites("suite: [a]")

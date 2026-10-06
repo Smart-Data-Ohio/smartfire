@@ -4,6 +4,9 @@ repo=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
 : "${RUNNER_TEMP:?Set RUNNER_TEMP to a disk-backed scratch directory}"
 scratch="$RUNNER_TEMP/rust-correctness"
 mkdir -p "$scratch"
+# The same CI profile and Cargo home as cargo.sh (see cargo-config.toml).
+mkdir -p "$repo/rust/.cargo-home"
+install -m 644 "$repo/rust/ci/cargo-config.toml" "$repo/rust/.cargo-home/config.toml"
 git_mount=()
 git_common=$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)
 if [[ "$git_common" != "$repo/"* ]]; then
@@ -33,4 +36,6 @@ docker run --rm --init --network host --user "$(id -u):$(id -g)" \
   --env WS14_BROWSER_SCRATCH="$scratch/ws14" \
   --env PARITY_IMAGE="${PARITY_IMAGE:-ws19b-ci-reference}" --env PARITY_CAPTURE_RUNTIME=docker \
   --env WS8BM_PINNED_BROWSER=1 \
+  --env CORRECTNESS_SHARD --env CORRECTNESS_PART --env WS8BM_PREBUILT_APP --env WS8BM_PREBUILT_TEST_HOST \
+  --env WS8BM_HOST_BUILD_JOBS \
   "${RUST_CORRECTNESS_IMAGE:-campfire-correctness}" "$@"

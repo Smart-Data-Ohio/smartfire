@@ -128,13 +128,30 @@ def inventory(root):
     return found
 
 
+def workflow_suites(workflow):
+    """Map every correctness matrix suite to its shard list ("k/N"; empty means one job).
+
+    A suite may appear in several matrices (for example two parts of one suite), but each
+    matrix's shard list must be exactly 1/N..N/N so no slice of a suite is left unscheduled.
+    """
+    if 'bash rust/ci/correctness.sh "$SUITE"' not in workflow:
+        raise ValueError("correctness runner is not invoked by the workflow")
+    jobs = {}
+    for match in re.finditer(r"suite: \[([^\]]+)\](?:\s*\n\s*shard: \[([^\]]+)\])?", workflow):
+        shards = [item.strip().strip("'\"") for item in match[2].split(",")] if match[2] else []
+        if shards and shards != [f"{index}/{len(shards)}" for index in range(1, len(shards) + 1)]:
+            raise ValueError(f"shards must be 1/N..N/N: {shards}")
+        for name in match[1].split(","):
+            jobs.setdefault(name.strip(), []).append(shards)
+    if not jobs:
+        raise ValueError("correctness runner is not invoked by the workflow")
+    return jobs
+
+
 def check(root, manifest, workflow):
     found = inventory(root)
     owners = {}
-    suites = re.search(r"suite: \[([^\]]+)\]", workflow)
-    if not suites or 'bash rust/ci/correctness.sh "$SUITE"' not in workflow:
-        raise ValueError("correctness runner is not invoked by the workflow")
-    jobs = {name.strip() for name in suites[1].split(",")}
+    jobs = workflow_suites(workflow)
     for suite, records in manifest.items():
         if suite not in jobs:
             raise ValueError(f"missing CI job for ignored suite: {suite}")
@@ -182,16 +199,44 @@ def check_compiled(document, manifest, utilities):
     print(f"Compiler ignored-test guard: {len(correctness)} CI correctness tests, {len(utilities)} utilities; 0 unclassified")
 
 
+def parse_shard(value):
+    match = re.fullmatch(r"([1-9][0-9]*)/([1-9][0-9]*)", value or "")
+    if not match or int(match[1]) > int(match[2]):
+        raise argparse.ArgumentTypeError(f"expected K/N with 1 <= K <= N, got {value!r}")
+    return int(match[1]), int(match[2])
+
+
+def shard(records, selected):
+    """Deterministically split a suite's records into N disjoint shards; return shard K.
+
+    Longest-first by the optional observed "seconds" (default 1), each record going to the
+    least-loaded shard (then fewest tests, then lowest index). Every record lands in exactly
+    one shard, and no shard is empty.
+    """
+    index, count = selected
+    if count > len(records):
+        raise ValueError(f"{count} shards for {len(records)} selected tests would leave a shard empty")
+    loads = [0.0] * count
+    owned = [[] for _ in range(count)]
+    for record in sorted(records, key=lambda r: (-r.get("seconds", 1), r["package"], r["binary"], r["test"])):
+        target = min(range(count), key=lambda shard: (loads[shard], len(owned[shard]), shard))
+        loads[target] += record.get("seconds", 1)
+        owned[target].append(record)
+    return owned[index - 1]
+
+
 def expression(records):
     return " or ".join(f'(package(={r["package"]}) and binary(={r["binary"]}) and test(={r["test"]}))' for r in records)
 
 
-def verify_junit(records, path):
-    cases = ET.parse(path).getroot().findall(".//testcase")
+def verify_junit(records, paths):
+    """Require exactly the selected tests to have passed across the given receipts (shards)."""
+    paths = [paths] if isinstance(paths, (str, Path)) else list(paths)
+    cases = [case for path in paths for case in ET.parse(path).getroot().findall(".//testcase")]
     actual = [case.attrib["name"] for case in cases if case.find("skipped") is None]
     expected = sorted(record["test"] for record in records)
     if sorted(actual) != expected or any(case.find("failure") is not None or case.find("error") is not None for case in cases):
-        raise ValueError(f"expected exactly {expected}; executed {actual}; see {path}")
+        raise ValueError(f"expected exactly {expected}; executed {actual}; see {', '.join(map(str, paths))}")
     print(f"Ignored correctness receipt: {len(actual)} passed, 0 failed, 0 selected tests skipped")
 
 
@@ -199,7 +244,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--filter", choices=["database", "acme", "browsers", "livekit", "messaging"])
     parser.add_argument("--package", action="store_true")
-    parser.add_argument("--junit", type=Path)
+    parser.add_argument("--shard", type=parse_shard, help="K/N: only this shard of the suite's tests")
+    parser.add_argument("--junit", type=Path, action="append", help="receipt; repeat to verify the union of shards")
     parser.add_argument("--nextest-list", type=Path)
     args = parser.parse_args()
     manifest = json.loads((ROOT / "ci/ignored-tests.json").read_text())
@@ -221,8 +267,8 @@ if __name__ == "__main__":
     elif args.junit:
         if not args.filter:
             parser.error("--junit needs --filter")
-        verify_junit(manifest[args.filter], args.junit)
+        verify_junit(shard(manifest[args.filter], args.shard) if args.shard else manifest[args.filter], args.junit)
     elif args.filter:
-        print(expression(manifest[args.filter]))
+        print(expression(shard(manifest[args.filter], args.shard) if args.shard else manifest[args.filter]))
     else:
         print(f"Ignored-test guard: {correctness} CI correctness tests, {utilities} utilities; 0 unowned")
