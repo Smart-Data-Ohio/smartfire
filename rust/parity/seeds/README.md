@@ -96,7 +96,10 @@ and the Rails validator. There are no fallback keys. Local image archives are re
 when their recorded image cache key matches all current inputs and their SHA-256 checksum
 matches the receipt; stale archives or missing receipts trigger a rebuild.
 The image's embedded Rails revision is
-checked after load, and cached seeds still undergo Rails validation before tests run.
+checked after load, and cached seeds still undergo Rails validation in every run: the `Rust seeds`
+job validates the exact cache entry the test and correctness jobs restore, and both gates
+(`Rust port`, `Rust correctness`) fail unless it succeeded. A job whose exact entry is missing
+builds and validates its own seeds.
 Only pushes to main save caches; PRs read them and use no application secrets.
 
 Every app seed loader fails if its seed is missing and `CI` is set, even to an empty value.

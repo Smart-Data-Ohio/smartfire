@@ -25,7 +25,7 @@ from behavior_action_rows import assert_action_rows
 from behavior_upload_bytes import uploaded_bytes
 from behavior_server_cleanup import stop_behavior_servers
 from behavior_mutation_jobs import probe_jobs
-from browser_host import build_host
+from browser_host import build_host, prepare_source
 
 ROOT = Path(__file__).resolve().parents[3]
 RUST = ROOT / "rust"
@@ -187,9 +187,33 @@ parser.add_argument("--mutant", help="select one served mutant variant; without 
 parser.add_argument("--mutant-set", choices=["visible-assertions", "visible-lookups", "instantaneous-opacity", "element-scopes", "hidden-scopes", "categories", "labels"], help="diagnose all new visibility assertion mutants without parity credit")
 parser.add_argument("--repeat",type=int,default=1,help="repeat one positive case with independent fixtures and unchanged deadlines")
 parser.add_argument("--keep-going", action="store_true", help="report every selected flow; failures still produce a nonzero exit")
+parser.add_argument("--shard", help="K/N: run only shard K of the selected positive batches (CI runs N shards in parallel)")
+parser.add_argument("--receipt", type=Path, help="write the named cases this invocation selected and its outcome as JSON")
+parser.add_argument("--verify-receipts", type=Path, nargs="+", help="check that shard receipts cover every selected case exactly once, all passed, then exit")
+parser.add_argument("--prepare-only", action="store_true", help="build the browser image, seeds and npm inputs, verify the Selenium atom, then exit")
 args = parser.parse_args()
 assert args.repeat>=1 and (args.repeat==1 or (args.case and not args.negative and not args.mutant and not args.mutant_set)), "repetition is for one positive case only"
 files = args.files or list(CASES)
+shard = None
+if args.shard:
+    index, _, count = args.shard.partition("/")
+    shard = (int(index), int(count))
+    assert 1 <= shard[0] <= shard[1], "--shard must be K/N with 1 <= K <= N"
+    assert not (args.negative or args.mutant or args.mutant_set or args.slice or args.repeat > 1), "shards split one positive run"
+if args.verify_receipts:
+    # Every shard ran the same selection; together they must cover it exactly once.
+    expected = sorted([file, name] for file in files for name in CASES[file]
+                      if (not args.case or name == args.case) and name not in args.exclude_case)
+    receipts = [json.loads(path.read_text()) for path in args.verify_receipts]
+    covered = sorted(pair for receipt in receipts for pair in receipt["cases"])
+    shards = sorted(receipt["shard"] for receipt in receipts)
+    count = len(receipts)
+    assert shards == sorted(f"{index}/{count}" for index in range(1, count + 1)), f"expected shard receipts 1/{count}..{count}/{count}, got {shards}"
+    assert all(receipt["files"] == files for receipt in receipts), "shards selected different files"
+    assert covered == expected, f"shards covered {len(covered)} named cases, expected each of {len(expected)} exactly once"
+    assert all(receipt["passed"] == len(receipt["cases"]) and not receipt["failed"] for receipt in receipts), "a shard reported failed cases"
+    print(f"WS8bm behaviour shards: {count} receipts cover all {len(expected)} named cases exactly once; all passed on Rails and Rust", flush=True)
+    raise SystemExit(0)
 if args.mutant_set:
     assert not args.mutant and not args.case and (not args.negative or args.mutant_set in {"element-scopes", "categories", "labels"}), "only element-scopes/categories/labels support a negative mutant-set run"
     diagnostic_export = {"visible-lookups": "visibilityLookupMutations", "instantaneous-opacity": "instantaneousOpacityMutations", "element-scopes": "elementScopeMutations", "hidden-scopes": "hiddenScopeProbes", "categories": "categoryMutations", "labels": "labelMutations"}.get(args.mutant_set, "visibilityAssertionMutations")
@@ -235,9 +259,24 @@ selected_names=[name for file in files for name in CASES[file] if (not args.case
 needs_paused_jobs=not args.slice and any(name in paused_job_cases for name in selected_names)
 needs_test_environment=motion_default in selected_names
 needs_drive=any(name in drive_cases for name in selected_names)
-if args.slice or any(name not in paused_job_cases for name in selected_names):
+# CI's sharded jobs receive both hosts from earlier jobs that built them from this
+# checkout with the same commands (rust.yml's messaging-hosts jobs).
+prebuilt_host = os.environ.get("WS8BM_PREBUILT_TEST_HOST")
+if args.prepare_only:
+    pass
+elif os.environ.get("WS8BM_PREBUILT_APP") == "1":
+    assert (Path(env.get("CARGO_TARGET_DIR", RUST / "target")) / "debug/campfire").is_file(), "prebuilt campfire binary is missing"
+elif args.slice or any(name not in paused_job_cases for name in selected_names):
     subprocess.run(shlex.split(env.get("CAMPFIRE_CARGO", "cargo")) + ["build", "--locked", "-j2", "--manifest-path", "rust/Cargo.toml", "-p", "campfire", "--bin", "campfire"], cwd=ROOT, env=env, check=True)
-test_host=build_host(ROOT,env) if needs_paused_jobs or needs_drive or needs_test_environment else None
+if args.prepare_only or not (needs_paused_jobs or needs_drive or needs_test_environment):
+    test_host = None
+elif prebuilt_host:
+    # The executable reads its generated source tree at run time; regenerate it in place.
+    prepare_source(ROOT)
+    assert Path(prebuilt_host).is_file(), "prebuilt browser test host is missing"
+    test_host = prebuilt_host
+else:
+    test_host = build_host(ROOT, env)
 subprocess.run(["npm", "ci", "--prefix", "rust/parity"], cwd=ROOT, check=True)
 # CI supplies Chromium and the matching ChromeDriver from pinned inputs.
 if os.environ.get("WS8BM_PINNED_BROWSER") != "1":
@@ -249,6 +288,8 @@ visibility_atom = subprocess.check_output([
 ], cwd=ROOT)
 assert visibility_atom == (RUST / "reference-tools/messaging/selenium/isDisplayed.js").read_bytes(), "visibility helper must use the unmodified pinned Selenium atom"
 print(f"WS8bm visibility atom: pinned Selenium SHA256 {hashlib.sha256(visibility_atom).hexdigest()} verified", flush=True)
+if args.prepare_only:
+    raise SystemExit(0)
 for line in (RUST / "parity/.env.reference").read_text().splitlines():
     if line and not line.startswith("#"):
         key, value = line.split("=", 1)
@@ -298,9 +339,7 @@ mutation_variants = json.loads(subprocess.check_output([
     "import {mutationNames,mutationVariants} from './rust/reference-tools/messaging/behavior-mutations.mjs'; "
     "console.log(JSON.stringify(Object.fromEntries(mutationNames.map(name=>[name,mutationVariants(name)]))))"
 ], cwd=ROOT, env=env, text=True)) if args.negative else {}
-for file in files:
-    source_path = f"test/{'controllers/channel_threads_controller' if file == 'channel_threads_controller' else 'system/'+file}_test.rb"
-    source = subprocess.check_output(["git", "show", f"{PIN}:{source_path}"], cwd=ROOT)
+def plan(file):
     selected = [case for case in CASES[file] if (not args.case or case == args.case) and case not in args.exclude_case]
     if args.slice:
         continuation = {"channel_threads_controller":CASES["channel_threads_controller"],"mobile_layout":CASES["mobile_layout"],"threads":CASES["threads"][:8],"message_list_a11y":["text fields stay at 16px on touch devices without changing the desktop look"],"code_highlighting":["thread code stays readable in both themes and scrolls within a narrow screen"]}
@@ -335,7 +374,30 @@ for file in files:
     jobs = probe_jobs(batches, selected, negative=args.negative, mutant=args.mutant,
                       mutation_variants=mutation_variants,
                       diagnostic_variants=diagnostic_variants if args.mutant_set else None)
-    jobs *= args.repeat
+    return jobs * args.repeat
+
+
+plans = {file: plan(file) for file in files}
+owned = None
+if shard:
+    # Whole batches (a shared read-only server is one unit), heaviest first, each to the
+    # least-loaded shard. A batch costs about one server start (~8 cases' worth of browser
+    # time) plus its cases. Deterministic, so the N shards partition the run exactly.
+    loads = [0] * shard[1]
+    owners = {}
+    units = sorted(((8 + len(batch), file, position) for file in files for position, (batch, _) in enumerate(plans[file])),
+                   key=lambda unit: (-unit[0], files.index(unit[1]), unit[2]))
+    for weight, file, position in units:
+        lightest = min(range(shard[1]), key=lambda index: (loads[index], index))
+        loads[lightest] += weight
+        owners[(file, position)] = lightest + 1
+    owned = {unit for unit, owner in owners.items() if owner == shard[0]}
+receipt_cases = [[file, case] for file in files for position, (batch, _) in enumerate(plans[file])
+                 if owned is None or (file, position) in owned for case in batch]
+for file in files:
+    source_path = f"test/{'controllers/channel_threads_controller' if file == 'channel_threads_controller' else 'system/'+file}_test.rb"
+    source = subprocess.check_output(["git", "show", f"{PIN}:{source_path}"], cwd=ROOT)
+    jobs = [job for position, job in enumerate(plans[file]) if owned is None or (file, position) in owned]
     for batch, variant in jobs:
         retry_key=(tuple(batch),variant)
         retry_attempts[retry_key]=retry_attempts.get(retry_key,0)+1
@@ -778,6 +840,9 @@ else:
         print(f"WS8bm behaviour repetition: {passed} paired attempts; 1 named declaration; {len(failed_cases)} failed",flush=True)
     else:
         print(f"WS8bm behaviour check: {passed} named cases passed on Rails and Rust; {len(failed_cases)} failed; no pixel checks", flush=True)
+if args.receipt:
+    args.receipt.write_text(json.dumps({"shard": args.shard, "files": files, "cases": receipt_cases,
+                                        "passed": passed, "failed": failed_cases}, indent=2) + "\n")
 if failed_cases:
     print("WS8bm failed named checks:\n" + "\n".join(failed_cases), flush=True)
     raise SystemExit(1)

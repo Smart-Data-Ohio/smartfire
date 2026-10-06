@@ -1,44 +1,56 @@
 name: Rust CI setup
 description: Restore or build the pinned Rails inputs, toolchain, and Cargo cache used by every Rust gate.
 inputs:
+  parity:
+    description: >-
+      full: prepare, restore or build, and validate the reference image and seeds (the Rust seeds job).
+      reference: restore the validated seeds and load the reference image.
+      seeds: restore the validated seeds only.
+      none: no parity inputs.
+      A job whose exact seed or image cache misses falls back to the full path, including validation.
+    default: full
+  toolchain:
+    description: Build the toolchain image from the main-written Buildx cache
+    default: 'true'
+  cargo-cache:
+    description: 'Cargo cache to restore: tests (nextest harnesses), build (clippy, binaries, doctests), correctness (stable-toolchain builds from the repository root), or none'
+    default: none
+  free-disk:
+    description: Delete unused preinstalled SDKs in the background
+    default: 'true'
   save-caches:
-    description: Only the ordinary Rust job saves trusted main caches
+    description: Only the Rust seeds job saves the trusted main reference image and seed caches
     default: 'false'
 outputs:
   cargo-cache-hit:
     description: Whether the exact Cargo cache was restored
     value: ${{ steps.cargo-cache.outputs.cache-hit }}
+  cargo-cache-key:
+    description: This commit's exact Cargo cache key (saved by one job on pushes to main)
+    value: ${{ steps.cargo-key.outputs.prefix }}${{ github.sha }}
 runs:
   using: composite
   steps:
+    # Deleting these SDKs takes one to two minutes; nothing below needs the space at once.
     - name: Make room for media, targets, and pinned browsers
+      if: ${{ inputs.free-disk == 'true' }}
       shell: bash
-      run: sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+      run: nohup sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc >/dev/null 2>&1 &
 
-    - name: Test parity cache identities
-      shell: bash
-      run: python3 -m unittest discover -s rust/parity -p test_ci_seed.py
-
-    - name: Prepare pinned Rails reference
+    - name: Compute parity cache identities
       id: parity
+      if: ${{ inputs.parity != 'none' }}
       shell: bash
       run: |
         echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
-        rust/parity/bin/ci-seed prepare >> "$GITHUB_OUTPUT"
+        python3 rust/parity/ci_seed.py >> "$GITHUB_OUTPUT"
 
     # Exact keys only: a seed from a different Rails pin, image input or seed script
     # is never reused. PRs can read trusted caches but cannot save either cache.
-    - name: Restore reference image
-      id: reference-cache
-      # zizmor: ignore[cache-poisoning] -- loaded only for tests; PRs cannot save it or publish anything
-      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: rust/parity/.ci/image
-        key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
-
     - name: Restore parity seeds
       id: seed-cache
-      # zizmor: ignore[cache-poisoning] -- PRs cannot save it; Rails validates every restored seed
+      if: ${{ inputs.parity != 'none' }}
+      # zizmor: ignore[cache-poisoning] -- PRs cannot save it; the Rust seeds job validates this exact entry with Rails
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
@@ -47,33 +59,71 @@ runs:
           rust/parity/.seed/agents_ui
         key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
 
+    # Jobs other than the seeds job skip the reference image and validation when the exact
+    # seed cache entry exists: cache entries are immutable, and the Rust seeds job validates
+    # that same entry with Rails in every run. Any miss takes the full path below.
+    - name: Select parity path
+      id: path
+      if: ${{ inputs.parity != 'none' }}
+      shell: bash
+      env:
+        MODE: ${{ inputs.parity }}
+        SEED_HIT: ${{ steps.seed-cache.outputs.cache-hit }}
+      run: |
+        if [[ "$MODE" == full || "$SEED_HIT" != true ]]; then full=true; else full=false; fi
+        if [[ "$full" == true || "$MODE" == reference ]]; then image=true; else image=false; fi
+        echo "full=$full" >> "$GITHUB_OUTPUT"
+        echo "image=$image" >> "$GITHUB_OUTPUT"
+
+    - name: Restore reference image
+      id: reference-cache
+      if: ${{ steps.path.outputs.image == 'true' }}
+      # zizmor: ignore[cache-poisoning] -- loaded only for tests; PRs cannot save it or publish anything
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: rust/parity/.ci/image
+        key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Test parity cache identities
+      if: ${{ steps.path.outputs.full == 'true' }}
+      shell: bash
+      run: python3 -m unittest discover -s rust/parity -p test_ci_seed.py
+
+    - name: Prepare pinned Rails reference
+      if: ${{ steps.path.outputs.full == 'true' || (steps.path.outputs.image == 'true' && steps.reference-cache.outputs.cache-hit != 'true') }}
+      shell: bash
+      run: rust/parity/bin/ci-seed prepare >/dev/null
+
     - name: Build or load pinned reference image
+      if: ${{ steps.path.outputs.image == 'true' }}
       shell: bash
       run: rust/parity/bin/ci-seed image
 
     - name: Build parity seeds
-      if: ${{ steps.seed-cache.outputs.cache-hit != 'true' }}
+      if: ${{ inputs.parity != 'none' && steps.seed-cache.outputs.cache-hit != 'true' }}
       shell: bash
       run: rust/parity/bin/ci-seed build
 
     - name: Validate parity seeds with Rails
+      if: ${{ steps.path.outputs.full == 'true' }}
       shell: bash
       run: rust/parity/bin/ci-seed validate
 
     - name: Prove parity gates reject missing or corrupt inputs
+      if: ${{ steps.path.outputs.full == 'true' }}
       shell: bash
       run: python3 -m unittest discover -s rust/parity -p test_ci_seed_docker.py
 
     # Only pushes to main save these caches; PRs and other branches only restore.
     - name: Save reference image
-      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.reference-cache.outputs.cache-hit != 'true' }}
+      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.path.outputs.image == 'true' && steps.reference-cache.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: rust/parity/.ci/image
         key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
 
     - name: Save parity seeds
-      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.seed-cache.outputs.cache-hit != 'true' }}
+      if: ${{ inputs.save-caches == 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && inputs.parity != 'none' && steps.seed-cache.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
@@ -83,15 +133,18 @@ runs:
         key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
 
     - name: Summarize parity setup time
+      if: ${{ inputs.parity != 'none' }}
       env:
         STARTED: ${{ steps.parity.outputs.started }}
         IMAGE_HIT: ${{ steps.reference-cache.outputs.cache-hit }}
         SEED_HIT: ${{ steps.seed-cache.outputs.cache-hit }}
+        FULL: ${{ steps.path.outputs.full }}
       shell: bash
       run: |
-        echo "Parity setup: $(($(date +%s) - STARTED))s (image cache: ${IMAGE_HIT:-false}; seed cache: ${SEED_HIT:-false})" | tee -a "$GITHUB_STEP_SUMMARY"
+        echo "Parity setup: $(($(date +%s) - STARTED))s (image cache: ${IMAGE_HIT:-not needed}; seed cache: ${SEED_HIT:-false}; validated here: $FULL)" | tee -a "$GITHUB_STEP_SUMMARY"
 
     - name: Set up Docker Buildx
+      if: ${{ inputs.toolchain == 'true' }}
       uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
     # The Dockerfile's toolchain stage: Rust with the image's own libvips and ffmpeg builds.
@@ -99,6 +152,7 @@ runs:
     # prevents cache poisoning and keeps their multi-gigabyte targets from evicting Rails/image
     # caches. Use immutable GitHub context directly, never a step-writable environment variable.
     - name: Build toolchain image
+      if: ${{ inputs.toolchain == 'true' }}
       uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
       with:
         context: rust
@@ -110,16 +164,38 @@ runs:
         cache-from: type=gha,scope=rust-toolchain
         cache-to: ${{ inputs.save-caches == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' && 'type=gha,scope=rust-toolchain,mode=max' || '' }}
 
+    # One cache per kind of build: the nextest harnesses' dependencies, clippy's check-mode
+    # dependencies plus the binaries' and doctests', or the correctness suites' stable-toolchain
+    # builds. Workspace crates are pruned before saving (rust/ci/prune-target.py): a fresh
+    # checkout's mtimes make Cargo rebuild them anyway. Every key, including the fallbacks, is
+    # scoped to the toolchains (rust-toolchain.toml's nightly, the Dockerfile's stable release
+    # and toolchain image), so an entry built by another compiler is never restored.
+    - name: Name the Cargo cache
+      id: cargo-key
+      if: ${{ inputs.cargo-cache != 'none' }}
+      shell: bash
+      env:
+        TOOLCHAIN: rust-cargo-v4-${{ inputs.cargo-cache }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/rust-toolchain.toml', 'rust/Dockerfile') }}-
+        INPUTS: ${{ hashFiles('rust/Cargo.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh', 'rust/ci/cargo-config.toml') }}-
+        LOCK: ${{ hashFiles('rust/Cargo.lock') }}-
+      run: |
+        {
+          echo "toolchain=$TOOLCHAIN"
+          echo "inputs=$TOOLCHAIN$INPUTS"
+          echo "prefix=$TOOLCHAIN$INPUTS$LOCK"
+        } >> "$GITHUB_OUTPUT"
+
     - name: Restore cargo registry and target
       id: cargo-cache
+      if: ${{ inputs.cargo-cache != 'none' }}
       # zizmor: ignore[cache-poisoning] -- nothing is published: the image above is only loaded locally
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           rust/.cargo-home/registry
           rust/target
-        key: rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+        key: ${{ steps.cargo-key.outputs.prefix }}${{ github.sha }}
         restore-keys: |
-          rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh') }}-${{ hashFiles('rust/Cargo.lock') }}-
-          rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust/Dockerfile', 'rust/Cargo.toml', 'rust/rust-toolchain.toml', 'rust/.cargo/config.toml', 'rust/ci/cargo.sh') }}-
-          rust-cargo-v2-${{ runner.os }}-${{ runner.arch }}-
+          ${{ steps.cargo-key.outputs.prefix }}
+          ${{ steps.cargo-key.outputs.inputs }}
+          ${{ steps.cargo-key.outputs.toolchain }}

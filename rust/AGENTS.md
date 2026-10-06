@@ -75,19 +75,24 @@ submodule and no `rust/reference` symlink: a `rust/reference -> ..` link would m
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on
-Rust and Rails comparison inputs. Every ordinary nextest group and runnable doctest is
-required; the app and workspace steps report all failures before explicit outcome gates.
-`ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold; local builds retain
-their normal linker. Shared pinned Rails seed build/restore/validation lives in
-`.github/actions/rust-setup`.
+every pull request, building only when Rust or Rails comparison inputs changed. Every ordinary nextest group and runnable doctest is
+required; tests run as twelve nextest partitions beside seed validation, clippy/doctest,
+LLVM panic-recovery and stable-toolchain jobs, and the `Rust port` job fails unless all of
+them succeeded.
+`ci/cargo.sh` uses the Dockerfile's pinned toolchain/media and mold, and the CI-only
+`ci/cargo-config.toml` (optimized dependencies, unoptimized workspace crates); local builds
+retain their normal linker and profile. Shared pinned Rails seed build/restore/validation
+lives in `.github/actions/rust-setup`.
 
 Dev, test and CI builds use the nightly in `rust-toolchain.toml`, and `.cargo/config.toml` builds
 the `campfire` crate with the Cranelift backend (everything else, and every release build, uses
-LLVM; the production image stays on the Dockerfile's stable toolchain). Cranelift can't unwind:
+LLVM; the production image stays on the Dockerfile's stable toolchain, and so do the CI
+correctness suites, which build from the repository root). Cranelift can't unwind:
 tests of panic recovery need `--config 'profile.dev.package.campfire.codegen-backend="llvm"'`.
 Measurements and rejected options: `plans/build-speed-report.md`.
 
-Separate required correctness jobs run Rails differential/rollback, Pebble ACME,
+Separate required correctness jobs (some sharded, behind the `Rust correctness` gate) run
+Rails differential/rollback, Pebble ACME,
 WS12/WS13 browsers and the gateway Node suite, project-local LiveKit, paired messaging,
 and WS11 agent UI. `ci/ignored-tests.json` supplies exact nextest ignored-only selectors;
 `ci/ignored_tests.py` rejects any ignored test without a CI owner or a `utility:` reason,
@@ -110,12 +115,16 @@ and checks that Rails reads, and validates, every row the Rust crate wrote.
 - Work from `rust/`, with rustup's `cargo` (`~/.cargo/bin`): `rust-toolchain.toml` selects the
   nightly. Stable cargo, including `mise exec rust@1.98.1` (it sets `RUSTUP_TOOLCHAIN`), rejects
   `.cargo/config.toml`'s Cranelift settings.
-- `cargo test --workspace --exclude html5ever` runs everything. The app's integration tests need
+- `cargo nextest run --workspace --exclude html5ever -E "not (package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS))"`
+  runs everything but four panic-recovery tests, which need campfire on LLVM:
+  `cargo nextest run -p campfire --config 'profile.dev.package.campfire.codegen-backend="llvm"' -E "package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)"`
+  (`CAMPFIRE_LLVM_ONLY_TESTS` is in `.github/workflows/rust.yml`). Plain `cargo test --workspace`
+  exits 101 at the first of them under Cranelift. The app's integration tests need
   the `default`, `first_run` and `agents_ui` seeds (`parity/bin/seed build default first_run agents_ui`, which runs the
   reference). Missing seeds fail whenever `CI` is set; locally they skip with a message, so say
   which seeds were built when reporting results. CI archives `parity/reference.sha`, caches
   the reference image and seeds by their exact inputs, and validates even restored seeds with
-  Rails before testing. See `parity/seeds/README.md`. Storage vectors compare media bytes only when the
+  Rails in every run (the `Rust seeds` job, which both gates require). See `parity/seeds/README.md`. Storage vectors compare media bytes only when the
   local libvips/ffmpeg match the ones that produced `vectors/storage.json`.
 - `cargo clippy --workspace --exclude html5ever --all-targets` should stay clean. (`html5ever` is a
   vendored copy with one backported fix, kept identical to upstream otherwise.)
