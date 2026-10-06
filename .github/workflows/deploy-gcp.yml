@@ -219,13 +219,23 @@ jobs:
           # omit correctness jobs, and a dispatch can check out an input ref
           # that differs from the run's head_sha, so only push/schedule runs
           # prove this SHA.
-          url="$(gh api --method GET "repos/${REPO}/actions/workflows/rust.yml/runs" \
+          # The run must also contain a successful "Rust port" job: the
+          # aggregate over the sharded test, clippy, llvm, stable and seeds jobs.
+          url=""
+          for run_id in $(gh api --method GET "repos/${REPO}/actions/workflows/rust.yml/runs" \
             -f head_sha="$SHA" -f status=completed \
-            --jq '[.workflow_runs[] | select(.conclusion == "success" and (.event == "push" or .event == "schedule"))] | first | .html_url // ""')"
+            --jq '.workflow_runs[] | select(.conclusion == "success" and (.event == "push" or .event == "schedule")) | .id'); do
+            port="$(gh api --method GET "repos/${REPO}/actions/runs/${run_id}/jobs" -f per_page=100 --paginate \
+              --jq '.jobs[] | select(.name == "Rust port") | .conclusion')"
+            if [ "$port" = success ]; then
+              url="$(gh api "repos/${REPO}/actions/runs/${run_id}" --jq .html_url)"
+              break
+            fi
+          done
           if [ -n "$url" ]; then
             echo "Rust checks passed for ${SHA}: ${url}"
           elif [ "$ENVIRONMENT" = production ]; then
-            echo "::error::no successful Rust workflow run (push or schedule) for ${SHA}"
+            echo "::error::no successful Rust workflow run (push or schedule) with a passing \"Rust port\" job for ${SHA}"
             gh api --method GET "repos/${REPO}/actions/workflows/rust.yml/runs" \
               -f head_sha="$SHA" --jq '.workflow_runs[] | "\(.event) \(.status) \(.conclusion) \(.html_url)"' || true
             exit 1

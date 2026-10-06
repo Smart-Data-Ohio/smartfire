@@ -80,7 +80,12 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("push", gate)
         self.assertIn("schedule", gate)
         self.assertNotIn("ci.yml", (ROOT / ".github/workflows/deploy-gcp.yml").read_text())
-        print("WORKFLOW GATE: rust.yml push/schedule success is the single gate")
+        self.assertIn('select(.name == "Rust port")', gate)
+        rust = yaml_json((ROOT / ".github/workflows/rust.yml").read_text())
+        port = [job for job in rust["jobs"].values() if job.get("name") == "Rust port"]
+        self.assertEqual(len(port), 1, "rust.yml must keep exactly one aggregate job named 'Rust port'")
+        self.assertIn("always()", port[0]["if"])
+        print("WORKFLOW GATE: rust.yml push/schedule success with its 'Rust port' aggregate is the single gate")
 
     def test_image_workflow_publishes_from_main_only_with_pinned_actions(self):
         image = yaml_json((ROOT / ".github/workflows/publish-rust-image.yml").read_text())
