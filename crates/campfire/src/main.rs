@@ -14,9 +14,8 @@ use campfire_app::{account_security, config, errors, net, queue, security};
 #[cfg(test)]
 use campfire_app::{cable, state, test_support};
 
-// The web layer (crates/web), likewise. `concerns`, `mail` and `controllers::presenters` (with
-// `controllers::messages::rendered`, mirrored in `controllers`) also hold tests of theirs that
-// boot the whole app.
+// The web layer (crates/web), likewise. `concerns`, `mail` and `controllers::presenters` (mirrored
+// in `controllers`) also hold tests of theirs that boot the whole app.
 use campfire_web::{active_storage, authentication, messaging, rich_text};
 
 mod concerns {
