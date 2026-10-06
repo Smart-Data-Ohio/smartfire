@@ -557,7 +557,7 @@
       "status": "not_reachable",
       "branch": "Retired HTML autocomplete renderer: no production call site. Pinned Rails has only JSON picker templates; fresh HTML GET returns 406. users/autocompletables/template has no Rails render reference in controllers/helpers/views.",
       "sources": [
-        "crates/campfire/src/controllers/autocompletable.rs"
+        "crates/controllers/src/controllers/autocompletable.rs"
       ],
       "scope": "rust_production"
     },
@@ -565,7 +565,7 @@
       "status": "not_reachable",
       "branch": "Retired HTML autocomplete renderer: no production call site. Pinned Rails has only JSON picker templates; fresh HTML GET returns 406. users/autocompletables/template has no Rails render reference in controllers/helpers/views.",
       "sources": [
-        "crates/campfire/src/controllers/autocompletable.rs"
+        "crates/controllers/src/controllers/autocompletable.rs"
       ],
       "scope": "rust_production"
     },

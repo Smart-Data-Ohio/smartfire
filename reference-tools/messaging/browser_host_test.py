@@ -34,7 +34,7 @@ class HostSourceTests(unittest.TestCase):
 
     def test_generated_pwa_module_keeps_its_real_relative_compile_inputs(self):
         project = Path(__file__).resolve().parents[2]
-        module = Path("crates/campfire/src/controllers/pwa.rs")
+        module = Path("crates/campfire/src/controllers/pwa/tests.rs")
         content = (project / module).read_bytes()
         includes = re.findall(r'\binclude_(?:str|bytes)!\s*\(\s*"([^"]+)"', content.decode())
         self.assertTrue(includes, "the real PWA module must exercise compile-time inputs")
