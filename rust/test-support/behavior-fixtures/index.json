@@ -1,0 +1,185 @@
+{
+  "reference": "78b9b1546bdab4c6c1c9b8ddb94512f661289112",
+  "seed": "parity/seeds/frozen/default",
+  "cases": {
+    "drive_attachments": {
+      "attach Drive files from the picker, send textless, and remove through edit": "drive--attach-drive-files-from-the-picker-send-textless-and-remove--ce766d58",
+      "edit a room message in the composer and remove one of two attachments": "drive--edit-a-room-message-in-the-composer-and-remove-one-of-two-at-f9f26bc5",
+      "attach a Drive file from the thread composer": "drive--attach-a-drive-file-from-the-thread-composer-957912b2"
+    },
+    "motion": {
+      "motion is off by default in the test environment": "motion--motion-is-off-by-default-in-the-test-environment-010516e4",
+      "mobile drawer animates in, lands in place, and returns focus with motion on": "motion--mobile-drawer-animates-in-lands-in-place-and-returns-focus-w-e5f04761",
+      "member selection mode moves no rows and resizes nothing": "motion--member-selection-mode-moves-no-rows-and-resizes-nothing-4ff58074",
+      "people directory bar shifts no rows when toggling": "motion--people-directory-bar-shifts-no-rows-when-toggling-9f89c215",
+      "people directory bar stays stuck while scrolling": "motion--people-directory-bar-stays-stuck-while-scrolling-d930ce62",
+      "room menu measures at full scale when clamping to the viewport edge": "motion--room-menu-measures-at-full-scale-when-clamping-to-the-viewpo-a07c366b",
+      "mobile drawer keeps the room list scroll position across close and reopen": "motion--mobile-drawer-keeps-the-room-list-scroll-position-across-clo-10722f9d",
+      "mobile drawer reveals a current room far down the list on first open": "motion--mobile-drawer-reveals-a-current-room-far-down-the-list-on-fi-608990b1",
+      "mobile drawer reopens on the current room when it is already in view": "motion--mobile-drawer-reopens-on-the-current-room-when-it-is-already-66f430b2"
+    },
+    "mobile_layout": {
+      "the profile page fits phone widths without scrolling sideways": "mobile-layout",
+      "headers outside the workspace shell stay opaque over scrolled content": "mobile-layout",
+      "headers outside the workspace shell never cover the page or its scrollbar": "mobile-layout",
+      "pages outside the workspace shell show no drawer toggle that opens nothing": "mobile-layout",
+      "every drawer destination has one toggle that opens the drawer on itself": "mobile-layout"
+    },
+    "channel_threads_controller": {
+      "converts a thread to work, assigns an eligible owner, and keeps an audit trail": "work-controller--converts-a-thread-to-work-assigns-an-eligible-owner-and-keep-74a42808",
+      "work owner must be an eligible parent-room member and a revoked owner stays visible as unavailable": "work-controller--work-owner-must-be-an-eligible-parent-room-member-and-a-revo-9d8d5d92",
+      "assigned owner can change work status but cannot reassign it": "work-controller--assigned-owner-can-change-work-status-but-cannot-reassign-it-1a8bd8e6",
+      "only a thread manager can remove work tracking": "work-controller--only-a-thread-manager-can-remove-work-tracking-86e55071",
+      "a manager can assign an eligible agent and the agent is notified": "work-controller--a-manager-can-assign-an-eligible-agent-and-the-agent-is-noti-89a011e7",
+      "the owner picker lists eligible agents with profiles and excludes ineligible ones": "work-controller--the-owner-picker-lists-eligible-agents-with-profiles-and-exc-c87f6a27",
+      "a member who cannot manage the thread cannot assign an agent": "work-controller--a-member-who-cannot-manage-the-thread-cannot-assign-an-agent-87e563c5",
+      "ordinary thread fields remain separate from work tracking": "work-controller--ordinary-thread-fields-remain-separate-from-work-tracking-65f04463"
+    },
+    "sending_messages": {
+      "uploading a fresh video in the thread composer": "workspace-upload",
+      "sending messages between two users": null,
+      "editing messages": null,
+      "deleting messages": null
+    },
+    "workspace_markdown": {
+      "workspace follows the system theme and mobile navigation remains reachable": null,
+      "Markdown messages reach other users and editing preserves the original source": null,
+      "desktop keyboard composition keeps line breaks and sends once after composition ends": null,
+      "untrusted markup stays inert in the delivered message": null,
+      "Markdown replies and file attachments remain usable": "workspace-upload",
+      "late upload progress preserves a delivered attachment and reply preview": "workspace-upload",
+      "mention suggestions select a room member without sending the unfinished message": null,
+      "a rejected message can be recovered corrected and sent": null,
+      "sending preserves the submitted source and a newer draft": null
+    },
+    "threads": {
+      "tracks work, assigns an owner, completes and reopens it without losing the conversation": null,
+      "shows work-thread guidance in the new-thread form and on the work page": null,
+      "keeps the new-thread guidance usable on a phone": null,
+      "shows work assignment activity to the owner and opens the exact thread": null,
+      "keeps the thread drawer usable on a phone and preserves the channel": null,
+      "marks a joined thread read only while the conversation is visible": null,
+      "opens a shared thread message link around an older post": "thread-anchor",
+      "keeps an anchored older thread unread when a new reply arrives": "thread-anchor-race",
+      "creates a thread from a channel message and keeps the channel draft separate": null,
+      "the thread root counts its replies live and hides the count when none remain": null,
+      "a stray create re-entry does not wipe the half-filled thread name": null,
+      "browses active and closed threads and can join or leave a closed one": null,
+      "rejects an external thread deep link before fetching it": null,
+      "renders untrusted thread metadata as text": null,
+      "discusses a pull request from its card": "thread-pr"
+    },
+    "message_list_a11y": {
+      "the message list is a single tab stop with a roving tabindex": "message_list",
+      "arrow keys move between messages": "message_list",
+      "a stream replacing the focused message keeps focus and the tab stop on its replacement": "message_list",
+      "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement": "message_list",
+      "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement": "message_list",
+      "deleting the focused message moves focus to the surviving tab stop": "message_list",
+      "deleting an older focused message hands focus to its neighbour, not the newest": "message_list",
+      "a focus move during a stream render survives Turbo's focus restore": "message_list",
+      "a no-change room refresh does not yank focus back to the composer": "message_list",
+      "the ContextMenu key opens the shared menu and Escape returns focus": "message_list",
+      "a late composer autofocus does not steal focus from a message": "message_list",
+      "up arrow from an empty composer still edits my last message": "message_list",
+      "up-arrow-to-edit shows an error when the actions endpoint fails": "message_list",
+      "forward reuses the menu-open metadata request instead of fetching again": "message_list",
+      "a menu opened while an action waits does not redirect the pending action": "message_list",
+      "the menu closes before Turbo caches the page": "message_list",
+      "the main message list is a live log": "message_list",
+      "paginated history stays quiet past the insert, then the live region comes back": "history",
+      "an edit replacement is not announced as an addition": "message_list",
+      "an own message is not re-announced when its broadcast replaces the pending copy": "message_list",
+      "search results keep their menus and focusability": "message_destinations",
+      "the message-list top padding does not apply to search results": "message_destinations",
+      "the standalone thread page keeps menus and focusability": "message_destinations",
+      "the standalone message page keeps its menu and focusability": "message_destinations",
+      "the viewport allows pinch zoom": "message_destinations",
+      "profile message and ban buttons have accessible names": "message_destinations",
+      "flash persists its 5-second minimum under reduced motion": "message_destinations",
+      "flash dismisses on demand under reduced motion": "message_destinations",
+      "text fields stay at 16px on touch devices without changing the desktop look": "board-touch"
+    },
+    "search_forward_edit": {
+      "search tolerates operators, shows an empty state and pages older results": "search",
+      "forwarded Markdown keeps tables and code blocks": "forward",
+      "editing to add a URL renders its card live and the edited marker on load": "edit-card"
+    },
+    "unread_divider": {
+      "few unread render the divider above the first new message and keep the bottom scroll": "unread-few",
+      "many unread scroll the room to the divider": "unread-many",
+      "the jump pill shows while the divider is off-screen and returns to it": "unread-pill",
+      "unread older than the last page keeps the last page and the pill links to the first unread": "unread-offpage",
+      "mark unread from the message menu points the divider at that message": "unread-menu"
+    },
+    "composer": {
+      "blurring an open autocomplete does not leave a zombie that swallows Enter": "composer-drafts",
+      "a stale icon response does not poison the suggestion commit": "composer-drafts",
+      "mention queries are URL-encoded": "composer-drafts",
+      "composer autocomplete exposes combobox semantics over a polite listbox": "composer-drafts",
+      "composing text does not commit a suggestion or send the message": "composer-drafts",
+      "clicking a reply preview scrolls to the loaded message instead of navigating": "composer-drafts",
+      "clicking a reply preview falls back to the permalink when the target is not loaded": "composer-drafts",
+      "deleting a replied-to message turns open reply previews into a tombstone": "composer-drafts",
+      "two typers with the same name do not merge": "composer-typing",
+      "composer drafts persist per room and clear on send": "composer-drafts",
+      "thread drafts persist per thread without touching the channel draft": "composer-drafts"
+    },
+    "composer_attach_menu": {
+      "From Google Drive starts the legacy picker flow": "drive--from-google-drive-starts-the-legacy-picker-flow-f171fe97",
+      "From Google Drive starts the enhanced share flow when sharing is configured": "attach-share",
+      "+ shows both attach options when Drive is available": "attach-menu",
+      "From this device triggers the file input": "attach-menu",
+      "+ opens the file picker directly without Drive": "attach-menu",
+      "arrow keys move between items and Escape closes back onto +": "attach-menu",
+      "a tap outside closes the menu": "attach-menu",
+      "phone layout keeps the menu above the composer with no horizontal overflow": "attach-menu",
+      "device files, paste, and drag-and-drop still preview uploads": "attach-menu"
+    },
+    "boosting_messages": {
+      "boosting a message": "boosts",
+      "deleting a boost": "boosts",
+      "message update preserves the input state": "boosts",
+      "boost by another user preserves the input state": "boosts"
+    },
+    "message_interactions": {
+      "opens message actions from context menu and keyboard, and cancels a moving long press": "interactions",
+      "a release click landing on the just-opened menu does not activate it": "interactions",
+      "shows the message action menu as a bottom sheet on phones": "interactions",
+      "edits through the normal composer and restores the saved draft on cancel and success": "interactions",
+      "a duplicate delivery does not replace the message while its actions are open": "interactions",
+      "keeps newer typing through an asynchronous edit and leaves failures in edit mode": "interactions",
+      "replies with notify off and renders a tombstone when the target is deleted": "interactions",
+      "copies message text and link and forwards to a server-provided thread destination": "interactions",
+      "forwarding twice in a row submits only once": "interactions",
+      "groups emoji reactions, updates the live count, and highlights the current user": "interactions"
+    },
+    "message_actions_mobile": {
+      "message action menu is a bottom sheet with touch-sized targets on phones": "actions-mobile",
+      "message action menu stays a floating popover on desktop": "actions-mobile"
+    },
+    "message_toolbar": {
+      "the toolbar stays hidden until hover or focus and labels every action": "toolbar",
+      "quick-react creates a boost from the toolbar": "toolbar",
+      "reply and thread buttons drive the composer and the thread panel": "toolbar",
+      "the more button opens the shared menu for its message": "toolbar",
+      "keyboard users reach the toolbar from a focused message": "toolbar",
+      "the emoji picker searches and reacts": "toolbar",
+      "the picker shows category tabs and switches between them": "toolbar",
+      "the picker loads its emoji data only on first open": "toolbar",
+      "the picker remembers recent reactions": "toolbar",
+      "the picker Custom tab reacts with a workspace icon": "toolbar",
+      "the picker reacts with a brand icon shortcode": "toolbar",
+      "picker arrows move through options, Enter selects, and Escape returns focus": "toolbar",
+      "picker tabs move with arrow keys and switch the grid": "toolbar"
+    },
+    "code_highlighting": {
+      "thread code stays readable in both themes and scrolls within a narrow screen": "highlight-thread",
+      "language fences highlight common code without changing its text": "highlight",
+      "unlabelled code is detected while text unknown languages and inline code stay literal": "highlight",
+      "search results highlight code on initial load and after returning to the channel": "highlight-search",
+      "code and copying remain available when the highlighter cannot load": "highlight",
+      "editing a code block replaces its language colors and copied source": "highlight"
+    }
+  }
+}
