@@ -9,7 +9,7 @@ Two GitHub workflows drive it:
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| [`publish-image.yml`](../../.github/workflows/publish-image.yml) | push to `main`, push `v*` tags, manual (dry run by default) | Builds the Rust image for `linux/amd64` and `linux/arm64` on native runners. On a push to `main` (or a manual run on `main` with `dry_run` off), copies the amd64 manifest by digest to Artifact Registry as `rust-git-<full sha>` and attests provenance; it also publishes the multi-arch image to GHCR. |
+| [`publish-image.yml`](../../.github/workflows/publish-image.yml) | push to `main`, push `v*` tags, manual (dry run by default) | On a push to `main` (or a manual run on `main` with `dry_run` off), its amd64 job builds the Rust image for `linux/amd64` and pushes `rust-git-<full sha>` to Artifact Registry, then attests provenance. That job depends on nothing else in the workflow. A native arm64 build runs alongside, and once both finish, the GHCR job publishes a multi-arch image made from the same amd64 manifest. Publishing runs are never cancelled. |
 | [`deploy-gcp.yml`](../../.github/workflows/deploy-gcp.yml) | manual only | Production only from `main`. Requires a successful `rust.yml` push or scheduled run (with its `Rust port` job) for the revision, resolves `rust-git-<sha>` to a digest and runs `campfire-release.sh` on the app VM through an IAP SSH tunnel. |
 
 Production runs the Rust port. The release script only moves one Rust image (label
@@ -130,7 +130,7 @@ Run its local checks with
 ## Repository tags are immutable
 
 Artifact Registry rejects moving an existing tag. `publish-image.yml` therefore
-looks the tag up first: if `rust-git-<sha>` already exists it skips the copy and resolves
+looks the tag up first: if `rust-git-<sha>` already exists it skips the build and resolves
 the published digest, so re-running the workflow for an already-released revision is a
 no-op rather than a failure. A lookup that fails for any reason *other* than "not
 found" — auth, network, permissions — fails the run instead of rebuilding blindly into

@@ -96,10 +96,10 @@ in `parity/SCREENS.md`. Golden vectors and fixtures were recorded from Rails and
 
 This repository's deployable Rust image is private in **GCP Artifact Registry**, tagged
 **`rust-git-<full Git SHA>`**, for **`linux/amd64`**.
-[`publish-image.yml`](../.github/workflows/publish-image.yml) builds it on every push to main
-(or resolves an existing immutable tag), along with an arm64 build on a native runner, and
-publishes both as a multi-arch image to GHCR (`ghcr.io/smart-data-ohio/smartfire`) for
-self-hosters. A manual dry run builds both without pushing. The registry image path comes from
+[`publish-image.yml`](../.github/workflows/publish-image.yml) builds and pushes it on every push
+to main (or resolves an existing immutable tag) in a job of its own. An arm64 build runs alongside
+on a native runner, and GHCR (`ghcr.io/smart-data-ohio/smartfire`) gets both as a multi-arch image
+for self-hosters, built from the same amd64 manifest. A manual dry run builds both without pushing. The registry image path comes from
 the `GCP_IMAGE` repository variable.
 
 Deploy the selected commit with
