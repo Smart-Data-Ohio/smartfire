@@ -1,14 +1,18 @@
 import { useParams } from "@tanstack/react-router";
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { setTheme, useAppearance } from "../../lib/appearance.ts";
+import { shortcutKeys } from "../../lib/shortcuts.ts";
 import { useStore } from "../../store/store.ts";
 import { Button } from "../../ui/button.tsx";
 import { IconButton } from "../../ui/icon-button.tsx";
 import { Icon } from "../../ui/icons/icon.tsx";
+import { ariaKeyShortcuts, Kbd } from "../../ui/kbd.tsx";
+import { Menu, MenuItem, MenuSeparator } from "../../ui/menu.tsx";
 import { Skeleton, SkeletonReveal } from "../../ui/skeleton.tsx";
 import { UNKNOWN_NAME } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { useDestination } from "../shell/view-store.ts";
+import { openOverlay } from "../switcher/overlay-store.ts";
 import { type SidebarSection, sidebarSections } from "./sections.ts";
 import { SidebarRow } from "./sidebar-row.tsx";
 import "./sidebar.css";
@@ -38,13 +42,17 @@ interface SectionProps {
   readonly open: boolean;
   readonly selectedRoomId: number | null;
   readonly onToggle: () => void;
+  /** A button at the heading's end (Direct messages' "+"). */
+  readonly action?: ReactNode;
+  /** What an empty open section says, or offers. */
+  readonly empty: ReactNode;
 }
 
 /**
  * A collapsible group (the transitions.dev accordion). Collapsed, it still lists its unread rows
  * and the open conversation, as Slack does, so nothing new hides behind a chevron.
  */
-function Section({ section, open, selectedRoomId, onToggle }: SectionProps) {
+function Section({ section, open, selectedRoomId, onToggle, action, empty }: SectionProps) {
   const id = useId();
 
   const peeking = open
@@ -55,21 +63,24 @@ function Section({ section, open, selectedRoomId, onToggle }: SectionProps) {
 
   return (
     <div className="sidebar-section t-acc" data-open={open}>
-      <h2 className="sidebar-section-heading">
-        <button
-          type="button"
-          id={`${id}-trigger`}
-          className="sidebar-section-trigger"
-          aria-expanded={open}
-          aria-controls={`${id}-panel`}
-          onClick={onToggle}
-        >
-          <span className="t-acc-chevron">
-            <Icon name="chevron-down" size={12} />
-          </span>
-          {section.title}
-        </button>
-      </h2>
+      <div className="sidebar-section-heading">
+        <h2 className="sidebar-section-title">
+          <button
+            type="button"
+            id={`${id}-trigger`}
+            className="sidebar-section-trigger"
+            aria-expanded={open}
+            aria-controls={`${id}-panel`}
+            onClick={onToggle}
+          >
+            <span className="t-acc-chevron">
+              <Icon name="chevron-down" size={12} />
+            </span>
+            {section.title}
+          </button>
+        </h2>
+        {action}
+      </div>
       <section
         id={`${id}-panel`}
         className="t-acc-panel"
@@ -81,11 +92,7 @@ function Section({ section, open, selectedRoomId, onToggle }: SectionProps) {
             {section.rows.map((row) => (
               <SidebarRow key={row.room.id} row={row} selected={row.room.id === selectedRoomId} />
             ))}
-            {section.rows.length === 0 ? (
-              <li className="sidebar-empty text-faint">
-                {section.key === "direct" ? "No conversations yet" : "No channels yet"}
-              </li>
-            ) : null}
+            {section.rows.length === 0 ? <li className="sidebar-empty">{empty}</li> : null}
           </ul>
         </div>
       </section>
@@ -100,16 +107,101 @@ function Section({ section, open, selectedRoomId, onToggle }: SectionProps) {
   );
 }
 
+/** The first-load placeholder: two sections' worth of rows, shaped like the real ones. */
 function SidebarSkeleton() {
-  return (
-    <div className="sidebar-skeleton">
-      {[72, 56, 64, 48, 80, 60].map((width) => (
-        // The widths are distinct, so each one names its row.
+  const group = (key: string, widths: readonly number[], avatar: boolean) => (
+    <div key={key} className="sidebar-skeleton-group">
+      <Skeleton width={72} height={8} />
+      {widths.map((width) => (
+        // The widths are distinct within a group, so each one names its row.
         <span key={width} className="sidebar-skeleton-row">
-          <Skeleton width={16} height={16} radius="sm" />
-          <Skeleton width={`${width}%`} height={10} />
+          <Skeleton
+            width={avatar ? 20 : 14}
+            height={avatar ? 20 : 14}
+            radius={avatar ? "md" : "sm"}
+          />
+          <Skeleton width={`${width}%`} height={9} />
         </span>
       ))}
+    </div>
+  );
+
+  return (
+    <div className="sidebar-skeleton">
+      {group("channels", [62, 48, 70, 54, 40], false)}
+      {group("direct", [58, 44, 66], true)}
+    </div>
+  );
+}
+
+/** The workspace header: the account's menu (shortcuts live there) and a new-message button. */
+function WorkspaceHeader({ title }: { readonly title: string }) {
+  return (
+    <header className="sidebar-header">
+      <Menu
+        label={`${title} menu`}
+        trigger={(props) => (
+          <Button
+            {...props}
+            variant="ghost"
+            size="sm"
+            trailingIcon="chevron-down"
+            className="sidebar-workspace"
+          >
+            <span className="sidebar-workspace-name">{title}</span>
+          </Button>
+        )}
+      >
+        <MenuItem
+          icon="square-pen"
+          shortcut={shortcutKeys("new-direct")}
+          onSelect={() => openOverlay("new-direct")}
+        >
+          New message
+        </MenuItem>
+        <MenuItem
+          icon="search"
+          shortcut={shortcutKeys("switcher")}
+          onSelect={() => openOverlay("switcher")}
+        >
+          Jump to…
+        </MenuItem>
+        <MenuSeparator />
+        <MenuItem
+          icon="keyboard"
+          shortcut={shortcutKeys("shortcuts")}
+          onSelect={() => openOverlay("shortcuts")}
+        >
+          Keyboard shortcuts
+        </MenuItem>
+      </Menu>
+      <IconButton
+        icon="square-pen"
+        label="New message"
+        shortcut={shortcutKeys("new-direct")}
+        tooltipPlacement="bottom"
+        className="sidebar-compose"
+        onClick={() => openOverlay("new-direct")}
+      />
+    </header>
+  );
+}
+
+/** The search bar that opens the quick switcher, with its shortcut, as Slack's top bar does. */
+function JumpButton() {
+  return (
+    <div className="sidebar-jump-wrap">
+      <Button
+        variant="secondary"
+        size="sm"
+        icon="search"
+        className="sidebar-jump"
+        aria-keyshortcuts={ariaKeyShortcuts(shortcutKeys("switcher"))}
+        onClick={() => openOverlay("switcher")}
+      >
+        <span className="sidebar-jump-label">Jump to…</span>
+        <Kbd keys={shortcutKeys("switcher")} className="sidebar-jump-kbd" />
+      </Button>
     </div>
   );
 }
@@ -149,7 +241,8 @@ function YouPanel() {
 
 /**
  * The conversation list: the workspace header, then Favourites, your categories, Channels, Voice
- * and Direct messages, then your own panel. Read-only organisation in this slice.
+ * and Direct messages, then your own panel. The header's menu, the compose button, the jump bar
+ * and Direct messages' "+" open the switcher, shortcuts and new-message overlays.
  */
 export function Sidebar() {
   const sidebar = useStore((state) => state.sidebar);
@@ -183,13 +276,38 @@ export function Sidebar() {
     writeCollapsed(next);
   };
 
+  const newMessage = (
+    <IconButton
+      icon="plus"
+      label="New message"
+      shortcut={shortcutKeys("new-direct")}
+      size="sm"
+      className="sidebar-section-action"
+      onClick={() => openOverlay("new-direct")}
+    />
+  );
+
+  const emptyFor = (section: SidebarSection) =>
+    section.key === "direct" ? (
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="plus"
+        className="sidebar-empty-action"
+        onClick={() => openOverlay("new-direct")}
+      >
+        Start a conversation
+      </Button>
+    ) : (
+      <span className="text-faint">No channels yet</span>
+    );
+
   return (
     <aside className="sidebar" aria-label="Conversations">
-      <header className="sidebar-header">
-        <Button variant="ghost" size="sm" trailingIcon="chevron-down" className="sidebar-workspace">
-          {accountName ?? "Smartfire"}
-        </Button>
-      </header>
+      <WorkspaceHeader
+        title={destination === "dms" ? "Direct messages" : (accountName ?? "Smartfire")}
+      />
+      <JumpButton />
       <div className="sidebar-scroll">
         {sidebar.status === "error" ? (
           <p className="sidebar-error text-meta">Couldn't load your conversations.</p>
@@ -202,6 +320,8 @@ export function Sidebar() {
                 open={isOpen(section)}
                 selectedRoomId={selectedRoomId}
                 onToggle={() => toggle(section)}
+                action={section.key === "direct" ? newMessage : undefined}
+                empty={emptyFor(section)}
               />
             ))}
           </SkeletonReveal>

@@ -7,6 +7,7 @@ import { Icon } from "../../ui/icons/icon.tsx";
 import { isAgent, useUser } from "../people/people.ts";
 import { UserAvatar } from "../people/user-avatar.tsx";
 import { ROOM_KIND_ICON } from "../room/room-icon.ts";
+import { GroupAvatars } from "./group-avatars.tsx";
 import { rowPillCount } from "./sections.ts";
 
 /** Whether someone (other than the viewer) is typing in the room right now. */
@@ -43,8 +44,8 @@ function DirectGlyph({ row }: { readonly row: Row }) {
 
   if (row.directMemberIds.length > 1) {
     return (
-      <span className="sidebar-row-glyph sidebar-row-group" aria-hidden="true">
-        {row.directMemberIds.length}
+      <span className="sidebar-row-glyph">
+        <GroupAvatars ids={row.directMemberIds} size={20} />
       </span>
     );
   }

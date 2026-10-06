@@ -12,15 +12,80 @@
     display: flex;
     flex-shrink: 0;
     align-items: center;
+    gap: var(--space-1);
     height: var(--pane-header-height);
     padding: 0 var(--space-2);
     box-shadow: 0 1px 0 var(--border);
   }
 
   .sidebar-workspace {
+    --button-fg: var(--text);
+
+    flex-shrink: 1;
+    min-width: 0;
     max-width: 100%;
+    margin-right: auto;
     font-size: var(--text-body);
     font-weight: var(--weight-semibold);
+  }
+
+  .sidebar-workspace .button-stack,
+  .sidebar-workspace .button-label {
+    min-width: 0;
+  }
+
+  .sidebar-workspace-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Slack's search bar: a quiet field-shaped button that opens the switcher. */
+  .sidebar-jump-wrap {
+    flex-shrink: 0;
+    padding: var(--space-2) var(--space-2) 0;
+  }
+
+  .sidebar-jump {
+    --button-bg: color-mix(in oklch, var(--bg-sidebar), var(--bg-pane) 55%);
+    --button-bg-hover: var(--bg-pane);
+    --button-bg-active: var(--bg-pane);
+    --button-ring: var(--border);
+    --button-fg: var(--text-muted);
+
+    justify-content: flex-start;
+    width: 100%;
+    box-shadow: inset 0 0 0 1px var(--button-ring);
+    font-weight: var(--weight-regular);
+  }
+
+  .sidebar-jump:hover {
+    --button-ring: var(--border-strong);
+    --button-fg: var(--text);
+  }
+
+  .sidebar-jump .button-stack {
+    flex: 1;
+    justify-items: stretch;
+  }
+
+  .sidebar-jump-label {
+    flex: 1;
+    text-align: start;
+  }
+
+  .sidebar-jump-kbd .kbd-key {
+    min-width: 16px;
+    height: 16px;
+    background: var(--bg-sidebar);
+    font-size: 10px;
+  }
+
+  /* A phone has no keyboard to hint at. */
+  @media (width < 720px), (hover: none) {
+    .sidebar-jump-kbd {
+      display: none;
+    }
   }
 
   .sidebar-scroll {
@@ -36,10 +101,41 @@
   }
 
   .sidebar-section-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-0-5);
     padding: 0 var(--space-2);
+  }
+
+  .sidebar-section-title {
+    flex: 1;
+    min-width: 0;
     font-size: inherit;
     font-weight: inherit;
     letter-spacing: normal;
+  }
+
+  /* The heading's "+": shown on hover or focus of the section, always on touch screens. */
+  .sidebar-section-action {
+    --button-height: 22px;
+
+    opacity: 0;
+    transition:
+      opacity var(--duration-micro) var(--ease-enter),
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter);
+  }
+
+  .sidebar-section:hover .sidebar-section-action,
+  .sidebar-section-heading:focus-within .sidebar-section-action,
+  .sidebar-section-action[aria-expanded="true"] {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .sidebar-section-action {
+      opacity: 1;
+    }
   }
 
   .sidebar-section-trigger {
@@ -107,24 +203,35 @@
     font-weight: var(--weight-semibold);
   }
 
-  /* Discord's unread nub on the row's leading edge. */
+  /*
+   * The unread pill: a fully rounded bar in the gutter left of the row (Discord's nub, kept
+   * whole, never cut by the sidebar's edge). It grows a little on hover, like Discord's.
+   */
   .sidebar-row::before {
     content: "";
     position: absolute;
     top: 50%;
-    left: calc(var(--space-2) * -1);
+    left: calc(var(--space-1-5) * -1);
     width: 4px;
     height: 8px;
-    border-radius: 0 4px 4px 0;
+    border-radius: var(--radius-pill);
     background: var(--text);
     translate: 0 -50%;
-    scale: 0 1;
-    transform-origin: left;
-    transition: scale var(--duration-small) var(--ease-move);
+    opacity: 0;
+    scale: 0;
+    transition:
+      scale var(--duration-small) var(--ease-move),
+      opacity var(--duration-small) var(--ease-move);
   }
 
   .sidebar-row[data-state="unread"]::before {
+    opacity: 1;
     scale: 1;
+  }
+
+  /* Grown by scale, not height, so the hover stays on the compositor. */
+  .sidebar-row[data-state="unread"]:hover::before {
+    scale: 1 1.75;
   }
 
   .sidebar-row[data-state="muted"] {
@@ -136,6 +243,61 @@
     background: var(--bg-selected);
     color: var(--text);
     font-weight: var(--weight-medium);
+  }
+
+  /* A group DM's two avatars, corner to corner; the front one ringed in the row's surface. */
+  .group-avatars {
+    --group-ring: var(--bg-sidebar);
+
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+    width: var(--group-size);
+    height: var(--group-size);
+  }
+
+  .group-avatars > span {
+    position: absolute;
+    display: inline-flex;
+  }
+
+  .group-avatars-back {
+    top: 0;
+    left: 0;
+  }
+
+  .group-avatars-front {
+    right: 0;
+    bottom: 0;
+    border-radius: calc(var(--group-size) * 0.22);
+    box-shadow: 0 0 0 1.5px var(--group-ring);
+  }
+
+  .group-avatars .avatar {
+    --avatar-radius: calc(var(--group-size) * 0.22);
+
+    font-size: calc(var(--group-size) * 0.32);
+    letter-spacing: -0.02em;
+  }
+
+  .group-avatars-back .avatar-initials {
+    visibility: hidden;
+  }
+
+  .switcher-glyph .group-avatars {
+    --group-ring: var(--bg-raised);
+  }
+
+  .sidebar-row:hover .group-avatars {
+    --group-ring: var(--bg-hover);
+  }
+
+  .sidebar-row[data-state="selected"] .group-avatars {
+    --group-ring: var(--bg-selected);
+  }
+
+  .switcher-option[data-active] .switcher-glyph .group-avatars {
+    --group-ring: var(--bg-selected);
   }
 
   .sidebar-row-glyph {
@@ -162,14 +324,6 @@
     --avatar-ring: var(--bg-selected);
   }
 
-  .sidebar-row-group {
-    border-radius: var(--radius-xs);
-    background: var(--bg-active);
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: var(--weight-semibold);
-  }
-
   .sidebar-row-icon {
     opacity: 0.75;
   }
@@ -192,6 +346,17 @@
     font-size: var(--text-sidebar);
   }
 
+  .sidebar-empty:has(.sidebar-empty-action) {
+    padding: 0;
+  }
+
+  .sidebar-empty-action {
+    justify-content: flex-start;
+    width: 100%;
+    padding-inline: var(--space-2);
+    font-weight: var(--weight-regular);
+  }
+
   .sidebar-error {
     padding: var(--space-3) var(--space-4);
     color: var(--danger-text);
@@ -200,8 +365,14 @@
   .sidebar-skeleton {
     display: flex;
     flex-direction: column;
+    gap: var(--space-5);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .sidebar-skeleton-group {
+    display: flex;
+    flex-direction: column;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-4);
   }
 
   .sidebar-skeleton-row {
@@ -251,5 +422,19 @@
   .sidebar-row .badge[data-open="false"] {
     width: 0;
     margin-left: calc(var(--space-2) * -1);
+  }
+}
+
+@layer app {
+  /* Phones: the list is the home screen, so rows get thumb-sized. */
+  @media (width < 720px) {
+    .sidebar-row {
+      height: 40px;
+      font-size: var(--text-body);
+    }
+
+    .sidebar-section-trigger {
+      height: 32px;
+    }
   }
 }

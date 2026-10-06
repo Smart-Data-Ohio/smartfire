@@ -1,0 +1,245 @@
+/* The quick switcher: a command-palette surface on the modal recipe, pinned high like Slack's. */
+@layer app {
+  .dialog:has(.switcher) {
+    width: min(640px, calc(100vw - var(--space-8)));
+    margin-block: min(14vh, 128px) auto;
+  }
+
+  /* The dialog keeps its title for assistive tech; the search field is the visible header. */
+  .dialog:has(.switcher) .dialog-header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dialog:has(.switcher) .dialog-surface {
+    gap: 0;
+    padding: 0;
+  }
+
+  .dialog:has(.switcher) .dialog-body {
+    display: flex;
+    margin-top: 0;
+    overflow: hidden;
+  }
+
+  .switcher {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    max-height: min(560px, calc(100dvh - min(14vh, 128px) - var(--space-8)));
+  }
+
+  .switcher-search {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-3);
+    height: 56px;
+    padding: 0 var(--space-4) 0 var(--space-5);
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .switcher-search-icon {
+    flex-shrink: 0;
+    color: var(--text-faint);
+  }
+
+  .switcher-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-composer);
+    line-height: var(--leading-composer);
+    outline: none;
+  }
+
+  .switcher-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .switcher-results {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-1-5) var(--space-2) var(--space-2);
+    overscroll-behavior: contain;
+    scroll-padding-block: var(--space-8) var(--space-2);
+  }
+
+  .switcher-section + .switcher-section {
+    margin-top: var(--space-1-5);
+  }
+
+  .switcher-section-title {
+    padding: var(--space-2) var(--space-3) var(--space-1);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+  }
+
+  .switcher-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    height: 38px;
+    padding: 0 var(--space-2) 0 var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter);
+  }
+
+  .switcher-option[data-active] {
+    background: var(--bg-selected);
+    color: var(--text);
+    transition-duration: 0ms;
+  }
+
+  .switcher-option[data-unread] {
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .switcher-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .switcher-option[data-muted] .switcher-label {
+    opacity: 0.6;
+  }
+
+  .switcher-glyph {
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    color: var(--text-faint);
+  }
+
+  .switcher-option[data-active] .switcher-glyph {
+    color: var(--text-muted);
+  }
+
+  .switcher-glyph .avatar {
+    --avatar-ring: var(--bg-raised);
+  }
+
+  .switcher-option[data-active] .switcher-glyph .avatar {
+    --avatar-ring: var(--bg-selected);
+  }
+
+  .switcher-mark {
+    background: none;
+    color: var(--text);
+    font-weight: var(--weight-semibold);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--accent), transparent 40%);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  /* The label gives way first, so "in #room" stays readable on a narrow screen. */
+  .switcher-detail {
+    flex-shrink: 0;
+    max-width: 45%;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-regular);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .switcher-meta {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-2);
+    margin-left: auto;
+  }
+
+  .switcher-unread-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text);
+  }
+
+  .switcher-enter {
+    opacity: 0;
+    transition: opacity var(--duration-micro) var(--ease-enter);
+  }
+
+  .switcher-option[data-active] .switcher-enter {
+    opacity: 1;
+  }
+
+  .switcher-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-8) var(--space-4);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    text-align: center;
+  }
+
+  .switcher-empty-title {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .switcher-footer {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--space-5);
+    padding: var(--space-2) var(--space-5);
+    box-shadow: 0 -1px 0 var(--border);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  .switcher-footer > span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+  }
+
+  @media (width < 720px) {
+    .dialog:has(.switcher) {
+      width: calc(100vw - var(--space-4));
+      margin-block: var(--space-3) auto;
+    }
+
+    .switcher {
+      max-height: calc(100dvh - var(--space-8));
+    }
+
+    .switcher-footer {
+      display: none;
+    }
+
+    .switcher-option {
+      height: 44px;
+    }
+  }
+}

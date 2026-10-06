@@ -1,0 +1,230 @@
+/* The people pickers (new DM, add people): Slack's "To:" field with chips, then the list. */
+@layer app {
+  /* The body clips so only the list scrolls; the inset keeps the field's focus halo. */
+  .dialog:has(.picker) .dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: calc(var(--space-2) - 4px) -4px -4px;
+    padding: 4px;
+    overflow: hidden;
+  }
+
+  .picker {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .picker-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1-5);
+    min-height: var(--control-lg);
+    padding: var(--space-1-5) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    cursor: text;
+    transition: box-shadow var(--duration-micro) var(--ease-enter);
+  }
+
+  .picker-field:hover {
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+
+  .picker-field:focus-within {
+    box-shadow:
+      inset 0 0 0 1px var(--accent),
+      0 0 0 3px color-mix(in oklch, var(--accent), transparent 75%);
+  }
+
+  .picker-to {
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+  }
+
+  .picker-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    height: 26px;
+    padding: 0 var(--space-0-5) 0 var(--space-1);
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    color: var(--text);
+    font-size: var(--text-sidebar);
+    font-weight: var(--weight-medium);
+  }
+
+  .picker-chip .avatar {
+    --avatar-radius: 4px;
+  }
+
+  .picker-chip-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .picker-chip-remove {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-xs);
+    color: var(--text-muted);
+    transition:
+      background-color var(--duration-micro) var(--ease-enter),
+      color var(--duration-micro) var(--ease-enter);
+  }
+
+  .picker-chip-remove:hover {
+    background: color-mix(in oklch, var(--accent), transparent 82%);
+    color: var(--text);
+  }
+
+  .picker-input {
+    flex: 1;
+    min-width: 64px;
+    height: 26px;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: var(--text-ui);
+    outline: none;
+  }
+
+  .picker-input::placeholder {
+    color: var(--text-faint);
+  }
+
+  .picker-note {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .picker-error {
+    color: var(--danger-text);
+  }
+
+  .picker-list {
+    height: min(320px, 44dvh);
+    overflow: auto;
+    margin-inline: calc(var(--space-2) * -1);
+    padding: var(--space-0-5) var(--space-2);
+    overscroll-behavior: contain;
+  }
+
+  .picker-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  .picker-option[data-active] {
+    background: var(--bg-selected);
+  }
+
+  .picker-option[aria-disabled="true"] {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .picker-option .avatar {
+    --avatar-ring: var(--bg-raised);
+  }
+
+  .picker-option[data-active] .avatar {
+    --avatar-ring: var(--bg-selected);
+  }
+
+  .picker-option-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  .picker-option-name,
+  .picker-option-status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .picker-option-name {
+    color: var(--text);
+    font-size: var(--text-ui);
+    font-weight: var(--weight-medium);
+  }
+
+  .picker-option-status {
+    color: var(--text-muted);
+    font-size: var(--text-meta);
+  }
+
+  .picker-tag {
+    flex-shrink: 0;
+    padding: 1px var(--space-1-5);
+    border-radius: var(--radius-xs);
+    background: var(--agent-soft);
+    color: var(--agent-text);
+    font-size: 10px;
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .picker-star {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--warning);
+  }
+
+  .picker-empty {
+    padding: var(--space-6) var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    text-align: center;
+  }
+
+  .picker-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    height: min(320px, 44dvh);
+    padding: var(--space-2) 0;
+  }
+
+  .picker-skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .directs-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1-5);
+    margin-right: auto;
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+  }
+
+  @media (width < 720px) {
+    .directs-hint {
+      display: none;
+    }
+  }
+}

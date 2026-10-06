@@ -1,0 +1,110 @@
+/* The shortcuts dialog: a searchable two-column list of the catalogue. */
+@layer app {
+  .dialog:has(.shortcuts) {
+    width: min(560px, calc(100vw - var(--space-8)));
+  }
+
+  /* The body clips so only the list scrolls; the inset keeps the search field's focus halo. */
+  .dialog:has(.shortcuts) .dialog-body {
+    display: flex;
+    margin: calc(var(--space-1) - 4px) -4px -4px;
+    padding: 4px;
+    overflow: hidden;
+  }
+
+  .shortcuts {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    max-height: min(600px, calc(100dvh - var(--space-10) * 2 - 72px));
+  }
+
+  .shortcuts-search {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .shortcuts-search-icon {
+    position: absolute;
+    top: 50%;
+    left: var(--space-3);
+    color: var(--text-faint);
+    translate: 0 -50%;
+    pointer-events: none;
+  }
+
+  .shortcuts-input {
+    width: 100%;
+    height: var(--control-md);
+    padding-left: calc(var(--space-3) + 16px + var(--space-2));
+  }
+
+  .shortcuts-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    margin-inline: calc(var(--space-2) * -1);
+    padding-inline: var(--space-2);
+    overscroll-behavior: contain;
+  }
+
+  .shortcuts-group + .shortcuts-group {
+    margin-top: var(--space-4);
+  }
+
+  .shortcuts-group-title {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: var(--space-1) 0 var(--space-1-5);
+    background: var(--bg-raised);
+    color: var(--text-faint);
+    font-size: var(--text-meta);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0.01em;
+  }
+
+  .shortcuts-rows {
+    margin: 0;
+  }
+
+  .shortcuts-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: 34px;
+    padding: var(--space-1) 0;
+    box-shadow: 0 1px 0 color-mix(in oklch, var(--border), transparent 40%);
+  }
+
+  .shortcuts-row:last-child {
+    box-shadow: none;
+  }
+
+  .shortcuts-row dt {
+    min-width: 0;
+    color: var(--text);
+    font-size: var(--text-ui);
+  }
+
+  .shortcuts-row dd {
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+  .shortcuts-row .kbd-key {
+    min-width: 22px;
+    height: 22px;
+    padding-inline: var(--space-1-5);
+  }
+
+  .shortcuts-empty {
+    padding: var(--space-6) 0;
+    color: var(--text-muted);
+    font-size: var(--text-ui);
+    text-align: center;
+  }
+}
