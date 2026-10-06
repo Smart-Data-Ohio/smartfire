@@ -1338,7 +1338,13 @@ rehearse_migration() {
       preserved:$preserved, additive:$additive}' \
     | write_state rehearsal-result.json
 
-  log "migration rehearsal PASSED: $(jq -r 'length' <<<"$migrations") migration(s) $(jq -r 'join(", ")' <<<"$migrations"); ${preserved:-unknown}; ${additive:-unknown}"
+  log "migration rehearsal PASSED: $(describe_migrations "$migrations"); ${preserved:-unknown}; ${additive:-unknown}"
+}
+
+# "no migrations" or "2 migrations (20261006010000, 20261007090000)" from a JSON array.
+describe_migrations() {
+  jq -r 'if length == 0 then "no migrations"
+         else "\(length) migration\(if length == 1 then "" else "s" end) (\(join(", ")))" end' <<<"$1"
 }
 
 # The versions `campfire db-migrate` reports applying, as a JSON array.
@@ -1405,7 +1411,7 @@ migrate_live_database() {
     warn "cutover: the live migration applied $(jq -c . <<<"$applied") but the rehearsal applied $(jq -c . <<<"$rehearsed")"
     exit "$EXIT_UNHEALTHY"
   fi
-  log "cutover: live database migrated: $(jq -r 'length' <<<"$applied") migration(s) $(jq -r 'join(", ")' <<<"$applied")"
+  log "cutover: live database migrated: $(describe_migrations "$applied")"
 }
 
 phase_cutover() {
