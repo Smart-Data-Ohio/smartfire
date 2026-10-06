@@ -24,6 +24,7 @@ import {
 } from "./corpus.ts";
 import { type Mentionable, mentionsUser, renderMarkdown } from "./markdown.ts";
 import type { Random } from "./random.ts";
+import { emptyS2World, type S2World } from "./s2/model.ts";
 
 const MINUTE = 60_000;
 
@@ -83,22 +84,35 @@ export const ROOM_IDS = {
 /** The viewer's sidebar category. */
 export const CATEGORY_IDS = { launch: 1 } as const;
 
+/**
+ * Seeded message ids are stable whatever the seed and clock: a room's root messages are
+ * `roomId * MESSAGE_ID_BLOCK + index` (oldest first), so the newest of #general's 400 is 10399.
+ */
+export const MESSAGE_ID_BLOCK = 10_000;
+
+/** Messages created at run time count up from here, above every seeded id. */
+export const FIRST_LIVE_MESSAGE_ID = 1_000_000;
+
+/** The seeded id of a room's root message at `index` (oldest first). */
+export function seededMessageId(roomId: number, index: number): number {
+  return roomId * MESSAGE_ID_BLOCK + index;
+}
+
 /** A room as the mock keeps it: the DTO plus what the viewer's sidebar row and detail need. */
 export interface RoomRecord {
   room: Room;
   /** Everyone in the room, in membership order (oldest first), viewer included. */
-  readonly memberIds: readonly number[];
+  memberIds: number[];
   /** The viewer's membership. */
   membership: Membership;
   /** The root timeline, ascending by id (and so by `createdAt`). */
   readonly messages: MessageDTO[];
-  readonly pinsCount: number;
   /** The viewer's unread mentions here. */
   mentionCount: number;
 }
 
 /** Everything the mock knows. Mutated in place by the server. */
-export interface World {
+export interface World extends S2World {
   readonly users: Map<number, User>;
   readonly presence: Map<number, UserPresence>;
   readonly rooms: Map<number, RoomRecord>;
@@ -308,7 +322,6 @@ interface RoomSeed {
   readonly involvement: Membership["involvement"];
   readonly categoryId: number | null;
   readonly favoritePosition: number | null;
-  readonly pinsCount: number;
 }
 
 const ROOMS: readonly RoomSeed[] = [
@@ -327,7 +340,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "everything",
     categoryId: null,
     favoritePosition: null,
-    pinsCount: 3,
   },
   {
     id: ROOM_IDS.design,
@@ -344,7 +356,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "mentions",
     categoryId: CATEGORY_IDS.launch,
     favoritePosition: null,
-    pinsCount: 0,
   },
   {
     id: ROOM_IDS.engineering,
@@ -361,7 +372,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "mentions",
     categoryId: null,
     favoritePosition: 1,
-    pinsCount: 1,
   },
   {
     id: ROOM_IDS.random,
@@ -378,7 +388,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "muted",
     categoryId: null,
     favoritePosition: null,
-    pinsCount: 0,
   },
   {
     id: ROOM_IDS.announcements,
@@ -395,7 +404,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "everything",
     categoryId: null,
     favoritePosition: null,
-    pinsCount: 0,
   },
   {
     id: ROOM_IDS.quiet,
@@ -412,7 +420,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "mentions",
     categoryId: null,
     favoritePosition: null,
-    pinsCount: 0,
   },
   {
     id: ROOM_IDS.launchPlanning,
@@ -429,7 +436,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "mentions",
     categoryId: CATEGORY_IDS.launch,
     favoritePosition: null,
-    pinsCount: 1,
   },
   {
     id: ROOM_IDS.lounge,
@@ -446,7 +452,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "mentions",
     categoryId: null,
     favoritePosition: null,
-    pinsCount: 0,
   },
   {
     id: ROOM_IDS.dmMaya,
@@ -463,7 +468,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "everything",
     categoryId: null,
     favoritePosition: 2,
-    pinsCount: 0,
   },
   {
     id: ROOM_IDS.dmEmber,
@@ -480,7 +484,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "everything",
     categoryId: null,
     favoritePosition: null,
-    pinsCount: 0,
   },
   {
     id: ROOM_IDS.groupDm,
@@ -497,7 +500,6 @@ const ROOMS: readonly RoomSeed[] = [
     involvement: "everything",
     categoryId: null,
     favoritePosition: null,
-    pinsCount: 0,
   },
 ];
 
@@ -694,7 +696,6 @@ export function seedWorld(now: number, random: Random): World {
   drafts.sort((a, b) => a.createdAt - b.createdAt || a.roomId - b.roomId);
 
   const messagesByRoom = new Map<number, MessageDTO[]>();
-  let nextMessageId = 1000;
 
   for (const draft of drafts) {
     const createdAt = timestamp(draft.createdAt);
@@ -707,7 +708,7 @@ export function seedWorld(now: number, random: Random): World {
     const list = messagesByRoom.get(draft.roomId) ?? [];
 
     list.push({
-      id: nextMessageId++,
+      id: seededMessageId(draft.roomId, list.length),
       roomId: draft.roomId,
       threadId: null,
       creatorId: draft.creatorId,
@@ -757,19 +758,19 @@ export function seedWorld(now: number, random: Random): World {
         createdAt,
         updatedAt: newest === undefined ? createdAt : newest.createdAt,
       },
-      memberIds: seed.memberIds,
+      memberIds: [...seed.memberIds],
       membership,
       messages,
-      pinsCount: seed.pinsCount,
       mentionCount,
     });
   }
 
   return {
+    ...emptyS2World(),
     users,
     presence: seedPresence(),
     rooms,
     categories: [{ id: CATEGORY_IDS.launch, name: "Launch", collapsed: false, position: 0 }],
-    nextMessageId,
+    nextMessageId: FIRST_LIVE_MESSAGE_ID,
   };
 }

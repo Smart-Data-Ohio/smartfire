@@ -4,6 +4,8 @@
  * here reaches the production bundle.
  *
  * - `/api/v1/*` and `/__mock/*` go to `MockServer.handle` (held sends hold the HTTP response).
+ * - `/rails/active_storage/*` (the direct-upload `PUT`, blob and thumbnail downloads) and
+ *   `/icons/*` go to `MockServer.handleBinary` with the raw body, ahead of the `/rails` proxy.
  * - `/api/v1/sync` upgrades to a WebSocket bridged to `MockServer.connect`; every other upgrade
  *   (Vite's HMR) is left alone.
  * - `/users/:id/avatar` answers with a picture for a couple of people and 404 for the rest, so
@@ -16,7 +18,13 @@ import type { Plugin } from "vite";
 import { type WebSocket, WebSocketServer } from "ws";
 import { type Json, parseJson } from "./json.ts";
 import { BOT_ID, USERS_WITH_PHOTOS } from "./seed.ts";
-import { createMockServer, isMockPath, type MockHeaders, type MockServer } from "./server.ts";
+import {
+  createMockServer,
+  isBinaryPath,
+  isMockPath,
+  type MockHeaders,
+  type MockServer,
+} from "./server.ts";
 import { parseClientFrame } from "./sync.ts";
 
 /** Whether the dev server should use the mock: `SMARTFIRE_MOCK=1` or `--mode mock`. */
@@ -33,12 +41,12 @@ export interface SmartfireMockOptions {
 
 const SYNC_PATH = "/api/v1/sync";
 
-function readBody(request: IncomingMessage): Promise<string> {
+function readBody(request: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
 
     request.on("data", (chunk: Buffer) => chunks.push(chunk));
-    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    request.on("end", () => resolve(Buffer.concat(chunks)));
     request.on("error", reject);
   });
 }
@@ -55,6 +63,13 @@ function headersOf(request: IncomingMessage): MockHeaders {
 
 function sendJson(response: ServerResponse, status: number, json: Json) {
   response.statusCode = status;
+
+  if (status === 204) {
+    response.end();
+
+    return;
+  }
+
   response.setHeader("Content-Type", "application/json; charset=utf-8");
   response.setHeader("Cache-Control", "no-store");
   response.end(JSON.stringify(json));
@@ -69,7 +84,7 @@ function avatarSvg(userId: number): string {
 
 async function serveHttp(mock: MockServer, request: IncomingMessage, response: ServerResponse) {
   const url = new URL(request.url ?? "/", "http://localhost");
-  const text = await readBody(request);
+  const text = (await readBody(request)).toString("utf8");
   const body = text.trim() === "" ? undefined : parseJson(text);
 
   if (text.trim() !== "" && body === undefined) {
@@ -87,6 +102,27 @@ async function serveHttp(mock: MockServer, request: IncomingMessage, response: S
   });
 
   sendJson(response, result.status, result.json);
+}
+
+/** The byte routes: the raw `PUT` body in, the blob or icon bytes out. */
+async function serveBinary(mock: MockServer, request: IncomingMessage, response: ServerResponse) {
+  const method = request.method ?? "GET";
+  const raw = method === "PUT" || method === "POST" ? await readBody(request) : null;
+
+  const result = await mock.handleBinary({
+    method,
+    path: request.url ?? "/",
+    headers: headersOf(request),
+    bytes: raw === null ? null : new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength),
+  });
+
+  response.statusCode = result.status;
+
+  for (const [name, value] of Object.entries(result.headers)) response.setHeader(name, value);
+
+  if (result.contentType !== null) response.setHeader("Content-Type", result.contentType);
+
+  response.end(method === "HEAD" ? undefined : Buffer.from(result.bytes));
 }
 
 function bridgeSocket(mock: MockServer, socket: WebSocket) {
@@ -148,6 +184,12 @@ export function smartfireMock(options: SmartfireMockOptions = {}): Plugin {
 
           response.setHeader("Content-Type", "image/svg+xml");
           response.end(avatarSvg(userId));
+
+          return;
+        }
+
+        if (isBinaryPath(path)) {
+          serveBinary(backend, request, response).catch(next);
 
           return;
         }
