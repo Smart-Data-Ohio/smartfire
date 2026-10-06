@@ -175,29 +175,29 @@ paths; see below), so `CAMPFIRE_LLVM_ONLY_TESTS` doesn't change, but their packa
 A panic unwinds through every crate between the panic and its `catch_unwind`, so the LLVM step
 needs LLVM for all the campfire crates, not just the test's own. `CAMPFIRE_LLVM` becomes
 `--config rust/ci/llvm.toml`, a file setting `codegen-backend = "llvm"` for each of them, and
-the step's filter becomes `rdeps(campfire_app) and (<the four tests>)`.
+the job selects them as below.
 
 ## CI: one named test set
 
-`rust/.config/nextest.toml` (nextest 0.9.146 in `ci/Dockerfile`) defines the app's tests once,
-as the packages that depend on `campfire_app`, so a new crate joins it without a CI edit:
+Since #254, `rust.yml` runs the whole workspace in 12 nextest slices (`--partition slice:N/12`),
+every slice with seeds, so new crates are picked up without a CI edit. What still names the
+`campfire` package is the LLVM-only selection (`package(campfire) and ($CAMPFIRE_LLVM_ONLY_TESTS)`,
+excluded from the slices and run by the LLVM job) and the `browser`/`ws11ui` overrides in
+`rust/.config/nextest.toml`. The first phase-2 PR defines the app's crates once, as the
+packages built on `campfire_app`, in `rust/.config/nextest.toml`:
 
 ```toml
-[profile.ci-app]           # seed-dependent: every crate built on campfire_app, and the tests
+[profile.ci-llvm]          # the panic-recovery job
 inherits = "ci"
 default-filter = "rdeps(campfire_app)"
-
-[profile.ci-workspace]     # everything else except the database step
-inherits = "ci"
-default-filter = "not rdeps(campfire_app) and not package(campfire_db)"
 ```
 
-`rust.yml`'s "Tests (seed-dependent campfire)" step uses `--profile ci-app` (plus
-`-E "not ($CAMPFIRE_LLVM_ONLY_TESTS)"` outside the schedule), "Tests (other workspace)" uses
-`--profile ci-workspace`, and the existing `browser`/`ws11ui` overrides change
-`package(campfire)` to `rdeps(campfire_app)`. `ci/ignored-tests.json` and
-`ci/ignored-utilities.json` name a package and binary per test: the ones that move get their new
-package in the PR that moves them. This lands in the first phase-2 PR, since phase 1 doesn't edit
+The LLVM job then runs `--profile ci-llvm -E "$CAMPFIRE_LLVM_ONLY_TESTS"`, the slices exclude
+`rdeps(campfire_app) and ($CAMPFIRE_LLVM_ONLY_TESTS)`, and the overrides' `package(campfire)`
+becomes `rdeps(campfire_app)` (nextest 0.9.146, pinned in `ci/Dockerfile`, has both
+`default-filter` and `rdeps`). The job's exact-count check (four tests) is unchanged.
+`ci/ignored-tests.json` and `ci/ignored-utilities.json` name a package and binary per test: the
+ones that move get their new package in the PR that moves them. Phase 1 doesn't edit
 `.github/workflows/` or `rust/ci/`.
 
 ## Tests
@@ -218,7 +218,7 @@ compiles in parallel.
 One extraction per PR, lowest first; each PR moves files with `git mv`, turns the boundary's
 `pub(crate)` into `pub`, adds the crate's Cranelift line, and leaves the check passing:
 
-1. `campfire_app` (with `test_support` and its panic test), plus the nextest profiles,
+1. `campfire_app` (with `test_support` and its panic test), plus the `ci-llvm` nextest profile,
    `ci/llvm.toml` and the `rust.yml` switch.
 2. `campfire_web`.
 3. `campfire_channels`.
