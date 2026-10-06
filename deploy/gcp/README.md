@@ -9,7 +9,7 @@ Two GitHub workflows drive it:
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| [`publish-image.yml`](../../.github/workflows/publish-image.yml) | push to `main`, push `v*` tags, manual (dry run by default) | Builds the Rust image for `linux/amd64` and `linux/arm64` on native runners. On a push to `main`, copies the amd64 manifest by digest to Artifact Registry as `rust-git-<full sha>` and attests provenance; it also publishes the multi-arch image to GHCR. |
+| [`publish-image.yml`](../../.github/workflows/publish-image.yml) | push to `main`, push `v*` tags, manual (dry run by default) | Builds the Rust image for `linux/amd64` and `linux/arm64` on native runners. On a push to `main` (or a manual run on `main` with `dry_run` off), copies the amd64 manifest by digest to Artifact Registry as `rust-git-<full sha>` and attests provenance; it also publishes the multi-arch image to GHCR. |
 | [`deploy-gcp.yml`](../../.github/workflows/deploy-gcp.yml) | manual only | Production only from `main`. Requires a successful `rust.yml` push or scheduled run (with its `Rust port` job) for the revision, resolves `rust-git-<sha>` to a digest and runs `campfire-release.sh` on the app VM through an IAP SSH tunnel. |
 
 Production runs the Rust port. The release script only moves one Rust image (label

@@ -6,7 +6,7 @@ name: Deploy to GCP
 # while writes are frozen.
 #
 # Releases go from one Rust image (rust-git-<sha>, published by
-# publish-rust-image.yml) to another; the script refuses anything else.
+# publish-image.yml) to another; the script refuses anything else.
 #
 # Ordering note: the migration (`campfire db-migrate`) is rehearsed against a
 # copy of the frozen database, inside a network-isolated throwaway container,
@@ -307,7 +307,7 @@ jobs:
             # missing image sends the operator off to publish one that is
             # already there, which is exactly the wrong half of the system.
             if grep -Eqi 'not found|does not exist|NOT_FOUND|404' "$err"; then
-              echo "::error::no image published for tag ${TAG}; run the Publish image to Artifact Registry workflow first"
+              echo "::error::no image published for tag ${TAG}; run the Publish image workflow (publish-image.yml) on main with dry_run off first"
             else
               echo "::error::could not resolve ${GCP_IMAGE}:${TAG} (registry or auth error)"
               cat "$err"
@@ -315,7 +315,7 @@ jobs:
             exit 1
           fi
           if [ -z "$digest" ]; then
-            echo "::error::no image published for tag ${TAG}; run the Publish image to Artifact Registry workflow first"
+            echo "::error::no image published for tag ${TAG}; run the Publish image workflow (publish-image.yml) on main with dry_run off first"
             exit 1
           fi
           # Never interpolate an unvalidated registry response into a remote command.

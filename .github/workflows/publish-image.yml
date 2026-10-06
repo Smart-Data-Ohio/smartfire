@@ -3,11 +3,12 @@ name: Publish image
 # Builds the production image (rust/Dockerfile) once per architecture, on native runners, and
 # publishes it to two registries:
 #
-# - GHCR (public, for self-hosters): a linux/amd64 + linux/arm64 image, tagged `latest` and
-#   `main` on main, `sha-<short sha>` for every published commit, and the semver tags on `v*`
-#   tag pushes; keyless cosign signature.
+# - GHCR (public, for self-hosters): a linux/amd64 + linux/arm64 image, tagged `main` on main,
+#   `sha-<short sha>` for every published commit, and the semver tags plus `latest` on `v*` tag
+#   pushes (so `latest` is always a release); keyless cosign signature.
 # - Artifact Registry (private, what deploy-gcp.yml deploys): the same linux/amd64 manifest,
-#   byte for byte, tagged `rust-git-<full sha>` on every push to main. Repository tags are
+#   byte for byte, tagged `rust-git-<full sha>` on every push to main (or a manual run on main
+#   with dry_run off). Repository tags are
 #   immutable, so a revision that's already published keeps its existing digest.
 #
 # A manual run with dry_run (the default) builds both architectures and pushes nothing.
@@ -198,7 +199,7 @@ jobs:
         with:
           images: ${{ steps.vars.outputs.canonical }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
             type=ref,event=branch
             type=ref,event=tag
             type=sha,format=short,prefix=sha-
@@ -253,7 +254,8 @@ jobs:
     name: Publish linux/amd64 image to Artifact Registry
     needs: build
     # Only the amd64 build is needed: an arm64 failure mustn't hold back a deployable image.
-    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    # A manual run on main with dry_run off fills in main's tip if its push run was cancelled.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && !inputs.dry_run)) }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

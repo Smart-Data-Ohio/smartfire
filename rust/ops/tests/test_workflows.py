@@ -109,7 +109,8 @@ class WorkflowTest(unittest.TestCase):
         self.assertIs(on["workflow_dispatch"]["inputs"]["dry_run"]["default"], True)
         registry = image["jobs"]["artifact-registry"]
         self.assertEqual(registry["if"].strip(),
-            "${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}")
+            "${{ !cancelled() && github.ref == 'refs/heads/main' && (github.event_name == 'push' || "
+            "(github.event_name == 'workflow_dispatch' && !inputs.dry_run)) }}")
         plan = next(step["run"] for step in registry["steps"] if step.get("id") == "plan")
         self.assertIn('tag="rust-git-${SHA}"', plan)
         copy = next(step["run"] for step in registry["steps"] if "imagetools create" in step.get("run", ""))

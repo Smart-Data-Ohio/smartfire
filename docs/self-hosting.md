@@ -4,7 +4,7 @@ Smartfire's Docker image contains everything needed for a fully-functional, sing
 This includes the web app, background jobs, caching, file serving, and SSL.
 This guide covers running the Docker image by hand.
 
-We recommend using `ghcr.io/smart-data-ohio/smartfire:main` (also tagged `latest`), which tracks the default branch.
+We recommend using `ghcr.io/smart-data-ohio/smartfire:main`, which tracks the default branch.
 It changes with every merged pull request, so it's the newest - but least battle-tested - version of Smartfire.
 Images are published for `linux/amd64` and `linux/arm64`, and signed with cosign.
 
@@ -16,7 +16,7 @@ so you can pin your deployment to a specific version if you want to avoid unexpe
 ghcr.io/smart-data-ohio/smartfire:sha-1a2b3c4
 ```
 
-Version tags (`v*`) additionally publish semver tags (`1.5.0`, `1.5`, `1`).
+Version tags (`v*`) additionally publish semver tags (`2.0.0`, `2.0`, `2`) and `latest`, so `latest` is always the newest release.
 
 To run it you'll need three things:
 1. a machine that runs Docker
