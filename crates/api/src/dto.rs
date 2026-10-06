@@ -573,7 +573,7 @@ pub fn me(
 ) -> Result<api::Me> {
     let settings = UserStatusSettings::for_ids(conn, &[viewer.id])?
         .remove(&viewer.id)
-        .ok_or_else(|| campfire_db::Error::RecordNotFound("User".into()))?;
+        .ok_or_else(|| campfire_db::Error::RecordNotFound("User"))?;
     let (tour_completed, voice_mode, push_to_talk_key): (bool, Option<String>, Option<String>) = conn.query_row_cached(
         r#"SELECT COALESCE("tour_completed_at", '') != '', "voice_mode", "push_to_talk_key" FROM "users" WHERE "users"."id" = ?"#,
         [viewer.id],
